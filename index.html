@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Hurricane XCS — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-logo">H</div>
+    <div>
+      <div class="brand-name">Hurricane XCS</div>
+      <div class="brand-sub">PERFORMANCE DASHBOARD</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="day-switcher">
+      <button class="day-btn" onclick="prevDay()">‹</button>
+      <span class="day-label" id="dayLabel" onclick="openCal()" title="Pick a date">TODAY</span>
+      <button class="day-btn" onclick="nextDay()">›</button>
+    </div>
+    <span id="liveBadge" class="live-badge"><span class="live-dot"></span>LIVE</span>
+  </div>
+</header>
+
+<!-- CALENDAR POPUP — iOS STYLE -->
+<div class="cal-overlay" id="calOverlay" style="display:none" onclick="handleCalOverlayClick(event)">
+  <div class="cal-box" onclick="event.stopPropagation()">
+    <div class="cal-handle"></div>
+
+    <!-- Top bar: Month+Year label + Today btn -->
+    <div class="cal-topbar">
+      <div class="cal-topbar-label" id="calTopLabel" onclick="toggleYearMonthPicker()">
+        <span id="calTopText">— —</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="cal-topbar-today" onclick="jumpToToday()">Today</div>
+    </div>
+
+    <!-- Year picker (hidden by default) -->
+    <div class="cal-year-picker" id="calYearPicker">
+      <div class="cal-year-list" id="calYearList"></div>
+    </div>
+
+    <!-- Month picker (hidden by default) -->
+    <div class="cal-month-picker" id="calMonthPicker"></div>
+
+    <!-- Month nav (shown when day view active) -->
+    <div class="cal-month-nav" id="calMonthNav">
+      <button class="cal-mnav-btn" onclick="calPrevMonth()">‹</button>
+      <div class="cal-month-display" id="calMonthDisplay">—</div>
+      <button class="cal-mnav-btn" onclick="calNextMonth()">›</button>
+    </div>
+
+    <!-- Day grid -->
+    <div class="cal-day-view" id="calDayView">
+      <div class="cal-grid">
+        <div class="cal-dow">S</div>
+        <div class="cal-dow">M</div>
+        <div class="cal-dow">T</div>
+        <div class="cal-dow">W</div>
+        <div class="cal-dow">T</div>
+        <div class="cal-dow">F</div>
+        <div class="cal-dow">S</div>
+        <div id="calDays" style="display:contents"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="nav-wrapper">
+<div class="nav-bar">
+  <div class="nav-tab active" onclick="showPage('dashboard',this)">📊 Dashboard</div>
+  <div class="nav-tab" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
+  <div class="nav-tab" onclick="showPage('salespeople',this)">👥 Salespeople</div>
+  <div class="nav-tab" onclick="showPage('trend',this)">📈 SP Trend</div>
+  <div class="nav-tab" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
+  <div class="nav-tab" onclick="showPage('admin',this)" style="color:#7c4dff">⚙️ Admin</div>
+</div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div class="page active" id="page-dashboard">
+<div class="container">
+
+  <div id="roBanner" class="readonly-banner" style="display:none">📅 Viewing <strong id="roDate"></strong> — Read-only. Go back to TODAY to add entries.</div>
+
+  <div class="sl">30-Day History</div>
+  <div class="history-strip" id="histStrip"></div>
+
+  <div class="goal-card">
+    <div class="goal-icon">🎯</div>
+    <div class="goal-text">
+      <div class="goal-title" id="goalTitle">Today's Target</div>
+      <div class="goal-main">160 Chats · Target Rp 70.000.000</div>
+      <div class="goal-progress-row">
+        <div class="goal-bar"><div class="goal-bar-fill" id="goalFill" style="width:0%"></div></div>
+        <div class="goal-pct" id="goalPct">0%</div>
+      </div>
+    </div>
+    <div class="goal-stats">
+      <div class="goal-val" id="totalRev">Rp 0</div>
+      <div class="goal-lbl">REVENUE</div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi-card c1"><div class="kpi-lbl">Total Closes</div><div class="kpi-val" id="K1">0</div><div class="kpi-ch nt" id="K1c">units sold</div></div>
+    <div class="kpi-card c2"><div class="kpi-lbl">Revenue</div><div class="kpi-val" id="K2">0</div><div class="kpi-ch nt" id="K2c">—</div></div>
+    <div class="kpi-card c3"><div class="kpi-lbl">Close Rate</div><div class="kpi-val" id="K3">0<span class="u">%</span></div><div class="kpi-ch nt">Target ≥10%</div></div>
+    <div class="kpi-card c4"><div class="kpi-lbl">Total Calls</div><div class="kpi-val" id="K4">0</div><div class="kpi-ch nt">—</div></div>
+    <div class="kpi-card c5"><div class="kpi-lbl">Follow Ups</div><div class="kpi-val" id="K5">0</div><div class="kpi-ch nt" id="K5c">—</div></div>
+  </div>
+
+  <div class="tab-row">
+    <div class="tab active" onclick="switchTab('team',this)">By Team</div>
+    <div class="tab" onclick="switchTab('sp',this)">By SP</div>
+    <div class="tab" onclick="switchTab('product',this)">By Product</div>
+  </div>
+
+  <div id="vTeam">
+    <div class="sl">Team Performance</div>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Team</th><th>Members</th><th>Chats</th><th>Calls</th><th>F/Up</th><th>Closes</th><th>Rate</th><th>Revenue</th></tr></thead>
+      <tbody id="tTeam"></tbody>
+    </table></div>
+  </div>
+  <div id="vSP" style="display:none">
+    <div class="sl">Salesperson Ranking</div>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Salesperson</th><th>Chats</th><th>Calls</th><th>F/Up</th><th>Closes</th><th>Rate</th><th>Revenue</th></tr></thead>
+      <tbody id="tSP"></tbody>
+    </table></div>
+  </div>
+  <div id="vProd" style="display:none">
+    <div class="sl">Product Breakdown</div>
+    <div class="tw"><div class="pg" id="prodGrid"></div></div>
+  </div>
+
+  <div class="bg">
+    <div class="panel">
+      <div class="pt"><span>➕ Log Entry</span></div>
+      <div id="inputArea">
+
+        <!-- Row 1: Date + Team + SP -->
+        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:end;">
+          <div class="ig">
+            <div class="igl">Date</div>
+            <div style="background:#0e0e1a;border:1px solid #252540;border-radius:8px;padding:8px 12px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#f5c518;cursor:pointer;white-space:nowrap;" id="entryDateLabel" onclick="openEntryCal()">📅 Today</div>
+          </div>
+          <div class="ig">
+            <div class="igl">Team</div>
+            <select id="inTeam" onchange="updateSPList()">
+              <option>Christ A</option><option>Christ B</option><option>Livia</option>
+              <option>Valen</option><option>Agung</option><option>Ivan</option><option>Noah</option>
+            </select>
+          </div>
+          <div class="ig">
+            <div class="igl">Salesperson</div>
+            <select id="inSP">
+              <option>Arfin</option><option>Erica</option><option>Nathan</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Product Sold -->
+        <div class="ig" style="margin-bottom:8px;">
+          <div class="igl">Product Sold</div>
+          <select id="inProd" onchange="updatePriceMode()">
+            <option value="">— Pilih Produk —</option>
+            <option value="XCSR V2">XCSR V2</option>
+            <option value="XCSR V3">XCSR V3</option>
+            <option value="XCSR TURBO">XCSR TURBO</option>
+            <option value="XCSR SUPERFAST">XCSR SUPERFAST</option>
+            <option value="ECOPOWER">ECOPOWER</option>
+            <option value="ECOTURBO">ECOTURBO</option>
+            <option value="ULTRABOOST">ULTRABOOST</option>
+            <option value="EV">EV</option>
+            <option value="EV POWER">EV POWER</option>
+            <option value="XCS 5">XCS 5</option>
+            <option value="XCS 7">XCS 7</option>
+            <option value="TWIN TURBO">TWIN TURBO</option>
+            <option value="SUPERFAST">SUPERFAST</option>
+            <option value="COMPETITION">COMPETITION</option>
+            <option value="SPRING BUFFER">SPRING BUFFER</option>
+          </select>
+        </div>
+
+        <!-- Row 3: Price toggle — Normal or Custom -->
+        <div id="priceSection" style="display:none;margin-bottom:8px;">
+          <div class="igl" style="margin-bottom:6px;">Harga</div>
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <button class="price-toggle-btn active-normal" id="ptb_normal" onclick="setPriceMode('normal')">✅ Normal Price</button>
+            <button class="price-toggle-btn" id="ptb_custom" onclick="setPriceMode('custom')">✏️ Custom Price</button>
+          </div>
+          <!-- Normal price display -->
+          <div id="normalPriceDisplay" style="background:#0e0e1a;border:1px solid rgba(0,230,118,0.3);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">NORMAL PRICE</span>
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00e676;" id="normalPriceVal">—</span>
+          </div>
+          <!-- Custom price input -->
+          <div id="customPriceInput" style="display:none;">
+            <div class="omset-input-wrap">
+              <span class="omset-rp">Rp</span>
+              <input type="number" id="inCustom" placeholder="Masukkan harga custom..." class="omset-input" oninput="updateCustomPreview()"/>
+            </div>
+            <div id="customPreview" style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-top:4px;text-align:right;"></div>
+          </div>
+        </div>
+
+        <!-- Row 4: Units + Sale Type -->
+        <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;margin-bottom:8px;align-items:start;">
+          <div class="ig">
+            <div class="igl">Units</div>
+            <input type="number" id="inUnits" placeholder="1" min="1" value="1" oninput="updateCustomPreview()"/>
+          </div>
+          <div class="ig">
+            <div class="igl">Sale Type (optional — bisa pilih lebih dari 1)</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;padding-top:2px;">
+              <button class="sale-type-btn" id="stb_upsell" onclick="toggleSaleType('upsell')">⬆️ Upselling</button>
+              <button class="sale-type-btn" id="stb_cross" onclick="toggleSaleType('cross')">🔀 Cross Selling</button>
+              <button class="sale-type-btn" id="stb_repeat" onclick="toggleSaleType('repeat')">🔁 Repeat Order</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 5: Notes + ADD -->
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:10px;align-items:end;">
+          <div class="ig">
+            <div class="igl">Notes (opt)</div>
+            <input type="text" id="inNotes" placeholder="—"/>
+          </div>
+          <button class="btn bg-gold" onclick="addEntry()" style="height:36px;">ADD</button>
+        </div>
+
+      </div>
+      <div id="entryLog"><div style="color:#333350;font-size:11px;font-family:'DM Mono',monospace;padding:5px 0;">No entries yet.</div></div>
+    </div>
+    <div class="panel">
+      <div class="pt"><span>🏆 Top Performers</span>
+        <button class="btn bg-wa" onclick="openWA()" style="font-size:10px;height:24px;padding:0 8px">📲 WA</button>
+      </div>
+      <div id="lb"><div style="color:#333350;font-size:11px;font-family:'DM Mono',monospace;">Log entries to see rankings.</div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ ACTIVITY PAGE ═══ -->
+<div class="page" id="page-activity">
+<div class="container">
+  <div class="sl">Log Calls & Follow Up</div>
+
+  <!-- Date notice banner -->
+  <div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.2);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:20px">📋</span>
+    <div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#f5c518;letter-spacing:1px;">Reporting for YESTERDAY's activity</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0;margin-top:2px;">Log calls & followups you did yesterday. Deadline: 2:00 PM today.</div>
+    </div>
+  </div>
+
+  <div class="act-form">
+    <div class="pt">➕ Add Activity</div>
+
+    <!-- Reporting date selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div class="ig">
+        <div class="igl">Reporting For (Date)</div>
+        <select id="aDateSel" onchange="updateActDateLabel()">
+          <option value="yesterday">Yesterday</option>
+          <option value="today">Today</option>
+        </select>
+      </div>
+      <div class="ig" id="aDateLabelWrap">
+        <div class="igl">Selected Date</div>
+        <div style="background:#0e0e1a;border:1px solid #1e1e32;border-radius:6px;padding:7px 9px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#f5c518" id="aDateLabel">—</div>
+      </div>
+    </div>
+
+    <div class="act-grid" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;flex-wrap:wrap;">
+      <div class="ig"><div class="igl">Team</div>
+        <select id="aTeam" onchange="updateActSP()">
+          <option>Christ A</option><option>Christ B</option><option>Livia</option>
+          <option>Valen</option><option>Agung</option><option>Ivan</option><option>Noah</option>
+        </select>
+      </div>
+      <div class="ig"><div class="igl">Salesperson</div><select id="aSP"><option>Arfin</option><option>Erica</option><option>Nathan</option></select></div>
+      <div class="ig"><div class="igl">💬 Chats</div><input type="number" id="aChats" placeholder="0" min="0"/></div>
+      <div class="ig"><div class="igl">📞 Calls Made</div><input type="number" id="aCalls" placeholder="0" min="0"/></div>
+      <div class="ig"><div class="igl">🔄 Follow Ups</div><input type="number" id="aFups" placeholder="0" min="0"/></div>
+      <div class="ig"><div class="igl">Notes (opt)</div><input type="text" id="aNotes" placeholder="e.g. warm lead"/></div>
+      <button class="btn bg-gold" style="align-self:end" onclick="addActivity()">ADD</button>
+    </div>
+  </div>
+  <!-- WHO HASN'T REPORTED -->
+  <div class="sl">⚠️ Who Hasn't Reported Yesterday</div>
+  <div id="notReportedPanel" style="margin-bottom:18px;"></div>
+
+  <div class="sl">Activity Log</div>
+  <div class="act-log">
+    <div class="alh" style="grid-template-columns:1fr .6fr .6fr .6fr .6fr .8fr auto"><span>Salesperson</span><span>Date</span><span>Chats</span><span>Calls</span><span>F/Up</span><span>Notes</span><span></span></div>
+    <div id="actLog"><div style="color:#333350;font-size:11px;font-family:'DM Mono',monospace;padding:16px;text-align:center;">No activity yet.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ SALESPEOPLE PAGE ═══ -->
+<div class="page" id="page-salespeople">
+<div class="container">
+  <div class="sl">All Salespeople — Tap for Detail</div>
+  <div class="sp-grid" id="spGrid"></div>
+</div>
+</div>
+
+<!-- ═══ MONTHLY RECAP ═══ -->
+<div class="page" id="page-monthly">
+<div class="container">
+
+  <!-- Month Switcher -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div class="sl" style="margin-bottom:0;flex:1">Monthly Recap</div>
+    <div class="day-switcher" style="margin-left:16px;">
+      <button class="day-btn" onclick="prevMonth()">‹</button>
+      <span class="day-label" id="monthLabel" style="min-width:110px;font-size:13px;">—</span>
+      <button class="day-btn" onclick="nextMonth()">›</button>
+    </div>
+  </div>
+
+  <!-- Monthly KPIs -->
+  <div class="kpi-strip" style="margin-bottom:18px;" id="mKpiStrip">
+    <div class="kpi-card c1"><div class="kpi-lbl">Total Chats</div><div class="kpi-val" id="mK1">0</div><div class="kpi-ch nt" id="mK1c">—</div></div>
+    <div class="kpi-card c2"><div class="kpi-lbl">Total Closes</div><div class="kpi-val" id="mK2">0</div><div class="kpi-ch nt">units sold</div></div>
+    <div class="kpi-card c3"><div class="kpi-lbl">Close Rate</div><div class="kpi-val" id="mK3">0<span class="u">%</span></div><div class="kpi-ch nt">avg this month</div></div>
+    <div class="kpi-card c4"><div class="kpi-lbl">Total Calls</div><div class="kpi-val" id="mK4">0</div><div class="kpi-ch nt">—</div></div>
+    <div class="kpi-card c5"><div class="kpi-lbl">Total Revenue</div><div class="kpi-val" id="mK5">0</div><div class="kpi-ch nt" id="mK5c">—</div></div>
+  </div>
+
+  <!-- Active Days -->
+  <div style="background:#12121e;border:1px solid #1e1e32;border-radius:11px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:20px;">
+    <div>
+      <div class="kpi-lbl">Active Days</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:#f5c518" id="mActiveDays">0</div>
+    </div>
+    <div style="flex:1">
+      <div class="kpi-lbl" style="margin-bottom:6px;">Daily Average Revenue</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:white" id="mAvgRev">Rp 0</div>
+    </div>
+    <div style="flex:1">
+      <div class="kpi-lbl" style="margin-bottom:6px;">Best Day Revenue</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#00e676" id="mBestDay">Rp 0</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0" id="mBestDate">—</div>
+    </div>
+  </div>
+
+  <!-- Team Monthly Table -->
+  <div class="sl">Team Performance This Month</div>
+  <div class="tw" style="margin-bottom:18px;">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Team</th><th>Chats</th><th>Calls</th><th>F/Up</th><th>Closes</th><th>Rate</th><th>Revenue</th><th>Share</th>
+      </tr></thead>
+      <tbody id="mTeamBody"></tbody>
+    </table>
+  </div>
+
+  <!-- SP Monthly Table -->
+  <div class="sl">Salesperson Ranking This Month</div>
+  <div class="tw" style="margin-bottom:18px;">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Salesperson</th><th>Chats</th><th>Calls</th><th>Closes</th><th>Rate</th><th>Revenue</th>
+      </tr></thead>
+      <tbody id="mSPBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Product Monthly -->
+  <div class="sl">Products Sold This Month</div>
+  <div class="tw" style="margin-bottom:18px;">
+    <div class="pg" id="mProdGrid"></div>
+  </div>
+
+  <!-- Daily Breakdown -->
+  <div class="sl">Day-by-Day Breakdown</div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>Date</th><th>Day</th><th>Chats</th><th>Closes</th><th>Revenue</th><th>Top SP</th>
+      </tr></thead>
+      <tbody id="mDayBody"></tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ SP TREND PAGE ═══ -->
+<div class="page" id="page-trend">
+<div class="container">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+    <div class="sl" style="margin-bottom:0;flex:1">SP Performance Trend</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Last 7 days vs previous 7 days</div>
+  </div>
+
+  <!-- Trend cards grid -->
+  <div id="trendGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:24px;"></div>
+
+  <!-- Team trend summary -->
+  <div class="sl">Team Trend Summary</div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>Team</th>
+        <th>Chats (This Wk)</th><th>vs Last Wk</th>
+        <th>Closes (This Wk)</th><th>vs Last Wk</th>
+        <th>Revenue (This Wk)</th><th>vs Last Wk</th>
+      </tr></thead>
+      <tbody id="teamTrendBody"></tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ UPDATE OMSET ═══ -->
+<div class="page" id="page-omset">
+<div class="container">
+
+  <!-- Date Picker Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div class="sl" style="margin-bottom:0;flex:1">💰 Update Omset Harian</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="day-switcher" style="background:#161624;border:1px solid #252540;">
+        <button class="day-btn" onclick="omsetPrevDay()">‹</button>
+        <span id="omsetDayLabel" style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;letter-spacing:1px;min-width:80px;text-align:center;cursor:pointer;border-bottom:1px dashed rgba(245,197,24,0.4);" onclick="openOmsetCal()">TODAY</span>
+        <button class="day-btn" onclick="omsetNextDay()">›</button>
+      </div>
+      <button class="btn bg-gold" onclick="saveOmset()" style="height:34px;font-size:12px;">💾 Simpan</button>
+    </div>
+  </div>
+
+  <!-- Selected date label -->
+  <div style="background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.15);border-radius:10px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Tanggal</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:white;" id="omsetDateLabel">—</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Total Omset</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:#f5c518;" id="omsetTotal">Rp 0</div>
+    </div>
+  </div>
+
+  <!-- OMSET FORM SECTIONS -->
+  <div id="omsetForm">
+
+    <!-- Christ A & B -->
+    <div class="omset-section">
+      <div class="omset-section-title">✝️ Team Christ</div>
+      <div class="omset-grid">
+        <div class="omset-item"><div class="omset-label">Christ A</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_christ_a" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Christ B</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_christ_b" placeholder="0" oninput="recalcOmset()"/></div></div>
+      </div>
+    </div>
+
+    <!-- Valen Team -->
+    <div class="omset-section">
+      <div class="omset-section-title">🔥 Team Valen</div>
+      <div class="omset-grid">
+        <div class="omset-item"><div class="omset-label">Valen Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_valen_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Valen Shopee</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_valen_shopee" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Maryam Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_maryam_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Amel</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_amel" placeholder="0" oninput="recalcOmset()"/></div></div>
+      </div>
+    </div>
+
+    <!-- Livia Team -->
+    <div class="omset-section">
+      <div class="omset-section-title">🌸 Team Livia</div>
+      <div class="omset-grid">
+        <div class="omset-item"><div class="omset-label">Livia Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_livia_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Livia Tokped</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_livia_tokped" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Shifa Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_shifa_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Live TikTok</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_live_tiktok" placeholder="0" oninput="recalcOmset()"/></div></div>
+      </div>
+    </div>
+
+    <!-- Noah -->
+    <div class="omset-section">
+      <div class="omset-section-title">⚓ Team Noah</div>
+      <div class="omset-grid">
+        <div class="omset-item"><div class="omset-label">Stanley</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_stanley" placeholder="0" oninput="recalcOmset()"/></div></div>
+      </div>
+    </div>
+
+    <!-- Ivan Team -->
+    <div class="omset-section">
+      <div class="omset-section-title">⚡ Team Ivan</div>
+      <div class="omset-grid">
+        <div class="omset-item"><div class="omset-label">Ivan Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_ivan_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Hendri Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_hendri_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
+      </div>
+    </div>
+
+    <!-- Motor Team (Agung) -->
+    <div class="omset-section">
+      <div class="omset-section-title">🦁 Motor Team (Agung)</div>
+      <div class="omset-grid">
+        <div class="omset-item"><div class="omset-label">Agung</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_agung" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Luthfi</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_luthfi" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Rei</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_rei" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">Koko</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_koko" placeholder="0" oninput="recalcOmset()"/></div></div>
+      </div>
+    </div>
+
+    <!-- XCSR Marketplace -->
+    <div class="omset-section">
+      <div class="omset-section-title">🛒 XCSR Marketplace</div>
+      <div class="omset-grid">
+        <div class="omset-item"><div class="omset-label">XCSR Tokped</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_xcsr_tokped" placeholder="0" oninput="recalcOmset()"/></div></div>
+        <div class="omset-item"><div class="omset-label">XCSR Shopee</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_xcsr_shopee" placeholder="0" oninput="recalcOmset()"/></div></div>
+      </div>
+    </div>
+
+    <!-- TOTAL -->
+    <div class="omset-total-card">
+      <div class="omset-total-label">🏆 TOTAL PENJUALAN</div>
+      <div class="omset-total-val" id="omsetTotalBig">Rp 0</div>
+      <div class="omset-total-sub" id="omsetTotalSub">Isi form di atas untuk melihat total</div>
+    </div>
+
+    <!-- Save button bottom -->
+    <button class="btn bg-gold" onclick="saveOmset()" style="width:100%;height:48px;font-size:16px;border-radius:12px;margin-top:4px;">
+      💾 Simpan Data Omset
+    </button>
+
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ ADMIN PAGE ═══ -->
+<div class="page" id="page-admin">
+<div class="container">
+
+  <!-- Login Screen -->
+  <div id="adminLogin" style="max-width:400px;margin:60px auto;text-align:center;">
+    <div style="font-size:60px;margin-bottom:14px;">🔐</div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:white;margin-bottom:6px;">Admin Access</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#6060a0;letter-spacing:1px;margin-bottom:24px;">Hanya untuk Jefferson</div>
+    <input type="password" id="adminPwd" placeholder="Enter password..." style="text-align:center;font-size:18px;padding:14px;background:#161624;border:1px solid #252540;border-radius:12px;color:white;font-family:'Space Grotesk',sans-serif;width:100%;margin-bottom:12px;" onkeypress="if(event.key==='Enter')checkAdminPwd()"/>
+    <button class="btn bg-gold" onclick="checkAdminPwd()" style="width:100%;height:48px;font-size:15px;border-radius:12px;">🔓 Unlock Admin</button>
+    <div id="adminPwdError" style="color:#ff3b5c;font-family:'Space Mono',monospace;font-size:11px;margin-top:10px;display:none;">❌ Wrong password</div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="adminPanel" style="display:none;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div class="sl" style="margin-bottom:4px;">⚙️ Admin Control Panel</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Settings persist for entire team</div>
+      </div>
+      <button class="btn" style="background:#252540;color:#e8e8f8;height:34px;font-size:11px;" onclick="adminLogout()">🔒 Lock Admin</button>
+    </div>
+
+    <!-- Section: Edit Records -->
+    <div class="omset-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="omset-section-title" style="margin-bottom:0;">📝 Edit / Delete Records</div>
+        <button onclick="adminRefreshAll()" class="btn" style="background:rgba(68,138,255,0.1);border:1px solid rgba(68,138,255,0.3);color:#448aff;height:30px;font-size:11px;padding:0 12px;">🔄 Refresh</button>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:14px;">Fix wrong entries, edit any field, or delete mistakes.</div>
+
+      <!-- Filter bar -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div class="ig">
+          <div class="igl">Filter Date</div>
+          <input type="date" id="editFilterDate" onchange="renderEditRecords()" style="color-scheme:dark;"/>
+        </div>
+        <div class="ig">
+          <div class="igl">Filter SP</div>
+          <select id="editFilterSP" onchange="renderEditRecords()">
+            <option value="">All Salespeople</option>
+          </select>
+        </div>
+        <div class="ig">
+          <div class="igl">Type</div>
+          <select id="editFilterType" onchange="renderEditRecords()">
+            <option value="all">All</option>
+            <option value="sales">💰 Sales/Closes</option>
+            <option value="activity">📞 Calls/Followups</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Records list -->
+      <div id="editRecordsList" style="display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto;"></div>
+
+      <div id="editRecordsEmpty" style="text-align:center;padding:30px;color:#6060a0;font-family:'Space Mono',monospace;font-size:11px;">
+        Pick a date to see records
+      </div>
+    </div>
+
+    <!-- Section: Daily Targets -->
+    <div class="omset-section">
+      <div class="omset-section-title">🎯 Daily Targets</div>
+      <div class="omset-grid">
+        <div class="omset-item">
+          <div class="omset-label">Daily Chat Target</div>
+          <div class="omset-input-wrap"><span class="omset-rp">💬</span><input type="number" class="omset-input" id="setChatTarget" placeholder="160"/></div>
+        </div>
+        <div class="omset-item">
+          <div class="omset-label">Daily Revenue Target (Rp)</div>
+          <div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="setRevTarget" placeholder="70000000"/></div>
+        </div>
+        <div class="omset-item">
+          <div class="omset-label">Submission Deadline (Hour, 24h)</div>
+          <div class="omset-input-wrap"><span class="omset-rp">⏰</span><input type="number" class="omset-input" id="setDeadline" placeholder="14" min="0" max="23"/></div>
+        </div>
+      </div>
+      <button class="btn bg-gold" onclick="saveTargets()" style="margin-top:12px;width:100%;">💾 Save Targets</button>
+    </div>
+
+    <!-- Section: Product Prices -->
+    <div class="omset-section">
+      <div class="omset-section-title">💰 Product Prices</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:12px;">Edit existing prices or add new products. Click 🗑 to delete.</div>
+      <div id="adminProductList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-top:14px;align-items:end;">
+        <div class="ig"><div class="igl">New Product Name</div><input type="text" id="newProdName" placeholder="e.g. XCS PRO"/></div>
+        <div class="ig"><div class="igl">Price (Rp)</div><input type="number" id="newProdPrice" placeholder="0"/></div>
+        <button class="btn bg-gold" onclick="addNewProduct()">➕ Add</button>
+      </div>
+    </div>
+
+    <!-- Section: Team Members -->
+    <div class="omset-section">
+      <div class="omset-section-title">👥 Team Members</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:12px;">Manage salespeople for each team. Add or remove members.</div>
+      <div id="adminTeamList" style="display:flex;flex-direction:column;gap:14px;"></div>
+    </div>
+
+    <!-- Section: Data Management -->
+    <div class="omset-section">
+      <div class="omset-section-title" style="color:#ff3b5c;">⚠️ Danger Zone</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:14px;">These actions cannot be undone. Use with caution.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn" style="background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:42px;" onclick="exportAllData()">📥 Export All Data (CSV)</button>
+        <button class="btn" style="background:rgba(255,107,26,0.1);border:1px solid rgba(255,107,26,0.3);color:#ff6b1a;height:42px;" onclick="resetTodayData()">🔄 Reset Today's Data</button>
+        <button class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:42px;grid-column:span 2;" onclick="resetAllData()">🗑️ Delete ALL Data</button>
+      </div>
+    </div>
+
+    <!-- Section: Change Password -->
+    <div class="omset-section">
+      <div class="omset-section-title">🔑 Change Admin Password</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+        <div class="ig"><div class="igl">Current Password</div><input type="password" id="currentPwd"/></div>
+        <div class="ig"><div class="igl">New Password</div><input type="password" id="newPwd"/></div>
+        <button class="btn bg-gold" onclick="changePassword()">🔐 Update</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<!-- CUSTOM CONFIRM MODAL -->
+<div class="mo" id="confirmMo" style="display:none">
+  <div style="background:#161624;border:1px solid #252540;border-radius:18px;padding:22px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div id="confirmTitle" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:white;margin-bottom:8px;">Confirm</div>
+    <div id="confirmMessage" style="font-family:'Space Mono',monospace;font-size:12px;color:#e8e8f8;line-height:1.6;margin-bottom:18px;white-space:pre-wrap;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeConfirmMo(false)" class="btn" style="flex:1;background:#252540;color:white;height:40px;">Cancel</button>
+      <button id="confirmOkBtn" onclick="closeConfirmMo(true)" class="btn" style="flex:1;background:#ff3b5c;color:white;height:40px;">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ENTRY DATE CALENDAR -->
+<div class="cal-overlay" id="entryCalOverlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="cal-box" onclick="event.stopPropagation()">
+    <div class="cal-handle"></div>
+    <div class="cal-topbar">
+      <div class="cal-topbar-label" id="entryCalTopLabel" onclick="toggleEntryYearMonth()">
+        <span id="entryCalTopText">— —</span><span class="chevron">▼</span>
+      </div>
+      <div class="cal-topbar-today" onclick="entryJumpToday()">Today</div>
+    </div>
+    <div class="cal-year-picker" id="entryCalYearPicker"><div class="cal-year-list" id="entryCalYearList"></div></div>
+    <div class="cal-month-picker" id="entryCalMonthPicker"></div>
+    <div class="cal-month-nav" id="entryCalMonthNav">
+      <button class="cal-mnav-btn" onclick="entryCalPrevMonth()">‹</button>
+      <div class="cal-month-display" id="entryCalMonthDisplay">—</div>
+      <button class="cal-mnav-btn" onclick="entryCalNextMonth()">›</button>
+    </div>
+    <div class="cal-day-view">
+      <div class="cal-grid">
+        <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+        <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+        <div id="entryCalDays" style="display:contents"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OMSET CALENDAR POPUP -->
+<div class="cal-overlay" id="omsetCalOverlay" style="display:none" onclick="handleOmsetCalClick(event)">
+  <div class="cal-box" onclick="event.stopPropagation()">
+    <div class="cal-handle"></div>
+    <div class="cal-topbar">
+      <div class="cal-topbar-label" id="omsetCalTopLabel" onclick="toggleOmsetYearMonth()">
+        <span id="omsetCalTopText">— —</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="cal-topbar-today" onclick="omsetJumpToday()">Today</div>
+    </div>
+    <div class="cal-year-picker" id="omsetCalYearPicker"><div class="cal-year-list" id="omsetCalYearList"></div></div>
+    <div class="cal-month-picker" id="omsetCalMonthPicker"></div>
+    <div class="cal-month-nav" id="omsetCalMonthNav">
+      <button class="cal-mnav-btn" onclick="omsetCalPrevMonth()">‹</button>
+      <div class="cal-month-display" id="omsetCalMonthDisplay">—</div>
+      <button class="cal-mnav-btn" onclick="omsetCalNextMonth()">›</button>
+    </div>
+    <div class="cal-day-view">
+      <div class="cal-grid">
+        <div class="cal-dow">S</div><div class="cal-dow">M</div><div class="cal-dow">T</div>
+        <div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div>
+        <div id="omsetCalDays" style="display:contents"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SP MODAL -->
+<div class="mo" id="spMo" style="display:none" onclick="closeSPMo(event)">
+  <div class="mbox" onclick="event.stopPropagation()">
+    <div class="mhd">
+      <div class="mav" id="mAv"></div>
+      <div><div class="mn" id="mName">—</div><div class="mteam" id="mTeam">—</div></div>
+      <span class="mc" onclick="closeSPMo()">✕</span>
+    </div>
+    <div class="mk-grid" id="mKPIs"></div>
+    <div class="sl" style="margin-bottom:8px">Products Sold</div>
+    <div id="mProds"></div>
+  </div>
+</div>
+
+<!-- WA MODAL -->
+<div class="mo" id="waMo" style="display:none" onclick="closeWAMo(event)">
+  <div class="wa-box" onclick="event.stopPropagation()">
+    <div class="pt"><span>📲 WhatsApp Report</span><span style="cursor:pointer;color:#6060a0" onclick="closeWAMo()">✕</span></div>
+    <div class="wa-pre" id="waPre"></div>
+    <div class="ma">
+      <button class="btn bg-wa" style="flex:1" onclick="copyWAText()">📋 Copy</button>
+      <button class="btn bg-gold" style="flex:1" onclick="sendWA()">📲 Open WA</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
