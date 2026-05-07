@@ -672,7 +672,7 @@ function aggTeams(entries,acts){
   const t={};
   Object.keys(TM).forEach(k=>t[k]={chats:0,closes:0,revenue:0,calls:0,fups:0});
   entries.forEach(e=>{if(t[e.team]){t[e.team].chats+=e.chats;t[e.team].closes+=e.units;t[e.team].revenue+=e.revenue;}});
-  acts.forEach(a=>{if(t[a.team]){t[a.team].calls+=a.calls;t[a.team].fups+=a.fups;}});
+  acts.forEach(a=>{if(t[a.team]){t[a.team].calls+=a.calls;t[a.team].fups+=a.fups;t[a.team].chats+=a.chats;}});
   return Object.entries(t).map(([n,d])=>({n,...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue);
 }
 function aggSP(entries,acts){
@@ -693,7 +693,7 @@ function aggSP(entries,acts){
   acts.forEach(a=>{
     const k=a.sp+'|'+a.team;
     if(!s[k])s[k]={sp:a.sp,team:a.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
-    s[k].calls+=a.calls;s[k].fups+=a.fups;
+    s[k].calls+=a.calls;s[k].fups+=a.fups;s[k].chats+=a.chats;
   });
   return Object.values(s).map(d=>({...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue||b.chats-a.chats);
 }
@@ -1026,11 +1026,12 @@ function renderMonthly(){
       daySPMap[sk].rev+=e.revenue;
     });
     acts.forEach(a=>{
-      totalCalls+=a.calls;totalFups+=a.fups;
-      if(teamTotals[a.team]){teamTotals[a.team].calls+=a.calls;teamTotals[a.team].fups+=a.fups;}
+      totalCalls+=a.calls;totalFups+=a.fups;totalChats+=a.chats;
+      dayChats+=a.chats;
+      if(teamTotals[a.team]){teamTotals[a.team].calls+=a.calls;teamTotals[a.team].fups+=a.fups;teamTotals[a.team].chats+=a.chats;}
       const sk=a.sp+'|'+a.team;
       if(!spTotals[sk])spTotals[sk]={sp:a.sp,team:a.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
-      spTotals[sk].calls+=a.calls;spTotals[sk].fups+=a.fups;
+      spTotals[sk].calls+=a.calls;spTotals[sk].fups+=a.fups;spTotals[sk].chats+=a.chats;
     });
 
     if(dayRev>bestRev){bestRev=dayRev;bestDate=k;}
