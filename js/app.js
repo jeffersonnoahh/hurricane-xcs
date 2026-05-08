@@ -478,44 +478,12 @@ function updateActSP(){
 }
 
 function getActDateKey(){
-  const sel=document.getElementById('aDateSel').value;
-  if(sel==='yesterday'){const d=new Date();d.setDate(d.getDate()-1);return dk(d);}
-  if(sel==='today'){return dk(new Date());}
-  if(sel==='custom'){
-    const v=document.getElementById('aCustomDate').value;
-    return v||dk(new Date());
-  }
-  return dk(new Date());
-}
-
-function updateActDateLabel(){
-  const sel=document.getElementById('aDateSel').value;
-  const customWrap=document.getElementById('aCustomDateWrap');
-  const labelWrap=document.getElementById('aDateLabelWrap');
-
-  if(sel==='custom'){
-    customWrap.style.display='';
-    labelWrap.style.display='none';
-    // Set default to yesterday
-    const y=new Date();y.setDate(y.getDate()-1);
-    document.getElementById('aCustomDate').value=dk(y);
-    document.getElementById('aCustomDate').max=dk(new Date());
-  } else {
-    customWrap.style.display='none';
-    labelWrap.style.display='';
-    const key=getActDateKey();
-    const d=new Date(key+'T00:00:00');
-    document.getElementById('aDateLabel').textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-  }
+  const d=new Date();d.setDate(d.getDate()-1);return dk(d);
 }
 
 function initActDate(){
-  // Set default label to yesterday
   const y=new Date();y.setDate(y.getDate()-1);
   document.getElementById('aDateLabel').textContent=y.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-  // Set max date for custom picker
-  const cd=document.getElementById('aCustomDate');
-  if(cd)cd.max=dk(new Date());
 }
 // ══ PRICE MODE ══
 let currentPriceMode='normal';

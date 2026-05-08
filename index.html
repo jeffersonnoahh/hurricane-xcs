@@ -273,18 +273,12 @@
   <div class="act-form">
     <div class="pt">➕ Add Activity</div>
 
-    <!-- Reporting date selector -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div class="ig">
-        <div class="igl">Reporting For (Date)</div>
-        <select id="aDateSel" onchange="updateActDateLabel()">
-          <option value="yesterday">Yesterday</option>
-          <option value="today">Today</option>
-        </select>
-      </div>
-      <div class="ig" id="aDateLabelWrap">
-        <div class="igl">Selected Date</div>
-        <div style="background:#0e0e1a;border:1px solid #1e1e32;border-radius:6px;padding:7px 9px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#f5c518" id="aDateLabel">—</div>
+    <!-- Reporting date — always yesterday -->
+    <div style="background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.15);border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px">📅</span>
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:2px;text-transform:uppercase;">Reporting For</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#f5c518;" id="aDateLabel">—</div>
       </div>
     </div>
 
