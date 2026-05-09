@@ -478,12 +478,22 @@ function updateActSP(){
 }
 
 function getActDateKey(){
+  const sel=document.getElementById('aDateSel');
+  const mode=sel?sel.value:'yesterday';
+  if(mode==='today'){return dk(new Date());}
   const d=new Date();d.setDate(d.getDate()-1);return dk(d);
 }
 
+function updateActDateLabel(){
+  const lbl=document.getElementById('aDateLabel');
+  if(!lbl)return;
+  const key=getActDateKey();
+  const d=new Date(key+'T00:00:00');
+  lbl.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+
 function initActDate(){
-  const y=new Date();y.setDate(y.getDate()-1);
-  document.getElementById('aDateLabel').textContent=y.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  updateActDateLabel();
 }
 // ══ PRICE MODE ══
 let currentPriceMode='normal';

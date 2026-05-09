@@ -265,20 +265,26 @@
   <div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.2);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px">📋</span>
     <div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#f5c518;letter-spacing:1px;">Reporting for YESTERDAY's activity</div>
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0;margin-top:2px;">Log calls & followups you did yesterday. Deadline: 2:00 PM today.</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#f5c518;letter-spacing:1px;">Log Calls, Chats & Follow Ups</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0;margin-top:2px;">Pick "Yesterday" to log past activity (deadline 2 PM) or "Today" to log activity you did today.</div>
     </div>
   </div>
 
   <div class="act-form">
     <div class="pt">➕ Add Activity</div>
 
-    <!-- Reporting date — always yesterday -->
-    <div style="background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.15);border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-      <span style="font-size:16px">📅</span>
-      <div>
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:2px;text-transform:uppercase;">Reporting For</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#f5c518;" id="aDateLabel">—</div>
+    <!-- Reporting date selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div class="ig">
+        <div class="igl">Reporting For</div>
+        <select id="aDateSel" onchange="updateActDateLabel()">
+          <option value="yesterday">Yesterday</option>
+          <option value="today">Today</option>
+        </select>
+      </div>
+      <div class="ig">
+        <div class="igl">Selected Date</div>
+        <div style="background:#0e0e1a;border:1px solid #1e1e32;border-radius:6px;padding:7px 9px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#f5c518" id="aDateLabel">—</div>
       </div>
     </div>
 
