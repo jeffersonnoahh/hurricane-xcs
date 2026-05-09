@@ -7,7 +7,7 @@ const P={
 };
 let TM={
   'Christ A':{m:['Arfin','Erica','Nathan'],c:'#3b9eff',bg:'#0d1e30',e:'✝️'},
-  'Christ B':{m:['Labib','Rico'],c:'#7b6fff',bg:'#150d30',e:'✝️'},
+  'Christ B':{m:['Rico'],c:'#7b6fff',bg:'#150d30',e:'✝️'},
   'Livia':   {m:['Shifa','Livia','Sales 1'],c:'#cc44cc',bg:'#2a1230',e:'🌸'},
   'Valen':   {m:['Valen','Melda','Maryam','Amel'],c:'#f5c518',bg:'#1a1400',e:'🔥'},
   'Agung':   {m:['Agung','Rei','Koko','Luthfi'],c:'#2eccc8',bg:'#0d2020',e:'🦁'},
