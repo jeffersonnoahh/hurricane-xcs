@@ -650,17 +650,10 @@
 <div class="page" id="page-warning">
 <div class="container">
 
-  <!-- Header + Period Selector -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-    <div>
-      <div class="sl" style="margin-bottom:4px;color:#ff3b5c;">⚠️ Performance Warning</div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Salespeople below performance thresholds</div>
-    </div>
-    <div class="ins-period-tabs">
-      <button class="ins-period-btn active" onclick="setWarnPeriod('yesterday',this)">Yesterday</button>
-      <button class="ins-period-btn" onclick="setWarnPeriod('last7',this)">Last 7 Days</button>
-      <button class="ins-period-btn" onclick="setWarnPeriod('thisMonth',this)">This Month</button>
-    </div>
+  <!-- Header -->
+  <div style="margin-bottom:20px;">
+    <div class="sl" style="margin-bottom:4px;color:#ff3b5c;">⚠️ Performance Warning</div>
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Revenue = total omset · Chats/Calls/F-ups = most recent log per SP</div>
   </div>
 
   <!-- Threshold settings -->
@@ -674,22 +667,22 @@
     </div>
     <div class="warn-thresh-grid" id="warnThreshGrid">
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">💰 Min Revenue (Month)</div>
+        <div class="warn-thresh-lbl">💰 Min Total Omset</div>
         <div class="warn-thresh-val" id="wtRev">Rp 50.000.000</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtRevIn" value="50000000" style="display:none"/>
       </div>
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">💬 Min Chats (Daily)</div>
+        <div class="warn-thresh-lbl">💬 Min Chats (Last Log)</div>
         <div class="warn-thresh-val" id="wtChats">7</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtChatsIn" value="7" style="display:none"/>
       </div>
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">📞 Min Calls (Daily)</div>
+        <div class="warn-thresh-lbl">📞 Min Calls (Last Log)</div>
         <div class="warn-thresh-val" id="wtCalls">7</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtCallsIn" value="7" style="display:none"/>
       </div>
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">🔄 Min Follow-ups (Daily)</div>
+        <div class="warn-thresh-lbl">🔄 Min Follow-ups (Last Log)</div>
         <div class="warn-thresh-val" id="wtFups">15</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtFupsIn" value="15" style="display:none"/>
       </div>

@@ -1660,18 +1660,9 @@ function renderInsights(){
 }
 
 // ══ PERFORMANCE WARNING ══
-let _warnPeriod='yesterday'; // 'yesterday' | 'last7' | 'thisMonth'
 let _warnThresh={rev:50000000,chats:7,calls:7,fups:15};
 // Load saved thresholds
 try{const s=JSON.parse(localStorage.getItem('hxcs_warn_thresh')||'null');if(s)Object.assign(_warnThresh,s);}catch(e){}
-
-function setWarnPeriod(p,btn){
-  _warnPeriod=p;
-  // Update threshold display labels for daily vs monthly context
-  document.querySelectorAll('#page-warning .ins-period-btn').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  renderWarning();
-}
 
 function toggleWarnThreshEdit(){
   const showing=document.getElementById('wtRevIn').style.display!=='none';
@@ -1717,29 +1708,6 @@ function saveWarnThresh(){
   renderWarning();
 }
 
-function _warnKeysForPeriod(){
-  const today=new Date();
-  if(_warnPeriod==='yesterday'){
-    const y=new Date();y.setDate(y.getDate()-1);
-    return[dk(y)];
-  }
-  if(_warnPeriod==='last7'){
-    const arr=[];
-    for(let i=1;i<=7;i++){const d=new Date();d.setDate(d.getDate()-i);arr.push(dk(d));}
-    return arr;
-  }
-  // thisMonth
-  const y=today.getFullYear(),m=today.getMonth();
-  const arr=[];
-  const last=new Date(y,m+1,0).getDate();
-  for(let i=1;i<=last;i++){
-    const d=new Date(y,m,i);
-    if(d>today)break;
-    arr.push(dk(d));
-  }
-  return arr;
-}
-
 function renderWarning(){
   // Update threshold display labels
   document.getElementById('wtRev').textContent=fRp(_warnThresh.rev);
@@ -1751,88 +1719,87 @@ function renderWarning(){
   document.getElementById('wsCallsThresh').textContent=_warnThresh.calls;
   document.getElementById('wsFupsThresh').textContent=_warnThresh.fups;
 
-  const keys=_warnKeysForPeriod();
-  const numDays=keys.length||1;
-
-  // For daily thresholds (chats/calls/fups), if multi-day period, scale by num of days
-  // i.e., if period is 7 days, threshold becomes 7*7=49 chats minimum total
-  const chatThresh=_warnThresh.chats*numDays;
-  const callThresh=_warnThresh.calls*numDays;
-  const fupThresh=_warnThresh.fups*numDays;
-  const revThresh=_warnPeriod==='thisMonth'?_warnThresh.rev:Math.round(_warnThresh.rev/30*numDays);
-
-  // Build per-SP aggregates
+  // Build per-SP aggregates:
+  // - revenue = TOTAL across all dates
+  // - chats/calls/fups = MOST RECENT log entry's values (with date)
   const spMap={};
   Object.entries(TM).forEach(([team,tc])=>{
     tc.m.forEach(sp=>{
       const k=sp+'|'+team;
-      spMap[k]={sp,team,chats:0,calls:0,fups:0,closes:0,revenue:0};
+      spMap[k]={sp,team,revenue:0,chats:0,calls:0,fups:0,lastDate:null,lastDateLbl:'Never logged'};
     });
   });
-  // Sales entries
-  keys.forEach(k=>{
+
+  // Sum total revenue across ALL dates
+  Object.keys(allData||{}).forEach(k=>{
     (allData[k]||[]).forEach(e=>{
       if(!e||typeof e!=='object')return;
       const key=e.sp+'|'+e.team;
-      if(!spMap[key])spMap[key]={sp:e.sp,team:e.team,chats:0,calls:0,fups:0,closes:0,revenue:0};
-      spMap[key].closes+=(e.units||0);
+      if(!spMap[key])spMap[key]={sp:e.sp,team:e.team,revenue:0,chats:0,calls:0,fups:0,lastDate:null,lastDateLbl:'Never logged'};
       spMap[key].revenue+=(e.revenue||0);
     });
-    (allActs[k]||[]).forEach(a=>{
-      if(!a||typeof a!=='object')return;
-      const key=a.sp+'|'+a.team;
-      if(!spMap[key])spMap[key]={sp:a.sp,team:a.team,chats:0,calls:0,fups:0,closes:0,revenue:0};
-      spMap[key].chats+=(a.chats||0);
-      spMap[key].calls+=(a.calls||0);
-      spMap[key].fups+=(a.fups||0);
-    });
+  });
+
+  // For each SP, find their MOST RECENT activity log entry
+  const actDates=Object.keys(allActs||{}).sort().reverse(); // newest first
+  Object.values(spMap).forEach(s=>{
+    for(const date of actDates){
+      const arr=allActs[date]||[];
+      // Sum same-SP entries for that day (can have multiple)
+      const sameDay=arr.filter(a=>a&&a.sp===s.sp&&a.team===s.team);
+      if(sameDay.length>0){
+        s.chats=sameDay.reduce((t,a)=>t+(a.chats||0),0);
+        s.calls=sameDay.reduce((t,a)=>t+(a.calls||0),0);
+        s.fups=sameDay.reduce((t,a)=>t+(a.fups||0),0);
+        s.lastDate=date;
+        const d=new Date(date+'T00:00:00');
+        s.lastDateLbl=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        break;
+      }
+    }
   });
 
   const sps=Object.values(spMap);
 
-  // Categorize each SP
-  const failsRev=sps.filter(s=>s.revenue<revThresh);
-  const failsChats=sps.filter(s=>s.chats<chatThresh);
-  const failsCalls=sps.filter(s=>s.calls<callThresh);
-  const failsFups=sps.filter(s=>s.fups<fupThresh);
+  // Categorize
+  const failsRev=sps.filter(s=>s.revenue<_warnThresh.rev);
+  const failsChats=sps.filter(s=>s.chats<_warnThresh.chats);
+  const failsCalls=sps.filter(s=>s.calls<_warnThresh.calls);
+  const failsFups=sps.filter(s=>s.fups<_warnThresh.fups);
 
   const issuesPerSP={};
   sps.forEach(s=>{
     const issues=[];
-    if(s.revenue<revThresh)issues.push({type:'rev',gap:revThresh-s.revenue,curr:s.revenue,thresh:revThresh});
-    if(s.chats<chatThresh)issues.push({type:'chats',gap:chatThresh-s.chats,curr:s.chats,thresh:chatThresh});
-    if(s.calls<callThresh)issues.push({type:'calls',gap:callThresh-s.calls,curr:s.calls,thresh:callThresh});
-    if(s.fups<fupThresh)issues.push({type:'fups',gap:fupThresh-s.fups,curr:s.fups,thresh:fupThresh});
-    issuesPerSP[s.sp+'|'+s.team]={sp:s.sp,team:s.team,issues};
+    if(s.revenue<_warnThresh.rev)issues.push({type:'rev',curr:s.revenue,thresh:_warnThresh.rev,gap:_warnThresh.rev-s.revenue});
+    if(s.chats<_warnThresh.chats)issues.push({type:'chats',curr:s.chats,thresh:_warnThresh.chats,gap:_warnThresh.chats-s.chats,date:s.lastDateLbl});
+    if(s.calls<_warnThresh.calls)issues.push({type:'calls',curr:s.calls,thresh:_warnThresh.calls,gap:_warnThresh.calls-s.calls,date:s.lastDateLbl});
+    if(s.fups<_warnThresh.fups)issues.push({type:'fups',curr:s.fups,thresh:_warnThresh.fups,gap:_warnThresh.fups-s.fups,date:s.lastDateLbl});
+    issuesPerSP[s.sp+'|'+s.team]={sp:s.sp,team:s.team,issues,lastDateLbl:s.lastDateLbl};
   });
 
-  // Critical = 2+ issues
   const critical=Object.values(issuesPerSP).filter(x=>x.issues.length>=2).sort((a,b)=>b.issues.length-a.issues.length);
   const flaggedTotal=Object.values(issuesPerSP).filter(x=>x.issues.length>0).length;
-  const goodSPs=sps.filter(s=>{
-    const x=issuesPerSP[s.sp+'|'+s.team];
-    return x&&x.issues.length===0;
-  });
+  const goodSPs=sps.filter(s=>issuesPerSP[s.sp+'|'+s.team].issues.length===0);
 
-  // Summary header
+  // Summary
   document.getElementById('warnTotalCount').textContent=flaggedTotal;
-  const periodLbl={yesterday:'Yesterday',last7:'Last 7 Days',thisMonth:'This Month'}[_warnPeriod];
   if(flaggedTotal===0){
-    document.getElementById('warnSummaryText').textContent=`All clear! 🎉 No SP below thresholds (${periodLbl}).`;
+    document.getElementById('warnSummaryText').textContent='All clear! 🎉 Every SP meets all thresholds.';
   } else {
-    document.getElementById('warnSummaryText').textContent=`${flaggedTotal} salespeople below thresholds — ${periodLbl}`;
+    document.getElementById('warnSummaryText').textContent=`${flaggedTotal} salespeople below thresholds`;
   }
 
-  // Critical section
   const tcGet=t=>TM[t]||{c:'#888',bg:'#161624',e:'⭐'};
   const issueLbl=(t)=>({rev:'💰 LOW REV',chats:'💬 LOW CHATS',calls:'📞 LOW CALLS',fups:'🔄 LOW FUPS'}[t]||t);
+
+  // Critical card
   const renderCriticalCard=x=>{
     const tc=tcGet(x.team);
     return `<div class="warn-crit-card">
       <div class="av" style="background:${tc.bg};color:${tc.c}">${x.sp[0]}</div>
       <div>
         <div class="warn-crit-name">${x.sp}</div>
-        <div class="warn-crit-team">Team ${x.team} ${tc.e}</div>
+        <div class="warn-crit-team">Team ${x.team} ${tc.e} · last log ${x.lastDateLbl}</div>
         <div class="warn-crit-issues">${x.issues.map(i=>`<span class="warn-crit-issue">${issueLbl(i.type)}</span>`).join('')}</div>
       </div>
       <div>
@@ -1841,25 +1808,26 @@ function renderWarning(){
       </div>
     </div>`;
   };
-  const critEl=document.getElementById('warnCritical');
-  critEl.innerHTML=critical.length===0?'<div class="warn-empty">✅ No SP failing 2+ thresholds</div>':critical.map(renderCriticalCard).join('');
+  document.getElementById('warnCritical').innerHTML=critical.length===0?'<div class="warn-empty">✅ No SP failing 2+ thresholds</div>':critical.map(renderCriticalCard).join('');
 
-  // Per-category sections
+  // Per-category rows
   const renderRow=(s,issueType)=>{
     const tc=tcGet(s.team);
     const issue=issuesPerSP[s.sp+'|'+s.team].issues.find(i=>i.type===issueType);
     if(!issue)return '';
-    let currTxt,gapTxt;
+    let currTxt,gapTxt,subTxt='';
     if(issueType==='rev'){
       currTxt=fRp(issue.curr);
       gapTxt='-'+fRp(issue.gap);
+      subTxt='total omset';
     } else {
       currTxt=issue.curr+' / '+issue.thresh;
       gapTxt='-'+issue.gap;
+      subTxt=s.lastDate?'last: '+s.lastDateLbl:'NEVER LOGGED';
     }
     return `<div class="warn-row">
       <div class="av" style="background:${tc.bg};color:${tc.c}">${s.sp[0]}</div>
-      <div><div class="nm">${s.sp}</div><div class="tm">${s.team}</div></div>
+      <div><div class="nm">${s.sp}</div><div class="tm">${s.team} · ${subTxt}</div></div>
       <div class="stat">${currTxt}</div>
       <div class="gap">${gapTxt}</div>
     </div>`;
@@ -1880,7 +1848,7 @@ function renderWarning(){
       const tc=tcGet(s.team);
       return `<div class="warn-good-row">
         <div class="av" style="background:${tc.bg};color:${tc.c}">${s.sp[0]}</div>
-        <div><div class="nm">${s.sp}</div><div class="tm">${s.team} · ${s.chats}c · ${s.calls}call · ${s.fups}f · ${fRp(s.revenue)}</div></div>
+        <div><div class="nm">${s.sp}</div><div class="tm">${s.team} · ${fRp(s.revenue)} omset · last log ${s.lastDateLbl}</div></div>
         <div class="badge">✓ ALL OK</div>
       </div>`;
     }).join('');
