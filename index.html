@@ -290,9 +290,9 @@
         </select>
       </div>
       <div class="ig"><div class="igl">Salesperson</div><select id="aSP"><option>Arfin</option><option>Erica</option><option>Nathan</option></select></div>
-      <div class="ig"><div class="igl">💬 Chats</div><input type="number" id="aChats" placeholder="0" min="0"/></div>
-      <div class="ig"><div class="igl">📞 Calls Made</div><input type="number" id="aCalls" placeholder="0" min="0"/></div>
-      <div class="ig"><div class="igl">🔄 Follow Ups</div><input type="number" id="aFups" placeholder="0" min="0"/></div>
+      <div class="ig"><div class="igl">💬 Chats</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aChats" placeholder="0"/></div>
+      <div class="ig"><div class="igl">📞 Calls Made</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aCalls" placeholder="0"/></div>
+      <div class="ig"><div class="igl">🔄 Follow Ups</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aFups" placeholder="0"/></div>
       <div class="ig"><div class="igl">Notes (opt)</div><input type="text" id="aNotes" placeholder="e.g. warm lead"/></div>
       <button class="btn bg-gold" style="align-self:end" onclick="addActivity()">ADD</button>
     </div>

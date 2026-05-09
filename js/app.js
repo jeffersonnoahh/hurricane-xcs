@@ -626,11 +626,19 @@ function addActivity(){
 
     allActs[targetKey]=arr;
     if(window.db){
-      window.db.ref('activities/'+targetKey).set(arr).catch(err=>{
-        showToast('Save failed: '+(err.message||'check connection'),'error');
+      showToast('💾 Saving...','info');
+      window.db.ref('activities/'+targetKey).set(arr).then(()=>{
+        const dateLbl=new Date(targetKey+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        showToast(isLate?'⚠️ Logged for '+dateLbl+' — LATE (after 2 PM)':'✅ Logged for '+dateLbl,isLate?'info':'success');
+      }).catch(err=>{
+        showToast('❌ Save failed — check internet: '+(err.message||''),'error');
       });
     } else {
-      try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+      try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));
+        showToast('⚠️ Saved offline only — Firebase not connected','error');
+      }catch(e){
+        showToast('❌ Cannot save — storage blocked','error');
+      }
     }
 
     if(chatsEl)chatsEl.value='';
@@ -638,8 +646,6 @@ function addActivity(){
     fupsEl.value='';
     if(notesEl)notesEl.value='';
     renderAll();
-    const dateLbl=new Date(targetKey+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    showToast(isLate?'⚠️ Logged for '+dateLbl+' — LATE (after 2 PM)':'✅ Logged for '+dateLbl,isLate?'info':'success');
   }catch(err){
     console.error('addActivity error:',err);
     showToast('Error: '+(err.message||'something went wrong'),'error');
