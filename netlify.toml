@@ -1,17 +1,20 @@
 [build]
   publish = "."
 
+# Always revalidate — browser must check ETag before reusing cached file.
+# Uses zero bandwidth when nothing changed (304 Not Modified) but always
+# picks up updates immediately when there is one. No more stale phone caches.
 [[headers]]
   for = "/*"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, must-revalidate"
 
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "no-cache, must-revalidate"
 
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "no-cache, must-revalidate"
