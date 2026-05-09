@@ -585,38 +585,65 @@ function sE2(key,arr){
 
 // ══ ADD ACTIVITY ══
 function addActivity(){
-  const team=document.getElementById('aTeam').value;
-  const sp=document.getElementById('aSP').value;
-  const chats=parseInt(document.getElementById('aChats')?.value)||0;
-  const calls=parseInt(document.getElementById('aCalls').value)||0;
-  const fups=parseInt(document.getElementById('aFups').value)||0;
-  const notes=document.getElementById('aNotes').value.trim();
-  if(!chats&&!calls&&!fups){alert('Enter chats, calls or follow ups!');return;}
+  try{
+    const teamEl=document.getElementById('aTeam');
+    const spEl=document.getElementById('aSP');
+    const chatsEl=document.getElementById('aChats');
+    const callsEl=document.getElementById('aCalls');
+    const fupsEl=document.getElementById('aFups');
+    const notesEl=document.getElementById('aNotes');
 
-  const targetKey=getActDateKey();
-  const now=new Date();
-  const hour=now.getHours();
-  const minute=now.getMinutes();
-  const isLate=(hour>14)||(hour===14&&minute>0); // after 2:00 PM
+    if(!teamEl||!spEl||!callsEl||!fupsEl){
+      showToast('Form not loaded — please refresh','error');return;
+    }
 
-  const arr=allActs[targetKey]||[];
-  arr.push({team,sp,chats,calls,fups,notes,ts:Date.now(),isLate});
+    const team=teamEl.value;
+    const sp=spEl.value;
 
-  allActs[targetKey]=arr;
-  if(window.db){
-    if(!arr.length)window.db.ref('activities/'+targetKey).remove();
-    else window.db.ref('activities/'+targetKey).set(arr);
-  } else {
-    try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+    if(!team||!sp){
+      showToast('Please select team and salesperson','error');return;
+    }
+
+    // Robust number parsing — strip whitespace and commas
+    const parseNum=v=>{const n=parseInt(String(v||'').replace(/[^0-9-]/g,''));return isNaN(n)?0:n;};
+    const chats=parseNum(chatsEl?.value);
+    const calls=parseNum(callsEl.value);
+    const fups=parseNum(fupsEl.value);
+    const notes=(notesEl?.value||'').trim();
+
+    if(!chats&&!calls&&!fups){
+      showToast('⚠️ Enter at least one: chats, calls, or follow ups','error');return;
+    }
+
+    const targetKey=getActDateKey();
+    const now=new Date();
+    const hour=now.getHours();
+    const minute=now.getMinutes();
+    const isLate=(hour>14)||(hour===14&&minute>0); // after 2:00 PM
+
+    const arr=allActs[targetKey]||[];
+    arr.push({team,sp,chats,calls,fups,notes,ts:Date.now(),isLate});
+
+    allActs[targetKey]=arr;
+    if(window.db){
+      window.db.ref('activities/'+targetKey).set(arr).catch(err=>{
+        showToast('Save failed: '+(err.message||'check connection'),'error');
+      });
+    } else {
+      try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+    }
+
+    if(chatsEl)chatsEl.value='';
+    callsEl.value='';
+    fupsEl.value='';
+    if(notesEl)notesEl.value='';
+    renderAll();
+    const dateLbl=new Date(targetKey+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    showToast(isLate?'⚠️ Logged for '+dateLbl+' — LATE (after 2 PM)':'✅ Logged for '+dateLbl,isLate?'info':'success');
+  }catch(err){
+    console.error('addActivity error:',err);
+    showToast('Error: '+(err.message||'something went wrong'),'error');
   }
-
-  if(document.getElementById('aChats'))document.getElementById('aChats').value='';
-  document.getElementById('aCalls').value='';
-  document.getElementById('aFups').value='';
-  document.getElementById('aNotes').value='';
-  renderAll();
-  const msg=isLate?'⚠️ Activity logged — marked as LATE SUBMISSION (after 2 PM)':'✅ Activity logged for '+new Date(targetKey+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+'!';
-  alert(msg);
 }
 function removeActivityByDate(dateKey,ts){
   const arr=allActs[dateKey]||[];
