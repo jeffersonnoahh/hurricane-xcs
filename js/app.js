@@ -1708,6 +1708,10 @@ function saveWarnThresh(){
   renderWarning();
 }
 
+// Marketplace / channel accounts excluded from Warning page (not real reps)
+const _WARN_EXCLUDE=['Tokopedia','Live tiktok','Shopee live','Shopee'];
+const _isWarnExcluded=(sp)=>_WARN_EXCLUDE.some(x=>x.toLowerCase()===String(sp||'').toLowerCase());
+
 function renderWarning(){
   // Update threshold display labels
   document.getElementById('wtRev').textContent=fRp(_warnThresh.rev);
@@ -1722,9 +1726,11 @@ function renderWarning(){
   // Build per-SP aggregates:
   // - revenue = TOTAL across all dates
   // - chats/calls/fups = MOST RECENT log entry's values (with date)
+  // (marketplace/channel accounts are excluded entirely)
   const spMap={};
   Object.entries(TM).forEach(([team,tc])=>{
     tc.m.forEach(sp=>{
+      if(_isWarnExcluded(sp))return;
       const k=sp+'|'+team;
       spMap[k]={sp,team,revenue:0,chats:0,calls:0,fups:0,lastDate:null,lastDateLbl:'Never logged'};
     });
@@ -1734,6 +1740,7 @@ function renderWarning(){
   Object.keys(allData||{}).forEach(k=>{
     (allData[k]||[]).forEach(e=>{
       if(!e||typeof e!=='object')return;
+      if(_isWarnExcluded(e.sp))return;
       const key=e.sp+'|'+e.team;
       if(!spMap[key])spMap[key]={sp:e.sp,team:e.team,revenue:0,chats:0,calls:0,fups:0,lastDate:null,lastDateLbl:'Never logged'};
       spMap[key].revenue+=(e.revenue||0);
