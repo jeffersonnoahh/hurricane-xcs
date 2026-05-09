@@ -491,33 +491,6 @@ select:focus,input:focus{border-color:#f5c518;}
 .nr-team{font-family:'Space Mono',monospace;font-size:8px;color:#6060a0;letter-spacing:1px;}
 .nr-status{font-size:13px;flex-shrink:0;}
 
-/* ══ TREND PAGE ══ */
-.trend-card{
-  background:#161624;border:1px solid #252540;
-  border-radius:14px;padding:18px;position:relative;
-  transition:all 0.2s;
-}
-.trend-card:hover{border-color:#1e1e32;transform:translateY(-2px);}
-.trend-card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #252540;}
-.trend-av{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;flex-shrink:0;}
-.trend-name{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:white;}
-.trend-team{font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:1px;margin-top:1px;}
-.trend-badge{margin-left:auto;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;padding:3px 10px;border-radius:20px;flex-shrink:0;}
-.trend-badge.up{background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.2);}
-.trend-badge.dn{background:rgba(255,59,92,0.12);color:#ff3b5c;border:1px solid rgba(255,59,92,0.2);}
-.trend-badge.fl{background:rgba(255,255,255,0.05);color:#6060a0;border:1px solid #1e1e32;}
-.trend-rows{display:flex;flex-direction:column;gap:8px;}
-.trend-row{display:grid;grid-template-columns:70px 1fr 50px 40px;align-items:center;gap:8px;}
-.trend-lbl{font-family:'Space Mono',monospace;font-size:8px;color:#6060a0;letter-spacing:1px;text-transform:uppercase;}
-.trend-bar-track{height:5px;background:#1e1e32;border-radius:5px;overflow:hidden;}
-.trend-bar-fill{height:100%;border-radius:5px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);}
-.trend-val{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:white;text-align:right;}
-.trend-diff{font-size:11px;font-weight:700;text-align:right;}
-.tdiff-up{color:#00e676;}.tdiff-dn{color:#ff3b5c;}.tdiff-fl{color:#6060a0;}
-.tt-up{color:#00e676;font-weight:700;font-family:'Space Grotesk',sans-serif;font-size:14px;}
-.tt-dn{color:#ff3b5c;font-weight:700;font-family:'Space Grotesk',sans-serif;font-size:14px;}
-.tt-fl{color:#6060a0;font-family:'Space Grotesk',sans-serif;font-size:14px;}
-
 /* ══ PRICE TOGGLE ══ */
 .price-toggle-btn{
   background:#12121e;border:1px solid #252540;border-radius:8px;
@@ -571,9 +544,6 @@ select:focus,input:focus{border-color:#f5c518;}
 
   /* SP grid — 2 per row */
   .sp-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
-
-  /* Trend grid — 1 per row */
-  #trendGrid{grid-template-columns:1fr !important;}
 
   /* Tables — horizontal scroll */
   .tw{overflow-x:auto;}

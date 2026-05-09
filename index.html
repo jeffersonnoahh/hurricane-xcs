@@ -82,7 +82,6 @@
   <div class="nav-tab active" onclick="showPage('dashboard',this)">📊 Dashboard</div>
   <div class="nav-tab" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
   <div class="nav-tab" onclick="showPage('salespeople',this)">👥 Salespeople</div>
-  <div class="nav-tab" onclick="showPage('trend',this)">📈 SP Trend</div>
   <div class="nav-tab" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
   <div class="nav-tab" onclick="showPage('admin',this)" style="color:#7c4dff">⚙️ Admin</div>
 </div>
@@ -399,35 +398,6 @@
         <th>Date</th><th>Day</th><th>Chats</th><th>Closes</th><th>Revenue</th><th>Top SP</th>
       </tr></thead>
       <tbody id="mDayBody"></tbody>
-    </table>
-  </div>
-
-</div>
-</div>
-
-<!-- ═══ SP TREND PAGE ═══ -->
-<div class="page" id="page-trend">
-<div class="container">
-
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
-    <div class="sl" style="margin-bottom:0;flex:1">SP Performance Trend</div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Last 7 days vs previous 7 days</div>
-  </div>
-
-  <!-- Trend cards grid -->
-  <div id="trendGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:24px;"></div>
-
-  <!-- Team trend summary -->
-  <div class="sl">Team Trend Summary</div>
-  <div class="tw">
-    <table>
-      <thead><tr>
-        <th>Team</th>
-        <th>Chats (This Wk)</th><th>vs Last Wk</th>
-        <th>Closes (This Wk)</th><th>vs Last Wk</th>
-        <th>Revenue (This Wk)</th><th>vs Last Wk</th>
-      </tr></thead>
-      <tbody id="teamTrendBody"></tbody>
     </table>
   </div>
 

@@ -315,7 +315,6 @@ function showPage(p,el){
   document.getElementById('page-'+p).classList.add('active');
   el.classList.add('active');
   if(p==='monthly')renderMonthly();
-  else if(p==='trend')renderTrend();
   else if(p==='activity'){renderAll();renderNotReported();}
   else if(p==='omset')initOmset();
   else if(p==='admin'){if(adminUnlocked){loadAdminSettings();renderEditRecords();}}
@@ -1418,107 +1417,6 @@ function renderNotReported(){
           </div>`).join('')}
       </div>
     </div>`;
-}
-
-// ══ SP PERFORMANCE TREND ══
-function renderTrend(){
-  const thisWeekKeys=[],lastWeekKeys=[];
-  for(let i=0;i<7;i++){
-    const d1=new Date();d1.setDate(d1.getDate()-i);thisWeekKeys.push(dk(d1));
-    const d2=new Date();d2.setDate(d2.getDate()-i-7);lastWeekKeys.push(dk(d2));
-  }
-  function weekData(keys){
-    const sp={};
-    keys.flatMap(k=>allData[k]||[]).forEach(e=>{
-      const k=e.sp+'|'+e.team;
-      if(!sp[k])sp[k]={sp:e.sp,team:e.team,chats:0,closes:0,revenue:0,calls:0,fups:0};
-      sp[k].chats+=e.chats;sp[k].closes+=e.units;sp[k].revenue+=e.revenue;
-    });
-    keys.flatMap(k=>allActs[k]||[]).forEach(a=>{
-      const k=a.sp+'|'+a.team;
-      if(!sp[k])sp[k]={sp:a.sp,team:a.team,chats:0,closes:0,revenue:0,calls:0,fups:0};
-      sp[k].calls+=a.calls;sp[k].fups+=a.fups;
-    });
-    return sp;
-  }
-  const thisW=weekData(thisWeekKeys);
-  const lastW=weekData(lastWeekKeys);
-
-  function diffTxt(curr,prev,isRev){
-    const diff=curr-prev;
-    if(diff===0)return{cls:'tdiff-fl',txt:'='};
-    const pct=prev>0?Math.round(Math.abs(diff)/prev*100):100;
-    const arrow=diff>0?'↑':'↓';
-    return{cls:diff>0?'tdiff-up':'tdiff-dn',txt:`${arrow}${pct}%`};
-  }
-  function overallBadge(tw,lw){
-    if(!lw||(!lw.revenue&&!lw.chats))return{cls:'fl',txt:'— No prev'};
-    const d=tw.revenue-lw.revenue;
-    if(d>0)return{cls:'up',txt:'↑ Naik'};
-    if(d<0)return{cls:'dn',txt:'↓ Turun'};
-    return{cls:'fl',txt:'= Stabil'};
-  }
-
-  const allSPs=[];
-  Object.entries(TM).forEach(([tn,tc])=>tc.m.forEach(sp=>allSPs.push({sp,team:tn,tc})));
-  const maxChats=Math.max(1,...allSPs.map(({sp,team})=>(thisW[sp+'|'+team]||{}).chats||0));
-  const maxRev=Math.max(1,...allSPs.map(({sp,team})=>(thisW[sp+'|'+team]||{}).revenue||0));
-
-  document.getElementById('trendGrid').innerHTML=allSPs.map(({sp,team,tc})=>{
-    const k=sp+'|'+team;
-    const tw=thisW[k]||{chats:0,closes:0,revenue:0,calls:0,fups:0};
-    const lw=lastW[k]||{chats:0,closes:0,revenue:0,calls:0,fups:0};
-    const badge=overallBadge(tw,lw);
-    const rows=[
-      {label:'CHATS',curr:tw.chats,prev:lw.chats,max:maxChats,color:tc.c},
-      {label:'CLOSES',curr:tw.closes,prev:lw.closes,max:Math.max(1,tw.closes,lw.closes),color:'var(--green)'},
-      {label:'CALLS',curr:tw.calls,prev:lw.calls,max:Math.max(1,tw.calls,lw.calls),color:'var(--blue)'},
-      {label:'F/UP',curr:tw.fups,prev:lw.fups,max:Math.max(1,tw.fups,lw.fups),color:'var(--orange)'},
-      {label:'REVENUE',curr:tw.revenue,prev:lw.revenue,max:maxRev,color:'var(--gold)',isRev:true},
-    ];
-    return`<div class="trend-card">
-      <div class="trend-card-header">
-        <div class="trend-av" style="background:${tc.bg};color:${tc.c}">${sp[0]}</div>
-        <div><div class="trend-name">${sp}</div><div class="trend-team">Team ${team} ${tc.e}</div></div>
-        <div class="trend-badge ${badge.cls}">${badge.txt}</div>
-      </div>
-      <div class="trend-rows">
-        ${rows.map(r=>{
-          const d=diffTxt(r.curr,r.prev,r.isRev);
-          const bw=r.max>0?Math.round(r.curr/r.max*100):0;
-          return`<div class="trend-row">
-            <div class="trend-lbl">${r.label}</div>
-            <div class="trend-bar-track"><div class="trend-bar-fill" style="width:${bw}%;background:${r.color}"></div></div>
-            <div class="trend-val">${r.isRev?fRp(r.curr):r.curr}</div>
-            <div class="trend-diff ${d.cls}">${d.txt}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }).join('');
-
-  // Team trend table
-  document.getElementById('teamTrendBody').innerHTML=Object.entries(TM).map(([tn,tc])=>{
-    const tw={chats:0,closes:0,revenue:0},lw={chats:0,closes:0,revenue:0};
-    tc.m.forEach(sp=>{
-      const k=sp+'|'+tn;
-      const t=thisW[k]||{},l=lastW[k]||{};
-      tw.chats+=t.chats||0;tw.closes+=t.closes||0;tw.revenue+=t.revenue||0;
-      lw.chats+=l.chats||0;lw.closes+=l.closes||0;lw.revenue+=l.revenue||0;
-    });
-    function td(curr,prev,isRev){
-      const diff=curr-prev;
-      const cls=diff>0?'tt-up':diff<0?'tt-dn':'tt-fl';
-      const arrow=diff>0?'↑':diff<0?'↓':'=';
-      return diff===0?`<span class="tt-fl">—</span>`:`<span class="${cls}">${arrow}${isRev?fRp(Math.abs(diff)):Math.abs(diff)}</span>`;
-    }
-    return`<tr>
-      <td><div class="tcell"><div class="tav" style="background:${tc.bg};color:${tc.c}">${tc.e}</div><div class="tn">${tn}</div></div></td>
-      <td><span class="nb">${tw.chats}</span></td><td>${td(tw.chats,lw.chats,false)}</td>
-      <td><span class="nb">${tw.closes}</span></td><td>${td(tw.closes,lw.closes,false)}</td>
-      <td><span class="rc">${fFull(tw.revenue)}</span></td><td>${td(tw.revenue,lw.revenue,true)}</td>
-    </tr>`;
-  }).join('');
 }
 
 // ══ UPDATE OMSET ══
