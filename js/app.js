@@ -315,6 +315,7 @@ function showPage(p,el){
   document.getElementById('page-'+p).classList.add('active');
   el.classList.add('active');
   if(p==='monthly')renderMonthly();
+  else if(p==='insights')renderInsights();
   else if(p==='activity'){renderAll();renderNotReported();}
   else if(p==='omset')initOmset();
   else if(p==='admin'){if(adminUnlocked){loadAdminSettings();renderEditRecords();}}
@@ -1417,6 +1418,244 @@ function renderNotReported(){
           </div>`).join('')}
       </div>
     </div>`;
+}
+
+// ══ SALES INSIGHTS ══
+let _insightsPeriod='thisMonth'; // 'thisMonth' | 'last30' | 'all'
+
+function setInsightsPeriod(p,btn){
+  _insightsPeriod=p;
+  document.querySelectorAll('.ins-period-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderInsights();
+}
+
+function _insightsKeysForPeriod(){
+  const allKeys=Object.keys(allData||{}).sort();
+  if(_insightsPeriod==='all')return allKeys;
+  const today=new Date();
+  if(_insightsPeriod==='thisMonth'){
+    const y=today.getFullYear(),m=today.getMonth();
+    return allKeys.filter(k=>{
+      const d=new Date(k+'T00:00:00');
+      return d.getFullYear()===y&&d.getMonth()===m;
+    });
+  }
+  // last30
+  const cutoff=new Date(today);cutoff.setDate(cutoff.getDate()-30);
+  return allKeys.filter(k=>new Date(k+'T00:00:00')>=cutoff);
+}
+
+function _hasTag(e,tag){
+  return Array.isArray(e.saleType)&&e.saleType.includes(tag);
+}
+
+function _flatEntries(keys){
+  const out=[];
+  keys.forEach(k=>{
+    const arr=allData[k]||[];
+    arr.forEach(e=>{if(e&&typeof e==='object')out.push({...e,_date:k});});
+  });
+  return out;
+}
+
+function renderInsights(){
+  const keys=_insightsKeysForPeriod();
+  const entries=_flatEntries(keys);
+  const totalOrders=entries.length;
+  const totalRev=entries.reduce((s,e)=>s+(e.revenue||0),0);
+
+  // Tag aggregates
+  const upsell=entries.filter(e=>_hasTag(e,'upsell'));
+  const cross=entries.filter(e=>_hasTag(e,'cross'));
+  const repeat=entries.filter(e=>_hasTag(e,'repeat'));
+  const tagged=entries.filter(e=>Array.isArray(e.saleType)&&e.saleType.length>0);
+  const untagged=totalOrders-tagged.length;
+
+  const upsellRev=upsell.reduce((s,e)=>s+(e.revenue||0),0);
+  const crossRev=cross.reduce((s,e)=>s+(e.revenue||0),0);
+  const repeatRev=repeat.reduce((s,e)=>s+(e.revenue||0),0);
+  const taggedRev=tagged.reduce((s,e)=>s+(e.revenue||0),0);
+  const untaggedRev=totalRev-taggedRev;
+
+  const regularEntries=entries.filter(e=>!Array.isArray(e.saleType)||e.saleType.length===0);
+  const regularRev=regularEntries.reduce((s,e)=>s+(e.revenue||0),0);
+
+  const pct=(a,b)=>b>0?Math.round(a/b*1000)/10:0;
+  const avg=(arr,key)=>arr.length>0?Math.round(arr.reduce((s,e)=>s+(e[key]||0),0)/arr.length):0;
+
+  // KPI Row
+  document.getElementById('insUpsellRate').innerHTML=pct(upsell.length,totalOrders)+'<span class="u">%</span>';
+  document.getElementById('insUpsellSub').textContent=`${upsell.length} of ${totalOrders} orders`;
+  document.getElementById('insCrossRate').innerHTML=pct(cross.length,totalOrders)+'<span class="u">%</span>';
+  document.getElementById('insCrossSub').textContent=`${cross.length} of ${totalOrders} orders`;
+  document.getElementById('insRepeatRate').innerHTML=pct(repeatRev,totalRev)+'<span class="u">%</span>';
+  document.getElementById('insRepeatSub').textContent=`${fRp(repeatRev)} of ${fRp(totalRev)}`;
+  const avgUpsell=avg(upsell,'revenue');
+  const avgRegular=avg(regularEntries,'revenue');
+  document.getElementById('insAvgUpsell').textContent=fRp(avgUpsell);
+  document.getElementById('insAvgUpsellSub').textContent=`vs ${fRp(avgRegular)} regular`;
+  document.getElementById('insCoverage').innerHTML=pct(tagged.length,totalOrders)+'<span class="u">%</span>';
+  document.getElementById('insCoverageSub').textContent=`${untagged} untagged orders`;
+
+  // Revenue Mix Stacked Bar
+  const segs=[
+    {label:'Upsell',val:upsellRev,color:'#ff6b1a'},
+    {label:'Cross',val:crossRev,color:'#7c4dff'},
+    {label:'Repeat',val:repeatRev,color:'#00e676'},
+    {label:'Untagged',val:untaggedRev,color:'#404065'},
+  ];
+  const segMax=segs.reduce((s,x)=>s+x.val,0)||1;
+  document.getElementById('insRevBar').innerHTML=segs.map(s=>{
+    const w=Math.max(0,s.val/segMax*100);
+    return w<0.5?'':`<div class="ins-stacked-seg" style="width:${w}%;background:${s.color}">${w>8?Math.round(w)+'%':''}</div>`;
+  }).join('');
+  document.getElementById('insRevLegend').innerHTML=segs.map(s=>{
+    return `<div class="ins-legend-item"><span class="ins-legend-dot" style="background:${s.color}"></span>${s.label} · ${fRp(s.val)} (${pct(s.val,segMax)}%)</div>`;
+  }).join('');
+
+  // Avg Tickets
+  const avgRows=[
+    {label:'Upsell',val:avgUpsell,color:'#ff6b1a'},
+    {label:'Cross',val:avg(cross,'revenue'),color:'#7c4dff'},
+    {label:'Repeat',val:avg(repeat,'revenue'),color:'#00e676'},
+    {label:'Regular',val:avgRegular,color:'#6060a0'},
+  ];
+  const aMax=Math.max(1,...avgRows.map(r=>r.val));
+  document.getElementById('insAvgTickets').innerHTML=avgRows.map(r=>{
+    const w=Math.round(r.val/aMax*100);
+    return `<div class="ins-avg-row">
+      <div class="ins-avg-lbl">${r.label}</div>
+      <div class="ins-avg-bar-track"><div class="ins-avg-bar-fill" style="width:${w}%;background:${r.color}"></div></div>
+      <div class="ins-avg-val">${fRp(r.val)}</div>
+    </div>`;
+  }).join('');
+
+  // SP Leaderboards
+  function spAgg(filterFn){
+    const m={};
+    entries.forEach(e=>{
+      if(!filterFn(e))return;
+      const k=e.sp+'|'+e.team;
+      if(!m[k])m[k]={sp:e.sp,team:e.team,count:0,revenue:0};
+      m[k].count++;m[k].revenue+=(e.revenue||0);
+    });
+    return Object.values(m).sort((a,b)=>b.count-a.count||b.revenue-a.revenue).slice(0,5);
+  }
+  const renderLB=(arr,emptyMsg,color)=>{
+    if(!arr.length)return `<div class="ins-lb-empty">${emptyMsg}</div>`;
+    const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
+    return arr.map((s,i)=>`<div class="ins-lb-row">
+      <div class="ins-lb-rank">${medals[i]||(i+1)}</div>
+      <div><div class="ins-lb-name">${s.sp}</div><div class="ins-lb-team">${s.team}</div></div>
+      <div><div class="ins-lb-stat" style="color:${color}">${s.count}×</div><div class="ins-lb-substat">${fRp(s.revenue)}</div></div>
+    </div>`).join('');
+  };
+  document.getElementById('insTopUpsellers').innerHTML=renderLB(spAgg(e=>_hasTag(e,'upsell')),'No upsells in this period','#ff6b1a');
+  document.getElementById('insTopCross').innerHTML=renderLB(spAgg(e=>_hasTag(e,'cross')),'No cross-sells in this period','#7c4dff');
+  document.getElementById('insTopRepeat').innerHTML=renderLB(spAgg(e=>_hasTag(e,'repeat')),'No repeat orders in this period','#00e676');
+
+  // Team Comparison
+  const teamMap={};
+  Object.keys(TM).forEach(t=>teamMap[t]={team:t,orders:0,upsell:0,cross:0,repeat:0,taggedRev:0,totalRev:0});
+  entries.forEach(e=>{
+    if(!teamMap[e.team])teamMap[e.team]={team:e.team,orders:0,upsell:0,cross:0,repeat:0,taggedRev:0,totalRev:0};
+    const t=teamMap[e.team];
+    t.orders++;t.totalRev+=(e.revenue||0);
+    if(_hasTag(e,'upsell'))t.upsell++;
+    if(_hasTag(e,'cross'))t.cross++;
+    if(_hasTag(e,'repeat'))t.repeat++;
+    if(Array.isArray(e.saleType)&&e.saleType.length>0)t.taggedRev+=(e.revenue||0);
+  });
+  const teamRows=Object.values(teamMap).filter(t=>t.orders>0).sort((a,b)=>b.totalRev-a.totalRev);
+  document.getElementById('insTeamBody').innerHTML=teamRows.length===0?'<tr><td colspan="8" style="text-align:center;color:#404065;padding:20px;">No data in this period</td></tr>':teamRows.map((t,i)=>{
+    const tc=TM[t.team]||{c:'#888',e:''};
+    const avgTicket=t.orders>0?Math.round(t.totalRev/t.orders):0;
+    return `<tr>
+      <td><span class="med">${['🥇','🥈','🥉'][i]||(i+1)}</span></td>
+      <td><div class="tcell"><div class="tav" style="background:${tc.bg||'#161624'};color:${tc.c}">${tc.e||'⭐'}</div><div class="tn">${t.team}</div></div></td>
+      <td><span class="nb">${t.orders}</span></td>
+      <td><span style="color:#ff6b1a;font-weight:700">${pct(t.upsell,t.orders)}%</span></td>
+      <td><span style="color:#7c4dff;font-weight:700">${pct(t.cross,t.orders)}%</span></td>
+      <td><span style="color:#00e676;font-weight:700">${pct(t.repeat,t.orders)}%</span></td>
+      <td><span class="nb">${fRp(avgTicket)}</span></td>
+      <td><span class="rc">${fRp(t.taggedRev)}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Product Insights
+  function prodAgg(filterFn){
+    const m={};
+    entries.forEach(e=>{
+      if(!filterFn(e)||!e.prod)return;
+      if(!m[e.prod])m[e.prod]={prod:e.prod,count:0,revenue:0};
+      m[e.prod].count++;m[e.prod].revenue+=(e.revenue||0);
+    });
+    return Object.values(m).sort((a,b)=>b.count-a.count).slice(0,5);
+  }
+  const renderProds=(arr,emptyMsg,color)=>{
+    if(!arr.length)return `<div class="ins-lb-empty">${emptyMsg}</div>`;
+    return arr.map((p,i)=>`<div class="ins-lb-row">
+      <div class="ins-lb-rank">${i+1}</div>
+      <div><div class="ins-lb-name">${p.prod}</div></div>
+      <div><div class="ins-lb-stat" style="color:${color}">${p.count}×</div><div class="ins-lb-substat">${fRp(p.revenue)}</div></div>
+    </div>`).join('');
+  };
+  document.getElementById('insProdUpsell').innerHTML=renderProds(prodAgg(e=>_hasTag(e,'upsell')),'No upsells','#ff6b1a');
+  document.getElementById('insProdCross').innerHTML=renderProds(prodAgg(e=>_hasTag(e,'cross')),'No cross-sells','#7c4dff');
+  document.getElementById('insProdRepeat').innerHTML=renderProds(prodAgg(e=>_hasTag(e,'repeat')),'No repeats','#00e676');
+
+  // 6-Month Trend
+  const trend=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date();d.setMonth(d.getMonth()-i);
+    const y=d.getFullYear(),mo=d.getMonth();
+    const monthEntries=Object.keys(allData||{}).filter(k=>{
+      const dd=new Date(k+'T00:00:00');return dd.getFullYear()===y&&dd.getMonth()===mo;
+    }).flatMap(k=>allData[k]||[]).filter(e=>e&&typeof e==='object');
+    const total=monthEntries.length;
+    trend.push({
+      label:d.toLocaleDateString('en-US',{month:'short'}),
+      upsellRate:total>0?Math.round(monthEntries.filter(e=>_hasTag(e,'upsell')).length/total*100):0,
+      crossRate:total>0?Math.round(monthEntries.filter(e=>_hasTag(e,'cross')).length/total*100):0,
+      repeatRate:total>0?Math.round(monthEntries.filter(e=>_hasTag(e,'repeat')).length/total*100):0,
+      total:total,
+    });
+  }
+  const trendMax=Math.max(1,...trend.flatMap(t=>[t.upsellRate,t.crossRate,t.repeatRate]));
+  document.getElementById('insTrendChart').innerHTML=`<div class="ins-trend">${trend.map(t=>`
+    <div class="ins-trend-col">
+      <div class="ins-trend-bars">
+        <div class="ins-trend-bar up" style="height:${t.upsellRate/trendMax*100}%" title="Upsell ${t.upsellRate}%"></div>
+        <div class="ins-trend-bar cr" style="height:${t.crossRate/trendMax*100}%" title="Cross ${t.crossRate}%"></div>
+        <div class="ins-trend-bar rp" style="height:${t.repeatRate/trendMax*100}%" title="Repeat ${t.repeatRate}%"></div>
+      </div>
+      <div class="ins-trend-month">${t.label}<br><span style="color:#404065">${t.total}o</span></div>
+    </div>
+  `).join('')}</div>
+  <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:0.5px;">
+    <span><span class="ins-legend-dot" style="background:#ff6b1a;display:inline-block;vertical-align:middle;margin-right:5px;"></span>Upsell %</span>
+    <span><span class="ins-legend-dot" style="background:#7c4dff;display:inline-block;vertical-align:middle;margin-right:5px;"></span>Cross %</span>
+    <span><span class="ins-legend-dot" style="background:#00e676;display:inline-block;vertical-align:middle;margin-right:5px;"></span>Repeat %</span>
+  </div>`;
+
+  // Recent Tagged Sales (last 20)
+  const recent=tagged.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,20);
+  document.getElementById('insRecentBody').innerHTML=recent.length===0?'<tr><td colspan="6" style="text-align:center;color:#404065;padding:20px;">No tagged sales in this period</td></tr>':recent.map(e=>{
+    const tagsHTML=(e.saleType||[]).map(t=>{
+      const lbl=t==='upsell'?'Upsell':t==='cross'?'Cross':t==='repeat'?'Repeat':t;
+      return `<span class="ins-tag ${t}">${lbl}</span>`;
+    }).join('');
+    const dateLbl=new Date(e._date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    return `<tr>
+      <td><span class="nb">${dateLbl}</span></td>
+      <td><span class="nb" style="color:#e8e8f8">${e.sp||'—'}</span></td>
+      <td><span class="nb" style="color:#6060a0">${e.team||'—'}</span></td>
+      <td><span class="nb">${e.prod||'—'}</span></td>
+      <td>${tagsHTML}</td>
+      <td><span class="rc">${fRp(e.revenue||0)}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 // ══ UPDATE OMSET ══

@@ -83,6 +83,7 @@
   <div class="nav-tab" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
   <div class="nav-tab" onclick="showPage('salespeople',this)">👥 Salespeople</div>
   <div class="nav-tab" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
+  <div class="nav-tab" onclick="showPage('insights',this)" style="color:#00e676">💡 Sales Insights</div>
   <div class="nav-tab" onclick="showPage('admin',this)" style="color:#7c4dff">⚙️ Admin</div>
 </div>
 </div>
@@ -516,6 +517,129 @@
       💾 Simpan Data Omset
     </button>
 
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ SALES INSIGHTS PAGE ═══ -->
+<div class="page" id="page-insights">
+<div class="container">
+
+  <!-- Header + Period Selector -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <div class="sl" style="margin-bottom:4px;">💡 Sales Insights</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Upsell · Cross-sell · Repeat order analytics</div>
+    </div>
+    <div class="ins-period-tabs">
+      <button class="ins-period-btn active" onclick="setInsightsPeriod('thisMonth',this)">This Month</button>
+      <button class="ins-period-btn" onclick="setInsightsPeriod('last30',this)">Last 30 days</button>
+      <button class="ins-period-btn" onclick="setInsightsPeriod('all',this)">All Time</button>
+    </div>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="ins-kpi-row">
+    <div class="ins-kpi-card" style="border-color:rgba(255,107,26,0.3);">
+      <div class="ins-kpi-lbl">Upsell Rate</div>
+      <div class="ins-kpi-val" id="insUpsellRate" style="color:#ff6b1a;">0<span class="u">%</span></div>
+      <div class="ins-kpi-sub" id="insUpsellSub">0 of 0 orders</div>
+    </div>
+    <div class="ins-kpi-card" style="border-color:rgba(124,77,255,0.3);">
+      <div class="ins-kpi-lbl">Cross-Sell Rate</div>
+      <div class="ins-kpi-val" id="insCrossRate" style="color:#7c4dff;">0<span class="u">%</span></div>
+      <div class="ins-kpi-sub" id="insCrossSub">0 of 0 orders</div>
+    </div>
+    <div class="ins-kpi-card" style="border-color:rgba(0,230,118,0.3);">
+      <div class="ins-kpi-lbl">Repeat Order Rate</div>
+      <div class="ins-kpi-val" id="insRepeatRate" style="color:#00e676;">0<span class="u">%</span></div>
+      <div class="ins-kpi-sub" id="insRepeatSub">Rp 0 of Rp 0</div>
+    </div>
+    <div class="ins-kpi-card" style="border-color:rgba(245,197,24,0.3);">
+      <div class="ins-kpi-lbl">Avg Ticket — Upsell</div>
+      <div class="ins-kpi-val" id="insAvgUpsell" style="color:#f5c518;font-size:22px;">Rp 0</div>
+      <div class="ins-kpi-sub" id="insAvgUpsellSub">vs Rp 0 regular</div>
+    </div>
+    <div class="ins-kpi-card" style="border-color:rgba(68,138,255,0.3);">
+      <div class="ins-kpi-lbl">Tagged Coverage</div>
+      <div class="ins-kpi-val" id="insCoverage" style="color:#448aff;">0<span class="u">%</span></div>
+      <div class="ins-kpi-sub" id="insCoverageSub">data hygiene</div>
+    </div>
+  </div>
+
+  <!-- Revenue Mix -->
+  <div class="ins-grid-2">
+    <div class="ins-panel">
+      <div class="ins-pt">💰 Revenue Mix by Sale Type</div>
+      <div class="ins-stacked-bar" id="insRevBar"></div>
+      <div id="insRevLegend" class="ins-legend"></div>
+    </div>
+    <div class="ins-panel">
+      <div class="ins-pt">📏 Average Ticket by Type</div>
+      <div id="insAvgTickets"></div>
+    </div>
+  </div>
+
+  <!-- Leaderboards -->
+  <div class="ins-grid-3">
+    <div class="ins-panel">
+      <div class="ins-pt" style="color:#ff6b1a">🔼 Top Upsellers</div>
+      <div id="insTopUpsellers"></div>
+    </div>
+    <div class="ins-panel">
+      <div class="ins-pt" style="color:#7c4dff">🔀 Top Cross-Sellers</div>
+      <div id="insTopCross"></div>
+    </div>
+    <div class="ins-panel">
+      <div class="ins-pt" style="color:#00e676">🔁 Top Repeat Drivers</div>
+      <div id="insTopRepeat"></div>
+    </div>
+  </div>
+
+  <!-- Team Comparison -->
+  <div class="sl">🏟️ Team Comparison</div>
+  <div class="tw" style="margin-bottom:18px;">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Team</th><th>Orders</th><th>Upsell %</th><th>Cross %</th><th>Repeat %</th><th>Avg Ticket</th><th>Tagged Rev</th>
+      </tr></thead>
+      <tbody id="insTeamBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Product Insights -->
+  <div class="sl">📦 Product Insights</div>
+  <div class="ins-grid-3" style="margin-bottom:18px;">
+    <div class="ins-panel">
+      <div class="ins-pt" style="color:#ff6b1a">Most Upsold Products</div>
+      <div id="insProdUpsell"></div>
+    </div>
+    <div class="ins-panel">
+      <div class="ins-pt" style="color:#7c4dff">Most Cross-Sold Products</div>
+      <div id="insProdCross"></div>
+    </div>
+    <div class="ins-panel">
+      <div class="ins-pt" style="color:#00e676">Top Repeat Products</div>
+      <div id="insProdRepeat"></div>
+    </div>
+  </div>
+
+  <!-- Trend -->
+  <div class="sl">📈 6-Month Trend</div>
+  <div class="ins-panel" style="margin-bottom:18px;">
+    <div id="insTrendChart"></div>
+  </div>
+
+  <!-- Recent Tagged Sales -->
+  <div class="sl">📜 Recent Tagged Sales</div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>Date</th><th>SP</th><th>Team</th><th>Product</th><th>Tags</th><th>Revenue</th>
+      </tr></thead>
+      <tbody id="insRecentBody"></tbody>
+    </table>
   </div>
 
 </div>
