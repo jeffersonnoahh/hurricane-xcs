@@ -1784,12 +1784,15 @@ function renderWarning(){
     issuesPerSP[s.sp+'|'+s.team]={sp:s.sp,team:s.team,issues,lastDateLbl:s.lastDateLbl};
   });
 
-  const critical=Object.values(issuesPerSP).filter(x=>x.issues.length>=2).sort((a,b)=>b.issues.length-a.issues.length);
-  const flaggedTotal=Object.values(issuesPerSP).filter(x=>x.issues.length>0).length;
+  // ALL flagged SPs (1+ issues), sorted most severe first
+  const allFlagged=Object.values(issuesPerSP).filter(x=>x.issues.length>=1).sort((a,b)=>b.issues.length-a.issues.length);
+  const flaggedTotal=allFlagged.length;
   const goodSPs=sps.filter(s=>issuesPerSP[s.sp+'|'+s.team].issues.length===0);
 
   // Summary
   document.getElementById('warnTotalCount').textContent=flaggedTotal;
+  const flbl=document.getElementById('warnFlaggedCountLbl');
+  if(flbl)flbl.textContent='('+flaggedTotal+')';
   if(flaggedTotal===0){
     document.getElementById('warnSummaryText').textContent='All clear! 🎉 Every SP meets all thresholds.';
   } else {
@@ -1815,7 +1818,7 @@ function renderWarning(){
       </div>
     </div>`;
   };
-  document.getElementById('warnCritical').innerHTML=critical.length===0?'<div class="warn-empty">✅ No SP failing 2+ thresholds</div>':critical.map(renderCriticalCard).join('');
+  document.getElementById('warnCritical').innerHTML=allFlagged.length===0?'<div class="warn-empty">✅ All clear — every SP meets all thresholds</div>':allFlagged.map(renderCriticalCard).join('');
 
   // Per-category rows
   const renderRow=(s,issueType)=>{
