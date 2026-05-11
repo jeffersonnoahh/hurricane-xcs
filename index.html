@@ -375,6 +375,17 @@
     </table>
   </div>
 
+  <!-- SP Quick Lookup -->
+  <div class="sl">🔍 Lookup Salesperson</div>
+  <div class="sp-lookup-box">
+    <div class="sp-lookup-input-wrap">
+      <span class="sp-lookup-icon">🔍</span>
+      <input type="text" id="mSpSearch" class="sp-lookup-input" placeholder="Type salesperson name (e.g. Nathan, Arfin, Stanley)..." oninput="renderSpLookup()" autocomplete="off"/>
+      <button class="sp-lookup-clear" onclick="document.getElementById('mSpSearch').value='';renderSpLookup()">✕</button>
+    </div>
+    <div id="mSpLookupResult"></div>
+  </div>
+
   <!-- SP Monthly Table -->
   <div class="sl">Salesperson Ranking This Month</div>
   <div class="tw" style="margin-bottom:18px;">

@@ -1174,6 +1174,11 @@ function renderMonthly(){
       </tr>`;
     }).join('');
 
+  // Expose spTotals globally for the lookup search box
+  window._monthSpTotals=spTotals;
+  window._monthLabel=document.getElementById('monthLabel')?.textContent||'';
+  renderSpLookup();
+
   // SP table
   const sortedSPs=Object.values(spTotals).map(d=>({...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue);
   document.getElementById('mSPBody').innerHTML=sortedSPs.length===0
@@ -1214,6 +1219,56 @@ function renderMonthly(){
         <td><span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#f5c518">${d.topSP}</span></td>
       </tr>`;
     }).join('');
+}
+
+// ══ MONTHLY SP LOOKUP SEARCH ══
+function renderSpLookup(){
+  const inputEl=document.getElementById('mSpSearch');
+  const resultEl=document.getElementById('mSpLookupResult');
+  if(!inputEl||!resultEl)return;
+  const q=(inputEl.value||'').trim().toLowerCase();
+  const spTotals=window._monthSpTotals||{};
+  const monthLbl=window._monthLabel||'this month';
+
+  if(!q){
+    resultEl.innerHTML='<div class="sp-lookup-empty">💡 Start typing to search. You can also click any name in the ranking table below to see their full monthly detail.</div>';
+    return;
+  }
+
+  // Filter SPs by name (substring match)
+  const matches=Object.values(spTotals).filter(s=>{
+    return (s.sp||'').toLowerCase().includes(q)||(s.team||'').toLowerCase().includes(q);
+  }).sort((a,b)=>(b.revenue||0)-(a.revenue||0));
+
+  if(matches.length===0){
+    resultEl.innerHTML=`<div class="sp-lookup-empty" style="color:#ff3b5c">❌ No salesperson found matching "<strong>${q}</strong>" for ${monthLbl}.</div>`;
+    return;
+  }
+
+  resultEl.innerHTML=matches.map(s=>{
+    const tc=TM[s.team]||{c:'#888',bg:'#161624',e:'⭐'};
+    const rate=s.chats>0?(s.closes/s.chats*100).toFixed(1):'0';
+    return `<div class="sp-lookup-card" style="border-left:4px solid ${tc.c}" onclick="openSPMonthly('${s.sp}','${s.team}')">
+      <div class="sp-lookup-head">
+        <div class="sp-lookup-av" style="background:${tc.bg};color:${tc.c}">${s.sp[0].toUpperCase()}</div>
+        <div>
+          <div class="sp-lookup-name">${s.sp}</div>
+          <div class="sp-lookup-team" style="color:${tc.c}">${tc.e} Team ${s.team}</div>
+        </div>
+        <div class="sp-lookup-rev">
+          <div class="sp-lookup-rev-val">${fFull(s.revenue||0)}</div>
+          <div class="sp-lookup-rev-lbl">${monthLbl} omset</div>
+        </div>
+      </div>
+      <div class="sp-lookup-stats">
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">💬 Chats</div><div class="sp-lookup-stat-val" style="color:#f5c518">${s.chats||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">📞 Calls</div><div class="sp-lookup-stat-val" style="color:#448aff">${s.calls||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">🔄 Follow-ups</div><div class="sp-lookup-stat-val" style="color:#ff6b1a">${s.fups||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">✅ Closes</div><div class="sp-lookup-stat-val" style="color:#00e676">${s.closes||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">📈 Close Rate</div><div class="sp-lookup-stat-val" style="color:#7c4dff">${rate}%</div></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function openSPMonthly(sp,team){
