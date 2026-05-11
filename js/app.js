@@ -849,27 +849,81 @@ function renderActLog(acts){
     const dayActs=allActs[k]||[];
     dayActs.forEach(a=>allActEntries.push({...a,dateKey:k}));
   }
-  allActEntries.sort((a,b)=>b.ts-a.ts);
 
   if(!allActEntries.length){
     log.innerHTML='<div style="color:#333350;font-size:11px;font-family:\'DM Mono\',monospace;padding:16px;text-align:center;">No activity in last 7 days.</div>';
     return;
   }
-  log.innerHTML=allActEntries.map((a,ri)=>{
-    const tc=TM[a.team]||{c:'#888'};
-    const dateD=new Date(a.dateKey+'T00:00:00');
-    const dateStr=dateD.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    const lateBadge=a.isLate?'<span style="font-family:\'DM Mono\',monospace;font-size:9px;background:rgba(255,107,26,0.15);color:#ff6b1a;border:1px solid rgba(255,107,26,0.3);padding:1px 5px;border-radius:4px;letter-spacing:1px;flex-shrink:0">LATE</span>':'';
-    const i=allActEntries.length-1-ri;
-    return`<div class="ar" style="grid-template-columns:1fr .6fr .6fr .6fr .6fr .8fr auto">
-      <div><span class="asn" style="color:${tc.c}">${a.sp}</span><span class="att">${a.team}</span></div>
-      <div style="text-align:center;font-family:'Space Mono',monospace;font-size:9px;color:#6060a0">${dateStr}</div>
-      <div class="av" style="color:#f5c518">${a.chats||0}</div>
-      <div class="av" style="color:#448aff">${a.calls}</div>
-      <div class="av" style="color:#ff6b1a">${a.fups}</div>
-      <div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:4px;">${a.notes||'—'} ${lateBadge}</div>
-      <div><span class="ed" onclick="removeActivityByDate('${a.dateKey}',${a.ts})">✕</span></div>
+
+  // Group by date (newest first), then by team (alphabetical)
+  const byDate={};
+  allActEntries.forEach(a=>{
+    if(!byDate[a.dateKey])byDate[a.dateKey]={};
+    if(!byDate[a.dateKey][a.team])byDate[a.dateKey][a.team]=[];
+    byDate[a.dateKey][a.team].push(a);
+  });
+
+  const sortedDates=Object.keys(byDate).sort().reverse();
+  // Define team order matching navigation
+  const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
+
+  log.innerHTML=sortedDates.map(dateKey=>{
+    const dateD=new Date(dateKey+'T00:00:00');
+    const dateStr=dateD.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
+    const teams=byDate[dateKey];
+    // Get teams present, sort by team order
+    const teamsPresent=Object.keys(teams).sort((a,b)=>{
+      const ai=teamOrder.indexOf(a);const bi=teamOrder.indexOf(b);
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    });
+    // Daily totals
+    const dayEntries=teamsPresent.flatMap(t=>teams[t]);
+    const dayTotals={
+      chats:dayEntries.reduce((s,a)=>s+(a.chats||0),0),
+      calls:dayEntries.reduce((s,a)=>s+(a.calls||0),0),
+      fups:dayEntries.reduce((s,a)=>s+(a.fups||0),0),
+    };
+
+    const dateHeader=`<div class="alog-date-hdr">
+      <div class="alog-date-lbl">📅 ${dateStr}</div>
+      <div class="alog-date-tot">
+        <span style="color:#f5c518">💬 ${dayTotals.chats}</span>
+        <span style="color:#448aff">📞 ${dayTotals.calls}</span>
+        <span style="color:#ff6b1a">🔄 ${dayTotals.fups}</span>
+      </div>
     </div>`;
+
+    const teamSections=teamsPresent.map(team=>{
+      const tc=TM[team]||{c:'#888',bg:'#161624',e:'⭐'};
+      const entries=teams[team].slice().sort((a,b)=>b.ts-a.ts);
+      const teamTotals={
+        chats:entries.reduce((s,a)=>s+(a.chats||0),0),
+        calls:entries.reduce((s,a)=>s+(a.calls||0),0),
+        fups:entries.reduce((s,a)=>s+(a.fups||0),0),
+      };
+      const teamHeader=`<div class="alog-team-hdr" style="border-left:3px solid ${tc.c}">
+        <div class="alog-team-name" style="color:${tc.c}">${tc.e} ${team}</div>
+        <div class="alog-team-tot">
+          <span style="color:#f5c518">${teamTotals.chats}c</span> ·
+          <span style="color:#448aff">${teamTotals.calls} calls</span> ·
+          <span style="color:#ff6b1a">${teamTotals.fups}f</span>
+        </div>
+      </div>`;
+      const rows=entries.map(a=>{
+        const lateBadge=a.isLate?'<span style="font-family:\'DM Mono\',monospace;font-size:9px;background:rgba(255,107,26,0.15);color:#ff6b1a;border:1px solid rgba(255,107,26,0.3);padding:1px 5px;border-radius:4px;letter-spacing:1px;flex-shrink:0">LATE</span>':'';
+        return `<div class="ar" style="grid-template-columns:1fr .5fr .5fr .5fr 1fr auto">
+          <div><span class="asn" style="color:${tc.c}">${a.sp}</span></div>
+          <div class="av" style="color:#f5c518">${a.chats||0}</div>
+          <div class="av" style="color:#448aff">${a.calls}</div>
+          <div class="av" style="color:#ff6b1a">${a.fups}</div>
+          <div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:4px;">${a.notes||'—'} ${lateBadge}</div>
+          <div><span class="ed" onclick="removeActivityByDate('${a.dateKey}',${a.ts})">✕</span></div>
+        </div>`;
+      }).join('');
+      return teamHeader+rows;
+    }).join('');
+
+    return dateHeader+teamSections;
   }).join('');
 }
 
