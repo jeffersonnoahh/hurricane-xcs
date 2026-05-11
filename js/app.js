@@ -1906,7 +1906,40 @@ function renderWarning(){
       </div>
     </div>`;
   };
-  document.getElementById('warnCritical').innerHTML=allFlagged.length===0?'<div class="warn-empty">✅ All clear — every SP meets all thresholds</div>':allFlagged.map(renderCriticalCard).join('');
+  // Team ordering helper
+  const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
+  const sortByTeam=(a,b)=>{
+    const ai=teamOrder.indexOf(a.team);const bi=teamOrder.indexOf(b.team);
+    return (ai===-1?99:ai)-(bi===-1?99:bi);
+  };
+
+  // Group array of {team,...} by team in nav order, return [{team,tc,items},...]
+  const groupByTeam=arr=>{
+    const m={};
+    arr.forEach(x=>{
+      if(!m[x.team])m[x.team]=[];
+      m[x.team].push(x);
+    });
+    return Object.keys(m).sort((a,b)=>{
+      const ai=teamOrder.indexOf(a);const bi=teamOrder.indexOf(b);
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    }).map(team=>({team,tc:tcGet(team),items:m[team]}));
+  };
+
+  // ALL FLAGGED — grouped by team
+  if(allFlagged.length===0){
+    document.getElementById('warnCritical').innerHTML='<div class="warn-empty">✅ All clear — every SP meets all thresholds</div>';
+  } else {
+    const grouped=groupByTeam(allFlagged);
+    document.getElementById('warnCritical').innerHTML=grouped.map(g=>{
+      const header=`<div class="warn-team-hdr" style="border-left:3px solid ${g.tc.c}">
+        <div class="warn-team-name" style="color:${g.tc.c}">${g.tc.e} ${g.team}</div>
+        <div class="warn-team-tot">${g.items.length} flagged</div>
+      </div>`;
+      const cards=g.items.sort((a,b)=>b.issues.length-a.issues.length).map(renderCriticalCard).join('');
+      return header+cards;
+    }).join('');
+  }
 
   // Per-category rows
   const renderRow=(s,issueType)=>{
@@ -1925,17 +1958,28 @@ function renderWarning(){
     }
     return `<div class="warn-row">
       <div class="av" style="background:${tc.bg};color:${tc.c}">${s.sp[0]}</div>
-      <div><div class="nm">${s.sp}</div><div class="tm">${s.team} · ${subTxt}</div></div>
+      <div><div class="nm">${s.sp}</div><div class="tm">${subTxt}</div></div>
       <div class="stat">${currTxt}</div>
       <div class="gap">${gapTxt}</div>
     </div>`;
   };
   const renderEmpty='<div class="warn-empty">✅ All clear</div>';
 
-  document.getElementById('warnRev').innerHTML=failsRev.length===0?renderEmpty:failsRev.sort((a,b)=>a.revenue-b.revenue).map(s=>renderRow(s,'rev')).join('');
-  document.getElementById('warnChats').innerHTML=failsChats.length===0?renderEmpty:failsChats.sort((a,b)=>a.chats-b.chats).map(s=>renderRow(s,'chats')).join('');
-  document.getElementById('warnCalls').innerHTML=failsCalls.length===0?renderEmpty:failsCalls.sort((a,b)=>a.calls-b.calls).map(s=>renderRow(s,'calls')).join('');
-  document.getElementById('warnFups').innerHTML=failsFups.length===0?renderEmpty:failsFups.sort((a,b)=>a.fups-b.fups).map(s=>renderRow(s,'fups')).join('');
+  // Render category with team grouping
+  const renderCategoryGrouped=(arr,issueType,sortFn)=>{
+    if(arr.length===0)return renderEmpty;
+    const grouped=groupByTeam(arr);
+    return grouped.map(g=>{
+      const header=`<div class="warn-team-subhdr" style="color:${g.tc.c}">${g.tc.e} ${g.team}</div>`;
+      const rows=g.items.sort(sortFn).map(s=>renderRow(s,issueType)).join('');
+      return header+rows;
+    }).join('');
+  };
+
+  document.getElementById('warnRev').innerHTML=renderCategoryGrouped(failsRev,'rev',(a,b)=>a.revenue-b.revenue);
+  document.getElementById('warnChats').innerHTML=renderCategoryGrouped(failsChats,'chats',(a,b)=>a.chats-b.chats);
+  document.getElementById('warnCalls').innerHTML=renderCategoryGrouped(failsCalls,'calls',(a,b)=>a.calls-b.calls);
+  document.getElementById('warnFups').innerHTML=renderCategoryGrouped(failsFups,'fups',(a,b)=>a.fups-b.fups);
 
   // Good performers
   const goodEl=document.getElementById('warnGood');
