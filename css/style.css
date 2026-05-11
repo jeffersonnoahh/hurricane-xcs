@@ -820,23 +820,46 @@ select:focus,input:focus{border-color:#f5c518;}
 }
 
 /* ══ WARNING — TEAM GROUPING ══ */
+/* Big team header for the All Flagged section */
 .warn-team-hdr{
   display:flex;align-items:center;justify-content:space-between;
-  background:rgba(255,255,255,0.02);
-  padding:9px 14px;
-  margin:14px 0 6px;
-  border-radius:8px;
-  flex-wrap:wrap;gap:8px;
+  background:linear-gradient(135deg,rgba(255,255,255,0.04),transparent);
+  padding:12px 16px;
+  margin:20px 0 10px;
+  border-radius:10px;
+  flex-wrap:wrap;gap:10px;
+  position:relative;
 }
 .warn-team-hdr:first-child{margin-top:0;}
-.warn-team-name{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
-.warn-team-tot{font-family:'Space Mono',monospace;font-size:10px;color:#ff3b5c;font-weight:700;letter-spacing:0.5px;}
-
-.warn-team-subhdr{
-  font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;
-  text-transform:uppercase;
-  padding:8px 0 4px;
-  border-bottom:1px solid #1e1e32;
-  margin-bottom:4px;
+.warn-team-name{
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;
+  letter-spacing:1.5px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;
 }
-.warn-team-subhdr:not(:first-child){margin-top:10px;}
+.warn-team-tot{
+  font-family:'Space Mono',monospace;font-size:11px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  background:rgba(255,59,92,0.15);color:#ff3b5c;
+  border:1px solid rgba(255,59,92,0.3);
+  padding:4px 10px;border-radius:6px;
+}
+
+/* Compact but visible team subheader for Below-X sections */
+.warn-team-subhdr{
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(90deg,rgba(255,255,255,0.04),transparent);
+  border-radius:7px;
+  padding:8px 12px;
+  margin:12px 0 6px;
+  font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;
+  letter-spacing:1px;text-transform:uppercase;
+}
+.warn-team-subhdr:first-child{margin-top:0;}
+.warn-team-subhdr::before{
+  content:'';
+  display:inline-block;
+  width:4px;height:14px;
+  background:currentColor;
+  border-radius:2px;
+  flex-shrink:0;
+}

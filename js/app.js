@@ -1932,8 +1932,9 @@ function renderWarning(){
   } else {
     const grouped=groupByTeam(allFlagged);
     document.getElementById('warnCritical').innerHTML=grouped.map(g=>{
-      const header=`<div class="warn-team-hdr" style="border-left:3px solid ${g.tc.c}">
-        <div class="warn-team-name" style="color:${g.tc.c}">${g.tc.e} ${g.team}</div>
+      const bg=g.tc.bg||'#161624';
+      const header=`<div class="warn-team-hdr" style="border:1px solid ${g.tc.c}40;background:linear-gradient(135deg,${bg},transparent);">
+        <div class="warn-team-name" style="color:${g.tc.c}"><span style="font-size:18px">${g.tc.e}</span> Team ${g.team}</div>
         <div class="warn-team-tot">${g.items.length} flagged</div>
       </div>`;
       const cards=g.items.sort((a,b)=>b.issues.length-a.issues.length).map(renderCriticalCard).join('');
