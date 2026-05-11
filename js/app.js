@@ -927,14 +927,45 @@ function renderActLog(acts){
   }).join('');
 }
 
-// ══ SP GRID ══
+// ══ SP GRID — Grouped by team ══
 function renderSPGrid(entries,acts){
   const spMap={};
   aggSP(entries,acts).forEach(s=>spMap[s.sp+'|'+s.team]=s);
-  const html=Object.entries(TM).flatMap(([tn,tc])=>
-    tc.m.map(sp=>{
-      const k=sp+'|'+tn;
-      const s=spMap[k]||{chats:0,closes:0,revenue:0,calls:0,fups:0};
+
+  const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
+  const teams=Object.keys(TM).sort((a,b)=>{
+    const ai=teamOrder.indexOf(a);const bi=teamOrder.indexOf(b);
+    return (ai===-1?99:ai)-(bi===-1?99:bi);
+  });
+
+  const html=teams.map(tn=>{
+    const tc=TM[tn];
+    if(!tc||!tc.m||tc.m.length===0)return '';
+
+    // Team totals
+    const teamTotals={chats:0,calls:0,fups:0,closes:0,revenue:0};
+    tc.m.forEach(sp=>{
+      const s=spMap[sp+'|'+tn]||{};
+      teamTotals.chats+=s.chats||0;
+      teamTotals.calls+=s.calls||0;
+      teamTotals.fups+=s.fups||0;
+      teamTotals.closes+=s.closes||0;
+      teamTotals.revenue+=s.revenue||0;
+    });
+
+    const teamHeader=`<div class="spg-team-hdr" style="border-left:4px solid ${tc.c}">
+      <div class="spg-team-name" style="color:${tc.c}">${tc.e} Team ${tn}</div>
+      <div class="spg-team-stats">
+        <span style="color:#f5c518">💬 ${teamTotals.chats}</span>
+        <span style="color:#448aff">📞 ${teamTotals.calls}</span>
+        <span style="color:#ff6b1a">🔄 ${teamTotals.fups}</span>
+        <span style="color:#00e676">✅ ${teamTotals.closes}</span>
+        <span style="color:white;font-weight:800">${fFull(teamTotals.revenue)}</span>
+      </div>
+    </div>`;
+
+    const cards=tc.m.map(sp=>{
+      const s=spMap[sp+'|'+tn]||{chats:0,closes:0,revenue:0,calls:0,fups:0};
       return`<div class="spc" onclick="openSPModal('${sp}','${tn}')">
         <div class="spc-bar" style="background:${tc.c}"></div>
         <div class="spc-av" style="background:${tc.bg};color:${tc.c}">${sp[0].toUpperCase()}</div>
@@ -946,8 +977,11 @@ function renderSPGrid(entries,acts){
         <div class="spc-row"><span class="spc-rl">✅ Closes</span><span class="spc-rv">${s.closes}</span></div>
         <div class="spc-rev">${fFull(s.revenue)}</div>
       </div>`;
-    })
-  ).join('');
+    }).join('');
+
+    return teamHeader+`<div class="sp-grid">${cards}</div>`;
+  }).join('');
+
   document.getElementById('spGrid').innerHTML=html;
 }
 
