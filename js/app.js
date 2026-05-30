@@ -1083,8 +1083,8 @@ function openWA(){document.getElementById('waPre').textContent=buildWA();documen
 function closeWAMo(e){if(!e||e.target===document.getElementById('waMo'))document.getElementById('waMo').style.display='none';}
 function copyWAText(){
   const txt=buildWA();
-  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>alert('✅ Copied!'));}
-  else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('✅ Copied!');}
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>showToast('✅ Copied!','success'));}
+  else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('✅ Copied!','success');}
 }
 function sendWA(){window.open('https://wa.me/?text='+encodeURIComponent(buildWA()),'_blank');}
 
@@ -2165,14 +2165,14 @@ function saveOmset(){
   if(window.db){
     window.db.ref('omset/'+key).set(data).then(()=>{
       showOmsetSaved();
-    }).catch(e=>alert('Gagal simpan: '+e.message));
+    }).catch(e=>showToast('❌ Gagal simpan: '+e.message,'error'));
   } else {
     try{
       const all=JSON.parse(localStorage.getItem('hxcs_omset')||'{}');
       all[key]=data;
       localStorage.setItem('hxcs_omset',JSON.stringify(all));
       showOmsetSaved();
-    }catch(e){alert('Gagal simpan!');}
+    }catch(e){showToast('❌ Gagal simpan!','error');}
   }
 }
 
