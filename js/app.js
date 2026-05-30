@@ -747,6 +747,17 @@ function tots(entries,acts){
   return{...e,...a};
 }
 
+// Total revenue across all logged entries in the same calendar month as `vd`
+function monthRev(vd){
+  const y=vd.getFullYear(),m=vd.getMonth()+1;
+  let rev=0;
+  Object.keys(allData).forEach(k=>{
+    const p=k.split('-');
+    if(+p[0]===y&&+p[1]===m)(allData[k]||[]).forEach(e=>{rev+=e.revenue||0;});
+  });
+  return rev;
+}
+
 // ══ RENDER ALL ══
 function renderAll(){
   const entries=gE(),acts=gA();
@@ -766,13 +777,21 @@ function renderAll(){
   document.getElementById('goalPct').textContent=pct+'%';
   document.getElementById('totalRev').textContent=fFull(T.revenue);
 
+  // GIANT LIVE OMSET — total revenue for the viewed month, live
+  const vd=od(vOff);
+  const mRev=monthRev(vd);
+  const lo=document.getElementById('liveOmsetBig');
+  if(lo)lo.textContent=fFull(mRev);
+  const los=document.getElementById('liveOmsetSub');
+  if(los)los.textContent=vd.toLocaleDateString('en-US',{month:'long',year:'numeric'})+' · live total omset';
+
   // History
   renderHist();
 
   // TEAM TABLE
   const teams=aggTeams(entries,acts);
   document.getElementById('tTeam').innerHTML=teams.length===0
-    ?'<tr class="erow"><td colspan="9">No data yet — log entries below ↓</td></tr>'
+    ?'<tr class="erow"><td colspan="6">No data yet — log entries below ↓</td></tr>'
     :teams.map((t,i)=>{
       const tc=TM[t.n]||{c:'#888',bg:'#111',e:'👤',m:[]};
       return`<tr>
@@ -780,10 +799,7 @@ function renderAll(){
         <td><div class="tcell"><div class="tav" style="background:${tc.bg};color:${tc.c}">${tc.e}</div><div class="tn">${t.n}</div></div></td>
         <td><span style="font-size:9px;color:#6060a0;font-family:'DM Mono',monospace">${tc.m.join(' · ')}</span></td>
         <td><span class="nb">${t.chats}</span></td>
-        <td><span class="nb">${t.calls}</span></td>
-        <td><span class="nb">${t.fups}</span></td>
         <td><span class="nb">${t.closes}</span></td>
-        <td><span class="rb ${rc(t.rate)}">${t.rate.toFixed(1)}%</span></td>
         <td><span class="rc">${fFull(t.revenue)}</span></td>
       </tr>`;
     }).join('');
@@ -791,7 +807,7 @@ function renderAll(){
   // SP TABLE — show all SPs always (sorted by revenue)
   const sps=aggSP(entries,acts);
   document.getElementById('tSP').innerHTML=sps.length===0
-    ?'<tr class="erow"><td colspan="8">No salespeople configured</td></tr>'
+    ?'<tr class="erow"><td colspan="5">No salespeople configured</td></tr>'
     :sps.map((s,i)=>{
       const tc=TM[s.team]||{c:'#888'};
       const isEmpty=s.chats===0&&s.closes===0&&s.calls===0&&s.fups===0;
@@ -799,10 +815,7 @@ function renderAll(){
         <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
-        <td><span class="nb">${s.calls}</span></td>
-        <td><span class="nb">${s.fups}</span></td>
         <td><span class="nb">${s.closes}</span></td>
-        <td><span class="rb ${rc(s.rate)}">${s.rate.toFixed(1)}%</span></td>
         <td><span class="rc">${fFull(s.revenue)}</span></td>
       </tr>`;
     }).join('');
