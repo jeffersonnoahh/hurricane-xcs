@@ -320,6 +320,7 @@ function showPage(p,el){
   else if(p==='activity'){renderAll();renderNotReported();}
   else if(p==='omset')initOmset();
   else if(p==='admin'){if(adminUnlocked){loadAdminSettings();renderEditRecords();}}
+  else if(p==='mysales'){populateMsSPSelect();renderMySales();}
   else renderAll();
 }
 
@@ -541,41 +542,60 @@ function updatePP(){updatePriceMode();}
 
 // ══ ADD ENTRY ══
 function addEntry(){
-  const team=document.getElementById('inTeam').value;
-  const sp=document.getElementById('inSP').value;
-  const prod=document.getElementById('inProd').value;
-  const units=parseInt(document.getElementById('inUnits').value)||1;
-  const notes=document.getElementById('inNotes')?document.getElementById('inNotes').value.trim():'';
-  const saleType=[...activeSaleTypes];
-  const targetKey=getEntryDateKey();
+  try{
+    const team=document.getElementById('inTeam').value;
+    const sp=document.getElementById('inSP').value;
+    const prod=document.getElementById('inProd').value;
+    const units=parseInt(document.getElementById('inUnits').value)||1;
+    const notes=document.getElementById('inNotes')?document.getElementById('inNotes').value.trim():'';
+    const saleType=[...activeSaleTypes];
+    const targetKey=getEntryDateKey();
 
-  if(!prod){alert('Pilih produk dulu!');return;}
+    if(!prod){showToast('⚠️ Pilih produk dulu!','error');return;}
 
-  // Get price based on mode
-  let price=0;
-  if(currentPriceMode==='normal'){
-    price=P[prod]||0;
-  } else {
-    price=parseFloat(document.getElementById('inCustom')?.value)||0;
-    if(!price){alert('Masukkan custom price!');return;}
+    // Get price based on mode
+    let price=0;
+    if(currentPriceMode==='normal'){
+      price=P[prod]||0;
+    } else {
+      price=parseFloat(document.getElementById('inCustom')?.value)||0;
+      if(!price){showToast('⚠️ Masukkan custom price!','error');return;}
+    }
+
+    const newEntry={team,sp,prod,chats:0,units,price,revenue:price*units,saleType,notes,priceMode:currentPriceMode,ts:Date.now()};
+    const existing=allData[targetKey]||[];
+    existing.push(newEntry);
+    allData[targetKey]=existing;
+
+    // Save to Firebase with feedback
+    if(window.db){
+      showToast('💾 Saving...','info');
+      window.db.ref('scores/'+targetKey).set(existing).then(()=>{
+        showToast('✅ '+prod+(units>1?' ×'+units:'')+' saved for '+sp+'!','success');
+      }).catch(err=>{
+        showToast('❌ Save failed — check internet: '+(err.message||''),'error');
+        console.error('addEntry Firebase error:',err);
+      });
+    } else {
+      try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+      showToast('⚠️ Saved offline — Firebase not connected','info');
+    }
+
+    // Reset form immediately (optimistic UI)
+    document.getElementById('inUnits').value='1';
+    document.getElementById('inProd').value='';
+    if(document.getElementById('inCustom'))document.getElementById('inCustom').value='';
+    if(document.getElementById('inNotes'))document.getElementById('inNotes').value='';
+    if(document.getElementById('priceSection'))document.getElementById('priceSection').style.display='none';
+    if(document.getElementById('customPreview'))document.getElementById('customPreview').textContent='';
+    currentPriceMode='normal';
+    activeSaleTypes.clear();
+    ['upsell','cross','repeat'].forEach(t=>{const b=document.getElementById('stb_'+t);if(b)b.className='sale-type-btn';});
+    renderAll();
+  }catch(err){
+    console.error('addEntry error:',err);
+    showToast('❌ Error: '+(err.message||'something went wrong'),'error');
   }
-
-  const existing=allData[targetKey]||[];
-  existing.push({team,sp,prod,chats:0,units,price,revenue:price*units,saleType,notes,priceMode:currentPriceMode,ts:Date.now()});
-  allData[targetKey]=existing;
-  sE2(targetKey,existing);
-
-  // Reset form
-  document.getElementById('inUnits').value='1';
-  document.getElementById('inProd').value='';
-  if(document.getElementById('inCustom'))document.getElementById('inCustom').value='';
-  if(document.getElementById('inNotes'))document.getElementById('inNotes').value='';
-  if(document.getElementById('priceSection'))document.getElementById('priceSection').style.display='none';
-  if(document.getElementById('customPreview'))document.getElementById('customPreview').textContent='';
-  currentPriceMode='normal';
-  activeSaleTypes.clear();
-  ['upsell','cross','repeat'].forEach(t=>{const b=document.getElementById('stb_'+t);if(b)b.className='sale-type-btn';});
-  renderAll();
 }
 function removeEntry(i){
   if(!isT())return;
@@ -590,8 +610,15 @@ async function clearToday(){
 // ══ SAVE TO SPECIFIC KEY ══
 function sE2(key,arr){
   allData[key]=arr;
-  if(window.db){if(!arr.length)window.db.ref('scores/'+key).remove();else window.db.ref('scores/'+key).set(arr);}
-  else try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+  if(window.db){
+    if(!arr.length)window.db.ref('scores/'+key).remove();
+    else window.db.ref('scores/'+key).set(arr).catch(err=>{
+      console.error('sE2 save error:',err);
+      showToast('❌ Save error — check internet','error');
+    });
+  } else {
+    try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+  }
 }
 
 // ══ ADD ACTIVITY ══
@@ -2307,6 +2334,7 @@ function loadAdminSettings(){
   renderAdminProducts();
   renderAdminTeams();
   initEditRecords();
+  initAdminQuickAdd();
 }
 
 // ══ EDIT RECORDS ══
@@ -2385,7 +2413,7 @@ function renderEditRecords(){
           <div><span style="color:#6060a0;">Revenue:</span><br/><b style="color:#f5c518;">${fFull(r.revenue||0)}</b></div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button onclick="editSaleRecord('${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">✏️ Edit</button>
+          <button onclick="openEditMo('sale','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">✏️ Edit</button>
           <button onclick="deleteRecord('sale','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;">🗑</button>
         </div>
       </div>`;
@@ -2404,7 +2432,7 @@ function renderEditRecords(){
         </div>
         ${r.notes?`<div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;margin-bottom:10px;">📝 ${r.notes}</div>`:''}
         <div style="display:flex;gap:6px;">
-          <button onclick="editActRecord('${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">✏️ Edit</button>
+          <button onclick="openEditMo('activity','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">✏️ Edit</button>
           <button onclick="deleteRecord('activity','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;">🗑</button>
         </div>
       </div>`;
@@ -2412,55 +2440,117 @@ function renderEditRecords(){
   }).join('');
 }
 
-function editSaleRecord(date,idx){
-  const r=allData[date][idx];
-  const newProd=prompt('Product:',r.prod||'');
-  if(newProd===null)return;
-  const newUnits=prompt('Units:',r.units||1);
-  if(newUnits===null)return;
-  const newPrice=prompt('Price per unit (Rp):',r.price||0);
-  if(newPrice===null)return;
+// ══ EDIT RECORD MODAL ══
+let _editMoCtx=null;
+const _editMoTypes=new Set();
 
-  r.prod=newProd;
-  r.units=parseInt(newUnits)||0;
-  r.price=parseInt(newPrice)||0;
-  r.revenue=r.price*r.units;
-  r.editedAt=Date.now();
+function openEditMo(type,date,idx){
+  _editMoCtx={type,date,idx};
+  _editMoTypes.clear();
 
-  if(window.db){
-    window.db.ref('scores/'+date).set(allData[date]);
+  if(type==='sale'){
+    const r=allData[date][idx];
+    const existingTypes=Array.isArray(r.saleType)?r.saleType:(r.saleType?[r.saleType]:[]);
+    existingTypes.forEach(t=>_editMoTypes.add(t));
+    document.getElementById('editMoTitle').textContent='✏️ Edit Sale — '+r.sp;
+    document.getElementById('editMoFields').innerHTML=`
+      <div class="ig" style="margin-bottom:10px;">
+        <div class="igl">Product</div>
+        <select id="erProd">
+          ${Object.keys(P).map(p=>`<option value="${p}"${p===r.prod?' selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div class="ig"><div class="igl">Units</div><input type="number" id="erUnits" value="${r.units||1}" min="1"/></div>
+        <div class="ig"><div class="igl">Price per unit (Rp)</div><input type="text" inputmode="numeric" id="erPrice" value="${r.price||0}"/></div>
+      </div>
+      <div class="ig" style="margin-bottom:10px;">
+        <div class="igl">Sale Type</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="sale-type-btn${existingTypes.includes('upsell')?' active-upsell':''}" id="ertb_upsell" onclick="editMoToggle('upsell')">⬆️ Upselling</button>
+          <button class="sale-type-btn${existingTypes.includes('cross')?' active-cross':''}" id="ertb_cross" onclick="editMoToggle('cross')">🔀 Cross Selling</button>
+          <button class="sale-type-btn${existingTypes.includes('repeat')?' active-repeat':''}" id="ertb_repeat" onclick="editMoToggle('repeat')">🔁 Repeat Order</button>
+        </div>
+      </div>
+      <div class="ig">
+        <div class="igl">Notes (optional)</div>
+        <input type="text" id="erNotes" value="${(r.notes||'').replace(/"/g,'&quot;')}"/>
+      </div>`;
   } else {
-    try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+    const r=allActs[date][idx];
+    document.getElementById('editMoTitle').textContent='✏️ Edit Activity — '+r.sp;
+    document.getElementById('editMoFields').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div class="ig"><div class="igl">💬 Chats</div><input type="text" inputmode="numeric" id="erChats" value="${r.chats||0}"/></div>
+        <div class="ig"><div class="igl">📞 Calls</div><input type="text" inputmode="numeric" id="erCalls" value="${r.calls||0}"/></div>
+        <div class="ig"><div class="igl">🔄 Follow Ups</div><input type="text" inputmode="numeric" id="erFups" value="${r.fups||0}"/></div>
+      </div>
+      <div class="ig">
+        <div class="igl">Notes (optional)</div>
+        <input type="text" id="erNotes" value="${(r.notes||'').replace(/"/g,'&quot;')}"/>
+      </div>`;
   }
-  renderEditRecords();
-  renderAll();
-  alert('✅ Sale record updated');
+  document.getElementById('editRecordMo').style.display='flex';
 }
 
-function editActRecord(date,idx){
-  const r=allActs[date][idx];
-  const newChats=prompt('Chats:',r.chats||0);
-  if(newChats===null)return;
-  const newCalls=prompt('Calls:',r.calls||0);
-  if(newCalls===null)return;
-  const newFups=prompt('Follow ups:',r.fups||0);
-  if(newFups===null)return;
-  const newNotes=prompt('Notes (leave blank to keep):',r.notes||'');
+function editMoToggle(type){
+  if(_editMoTypes.has(type))_editMoTypes.delete(type);
+  else _editMoTypes.add(type);
+  ['upsell','cross','repeat'].forEach(t=>{
+    const btn=document.getElementById('ertb_'+t);
+    if(btn)btn.className='sale-type-btn'+(_editMoTypes.has(t)?' active-'+t:'');
+  });
+}
 
-  r.chats=parseInt(newChats)||0;
-  r.calls=parseInt(newCalls)||0;
-  r.fups=parseInt(newFups)||0;
-  if(newNotes!==null)r.notes=newNotes;
-  r.editedAt=Date.now();
+function closeEditMo(){
+  document.getElementById('editRecordMo').style.display='none';
+  _editMoCtx=null;
+}
 
-  if(window.db){
-    window.db.ref('activities/'+date).set(allActs[date]);
+function saveEditMo(){
+  if(!_editMoCtx)return;
+  const {type,date,idx}=_editMoCtx;
+  if(type==='sale'){
+    const r=allData[date][idx];
+    r.prod=document.getElementById('erProd').value;
+    r.units=parseInt(document.getElementById('erUnits').value)||1;
+    r.price=parseInt(String(document.getElementById('erPrice').value||'').replace(/[^0-9]/g,''))||0;
+    r.revenue=r.price*r.units;
+    r.notes=document.getElementById('erNotes').value.trim();
+    r.saleType=[..._editMoTypes];
+    r.editedAt=Date.now();
+    if(window.db){
+      showToast('💾 Saving...','info');
+      window.db.ref('scores/'+date).set(allData[date]).then(()=>{
+        showToast('✅ Sale updated!','success');
+        renderEditRecords();renderAll();
+      }).catch(err=>showToast('❌ Save failed: '+err.message,'error'));
+    } else {
+      try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+      showToast('✅ Updated (local)','success');
+      renderEditRecords();renderAll();
+    }
   } else {
-    try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+    const r=allActs[date][idx];
+    const pn=v=>parseInt(String(v||'').replace(/[^0-9]/g,''))||0;
+    r.chats=pn(document.getElementById('erChats').value);
+    r.calls=pn(document.getElementById('erCalls').value);
+    r.fups=pn(document.getElementById('erFups').value);
+    r.notes=document.getElementById('erNotes').value.trim();
+    r.editedAt=Date.now();
+    if(window.db){
+      showToast('💾 Saving...','info');
+      window.db.ref('activities/'+date).set(allActs[date]).then(()=>{
+        showToast('✅ Activity updated!','success');
+        renderEditRecords();renderAll();
+      }).catch(err=>showToast('❌ Save failed: '+err.message,'error'));
+    } else {
+      try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+      showToast('✅ Updated (local)','success');
+      renderEditRecords();renderAll();
+    }
   }
-  renderEditRecords();
-  renderAll();
-  alert('✅ Activity record updated');
+  closeEditMo();
 }
 
 async function deleteRecord(type,date,idx){
@@ -2485,7 +2575,7 @@ async function deleteRecord(type,date,idx){
   }
   renderEditRecords();
   renderAll();
-  alert('🗑️ Record deleted');
+  showToast('🗑️ Record deleted','success');
 }
 
 // ══ TOAST NOTIFICATION ══
@@ -2583,15 +2673,15 @@ async function deleteProduct(name){
 function addNewProduct(){
   const name=document.getElementById('newProdName').value.trim().toUpperCase();
   const price=parseInt(document.getElementById('newProdPrice').value);
-  if(!name||!price){alert('Enter both name and price');return;}
-  if(P[name]){alert('Product already exists!');return;}
+  if(!name||!price){showToast('⚠️ Enter both name and price','error');return;}
+  if(P[name]){showToast('⚠️ Product already exists!','error');return;}
   P[name]=price;
   saveProductsToFirebase();
   document.getElementById('newProdName').value='';
   document.getElementById('newProdPrice').value='';
   renderAdminProducts();
   refreshProductDropdown();
-  alert('✅ Product added: '+name);
+  showToast('✅ Product added: '+name,'success');
 }
 
 function saveProductsToFirebase(){
@@ -2638,7 +2728,7 @@ function addMember(teamName){
   const input=document.getElementById('newMember_'+teamName.replace(/\s/g,'_'));
   const name=input.value.trim();
   if(!name)return;
-  if(TM[teamName].m.includes(name)){alert('Member already in this team');return;}
+  if(TM[teamName].m.includes(name)){showToast('⚠️ Member already in this team','error');return;}
   TM[teamName].m.push(name);
   saveTeamsToFirebase();
   renderAdminTeams();
@@ -2671,10 +2761,10 @@ function refreshTeamDropdowns(){
 function adminRefreshAll(){
   if(!window.db){
     renderEditRecords();
-    alert('🔄 Refreshed (local data)');
+    showToast('🔄 Refreshed (local data)','info');
     return;
   }
-  // Force re-fetch from Firebase
+  showToast('⏳ Fetching from Firebase...','info');
   Promise.all([
     window.db.ref('scores').once('value'),
     window.db.ref('activities').once('value')
@@ -2687,9 +2777,9 @@ function adminRefreshAll(){
     Object.keys(aData).forEach(k=>{const v=aData[k];allActs[k]=Array.isArray(v)?v:Object.values(v);});
     renderAll();
     renderEditRecords();
-    alert('🔄 Data refreshed from Firebase!');
+    showToast('🔄 Data refreshed from Firebase!','success');
   }).catch(err=>{
-    alert('⚠️ Refresh failed: '+err.message);
+    showToast('⚠️ Refresh failed: '+err.message,'error');
   });
 }
 
@@ -2783,16 +2873,16 @@ async function resetTodayData(){
     ]).then(()=>{
       renderAll();
       if(typeof renderEditRecords==='function')renderEditRecords();
-      alert('✅ Today\'s data cleared from Firebase.');
+      showToast('✅ Today\'s data cleared!','success');
     }).catch(err=>{
       console.error('Firebase delete error:',err);
-      alert('⚠️ Firebase delete failed:\n\n'+err.message+'\n\nLikely cause: Firebase rules expired. Go to Firebase Console → Realtime Database → Rules → set both .read and .write to true → Publish.');
+      showToast('❌ Firebase delete failed: '+err.message,'error');
     });
   } else {
     try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
     renderAll();
     if(typeof renderEditRecords==='function')renderEditRecords();
-    alert('✅ Today\'s data cleared (local).');
+    showToast('✅ Today\'s data cleared (local)','success');
   }
 }
 
@@ -2814,28 +2904,28 @@ async function resetAllData(){
     ]).then(()=>{
       renderAll();
       if(typeof renderEditRecords==='function')renderEditRecords();
-      alert('🗑️ All data deleted from Firebase.');
+      showToast('🗑️ All data deleted!','success');
     }).catch(err=>{
       console.error('Firebase delete error:',err);
-      alert('⚠️ Firebase delete failed:\n\n'+err.message+'\n\nLikely cause: Firebase rules expired or blocked.\n\nFix:\n1. Go to console.firebase.google.com\n2. Realtime Database → Rules\n3. Set both .read and .write to true\n4. Publish');
+      showToast('❌ Firebase delete failed: '+err.message,'error');
     });
   } else {
     try{localStorage.setItem('hxcs',JSON.stringify({s:{},a:{}}));}catch(e){}
     renderAll();
     if(typeof renderEditRecords==='function')renderEditRecords();
-    alert('🗑️ All data deleted (local).');
+    showToast('🗑️ All data deleted (local)','success');
   }
 }
 
 function changePassword(){
   const current=document.getElementById('currentPwd').value;
   const newP=document.getElementById('newPwd').value;
-  if(current!==getAdminPwd()){alert('❌ Current password is wrong');return;}
-  if(newP.length<6){alert('New password must be at least 6 characters');return;}
+  if(current!==getAdminPwd()){showToast('❌ Current password is wrong','error');return;}
+  if(newP.length<6){showToast('⚠️ New password must be at least 6 characters','error');return;}
   localStorage.setItem('hxcs_admin_pwd',newP);
   document.getElementById('currentPwd').value='';
   document.getElementById('newPwd').value='';
-  alert('✅ Password updated! Default password '+DEFAULT_ADMIN_PWD+' will not work anymore.');
+  showToast('✅ Password updated!','success');
 }
 
 // Load admin config on page load (for everyone, applies settings)
@@ -2875,11 +2965,316 @@ function loadGlobalConfig(){
       refreshProductDropdown();
       updateSPList();
       updateActSP();
+      if(typeof populateMsSPSelect==='function')populateMsSPSelect();
       renderAll();
     });
   }
   setTimeout(()=>{
     updateSPList();
     updateActSP();
+    if(typeof populateMsSPSelect==='function')populateMsSPSelect();
   },100);
+}
+
+// ══════════════════════════════════════
+// ══ MY SALES PAGE ══
+// ══════════════════════════════════════
+let msPeriod='thisMonth';
+
+function populateMsSPSelect(){
+  const sel=document.getElementById('msSPSelect');
+  if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— Pick your name —</option>';
+  Object.entries(TM).forEach(([team,tc])=>{
+    if(!tc.m||!tc.m.length)return;
+    const grp=document.createElement('optgroup');
+    grp.label=tc.e+' Team '+team;
+    tc.m.forEach(sp=>{
+      const opt=document.createElement('option');
+      opt.value=sp+'|'+team;
+      opt.textContent=sp;
+      if(opt.value===prev)opt.selected=true;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+}
+
+function setMsPeriod(period,btn){
+  msPeriod=period;
+  document.querySelectorAll('#msFilter .ins-period-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderMySales();
+}
+
+function renderMySales(){
+  const sel=document.getElementById('msSPSelect');
+  if(!sel)return;
+  const val=sel.value;
+  const summary=document.getElementById('msSummary');
+  const filter=document.getElementById('msFilter');
+  const list=document.getElementById('msSalesList');
+  const empty=document.getElementById('msEmpty');
+
+  if(!val){
+    if(summary)summary.innerHTML='';
+    if(filter)filter.style.display='none';
+    if(list)list.innerHTML='';
+    if(empty)empty.style.display='block';
+    return;
+  }
+
+  const [sp,team]=val.split('|');
+  if(empty)empty.style.display='none';
+  if(filter)filter.style.display='block';
+
+  // Date range for period filter
+  const now=new Date();
+  const thisMonthStart=dk(new Date(now.getFullYear(),now.getMonth(),1));
+  const last30Start=dk(new Date(now.getTime()-30*24*60*60*1000));
+
+  // Collect all sales for this SP
+  let spSales=[];
+  Object.entries(allData).forEach(([date,entries])=>{
+    entries.forEach((e,idx)=>{
+      if(e.sp===sp&&e.team===team){
+        if(msPeriod==='thisMonth'&&date<thisMonthStart)return;
+        if(msPeriod==='last30'&&date<last30Start)return;
+        spSales.push({...e,_date:date,_idx:idx});
+      }
+    });
+  });
+
+  // Sort newest first
+  spSales.sort((a,b)=>b._date.localeCompare(a._date)||(b.ts||0)-(a.ts||0));
+
+  // Totals
+  const totalRev=spSales.reduce((s,e)=>s+(e.revenue||0),0);
+  const totalUnits=spSales.reduce((s,e)=>s+(e.units||0),0);
+  const totalOrders=spSales.length;
+  const upsellCnt=spSales.filter(e=>(Array.isArray(e.saleType)?e.saleType:[]).includes('upsell')).length;
+  const crossCnt=spSales.filter(e=>(Array.isArray(e.saleType)?e.saleType:[]).includes('cross')).length;
+  const repeatCnt=spSales.filter(e=>(Array.isArray(e.saleType)?e.saleType:[]).includes('repeat')).length;
+
+  const tc=TM[team]||{c:'#888',bg:'#161624',e:'⭐'};
+
+  // Render summary
+  if(summary){
+    summary.innerHTML=`
+      <div class="ms-profile-card" style="border-color:${tc.c}33;background:${tc.bg};">
+        <div class="ms-avatar" style="background:${tc.bg};color:${tc.c};border:2px solid ${tc.c}40;">${sp[0].toUpperCase()}</div>
+        <div>
+          <div class="ms-name">${sp}</div>
+          <div class="ms-team" style="color:${tc.c}">${tc.e} Team ${team}</div>
+        </div>
+      </div>
+      <div class="ms-kpi-row">
+        <div class="ms-kpi" style="border-color:rgba(245,197,24,0.3)">
+          <div class="ms-kpi-lbl">💰 Total Omset</div>
+          <div class="ms-kpi-val" style="color:#f5c518;">${fFull(totalRev)}</div>
+          <div class="ms-kpi-sub">${totalOrders} order${totalOrders!==1?'s':''} · ${totalUnits} unit${totalUnits!==1?'s':''}</div>
+        </div>
+        <div class="ms-kpi" style="border-color:rgba(255,107,26,0.3)">
+          <div class="ms-kpi-lbl">⬆️ Upselling</div>
+          <div class="ms-kpi-val" style="color:#ff6b1a;">${upsellCnt}</div>
+          <div class="ms-kpi-sub">${totalOrders?Math.round(upsellCnt/totalOrders*100):0}% of orders</div>
+        </div>
+        <div class="ms-kpi" style="border-color:rgba(124,77,255,0.3)">
+          <div class="ms-kpi-lbl">🔀 Cross-Sell</div>
+          <div class="ms-kpi-val" style="color:#7c4dff;">${crossCnt}</div>
+          <div class="ms-kpi-sub">${totalOrders?Math.round(crossCnt/totalOrders*100):0}% of orders</div>
+        </div>
+        <div class="ms-kpi" style="border-color:rgba(0,230,118,0.3)">
+          <div class="ms-kpi-lbl">🔁 Repeat</div>
+          <div class="ms-kpi-val" style="color:#00e676;">${repeatCnt}</div>
+          <div class="ms-kpi-sub">${totalOrders?Math.round(repeatCnt/totalOrders*100):0}% of orders</div>
+        </div>
+      </div>`;
+  }
+
+  // Empty for this period
+  if(!spSales.length){
+    if(list)list.innerHTML=`<div style="text-align:center;padding:40px 20px;background:#0e0e1a;border:1px solid #1e1e32;border-radius:12px;">
+      <div style="font-size:32px;margin-bottom:10px;">📭</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:white;margin-bottom:6px;">No sales in this period</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;">Try switching to "All Time" above</div>
+    </div>`;
+    return;
+  }
+
+  // Group by date
+  const byDate={};
+  spSales.forEach(e=>{
+    if(!byDate[e._date])byDate[e._date]=[];
+    byDate[e._date].push(e);
+  });
+
+  if(list){
+    list.innerHTML=Object.keys(byDate).sort().reverse().map(date=>{
+      const d=new Date(date+'T00:00:00');
+      const dateStr=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+      const dayRev=byDate[date].reduce((s,e)=>s+(e.revenue||0),0);
+      const entries=byDate[date];
+      return`<div class="ms-date-group">
+        <div class="ms-date-hdr">
+          <div class="ms-date-lbl">📅 ${dateStr}</div>
+          <div class="ms-date-rev">${fFull(dayRev)}</div>
+        </div>
+        ${entries.map(e=>{
+          const tags=Array.isArray(e.saleType)?e.saleType:(e.saleType?[e.saleType]:[]);
+          const hasTags=tags.length>0;
+          return`<div class="ms-sale-card">
+            <div class="ms-sale-top">
+              <div class="ms-sale-prod">${e.prod||'—'}</div>
+              <div class="ms-sale-rev">${fFull(e.revenue||0)}</div>
+            </div>
+            <div class="ms-sale-meta">
+              ${e.units>1?`<span class="ms-badge">×${e.units} units</span>`:''}
+              ${e.priceMode==='custom'?'<span class="ms-badge ms-badge-custom">✏️ Custom price</span>':''}
+              ${tags.map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">⬆️ Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">🔀 Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">🔁 Repeat</span>':'').join('')}
+              ${!hasTags&&!e.units>1?'<span class="ms-badge" style="color:#6060a0;border-color:#252540;">Regular sale</span>':''}
+              ${e.notes?`<span class="ms-note">📝 ${e.notes}</span>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+  }
+}
+
+// ══════════════════════════════════════
+// ══ ADMIN QUICK ADD SALE ══
+// ══════════════════════════════════════
+let adminAddPriceMode='normal';
+const adminAddTypes=new Set();
+
+function initAdminQuickAdd(){
+  // Set default date to today
+  const dateEl=document.getElementById('adminAddDate');
+  if(dateEl)dateEl.value=dk(new Date());
+
+  // Populate team dropdown
+  const teamSel=document.getElementById('adminAddTeam');
+  if(teamSel){
+    teamSel.innerHTML=Object.keys(TM).map(t=>`<option>${t}</option>`).join('');
+    adminAddUpdateSP();
+  }
+
+  // Populate product dropdown
+  const prodSel=document.getElementById('adminAddProd');
+  if(prodSel){
+    prodSel.innerHTML='<option value="">— Select Product —</option>'+
+      Object.keys(P).map(p=>`<option value="${p}">${p}</option>`).join('');
+  }
+
+  // Reset types
+  adminAddTypes.clear();
+  ['upsell','cross','repeat'].forEach(t=>{
+    const b=document.getElementById('aatb_'+t);
+    if(b)b.className='sale-type-btn';
+  });
+
+  // Reset price section
+  const ps=document.getElementById('adminAddPriceSection');
+  if(ps)ps.style.display='none';
+  adminAddPriceMode='normal';
+}
+
+function adminAddUpdateSP(){
+  const teamSel=document.getElementById('adminAddTeam');
+  const spSel=document.getElementById('adminAddSP');
+  if(!teamSel||!spSel)return;
+  const team=teamSel.value;
+  spSel.innerHTML=(TM[team]?.m||[]).map(sp=>`<option>${sp}</option>`).join('');
+}
+
+function adminAddUpdatePrice(){
+  const prod=document.getElementById('adminAddProd').value;
+  const section=document.getElementById('adminAddPriceSection');
+  if(!prod){section.style.display='none';return;}
+  section.style.display='block';
+  adminAddPriceMode='normal';
+  adminAddSetPriceMode('normal');
+}
+
+function adminAddSetPriceMode(mode){
+  adminAddPriceMode=mode;
+  const normalEl=document.getElementById('adminAddNormalPrice');
+  const customEl=document.getElementById('adminAddCustomPrice');
+  const btnN=document.getElementById('adminPtbNormal');
+  const btnC=document.getElementById('adminPtbCustom');
+  if(mode==='normal'){
+    normalEl.style.display='flex';customEl.style.display='none';
+    btnN.className='price-toggle-btn active-normal';btnC.className='price-toggle-btn';
+    const prod=document.getElementById('adminAddProd').value;
+    document.getElementById('adminAddNormalPriceVal').textContent=prod&&P[prod]?fFull(P[prod]):'—';
+  } else {
+    normalEl.style.display='none';customEl.style.display='block';
+    btnN.className='price-toggle-btn';btnC.className='price-toggle-btn active-custom';
+    const ci=document.getElementById('adminAddCustomVal');if(ci)ci.focus();
+  }
+}
+
+function adminAddToggleType(type){
+  if(adminAddTypes.has(type))adminAddTypes.delete(type);
+  else adminAddTypes.add(type);
+  ['upsell','cross','repeat'].forEach(t=>{
+    const btn=document.getElementById('aatb_'+t);
+    if(btn)btn.className='sale-type-btn'+(adminAddTypes.has(t)?' active-'+t:'');
+  });
+}
+
+async function adminAddSale(){
+  try{
+    const date=document.getElementById('adminAddDate').value;
+    const team=document.getElementById('adminAddTeam').value;
+    const sp=document.getElementById('adminAddSP').value;
+    const prod=document.getElementById('adminAddProd').value;
+    const units=parseInt(document.getElementById('adminAddUnits').value)||1;
+    const notes=(document.getElementById('adminAddNotes').value||'').trim();
+    const saleType=[...adminAddTypes];
+
+    if(!date){showToast('⚠️ Select a date','error');return;}
+    if(!prod){showToast('⚠️ Select a product','error');return;}
+    if(!sp){showToast('⚠️ Select a salesperson','error');return;}
+
+    let price=0;
+    if(adminAddPriceMode==='normal'){
+      price=P[prod]||0;
+      if(!price){showToast('⚠️ Product has no price — use Custom','error');return;}
+    } else {
+      price=parseInt(String(document.getElementById('adminAddCustomVal').value||'').replace(/[^0-9]/g,''))||0;
+      if(!price){showToast('⚠️ Enter custom price','error');return;}
+    }
+
+    const existing=allData[date]||[];
+    existing.push({team,sp,prod,chats:0,units,price,revenue:price*units,saleType,notes,priceMode:adminAddPriceMode,ts:Date.now(),addedByAdmin:true});
+    allData[date]=existing;
+
+    if(window.db){
+      showToast('💾 Saving...','info');
+      window.db.ref('scores/'+date).set(existing).then(()=>{
+        showToast('✅ Sale added for '+sp+' on '+date,'success');
+        renderAll();
+        renderEditRecords();
+        // Reset form
+        document.getElementById('adminAddProd').value='';
+        document.getElementById('adminAddUnits').value='1';
+        document.getElementById('adminAddNotes').value='';
+        document.getElementById('adminAddPriceSection').style.display='none';
+        adminAddTypes.clear();
+        ['upsell','cross','repeat'].forEach(t=>{const b=document.getElementById('aatb_'+t);if(b)b.className='sale-type-btn';});
+        adminAddPriceMode='normal';
+      }).catch(err=>showToast('❌ Save failed: '+err.message,'error'));
+    } else {
+      try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+      showToast('✅ Sale added (local)','success');
+      renderAll();
+      renderEditRecords();
+    }
+  }catch(err){
+    showToast('❌ Error: '+err.message,'error');
+    console.error('adminAddSale error:',err);
+  }
 }

@@ -931,3 +931,156 @@ select:focus,input:focus{border-color:#f5c518;}
   .sp-lookup-rev{margin-left:0;text-align:left;width:100%;}
   .sp-lookup-stat-val{font-size:16px;}
 }
+
+/* ══ MY SALES PAGE ══ */
+.ms-search-card{
+  background:#12121e;
+  border:1px solid rgba(167,139,250,0.2);
+  border-radius:14px;
+  padding:18px;
+  margin-bottom:18px;
+}
+.ms-sp-select{
+  width:100%;
+  background:#0e0e1a;
+  border:1px solid rgba(167,139,250,0.3);
+  border-radius:10px;
+  padding:12px 14px;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:15px;
+  font-weight:700;
+  color:white;
+  cursor:pointer;
+}
+.ms-sp-select:focus{outline:none;border-color:rgba(167,139,250,0.6);}
+
+/* Profile card */
+.ms-profile-card{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  border:1px solid transparent;
+  border-radius:12px;
+  padding:14px 16px;
+  margin-bottom:14px;
+}
+.ms-avatar{
+  width:50px;height:50px;
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:22px;font-weight:800;
+  flex-shrink:0;
+}
+.ms-name{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:20px;font-weight:800;color:white;
+}
+.ms-team{
+  font-family:'Space Mono',monospace;
+  font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-top:3px;
+}
+
+/* KPI row */
+.ms-kpi-row{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:10px;
+  margin-bottom:18px;
+}
+.ms-kpi{
+  background:#0e0e1a;
+  border:1px solid transparent;
+  border-radius:12px;
+  padding:14px;
+}
+.ms-kpi-lbl{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:#6060a0;
+  letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:6px;
+}
+.ms-kpi-val{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:26px;font-weight:800;
+  line-height:1;margin-bottom:4px;
+}
+.ms-kpi-sub{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:#6060a0;
+}
+
+/* Date group */
+.ms-date-group{
+  margin-bottom:16px;
+}
+.ms-date-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  background:#12121e;
+  border:1px solid #1e1e32;
+  border-radius:10px 10px 0 0;
+  padding:10px 14px;
+  flex-wrap:wrap;gap:6px;
+}
+.ms-date-lbl{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:13px;font-weight:700;color:white;
+}
+.ms-date-rev{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:14px;font-weight:800;color:#f5c518;
+}
+
+/* Sale card */
+.ms-sale-card{
+  background:#0d0d1a;
+  border:1px solid #1e1e32;
+  border-top:none;
+  padding:12px 14px;
+}
+.ms-sale-card:last-child{
+  border-radius:0 0 10px 10px;
+}
+.ms-sale-top{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:7px;
+}
+.ms-sale-prod{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:15px;font-weight:700;color:white;
+}
+.ms-sale-rev{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:15px;font-weight:800;color:#f5c518;
+}
+.ms-sale-meta{
+  display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+}
+.ms-badge{
+  background:#161624;
+  border:1px solid #252540;
+  border-radius:5px;
+  padding:3px 8px;
+  font-family:'Space Mono',monospace;
+  font-size:9px;
+  color:#e8e8f8;
+  letter-spacing:0.5px;
+}
+.ms-badge-custom{
+  border-color:rgba(255,107,26,0.3);
+  color:#ff6b1a;
+}
+.ms-note{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:#6060a0;
+  letter-spacing:0.5px;
+}
+
+@media(max-width:600px){
+  .ms-kpi-row{grid-template-columns:1fr 1fr;}
+  .ms-kpi-val{font-size:20px;}
+  .ms-sale-top{flex-direction:column;align-items:flex-start;gap:2px;}
+  .ms-sale-rev{font-size:13px;}
+}

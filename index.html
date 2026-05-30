@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260510">
+<link rel="stylesheet" href="css/style.css?v=20260530">
 </head>
 
 <body>
@@ -82,6 +82,7 @@
   <div class="nav-tab active" onclick="showPage('dashboard',this)">📊 Dashboard</div>
   <div class="nav-tab" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
   <div class="nav-tab" onclick="showPage('salespeople',this)">👥 Salespeople</div>
+  <div class="nav-tab" onclick="showPage('mysales',this)" style="color:#a78bfa">🛍️ My Sales</div>
   <div class="nav-tab" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
   <div class="nav-tab" onclick="showPage('insights',this)" style="color:#00e676">💡 Sales Insights</div>
   <div class="nav-tab" onclick="showPage('warning',this)" style="color:#ff3b5c">⚠️ Warning</div>
@@ -321,6 +322,48 @@
 <div class="container">
   <div class="sl">All Salespeople — Tap for Detail</div>
   <div id="spGrid"></div>
+</div>
+</div>
+
+<!-- ═══ MY SALES PAGE ═══ -->
+<div class="page" id="page-mysales">
+<div class="container">
+
+  <div style="margin-bottom:20px;">
+    <div class="sl" style="margin-bottom:4px;color:#a78bfa;">🛍️ My Sales</div>
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Look up your logged orders, products sold, and total omset</div>
+  </div>
+
+  <!-- SP Selector -->
+  <div class="ms-search-card">
+    <div class="igl" style="margin-bottom:10px;font-size:11px;color:#a78bfa;letter-spacing:1.5px;">👤 SELECT YOUR NAME</div>
+    <select id="msSPSelect" onchange="renderMySales()" class="ms-sp-select">
+      <option value="">— Pick your name —</option>
+    </select>
+  </div>
+
+  <!-- Summary Stats (shown when SP selected) -->
+  <div id="msSummary"></div>
+
+  <!-- Period Filter (shown when SP selected) -->
+  <div id="msFilter" style="display:none;margin-bottom:4px;">
+    <div class="ins-period-tabs">
+      <button class="ins-period-btn active" onclick="setMsPeriod('thisMonth',this)">This Month</button>
+      <button class="ins-period-btn" onclick="setMsPeriod('last30',this)">Last 30 Days</button>
+      <button class="ins-period-btn" onclick="setMsPeriod('all',this)">All Time</button>
+    </div>
+  </div>
+
+  <!-- Sales list -->
+  <div id="msSalesList"></div>
+
+  <!-- Empty state -->
+  <div id="msEmpty" style="text-align:center;padding:60px 20px;">
+    <div style="font-size:52px;margin-bottom:16px;opacity:0.7;">🛍️</div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:800;color:white;margin-bottom:8px;">Pick Your Name</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#6060a0;line-height:1.7;">Select your name above to see your logged<br>sales, products, and total omset</div>
+  </div>
+
 </div>
 </div>
 
@@ -772,6 +815,72 @@
       <button class="btn" style="background:#252540;color:#e8e8f8;height:34px;font-size:11px;" onclick="adminLogout()">🔒 Lock Admin</button>
     </div>
 
+    <!-- Section: Quick Add Sale -->
+    <div class="omset-section" style="border-color:rgba(245,197,24,0.35);background:rgba(245,197,24,0.02);">
+      <div class="omset-section-title" style="color:#f5c518;">⚡ Quick Add Sale</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:14px;">Add a sale manually for any date and salesperson</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div class="ig">
+          <div class="igl">Date</div>
+          <input type="date" id="adminAddDate" style="color-scheme:dark;"/>
+        </div>
+        <div class="ig">
+          <div class="igl">Team</div>
+          <select id="adminAddTeam" onchange="adminAddUpdateSP()"></select>
+        </div>
+        <div class="ig">
+          <div class="igl">Salesperson</div>
+          <select id="adminAddSP"></select>
+        </div>
+      </div>
+
+      <div class="ig" style="margin-bottom:8px;">
+        <div class="igl">Product Sold</div>
+        <select id="adminAddProd" onchange="adminAddUpdatePrice()">
+          <option value="">— Select Product —</option>
+        </select>
+      </div>
+
+      <div id="adminAddPriceSection" style="display:none;margin-bottom:8px;">
+        <div class="igl" style="margin-bottom:6px;">Price</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button class="price-toggle-btn active-normal" id="adminPtbNormal" onclick="adminAddSetPriceMode('normal')">✅ Normal</button>
+          <button class="price-toggle-btn" id="adminPtbCustom" onclick="adminAddSetPriceMode('custom')">✏️ Custom</button>
+        </div>
+        <div id="adminAddNormalPrice" style="background:#0e0e1a;border:1px solid rgba(0,230,118,0.3);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;">NORMAL PRICE</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00e676;" id="adminAddNormalPriceVal">—</span>
+        </div>
+        <div id="adminAddCustomPrice" style="display:none;">
+          <div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="text" inputmode="numeric" id="adminAddCustomVal" placeholder="Enter custom price..." class="omset-input"/></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;margin-bottom:8px;align-items:start;">
+        <div class="ig">
+          <div class="igl">Units</div>
+          <input type="number" id="adminAddUnits" value="1" min="1"/>
+        </div>
+        <div class="ig">
+          <div class="igl">Sale Type (optional)</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;padding-top:2px;">
+            <button class="sale-type-btn" id="aatb_upsell" onclick="adminAddToggleType('upsell')">⬆️ Upselling</button>
+            <button class="sale-type-btn" id="aatb_cross" onclick="adminAddToggleType('cross')">🔀 Cross Selling</button>
+            <button class="sale-type-btn" id="aatb_repeat" onclick="adminAddToggleType('repeat')">🔁 Repeat Order</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end;">
+        <div class="ig">
+          <div class="igl">Notes (optional)</div>
+          <input type="text" id="adminAddNotes" placeholder="e.g. customer name, order details..."/>
+        </div>
+        <button class="btn bg-gold" onclick="adminAddSale()" style="height:36px;font-size:13px;padding:0 18px;">➕ ADD</button>
+      </div>
+    </div>
+
     <!-- Section: Edit Records -->
     <div class="omset-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
@@ -875,6 +984,21 @@
 </div>
 </div>
 
+<!-- EDIT RECORD MODAL -->
+<div class="mo" id="editRecordMo" style="display:none" onclick="if(event.target===this)closeEditMo()">
+  <div style="background:#161624;border:1px solid #252540;border-radius:18px;padding:22px;max-width:440px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div id="editMoTitle" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:white;">Edit Record</div>
+      <span onclick="closeEditMo()" style="cursor:pointer;color:#6060a0;font-size:22px;line-height:1;">✕</span>
+    </div>
+    <div id="editMoFields"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px;">
+      <button onclick="closeEditMo()" class="btn" style="background:#252540;color:white;height:44px;font-size:13px;">Cancel</button>
+      <button onclick="saveEditMo()" class="btn bg-gold" style="height:44px;font-size:14px;">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- CUSTOM CONFIRM MODAL -->
 <div class="mo" id="confirmMo" style="display:none">
   <div style="background:#161624;border:1px solid #252540;border-radius:18px;padding:22px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
@@ -968,6 +1092,6 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20260510"></script>
+<script src="js/app.js?v=20260530"></script>
 </body>
 </html>
