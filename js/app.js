@@ -754,15 +754,11 @@ function renderAll(){
   const rate=T.chats>0?(T.closes/T.chats*100).toFixed(1):0;
   const spCnt=new Set(entries.map(e=>e.sp+'|'+e.team)).size||1;
 
-  // KPIs — Closes | Revenue | Rate | Calls | Followups
+  // KPIs — Closes | Revenue (calls/fups/rate removed from main dashboard)
   document.getElementById('K1').textContent=T.closes;
   document.getElementById('K2').textContent=fRp(T.revenue);
-  document.getElementById('K3').innerHTML=rate+'<span class="u">%</span>';
-  document.getElementById('K4').textContent=T.calls;
-  document.getElementById('K5').textContent=T.fups;
   document.getElementById('K1c').textContent=T.closes+' unit'+(T.closes!==1?'s':'')+' sold';
   document.getElementById('K2c').textContent=fFull(T.revenue);
-  document.getElementById('K5c').textContent='follow ups';
 
   // Goal
   const pct=Math.min(100,Math.round(T.revenue/TR*100));

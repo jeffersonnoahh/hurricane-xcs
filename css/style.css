@@ -188,6 +188,9 @@ header{
 
 /* ══ KPI CARDS ══ */
 .kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px;}
+/* Dashboard summary: only 2 cards (Total Closes + Revenue) */
+.kpi-strip-2{grid-template-columns:repeat(2,1fr);}
+.kpi-strip-2 .kpi-card:last-child{grid-column:span 1;}
 .kpi-card{
   background:#161624;
   border:1px solid #252540;
