@@ -2710,20 +2710,23 @@ function refreshProductDropdown(){
   sel.value=current;
 }
 
+function _htmlEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 function renderAdminTeams(){
   const list=document.getElementById('adminTeamList');
   list.innerHTML=Object.entries(TM).map(([teamName,tc])=>`
     <div style="background:#0e0e1a;border:1px solid #252540;border-radius:10px;padding:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <div style="width:34px;height:34px;border-radius:8px;background:${tc.bg};color:${tc.c};display:flex;align-items:center;justify-content:center;font-size:16px;">${tc.e}</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:white;">${teamName}</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:white;">${_htmlEsc(teamName)}</div>
         <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;">${tc.m.length} members</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
         ${tc.m.map(sp=>`
-          <div style="display:flex;align-items:center;gap:6px;background:#161624;border:1px solid #252540;border-radius:20px;padding:5px 10px 5px 12px;">
-            <span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;">${sp}</span>
-            <span onclick="removeMember('${teamName}','${sp}')" style="cursor:pointer;color:#ff3b5c;font-size:14px;">✕</span>
+          <div style="display:flex;align-items:center;gap:7px;background:#161624;border:1px solid #252540;border-radius:20px;padding:5px 9px 5px 12px;">
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;">${_htmlEsc(sp)}</span>
+            <span class="adm-mem-edit" data-team="${_htmlEsc(teamName)}" data-name="${_htmlEsc(sp)}" title="Rename" style="cursor:pointer;color:#f5c518;font-size:12px;">✏️</span>
+            <span class="adm-mem-del" data-team="${_htmlEsc(teamName)}" data-name="${_htmlEsc(sp)}" title="Remove" style="cursor:pointer;color:#ff3b5c;font-size:14px;line-height:1;">✕</span>
           </div>`).join('')}
       </div>
       <div style="display:flex;gap:6px;">
@@ -2731,6 +2734,104 @@ function renderAdminTeams(){
         <button onclick="addMember('${teamName}')" class="btn bg-gold" style="height:32px;font-size:11px;padding:0 14px;">+ Add</button>
       </div>
     </div>`).join('');
+  // Injection-safe member actions — names (incl. quotes/specials) carried via data-attrs, not inline JS strings
+  list.onclick=(ev)=>{
+    const ed=ev.target.closest('.adm-mem-edit');
+    if(ed){renameMember(ed.dataset.team,ed.dataset.name);return;}
+    const dl=ev.target.closest('.adm-mem-del');
+    if(dl){removeMember(dl.dataset.team,dl.dataset.name);return;}
+  };
+}
+
+// Reusable text-input modal (Promise resolves to the entered string, or null if cancelled)
+let _promptResolve=null;
+function showPrompt(title,message,defaultValue,okText){
+  return new Promise(resolve=>{
+    let mo=document.getElementById('promptMo');
+    if(!mo){
+      mo=document.createElement('div');
+      mo.id='promptMo';mo.className='mo';mo.style.display='none';
+      mo.innerHTML='<div class="mbox" style="max-width:400px;">'
+        +'<div id="promptTitle" style="font-family:\'Space Grotesk\',sans-serif;font-size:17px;font-weight:800;color:white;margin-bottom:8px;"></div>'
+        +'<div id="promptMessage" style="font-family:\'Space Mono\',monospace;font-size:11px;color:#6060a0;margin-bottom:14px;line-height:1.5;"></div>'
+        +'<input id="promptInput" type="text" autocomplete="off" style="width:100%;box-sizing:border-box;background:#0e0e1a;border:1px solid #252540;border-radius:8px;padding:10px 12px;color:white;font-size:14px;font-family:\'Space Grotesk\',sans-serif;outline:none;margin-bottom:16px;"/>'
+        +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
+        +'<button id="promptCancelBtn" class="btn" style="background:#252540;color:#9090c0;height:38px;padding:0 16px;">Cancel</button>'
+        +'<button id="promptOkBtn" class="btn bg-gold" style="height:38px;padding:0 18px;"></button>'
+        +'</div></div>';
+      document.body.appendChild(mo);
+      const inp=mo.querySelector('#promptInput');
+      const finish=(val)=>{mo.style.display='none';const r=_promptResolve;_promptResolve=null;if(r)r(val);};
+      mo.querySelector('#promptOkBtn').addEventListener('click',()=>finish(inp.value));
+      mo.querySelector('#promptCancelBtn').addEventListener('click',()=>finish(null));
+      mo.addEventListener('click',e=>{if(e.target===mo)finish(null);});
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();finish(inp.value);}else if(e.key==='Escape'){finish(null);}});
+    }
+    _promptResolve=resolve;
+    mo.querySelector('#promptTitle').textContent=title||'';
+    mo.querySelector('#promptMessage').textContent=message||'';
+    mo.querySelector('#promptOkBtn').textContent=okText||'Save';
+    const inp=mo.querySelector('#promptInput');
+    inp.value=defaultValue||'';
+    mo.style.display='flex';
+    setTimeout(()=>{inp.focus();inp.select();},50);
+  });
+}
+
+// Atomically rename matching entries inside one Firebase date node. Uses a transaction
+// (not whole-array .set) so a sale logged concurrently on the same date can't be lost.
+// Handles both array- and object-stored nodes.
+function _renameInNode(ref,oldName,newName,teamScope){
+  return ref.transaction(curr=>{
+    if(!curr)return curr;
+    Object.keys(curr).forEach(k=>{
+      const e=curr[k];
+      if(e&&e.sp===oldName&&(!teamScope||e.team===teamScope))e.sp=newName;
+    });
+    return curr;
+  });
+}
+
+// Rename a salesperson everywhere: roster (config/teams) + all historical scores & activities
+async function renameMember(teamName,oldName){
+  if(!TM[teamName]||!Array.isArray(TM[teamName].m)||!TM[teamName].m.includes(oldName)){showToast('⚠️ Member not found','error');return;}
+  // Marketplace channels are tied to a hardcoded warning-exclude list; renaming would silently un-exclude them.
+  if(typeof _isWarnExcluded==='function'&&_isWarnExcluded(oldName)){showToast('⚠️ "'+oldName+'" is a marketplace channel and can\'t be renamed here','error');return;}
+  const raw=await showPrompt('Rename Member','Rename "'+oldName+'" in team '+teamName+'. This also updates all of their past sales & activity records.',oldName,'Rename');
+  if(raw===null)return;
+  const newName=raw.trim();
+  if(!newName){showToast('⚠️ Name cannot be empty','error');return;}
+  if(newName===oldName)return;
+  if(TM[teamName].m.includes(newName)){showToast('⚠️ "'+newName+'" already exists in this team','error');return;}
+  // If the same name exists in ANOTHER team's roster it's a genuinely different person → scope to this team.
+  // Otherwise rename by name across ALL teams, so records logged under a previous/mistyped team aren't orphaned.
+  const ambiguous=Object.entries(TM).some(([t,tc])=>t!==teamName&&Array.isArray(tc.m)&&tc.m.includes(oldName));
+  const teamScope=ambiguous?teamName:null;
+  const match=(e)=>e&&e.sp===oldName&&(!teamScope||e.team===teamScope);
+  // 1) roster
+  TM[teamName].m=TM[teamName].m.map(m=>m===oldName?newName:m);
+  // 2) optimistic in-memory rename for instant UI + collect affected dates
+  let recCount=0;const scoreDates=[],actDates=[];
+  Object.keys(allData).forEach(d=>{let t=false;(allData[d]||[]).forEach(e=>{if(match(e)){e.sp=newName;t=true;recCount++;}});if(t)scoreDates.push(d);});
+  Object.keys(allActs).forEach(d=>{let t=false;(allActs[d]||[]).forEach(e=>{if(match(e)){e.sp=newName;t=true;recCount++;}});if(t)actDates.push(d);});
+  renderAdminTeams();refreshTeamDropdowns();if(typeof populateMsSPSelect==='function')populateMsSPSelect();renderAll();
+  // 3) persist — await every write and surface failures honestly (no false "success")
+  if(window.db){
+    showToast('⏳ Saving rename…','info');
+    const writes=[Promise.resolve(saveTeamsToFirebase())];
+    scoreDates.forEach(d=>writes.push(_renameInNode(window.db.ref('scores/'+d),oldName,newName,teamScope)));
+    actDates.forEach(d=>writes.push(_renameInNode(window.db.ref('activities/'+d),oldName,newName,teamScope)));
+    try{
+      await Promise.all(writes);
+      showToast('✅ Renamed "'+oldName+'" → "'+newName+'" ('+recCount+' record'+(recCount!==1?'s':'')+' updated)','success');
+    }catch(err){
+      showToast('❌ Save failed — check internet and refresh; some records may be inconsistent','error');
+    }
+  }else{
+    saveTeamsToFirebase();
+    try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+    showToast('✅ Renamed "'+oldName+'" → "'+newName+'" ('+recCount+' record'+(recCount!==1?'s':'')+' updated)','success');
+  }
 }
 
 function addMember(teamName){
@@ -2756,7 +2857,7 @@ async function removeMember(teamName,memberName){
 
 function saveTeamsToFirebase(){
   if(window.db){
-    window.db.ref('config/teams').set(TM);
+    return window.db.ref('config/teams').set(TM);
   } else {
     localStorage.setItem('hxcs_teams',JSON.stringify(TM));
   }
