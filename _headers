@@ -1,0 +1,5 @@
+# Cloudflare Pages headers (netlify.toml does NOT apply here).
+# Always revalidate — browsers must check for a new version before reusing cache.
+# 304 Not Modified keeps it cheap when nothing changed; updates arrive without hard-refresh.
+/*
+  Cache-Control: no-cache, must-revalidate

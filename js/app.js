@@ -3,16 +3,19 @@ const P={
   'XCSR V2':550000,'XCSR V3':775000,'XCSR TURBO':1750000,'XCSR SUPERFAST':3850000,
   'ECOPOWER':1750000,'ECOTURBO':2780000,'ULTRABOOST':1850000,'EV':3150000,
   'EV POWER':5250000,'XCS 5':2595000,'XCS 7':3990000,'TWIN TURBO':5775000,
-  'SUPERFAST':9555000,'COMPETITION':15750000,'SPRING BUFFER':2500000
+  'SUPERFAST':9555000,'COMPETITION':15750000,'SPRING BUFFER':2750000,
+  'SPRING BUFFER 1 SET':1375000,'SUPER GROUND WIRE':2500000
 };
+// Fallback roster (used only until Firebase config/teams loads) — keep in sync with reality
 let TM={
   'Christ A':{m:['Arfin','Erica','Nathan'],c:'#3b9eff',bg:'#0d1e30',e:'✝️'},
-  'Christ B':{m:['Rico'],c:'#7b6fff',bg:'#150d30',e:'✝️'},
-  'Livia':   {m:['Shifa','Livia','Sales 1','Esia','Tokopedia','Live tiktok'],c:'#cc44cc',bg:'#2a1230',e:'🌸'},
-  'Valen':   {m:['Valen','Melda','Maryam','Amel','Shopee','Shopee live'],c:'#f5c518',bg:'#1a1400',e:'🔥'},
-  'Agung':   {m:['Agung','Rei','Koko','Luthfi'],c:'#2eccc8',bg:'#0d2020',e:'🦁'},
-  'Ivan':    {m:['Ivan','Hendri'],c:'#ff6b1a',bg:'#2a1200',e:'⚡'},
-  'Noah':    {m:['Stanley'],c:'#2ecc71',bg:'#0d2015',e:'⚓'},
+  'Christ B':{m:['Rico','yuri','wati'],c:'#7b6fff',bg:'#150d30',e:'✝️'},
+  'Livia':   {m:['Syifa','FANI','Tokopedia','Live tiktok','Esia','Bilqis'],c:'#cc44cc',bg:'#2a1230',e:'🌸'},
+  'Valen':   {m:['Melda','Maryam','Amel','Shopee live','Shopee','ammar','caroline'],c:'#f5c518',bg:'#1a1400',e:'🔥'},
+  'Agung':   {m:['Agung','Koko','Luthfi','Ayu'],c:'#2eccc8',bg:'#0d2020',e:'🦁'},
+  'Ivan':    {m:['Ivan','Hendri','Eli'],c:'#ff6b1a',bg:'#2a1200',e:'⚡'},
+  'Noah':    {m:['Stanley','aurel'],c:'#2ecc71',bg:'#0d2015',e:'⚓'},
+  'REI':     {m:['Rei','Alif'],c:'#ff4d6d',bg:'#2a0d18',e:'🌀'},
 };
 // Keep a backup of default teams for recovery
 const TM_DEFAULT=JSON.parse(JSON.stringify(TM));
@@ -2629,7 +2632,8 @@ function saveTargets(){
     updateGoalCardText(chatTarget,revTarget);
 
     if(window.db){
-      window.db.ref('config').set(cfg).then(()=>{
+      // update() — NEVER set(): a whole-node set() here once wiped config/teams + config/products
+      window.db.ref('config').update(cfg).then(()=>{
         showToast('✅ Targets saved! Chat: '+chatTarget+' · Rp '+(revTarget/1000000).toFixed(1)+'M','success');
         renderAll();
       }).catch(err=>{
@@ -2794,6 +2798,7 @@ function _renameInNode(ref,oldName,newName,teamScope){
 
 // Rename a salesperson everywhere: roster (config/teams) + all historical scores & activities
 async function renameMember(teamName,oldName){
+  if(window.db&&!window._cfgTeamsLoaded){showToast('⏳ Roster is still loading — try again in a moment','error');return;}
   if(!TM[teamName]||!Array.isArray(TM[teamName].m)||!TM[teamName].m.includes(oldName)){showToast('⚠️ Member not found','error');return;}
   // Marketplace channels are tied to a hardcoded warning-exclude list; renaming would silently un-exclude them.
   if(typeof _isWarnExcluded==='function'&&_isWarnExcluded(oldName)){showToast('⚠️ "'+oldName+'" is a marketplace channel and can\'t be renamed here','error');return;}
@@ -2835,6 +2840,7 @@ async function renameMember(teamName,oldName){
 }
 
 function addMember(teamName){
+  if(window.db&&!window._cfgTeamsLoaded){showToast('⏳ Roster is still loading — try again in a moment','error');return;}
   const input=document.getElementById('newMember_'+teamName.replace(/\s/g,'_'));
   const name=input.value.trim();
   if(!name)return;
@@ -2847,6 +2853,7 @@ function addMember(teamName){
 }
 
 async function removeMember(teamName,memberName){
+  if(window.db&&!window._cfgTeamsLoaded){showToast('⏳ Roster is still loading — try again in a moment','error');return;}
   const ok=await showConfirm('Remove Member',`Remove ${memberName} from team ${teamName}?`,'Remove',true);
   if(!ok)return;
   TM[teamName].m=TM[teamName].m.filter(m=>m!==memberName);
@@ -3043,6 +3050,7 @@ function loadGlobalConfig(){
   if(window.db){
     window.db.ref('config').once('value',snap=>{
       const c=snap.val()||{};
+      window._cfgTeamsLoaded=true; // roster writes are blocked until the shared config has loaded
       if(c.products&&typeof c.products==='object')Object.assign(P,c.products);
 
       // Safe team merge — only accept valid team structures
