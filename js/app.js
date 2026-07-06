@@ -727,7 +727,7 @@ function aggSP(entries,acts){
     const k=e.sp+'|'+e.team;
     if(!s[k])s[k]={sp:e.sp,team:e.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
     s[k].chats+=e.chats;s[k].closes+=e.units;s[k].revenue+=e.revenue;
-    if(e.prod)s[k].prods[e.prod]=(s[k].prods[e.prod]||0)+e.units;
+    if(e.prod){const pp=s[k].prods[e.prod]||(s[k].prods[e.prod]={u:0,r:0});pp.u+=e.units||0;pp.r+=e.revenue||0;}
   });
   acts.forEach(a=>{
     const k=a.sp+'|'+a.team;
@@ -1042,13 +1042,13 @@ function openSPModal(sp,team){
     <div class="mk"><div class="mkl">Closes</div><div class="mkv gr">${s.closes}</div></div>
     <div class="mk"><div class="mkl">Close Rate</div><div class="mkv">${s.chats>0?(s.closes/s.chats*100).toFixed(1):0}%</div></div>`;
 
-  const prods=Object.entries(s.prods||{}).sort((a,b)=>b[1]-a[1]);
+  const prods=Object.entries(s.prods||{}).sort((a,b)=>b[1].r-a[1].r);
   document.getElementById('mProds').innerHTML=prods.length===0
     ?'<div style="color:#333350;font-size:11px;font-family:\'DM Mono\',monospace;padding:6px 0;">No closes yet.</div>'
-    :prods.map(([prod,qty])=>`
+    :prods.map(([prod,d])=>`
       <div class="mpr">
-        <div><div class="mpn">${prod}</div><div class="mpd">${qty} unit × Rp ${fRp(P[prod]||0)}</div></div>
-        <div class="mpr-r">${fFull((P[prod]||0)*qty)}</div>
+        <div><div class="mpn">${prod}</div><div class="mpd">${d.u} unit × Rp ${fRp(d.u?Math.round(d.r/d.u):0)}</div></div>
+        <div class="mpr-r">${fFull(d.r)}</div>
       </div>`).join('');
 
   document.getElementById('spMo').style.display='flex';
@@ -1329,13 +1329,13 @@ function openSPMonthly(sp,team){
     <div class="mk"><div class="mkl">Follow Ups</div><div class="mkv or">${s.fups}</div></div>
     <div class="mk"><div class="mkl">Total Closes</div><div class="mkv gr">${s.closes}</div></div>
     <div class="mk"><div class="mkl">Close Rate</div><div class="mkv">${s.chats>0?(s.closes/s.chats*100).toFixed(1):0}%</div></div>`;
-  const prods=Object.entries(s.prods||{}).sort((a,b)=>b[1]-a[1]);
+  const prods=Object.entries(s.prods||{}).sort((a,b)=>b[1].r-a[1].r);
   document.getElementById('mProds').innerHTML=prods.length===0
     ?'<div style="color:#333350;font-size:11px;padding:6px 0;">No closes this month.</div>'
-    :prods.map(([prod,qty])=>`
+    :prods.map(([prod,d])=>`
       <div class="mpr">
-        <div><div class="mpn">${prod}</div><div class="mpd">${qty} unit × Rp ${fRp(P[prod]||0)}</div></div>
-        <div class="mpr-r">${fFull((P[prod]||0)*qty)}</div>
+        <div><div class="mpn">${prod}</div><div class="mpd">${d.u} unit × Rp ${fRp(d.u?Math.round(d.r/d.u):0)}</div></div>
+        <div class="mpr-r">${fFull(d.r)}</div>
       </div>`).join('');
   document.getElementById('spMo').style.display='flex';
 }
