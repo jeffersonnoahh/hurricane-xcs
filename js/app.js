@@ -738,7 +738,7 @@ function aggSP(entries,acts){
 }
 function aggProds(entries){
   const p={};Object.keys(P).forEach(k=>p[k]={count:0,revenue:0});
-  entries.forEach(e=>{if(e.prod){p[e.prod].count+=e.units;p[e.prod].revenue+=e.revenue;}});
+  entries.forEach(e=>{if(e.prod){if(!p[e.prod])p[e.prod]={count:0,revenue:0};p[e.prod].count+=e.units;p[e.prod].revenue+=e.revenue;}});
   return p;
 }
 function tots(entries,acts){
@@ -1157,7 +1157,7 @@ function renderMonthly(){
       const sk=e.sp+'|'+e.team;
       if(!spTotals[sk])spTotals[sk]={sp:e.sp,team:e.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
       spTotals[sk].chats+=e.chats;spTotals[sk].closes+=e.units;spTotals[sk].revenue+=e.revenue;
-      if(e.prod){prodTotals[e.prod].count+=e.units;prodTotals[e.prod].revenue+=e.revenue;}
+      if(e.prod){if(!prodTotals[e.prod])prodTotals[e.prod]={count:0,revenue:0};prodTotals[e.prod].count+=e.units;prodTotals[e.prod].revenue+=e.revenue;}
       if(!daySPMap[sk])daySPMap[sk]={sp:e.sp,rev:0};
       daySPMap[sk].rev+=e.revenue;
     });
