@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260712b">
+<link rel="stylesheet" href="css/style.css?v=20260712c">
 </head>
 
 <body>
@@ -99,13 +99,15 @@
   <div class="sl">30-Day History</div>
   <div class="history-strip" id="histStrip"></div>
 
-  <!-- ═══ GIANT LIVE OMSET ═══ -->
+  <div class="overview-grid">
+  <!-- ═══ LIVE OMSET HERO ═══ -->
   <div class="omset-hero">
     <div class="omset-hero-lbl"><span class="live-dot"></span> TOTAL LIVE OMSET</div>
     <div class="omset-hero-val" id="liveOmsetBig">Rp 0</div>
     <div class="omset-hero-sub" id="liveOmsetSub">—</div>
   </div>
 
+  <div class="overview-side">
   <div class="goal-card">
     <div class="goal-icon">🎯</div>
     <div class="goal-text">
@@ -125,6 +127,8 @@
   <div class="kpi-strip kpi-strip-2">
     <div class="kpi-card c1"><div class="kpi-lbl">Total Closes</div><div class="kpi-val" id="K1">0</div><div class="kpi-ch nt" id="K1c">units sold</div></div>
     <div class="kpi-card c2"><div class="kpi-lbl">Revenue</div><div class="kpi-val" id="K2">0</div><div class="kpi-ch nt" id="K2c">—</div></div>
+  </div>
+  </div>
   </div>
 
   <div class="tab-row">
