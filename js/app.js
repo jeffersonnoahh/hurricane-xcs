@@ -469,17 +469,18 @@ function updateActSP(){
   const spSel=document.getElementById('aSP');
   if(!teamSel||!spSel)return;
   const t=teamSel.value;
+  const actM=(m)=>m.filter(x=>typeof _isActExcluded!=='function'||!_isActExcluded(x));
   if(!TM[t]||!TM[t].m||TM[t].m.length===0){
     const firstValid=Object.keys(TM).find(k=>TM[k]&&TM[k].m&&TM[k].m.length>0);
     if(firstValid){
       teamSel.value=firstValid;
-      spSel.innerHTML=TM[firstValid].m.map(x=>`<option>${x}</option>`).join('');
+      spSel.innerHTML=actM(TM[firstValid].m).map(x=>`<option>${x}</option>`).join('');
     } else {
       spSel.innerHTML='<option value="">No salespeople — add in Admin</option>';
     }
     return;
   }
-  spSel.innerHTML=TM[t].m.map(x=>`<option>${x}</option>`).join('');
+  spSel.innerHTML=actM(TM[t].m).map(x=>`<option>${x}</option>`).join('');
 }
 
 function getActDateKey(){
@@ -1371,7 +1372,7 @@ function buildDataSummaryForAI(){
   // Who hasn't reported calls yesterday
   const reportedYd=new Set((allActs[ydKey]||[]).map(a=>a.sp+'|'+a.team));
   const allSPsList=[];
-  Object.entries(TM).forEach(([tn,tc])=>tc.m.forEach(sp=>allSPsList.push({sp,team:tn})));
+  Object.entries(TM).forEach(([tn,tc])=>tc.m.forEach(sp=>{if(!_isActExcluded(sp))allSPsList.push({sp,team:tn});}));
   const notReported=allSPsList.filter(s=>!reportedYd.has(s.sp+'|'+s.team)).map(s=>s.sp);
 
   // 7-day trend
@@ -1560,7 +1561,7 @@ function renderNotReported(){
     if(a.isLate)lateSubmissions.add(a.sp+'|'+a.team);
   });
   const allSPs=[];
-  Object.entries(TM).forEach(([tn,tc])=>tc.m.forEach(sp=>allSPs.push({sp,team:tn,tc})));
+  Object.entries(TM).forEach(([tn,tc])=>tc.m.forEach(sp=>{if(!_isActExcluded(sp))allSPs.push({sp,team:tn,tc});}));
   const missing=allSPs.filter(s=>!reportedSPs.has(s.sp+'|'+s.team));
   const done=allSPs.filter(s=>reportedSPs.has(s.sp+'|'+s.team));
 
@@ -1897,6 +1898,10 @@ function saveWarnThresh(){
 // Marketplace / channel accounts excluded from Warning page (not real reps)
 const _WARN_EXCLUDE=['Tokopedia','Live tiktok','Shopee live','Shopee'];
 const _isWarnExcluded=(sp)=>_WARN_EXCLUDE.some(x=>x.toLowerCase()===String(sp||'').toLowerCase());
+// Channels that do NOT need to log daily calls/follow-ups — hidden from the
+// "belum laporan" tracker and the activity form (sales/omset unaffected)
+const _ACT_EXCLUDE=['Live tiktok','Shopee live'];
+const _isActExcluded=(sp)=>_ACT_EXCLUDE.some(x=>x.toLowerCase()===String(sp||'').toLowerCase());
 
 function renderWarning(){
   // Update threshold display labels
