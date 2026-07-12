@@ -1187,6 +1187,10 @@ function renderMonthly(){
   document.getElementById('mK4').textContent=totalCalls;
   document.getElementById('mK5').textContent=fRp(totalRev);
   document.getElementById('mK5c').textContent=fFull(totalRev);
+  const mob=document.getElementById('mOmsetBig');
+  if(mob)mob.textContent=fFull(totalRev);
+  const mos=document.getElementById('mOmsetSub');
+  if(mos)mos.textContent=fMonthName(mYear,mMonth)+' · total omset';
   document.getElementById('mActiveDays').textContent=activeDays;
   document.getElementById('mAvgRev').textContent=fFull(activeDays>0?Math.round(totalRev/activeDays):0);
   document.getElementById('mBestDay').textContent=bestDate?fFull(bestRev):'Rp 0';
