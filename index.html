@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <link rel="stylesheet" href="css/style.css?v=20260712-redesign2">
+<link rel="stylesheet" href="css/premium.css?v=20260712-premium1">
 </head>
 
 <body>
@@ -79,29 +80,29 @@
 
 <div class="nav-wrapper">
 <div class="nav-bar">
-  <div class="nav-tab active" onclick="showPage('dashboard',this)">📊 Dashboard</div>
-  <div class="nav-tab" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
-  <div class="nav-tab" onclick="showPage('salespeople',this)">👥 Salespeople</div>
-  <div class="nav-tab" onclick="showPage('mysales',this)" style="color:#a78bfa">🛍️ My Sales</div>
-  <div class="nav-tab" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
-  <div class="nav-tab" onclick="showPage('insights',this)" style="color:#00e676">💡 Sales Insights</div>
-  <div class="nav-tab" onclick="showPage('warning',this)" style="color:#ff3b5c">⚠️ Warning</div>
-  <div class="nav-tab" onclick="showPage('admin',this)" style="color:#7c4dff">⚙️ Admin</div>
+  <div class="nav-tab active" data-page="dashboard" onclick="showPage('dashboard',this)">📊 Dashboard</div>
+  <div class="nav-tab" data-page="activity" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
+  <div class="nav-tab" data-page="salespeople" onclick="showPage('salespeople',this)">👥 Salespeople</div>
+  <div class="nav-tab" data-page="mysales" onclick="showPage('mysales',this)" style="color:#a78bfa">🛍️ My Sales</div>
+  <div class="nav-tab" data-page="monthly" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
+  <div class="nav-tab" data-page="insights" onclick="showPage('insights',this)" style="color:#00e676">💡 Sales Insights</div>
+  <div class="nav-tab" data-page="warning" onclick="showPage('warning',this)" style="color:#ff3b5c">⚠️ Warning</div>
+  <div class="nav-tab" data-page="admin" onclick="showPage('admin',this)" style="color:#7c4dff">⚙️ Admin</div>
 </div>
 </div>
 
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page active" id="page-dashboard">
-<div class="container">
+<div class="container" id="dashboardContainer">
 
   <div id="roBanner" class="readonly-banner" style="display:none">📅 Viewing <strong id="roDate"></strong> — Read-only. Go back to TODAY to add entries.</div>
 
-  <div class="sl">30-Day History</div>
+  <div class="sl" id="historyHeading">30-Day History</div>
   <div class="history-strip" id="histStrip"></div>
 
   <!-- ═══ GIANT LIVE OMSET ═══ -->
-  <div class="omset-hero">
-    <div class="omset-hero-lbl"><span class="live-dot"></span> TOTAL LIVE OMSET</div>
+  <div class="omset-hero" id="homeOmsetHero">
+    <div class="omset-hero-lbl"><span class="live-dot"></span> MONTHLY LIVE OMSET</div>
     <div class="omset-hero-val" id="liveOmsetBig">Rp 0</div>
     <div class="omset-hero-sub" id="liveOmsetSub">—</div>
   </div>
@@ -127,7 +128,7 @@
     <div class="kpi-card c2"><div class="kpi-lbl">Revenue</div><div class="kpi-val" id="K2">0</div><div class="kpi-ch nt" id="K2c">—</div></div>
   </div>
 
-  <div class="tab-row">
+  <div class="tab-row" id="performanceTabs">
     <div class="tab active" onclick="switchTab('team',this)">By Team</div>
     <div class="tab" onclick="switchTab('sp',this)">By SP</div>
     <div class="tab" onclick="switchTab('product',this)">By Product</div>
@@ -153,7 +154,7 @@
   </div>
 
   <div class="bg">
-    <div class="panel">
+    <div class="panel" id="saleEntryPanel">
       <div class="pt"><span>➕ Log Entry</span></div>
       <div id="inputArea">
 
@@ -251,7 +252,7 @@
       </div>
       <div id="entryLog"><div style="color:#333350;font-size:11px;font-family:'DM Mono',monospace;padding:5px 0;">No entries yet.</div></div>
     </div>
-    <div class="panel">
+    <div class="panel" id="leaderboardPanel">
       <div class="pt"><span>🏆 Top Performers</span>
         <button class="btn bg-wa" onclick="openWA()" style="font-size:10px;height:24px;padding:0 8px">📲 WA</button>
       </div>
@@ -376,14 +377,14 @@
 <div class="container">
 
   <!-- ═══ GIANT MONTH TOTAL OMSET ═══ -->
-  <div class="omset-hero">
-    <div class="omset-hero-lbl"><span class="live-dot"></span> TOTAL OMSET</div>
+  <div class="omset-hero" id="monthlyOmsetHero">
+    <div class="omset-hero-lbl"><span class="live-dot"></span> MONTHLY TOTAL OMSET</div>
     <div class="omset-hero-val" id="mOmsetBig">Rp 0</div>
     <div class="omset-hero-sub" id="mOmsetSub">—</div>
   </div>
 
   <!-- Month Switcher -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <div id="monthlyControlRow" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div class="sl" style="margin-bottom:0;flex:1">Monthly Recap</div>
     <div class="day-switcher" style="margin-left:16px;">
       <button class="day-btn" onclick="prevMonth()">‹</button>
@@ -402,7 +403,7 @@
   </div>
 
   <!-- Active Days -->
-  <div style="background:#12121e;border:1px solid #1e1e32;border-radius:11px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:20px;">
+  <div id="monthlySummary" style="background:#12121e;border:1px solid #1e1e32;border-radius:11px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:20px;">
     <div>
       <div class="kpi-lbl">Active Days</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:#f5c518" id="mActiveDays">0</div>
@@ -1104,5 +1105,6 @@
 </div>
 
 <script src="js/app.js?v=20260712-redesign2"></script>
+<script src="js/premium-ui.js?v=20260712-premium1"></script>
 </body>
 </html>
