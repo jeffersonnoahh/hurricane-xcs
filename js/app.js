@@ -601,9 +601,14 @@ function addEntry(){
     showToast('❌ Error: '+(err.message||'something went wrong'),'error');
   }
 }
-function removeEntry(i){
+async function removeEntry(i){
   if(!isT())return;
-  const arr=gE();arr.splice(i,1);sE(arr);renderAll();
+  const arr=gE();
+  const e=arr[i];
+  const what=e?`${e.sp} — ${e.prod?e.units+'× '+e.prod:(e.chats||0)+' chats'}${e.revenue?' ('+fFull(e.revenue)+')':''}`:'this entry';
+  const ok=await showConfirm('Delete Entry','Delete '+what+'? This cannot be undone.','Delete',true);
+  if(!ok)return;
+  arr.splice(i,1);sE(arr);renderAll();
 }
 async function clearToday(){
   if(!isT())return;
@@ -693,8 +698,12 @@ function addActivity(){
     showToast('Error: '+(err.message||'something went wrong'),'error');
   }
 }
-function removeActivityByDate(dateKey,ts){
+async function removeActivityByDate(dateKey,ts){
   const arr=allActs[dateKey]||[];
+  const a=arr.find(x=>x&&x.ts===ts);
+  const what=a?`${a.sp}'s report (${a.chats||0} chats · ${a.calls||0} calls · ${a.fups||0} f/up)`:'this activity log';
+  const ok=await showConfirm('Delete Activity Log','Delete '+what+'? This cannot be undone.','Delete',true);
+  if(!ok)return;
   const newArr=arr.filter(a=>a.ts!==ts);
   allActs[dateKey]=newArr;
   if(window.db){
@@ -705,8 +714,10 @@ function removeActivityByDate(dateKey,ts){
   }
   renderAll();
 }
-function removeActivity(i){
+async function removeActivity(i){
   if(!isT())return;
+  const ok=await showConfirm('Delete Activity Log','Delete this activity log? This cannot be undone.','Delete',true);
+  if(!ok)return;
   const arr=gA();arr.splice(i,1);sA(arr);renderAll();
 }
 
