@@ -2605,7 +2605,7 @@ function showToast(message, type){
   if(!toast){
     toast=document.createElement('div');
     toast.id='hxcsToast';
-    toast.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(150%);background:#161624;border:1px solid #252540;border-radius:12px;padding:14px 20px;color:white;font-family:Space Grotesk,sans-serif;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,0.5);transition:transform 0.3s;max-width:90vw;text-align:center;';
+    toast.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(150%);background:#161624;border:1px solid #252540;border-radius:12px;padding:14px 20px;color:white;font-family:Space Grotesk,sans-serif;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,0.5);transition:transform 0.3s,opacity 0.3s;max-width:90vw;text-align:center;opacity:0;pointer-events:none;';
     document.body.appendChild(toast);
   }
   if(type==='error'){toast.style.borderColor='#ff3b5c';toast.style.color='#ff3b5c';}
@@ -2613,9 +2613,15 @@ function showToast(message, type){
   else {toast.style.borderColor='#f5c518';toast.style.color='#f5c518';}
   toast.textContent=message;
   toast.style.transform='translateX(-50%) translateY(0)';
+  toast.style.opacity='1';
+  toast.style.visibility='visible';
   clearTimeout(window._toastTimer);
+  clearTimeout(window._toastHideTimer);
   window._toastTimer=setTimeout(()=>{
     toast.style.transform='translateX(-50%) translateY(150%)';
+    toast.style.opacity='0';
+    // visibility is not animated, so nothing can pin the toast on screen
+    window._toastHideTimer=setTimeout(()=>{toast.style.visibility='hidden';},400);
   },3500);
 }
 
