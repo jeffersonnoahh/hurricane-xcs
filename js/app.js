@@ -571,10 +571,10 @@ function addEntry(){
     existing.push(newEntry);
     allData[targetKey]=existing;
 
-    // Save to Firebase with feedback
+    // Save to Firebase with feedback (atomic append — never rewrites the whole day)
     if(window.db){
       showToast('💾 Saving...','info');
-      window.db.ref('scores/'+targetKey).set(existing).then(()=>{
+      _txnAppend('scores',targetKey,newEntry).then(()=>{
         showToast('✅ '+prod+(units>1?' ×'+units:'')+' saved for '+sp+'!','success');
       }).catch(err=>{
         showToast('❌ Save failed — check internet: '+(err.message||''),'error');
@@ -603,17 +603,46 @@ function addEntry(){
 }
 async function removeEntry(i){
   if(!isT())return;
-  const arr=gE();
-  const e=arr[i];
-  const what=e?`${e.sp} — ${e.prod?e.units+'× '+e.prod:(e.chats||0)+' chats'}${e.revenue?' ('+fFull(e.revenue)+')':''}`:'this entry';
+  const e=gE()[i];
+  if(!e)return;
+  const what=`${e.sp} — ${e.prod?e.units+'× '+e.prod:(e.chats||0)+' chats'}${e.revenue?' ('+fFull(e.revenue)+')':''}`;
   const ok=await showConfirm('Delete Entry','Delete '+what+'? This cannot be undone.','Delete',true);
   if(!ok)return;
-  arr.splice(i,1);sE(arr);renderAll();
+  if(window.db&&e.ts){
+    _txnDeleteByTs('scores',gvk(),e.ts).then(()=>{
+      allData[gvk()]=(allData[gvk()]||[]).filter(x=>!(x&&x.ts===e.ts));
+      renderAll();
+      showToast('🗑️ Entry deleted','success');
+    }).catch(()=>showToast('❌ Delete failed — check internet','error'));
+  }else{
+    const arr=gE();const idx=e.ts?arr.findIndex(x=>x&&x.ts===e.ts):i;
+    if(idx>=0){arr.splice(idx,1);sE(arr);}
+    renderAll();
+  }
 }
 async function clearToday(){
   if(!isT())return;
   const okClr=await showConfirm('Clear Entries','Clear ALL entries for today?','Clear',true);if(!okClr)return;
   sE([]);sA([]);renderAll();
+}
+
+// ══ ATOMIC PER-RECORD WRITES ══
+// Adds/deletes merge with SERVER state via transactions, so a stale phone can
+// never wipe or resurrect other people's records by rewriting the whole day.
+function _txnAppend(node,dateKey,entry){
+  return window.db.ref(node+'/'+dateKey).transaction(curr=>{
+    if(!curr)return[entry];
+    if(Array.isArray(curr)){if(!curr.some(e=>e&&e.ts===entry.ts))curr.push(entry);return curr;}
+    curr['k'+entry.ts]=entry;return curr;
+  });
+}
+function _txnDeleteByTs(node,dateKey,ts){
+  return window.db.ref(node+'/'+dateKey).transaction(curr=>{
+    if(!curr)return curr;
+    if(Array.isArray(curr)){const out=curr.filter(e=>!(e&&e.ts===ts));return out.length?out:null;}
+    Object.keys(curr).forEach(k=>{if(curr[k]&&curr[k].ts===ts)curr[k]=null;});
+    return curr;
+  });
 }
 
 // ══ SAVE TO SPECIFIC KEY ══
@@ -669,12 +698,13 @@ function addActivity(){
     const isLate=(hour>14)||(hour===14&&minute>0); // after 2:00 PM
 
     const arr=allActs[targetKey]||[];
-    arr.push({team,sp,chats,calls,fups,notes,ts:Date.now(),isLate});
+    const newAct={team,sp,chats,calls,fups,notes,ts:Date.now(),isLate};
+    arr.push(newAct);
 
     allActs[targetKey]=arr;
     if(window.db){
       showToast('💾 Saving...','info');
-      window.db.ref('activities/'+targetKey).set(arr).then(()=>{
+      _txnAppend('activities',targetKey,newAct).then(()=>{
         const dateLbl=new Date(targetKey+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
         showToast(isLate?'⚠️ Logged for '+dateLbl+' — LATE (after 2 PM)':'✅ Logged for '+dateLbl,isLate?'info':'success');
       }).catch(err=>{
@@ -699,26 +729,38 @@ function addActivity(){
   }
 }
 async function removeActivityByDate(dateKey,ts){
-  const arr=allActs[dateKey]||[];
-  const a=arr.find(x=>x&&x.ts===ts);
+  const a=(allActs[dateKey]||[]).find(x=>x&&x.ts===ts);
   const what=a?`${a.sp}'s report (${a.chats||0} chats · ${a.calls||0} calls · ${a.fups||0} f/up)`:'this activity log';
   const ok=await showConfirm('Delete Activity Log','Delete '+what+'? This cannot be undone.','Delete',true);
   if(!ok)return;
-  const newArr=arr.filter(a=>a.ts!==ts);
-  allActs[dateKey]=newArr;
   if(window.db){
-    if(!newArr.length)window.db.ref('activities/'+dateKey).remove();
-    else window.db.ref('activities/'+dateKey).set(newArr);
-  } else {
+    _txnDeleteByTs('activities',dateKey,ts).then(()=>{
+      allActs[dateKey]=(allActs[dateKey]||[]).filter(x=>!(x&&x.ts===ts));
+      renderAll();
+      showToast('🗑️ Activity log deleted','success');
+    }).catch(()=>showToast('❌ Delete failed — check internet','error'));
+  }else{
+    allActs[dateKey]=(allActs[dateKey]||[]).filter(x=>!(x&&x.ts===ts));
     try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
+    renderAll();
   }
-  renderAll();
 }
 async function removeActivity(i){
   if(!isT())return;
+  const a=gA()[i];
+  if(!a)return;
   const ok=await showConfirm('Delete Activity Log','Delete this activity log? This cannot be undone.','Delete',true);
   if(!ok)return;
-  const arr=gA();arr.splice(i,1);sA(arr);renderAll();
+  if(window.db&&a.ts){
+    _txnDeleteByTs('activities',gvk(),a.ts).then(()=>{
+      allActs[gvk()]=(allActs[gvk()]||[]).filter(x=>!(x&&x.ts===a.ts));
+      renderAll();
+    }).catch(()=>showToast('❌ Delete failed — check internet','error'));
+  }else{
+    const arr=gA();const idx=a.ts?arr.findIndex(x=>x&&x.ts===a.ts):i;
+    if(idx>=0){arr.splice(idx,1);sA(arr);}
+    renderAll();
+  }
 }
 
 // ══ AGGREGATORS ══
