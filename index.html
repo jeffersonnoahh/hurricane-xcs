@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20260712-redesign2">
+<link rel="stylesheet" href="css/style.css?v=20260719-saletype1">
 <link rel="stylesheet" href="css/premium.css?v=20260712-premium2">
 </head>
 
@@ -231,11 +231,13 @@
             <input type="number" id="inUnits" placeholder="1" min="1" value="1" oninput="updateCustomPreview()"/>
           </div>
           <div class="ig">
-            <div class="igl">Sale Type (optional — bisa pilih lebih dari 1)</div>
+            <div class="igl">Sale Type (WAJIB — pilih minimal 1)</div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;padding-top:2px;">
               <button class="sale-type-btn" id="stb_upsell" onclick="toggleSaleType('upsell')">⬆️ Upselling</button>
               <button class="sale-type-btn" id="stb_cross" onclick="toggleSaleType('cross')">🔀 Cross Selling</button>
               <button class="sale-type-btn" id="stb_repeat" onclick="toggleSaleType('repeat')">🔁 Repeat Order</button>
+              <button class="sale-type-btn" id="stb_testdrive" onclick="toggleSaleType('testdrive')">🚗 Test Drive</button>
+              <button class="sale-type-btn" id="stb_complete" onclick="toggleSaleType('complete')">✅ Order Complete</button>
             </div>
           </div>
         </div>
@@ -880,6 +882,8 @@
             <button class="sale-type-btn" id="aatb_upsell" onclick="adminAddToggleType('upsell')">⬆️ Upselling</button>
             <button class="sale-type-btn" id="aatb_cross" onclick="adminAddToggleType('cross')">🔀 Cross Selling</button>
             <button class="sale-type-btn" id="aatb_repeat" onclick="adminAddToggleType('repeat')">🔁 Repeat Order</button>
+            <button class="sale-type-btn" id="aatb_testdrive" onclick="adminAddToggleType('testdrive')">🚗 Test Drive</button>
+            <button class="sale-type-btn" id="aatb_complete" onclick="adminAddToggleType('complete')">✅ Order Complete</button>
           </div>
         </div>
       </div>
@@ -1104,7 +1108,7 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20260713-atomic1"></script>
+<script src="js/app.js?v=20260719-saletype1"></script>
 <script src="js/premium-ui.js?v=20260712-premium1"></script>
 </body>
 </html>
