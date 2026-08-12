@@ -1972,44 +1972,60 @@ function renderWarning(){
   // - revenue = TOTAL across all dates
   // - chats/calls/fups = MOST RECENT log entry's values (with date)
   // (marketplace/channel accounts are excluded entirely)
+  // ROSTER IS THE ONLY SOURCE OF NAMES HERE. Old records must never re-add a
+  // person: someone removed from config/teams (resigned, moved out) has to
+  // disappear from Warning, even though their historical records stay.
   const spMap={};
+  const _wKey={},_wName={};                      // lookup: exact sp|team, and name-only
+  const _wNorm=s=>String(s||'').trim().toLowerCase();
   Object.entries(TM).forEach(([team,tc])=>{
-    tc.m.forEach(sp=>{
+    (tc.m||[]).forEach(sp=>{
       if(_isWarnExcluded(sp))return;
       const k=sp+'|'+team;
       spMap[k]={sp,team,revenue:0,chats:0,calls:0,fups:0,lastDate:null,lastDateLbl:'Never logged'};
+      _wKey[_wNorm(sp)+'|'+_wNorm(team)]=k;
+      const n=_wNorm(sp);
+      _wName[n]=(_wName[n]===undefined)?k:null;  // null = name used by 2+ teams (ambiguous)
     });
   });
+  // Map a record to a CURRENT roster member. Falls back to name-only so that a
+  // rep who changed team keeps their old history; returns null for ex-members,
+  // whose records are then ignored entirely.
+  const _wResolve=(sp,team)=>{
+    const ek=_wKey[_wNorm(sp)+'|'+_wNorm(team)];
+    if(ek)return ek;
+    return _wName[_wNorm(sp)]||null;
+  };
 
-  // Sum total revenue across ALL dates
+  // Sum total revenue across ALL dates (ex-members skipped)
   Object.keys(allData||{}).forEach(k=>{
     (allData[k]||[]).forEach(e=>{
       if(!e||typeof e!=='object')return;
-      if(_isWarnExcluded(e.sp))return;
-      const key=e.sp+'|'+e.team;
-      if(!spMap[key])spMap[key]={sp:e.sp,team:e.team,revenue:0,chats:0,calls:0,fups:0,lastDate:null,lastDateLbl:'Never logged'};
+      const key=_wResolve(e.sp,e.team);
+      if(!key||!spMap[key])return;
       spMap[key].revenue+=(e.revenue||0);
     });
   });
 
-  // For each SP, find their MOST RECENT activity log entry
+  // For each SP, find their MOST RECENT activity log entry (ex-members skipped)
   const actDates=Object.keys(allActs||{}).sort().reverse(); // newest first
-  Object.values(spMap).forEach(s=>{
-    for(const date of actDates){
-      const arr=allActs[date]||[];
-      // Sum same-SP entries for that day (can have multiple)
-      const sameDay=arr.filter(a=>a&&a.sp===s.sp&&a.team===s.team);
-      if(sameDay.length>0){
-        s.chats=sameDay.reduce((t,a)=>t+(a.chats||0),0);
-        s.calls=sameDay.reduce((t,a)=>t+(a.calls||0),0);
-        s.fups=sameDay.reduce((t,a)=>t+(a.fups||0),0);
-        s.lastDate=date;
-        const d=new Date(date+'T00:00:00');
-        s.lastDateLbl=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-        break;
-      }
-    }
-  });
+  for(const date of actDates){
+    const dayAgg={};
+    (allActs[date]||[]).forEach(a=>{
+      if(!a||typeof a!=='object')return;
+      const key=_wResolve(a.sp,a.team);
+      if(!key||!spMap[key]||spMap[key].lastDate)return;   // already has a newer log
+      const g=dayAgg[key]||(dayAgg[key]={chats:0,calls:0,fups:0});
+      g.chats+=(a.chats||0);g.calls+=(a.calls||0);g.fups+=(a.fups||0);
+    });
+    Object.keys(dayAgg).forEach(key=>{
+      const s=spMap[key];
+      s.chats=dayAgg[key].chats;s.calls=dayAgg[key].calls;s.fups=dayAgg[key].fups;
+      s.lastDate=date;
+      const d=new Date(date+'T00:00:00');
+      s.lastDateLbl=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    });
+  }
 
   const sps=Object.values(spMap);
 
