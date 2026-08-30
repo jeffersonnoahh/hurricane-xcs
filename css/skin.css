@@ -1,0 +1,301 @@
+/* ══════════════════════════════════════════════════════════════════════
+   SKIN 2026 — CAT ULANG SAJA.
+   File ini HANYA warna & tata letak. Tidak ada satu pun fungsi, tombol,
+   atau elemen yang diubah — app.js dan index.html tidak disentuh logikanya.
+   Dimuat PALING AKHIR supaya menimpa style.css & premium.css.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root{
+  color-scheme:light;
+
+  /* permukaan */
+  --bg:#f4f5f9;
+  --surface:#ffffff;
+  --card:#ffffff;
+  --card2:#f7f8fc;
+  --border:#e6e8f0;
+  --border2:#eef0f6;
+
+  /* teks */
+  --text:#0e1220;
+  --soft:#6b7392;
+  --muted:#9aa0b4;
+  --softer:#aeb4c6;
+
+  /* aksen — dibuat kontras di atas putih */
+  --blue:#3d5afe;
+  --purple:#7c3aed;
+  --green:#16a34a;
+  --red:#dc2626;
+  --orange:#ea580c;
+  --cyan:#0891b2;
+  --gold:#b8860b;
+  --gold2:#a97d09;
+
+  --radius-sm:12px; --radius:16px; --radius-lg:20px;
+  --shadow:0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+  --sidebar:266px;
+}
+
+body{background:var(--bg);color:var(--text)}
+
+/* ── kartu & panel: putih + garis halus, bukan blok gelap ── */
+.card,.panel,.kpi,.sec,.box,.omset-section,.nr-panel,.spc,.warn-crit-card,
+.mk,.mpr,.goal-card,.history-strip,.cal-box,.modal,.mo-box{
+  background:var(--surface)!important;
+  border-color:var(--border)!important;
+  box-shadow:var(--shadow);
+}
+
+/* ══ HEADER + SIDEBAR (desktop) ══
+   Struktur HTML tetap. .brand dan .nav-wrapper hanya DIPINDAH posisinya
+   lewat CSS menjadi kolom kiri — tidak ada elemen yang dibuat/dihapus. */
+@media (min-width:1000px){
+  body{padding-left:var(--sidebar)}
+
+  .brand{
+    position:fixed;left:0;top:0;width:var(--sidebar);height:88px;
+    padding:0 22px;margin:0;background:var(--surface);
+    border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:12px;z-index:200;
+  }
+  .nav-wrapper{
+    position:fixed;left:0;top:88px;bottom:0;width:var(--sidebar);
+    background:var(--surface);border-right:1px solid var(--border);
+    padding:16px 14px;overflow-y:auto;z-index:199;
+    box-shadow:none;backdrop-filter:none;
+  }
+  .nav-bar{
+    display:flex!important;flex-direction:column;align-items:stretch;
+    gap:4px;overflow:visible;padding:0;margin:0;border:none;background:none;
+  }
+  .nav-tab{
+    display:flex;align-items:center;gap:11px;
+    padding:12px 14px;border-radius:12px;border:none;background:none;
+    font-size:14px;font-weight:600;color:var(--soft)!important;
+    white-space:nowrap;transition:.15s;
+  }
+  .nav-tab:hover{background:var(--card2);color:var(--text)!important}
+  .nav-tab.active{
+    background:var(--blue);color:#fff!important;
+    box-shadow:0 6px 16px rgba(61,90,254,.28);
+  }
+
+  header{
+    position:sticky;top:0;z-index:150;
+    background:var(--bg);backdrop-filter:none!important;
+    border-bottom:1px solid var(--border);
+    display:flex;justify-content:flex-end;align-items:center;
+    min-height:88px;padding:0 30px;margin:0;
+  }
+  .header-right{gap:10px}
+}
+
+/* ── kontrol di header ── */
+.day-switcher,.live-badge{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;box-shadow:var(--shadow);
+}
+.day-switcher{padding:4px}
+.day-btn{background:none;border:none;color:var(--soft);border-radius:9px}
+.day-btn:hover{background:var(--card2);color:var(--text)}
+.day-label{color:var(--text);font-weight:700}
+.live-badge{color:var(--green);background:#effaf3;border-color:#d6f2e0;padding:9px 13px}
+
+/* ── tombol ── */
+.btn{border-radius:12px;font-weight:700;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.btn:hover{border-color:#d5d8e6}
+.btn-primary,.btn.primary,.btn-gold{
+  background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important;
+  box-shadow:0 8px 20px rgba(61,90,254,.28);
+}
+
+/* ── input ── */
+input,select,textarea{
+  background:var(--surface)!important;border:1px solid var(--border)!important;
+  color:var(--text)!important;border-radius:11px;
+}
+input::placeholder,textarea::placeholder{color:var(--muted)!important}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)!important;outline:none;box-shadow:0 0 0 3px rgba(61,90,254,.12)}
+
+/* ── tabel ── */
+table{border-color:var(--border)}
+th{color:var(--muted)!important;font-weight:700;letter-spacing:.6px;background:var(--card2)}
+td{border-color:var(--border2)!important}
+tr:hover td{background:var(--card2)}
+
+/* ── hero omset: satu-satunya blok yang tetap GELAP, seperti di desain ── */
+.omset-hero{
+  background:#0b0f1c!important;border:none!important;
+  border-radius:var(--radius-lg);box-shadow:0 20px 50px rgba(11,15,28,.22);
+  color:#fff;
+}
+.omset-hero .omset-hero-val,#liveOmsetBig,#mOmsetBig{color:#fff!important}
+.omset-hero .omset-hero-lbl{color:#a8b0c9!important}
+.omset-hero .omset-hero-sub{color:#7b8399!important}
+
+/* ── badge / chip ── */
+.tag,.chip,.badge,.pill{border-radius:9px}
+
+/* ── modal & overlay ── */
+.cal-overlay,.mo-overlay,.modal-overlay,[class*="-overlay"]{background:rgba(14,18,32,.42)!important;backdrop-filter:blur(4px)}
+
+/* ── scrollbar ── */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#d8dbe8;border-radius:99px;border:3px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:#c2c6d8}
+
+/* ══ TEKS UTAMA ══
+   Semua ini dulunya putih (untuk latar gelap). Di tema terang harus jadi
+   tinta gelap. Nilai di dalam hero tetap putih (diatur di bawah). */
+.brand-name,.day-label,.goal-main,.kpi-val,.tn,.nb,.pi-c,.pt,.lbn,.asn,
+.spc-name,.spc-rv,.mn,.mkv,.mpn,.nr-name,.omset-section-title,
+.cal-topbar-label,.warn-crit-name,.sp-lookup-name,.ms-name,.ms-date-lbl,
+.ms-sale-prod,.mo-title,.sl{color:var(--text)!important}
+
+/* hero tetap gelap → isinya tetap putih */
+.omset-hero .omset-hero-val,.omset-hero .omset-hero-lbl,.omset-hero .omset-hero-sub,
+#liveOmsetBig,#mOmsetBig{color:#fff!important}
+.omset-hero .omset-hero-lbl{color:#a8b0c9!important}
+.omset-hero .omset-hero-sub{color:#7b8399!important}
+
+/* ══ WARNA TIM DARI DATABASE ══
+   Warna tim (config/teams .c/.bg) dipilih untuk latar gelap — neon, dan
+   nyaris tak terbaca di atas putih. Warnanya di-set inline oleh app.js jadi
+   tidak bisa ditimpa tanpa mengubah kode. Solusi: gelapkan lewat filter,
+   sehingga identitas warna tiap tim TETAP ada tapi terbaca. */
+.tav,.spc-av,.spc-team,.warn-crit-team,.av,.spg-team-name,.tn-team,
+.mt,.ms-team,.nr-team,.lb-team,[class*="team-name"]{
+  filter:brightness(.68) saturate(1.5);
+}
+.spc-av,.tav,.av,.mav{filter:brightness(.92) saturate(1.15)}
+
+/* ══ NAVIGASI ══ */
+@media (min-width:1000px){
+  .nav-tab{color:var(--soft)!important}
+  .nav-tab.active{color:#fff!important}
+}
+
+/* ══ TOMBOL AKSI ══ */
+.btn,button.btn{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;font-weight:700}
+.btn:hover{border-color:#d5d8e6;background:var(--card2)}
+
+/* ══ AKSEN BIRU (mengikuti desain) ══ */
+.premium-quick-add{
+  background:var(--blue)!important;color:#fff!important;border:1px solid var(--blue)!important;
+  box-shadow:0 8px 20px rgba(61,90,254,.28)!important;border-radius:12px!important;
+}
+.premium-head-ghost{
+  background:var(--surface)!important;color:var(--text)!important;
+  border:1px solid var(--border)!important;border-radius:12px!important;box-shadow:var(--shadow);
+}
+.premium-head-ghost:hover{background:var(--card2)!important;border-color:#d5d8e6!important}
+
+/* tab By Team / By SP / By Product */
+.tab-row{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px;gap:5px;box-shadow:var(--shadow)}
+.tab{background:none!important;border:none!important;color:var(--soft)!important;border-radius:10px;font-weight:700}
+.tab:hover{background:var(--card2)!important;color:var(--text)!important}
+.tab.active{background:var(--blue)!important;color:#fff!important;box-shadow:0 5px 14px rgba(61,90,254,.26)}
+
+/* strip status: jadikan kartu, bukan pita datar */
+.premium-status-strip{background:transparent!important;border:none!important;gap:16px;box-shadow:none!important}
+.premium-status-strip>div{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;box-shadow:var(--shadow);
+}
+.premium-status-strip strong{color:var(--text)!important}
+.premium-status-strip span{color:var(--muted)!important}
+.premium-status-strip small{color:var(--soft)!important}
+
+/* kartu hari di riwayat 30 hari */
+.hday,.history-strip>div,.hist-day{background:var(--surface)!important;border:1px solid var(--border)!important;border-radius:13px}
+
+/* item "More" milik shell HP — sembunyikan di sidebar desktop */
+@media (min-width:1000px){ .nav-tab.premium-more-tab{display:none!important} }
+
+/* hero proporsional (di desain tingginya sedang, bukan blok raksasa) */
+.omset-hero{padding:26px 30px!important;min-height:0!important}
+.omset-hero-val{font-size:clamp(34px,4.4vw,58px)!important;letter-spacing:-2px}
+
+/* ══ WARNA INLINE DARI app.js ══
+   Sebagian teks diberi warna langsung oleh JS (style="color:white"), dibuat
+   untuk latar gelap. app.js TIDAK diubah — cukup ditimpa lewat CSS. */
+[style*="color:white"],[style*="color: white"],
+[style*="color:#fff"],[style*="color: #fff"]{color:var(--text)!important}
+
+/* badge/tag: teks aksen di atas tint tipis — pastikan tetap tegas */
+.rb,.ins-tag,.warn-crit-issue,.gap,.warn-team-tot,.tag,.chip{font-weight:700}
+
+/* ══ WARNA INLINE DARI app.js / index.html ══
+   app.js menulis sebagian warna langsung ke elemen (style="..."), dipilih
+   untuk tema gelap. Kode TIDAK diubah — cukup ditimpa dari sini. */
+[style*="background:#0e0e1a"],
+[style*="background: #0e0e1a"],
+[style*="background:#161624"],
+[style*="background: #161624"],
+[style*="background:#12121e"],
+[style*="background: #12121e"],
+[style*="background:#1e1e32"],
+[style*="background: #1e1e32"],
+[style*="background:#252540"],
+[style*="background: #252540"],
+[style*="background-color:#0e0e1a"],
+[style*="background-color: #0e0e1a"],
+[style*="background-color:#161624"],
+[style*="background-color: #161624"],
+[style*="background-color:#12121e"],
+[style*="background-color: #12121e"],
+[style*="background-color:#1e1e32"],
+[style*="background-color: #1e1e32"],
+[style*="background-color:#252540"],
+[style*="background-color: #252540"]{background:var(--surface)!important;border-color:var(--border)!important}
+[style*="border:#252540"],
+[style*="border: #252540"],
+[style*="border:#1e1e32"],
+[style*="border: #1e1e32"],
+[style*="1px solid #252540"],
+[style*="1px solid #1e1e32"]{border-color:var(--border)!important}
+[style*="color:#e8e8f8"],
+[style*="color: #e8e8f8"]{color:var(--text)!important}
+[style*="color:#f5c518"],
+[style*="color: #f5c518"]{color:#a97d09!important}
+[style*="color:#ff6b1a"],
+[style*="color: #ff6b1a"]{color:#d1560a!important}
+[style*="color:#448aff"],
+[style*="color: #448aff"]{color:#2f56e0!important}
+[style*="color:#ff3b5c"],
+[style*="color: #ff3b5c"]{color:#d92544!important}
+[style*="color:#00e676"],
+[style*="color: #00e676"]{color:#0e9f5b!important}
+[style*="color:#7c4dff"],
+[style*="color: #7c4dff"]{color:#6d28d9!important}
+[style*="color:#00e5ff"],
+[style*="color: #00e5ff"]{color:#0e7490!important}
+[style*="color:#a78bfa"],
+[style*="color: #a78bfa"]{color:#6d28d9!important}
+
+/* ══ PERMUKAAN rgba YANG MASIH GELAP ══
+   (overlay modal sengaja DIBIARKAN gelap — itu memang peredup latar) */
+header{background:rgba(255,255,255,.9)!important;border-bottom:1px solid var(--border)!important}
+.nav-bar{background:transparent!important}
+thead tr,.alh,.nr-header{background:var(--card2)!important}
+
+/* ══ TAMPILAN HP ══
+   Shell HP (bottom nav + tombol SALE) tetap seperti sekarang — hanya warnanya. */
+@media (max-width:999px){
+  .nav-wrapper{
+    background:rgba(255,255,255,.96)!important;
+    border-top:1px solid var(--border)!important;border-right:none!important;
+    box-shadow:0 -6px 24px rgba(16,24,40,.09)!important;
+  }
+  .nav-tab{color:var(--soft)!important;background:transparent!important}
+  .nav-tab.active{color:var(--blue)!important;background:#eef1ff!important}
+  .nav-tab.active .premium-nav-label,.nav-tab.active .premium-nav-icon{color:var(--blue)!important}
+  .premium-add-fab{
+    background:var(--blue)!important;background-image:none!important;color:#fff!important;
+    box-shadow:0 10px 24px rgba(61,90,254,.4)!important;border-color:#fff!important;
+  }
+  .premium-more-tab{background:transparent!important}
+  header .brand-name{color:var(--text)!important}
+}
