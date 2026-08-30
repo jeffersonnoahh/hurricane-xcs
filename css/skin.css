@@ -86,7 +86,8 @@ header{
 .omset-hero-lbl{color:var(--soft)!important;font-size:12px;letter-spacing:1.6px;font-weight:600;justify-content:flex-start}
 .omset-hero-val,#liveOmsetBig,#mOmsetBig{
   color:#fff!important;font-weight:700!important;
-  font-size:clamp(46px,5.6vw,72px)!important;letter-spacing:-2.5px!important;line-height:1.04!important;
+  font-size:clamp(28px,10vw,72px)!important;letter-spacing:-2.2px!important;line-height:1.05!important;
+  overflow-wrap:anywhere;
 }
 .omset-hero-sub{color:var(--muted)!important;letter-spacing:1.2px}
 
@@ -163,7 +164,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold)!important;outli
 [style*="color:#e8e8f8"],[style*="color: #e8e8f8"]{color:var(--text)!important}
 
 /* ══ TAMPILAN HP (shell premium) ══ */
-@media (max-width:999px){
+@media (max-width:768px){
   .nav-wrapper{
     background:rgba(12,12,14,.9)!important;
     backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;
@@ -178,3 +179,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold)!important;outli
   }
   .premium-more-tab{background:transparent!important}
 }
+
+[style*="color:#333350"],[style*="color: #333350"]{color:var(--muted)!important}
+[style*="color:#404065"],[style*="color: #404065"]{color:var(--muted)!important}
+/* segmen 'Untagged' di Insights: abu terang supaya label % hitamnya terbaca */
+[style*="background:#404065"],[style*="background: #404065"]{background:#8e8e93!important}
+
+/* background aksen inline dari app.js → palet iOS yang sama */
+[style*="background:#f5c518"],[style*="background: #f5c518"]{background:var(--gold)!important}
+[style*="background:#00e676"],[style*="background: #00e676"]{background:var(--green)!important}
+[style*="background:#ff3b5c"],[style*="background: #ff3b5c"]{background:var(--red)!important}
+[style*="background:#448aff"],[style*="background: #448aff"]{background:var(--blue)!important}
+[style*="background:#7c4dff"],[style*="background: #7c4dff"]{background:var(--purple)!important}
+[style*="background:#ff6b1a"],[style*="background: #ff6b1a"]{background:var(--orange)!important}
