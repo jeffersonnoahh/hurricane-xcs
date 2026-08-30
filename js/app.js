@@ -816,6 +816,31 @@ function monthRev(vd){
   return rev;
 }
 
+// Aktivitas (chat/call/follow-up) sebulan penuh per sales, untuk rata-rata harian.
+function monthActBySP(vd){
+  const y=vd.getFullYear(),m=vd.getMonth()+1;
+  const map={};
+  Object.keys(allActs).forEach(k=>{
+    const p=k.split('-');
+    if(+p[0]!==y||+p[1]!==m)return;
+    (allActs[k]||[]).forEach(a=>{
+      if(!a||typeof a!=='object')return;
+      const key=a.sp+'|'+a.team;
+      const g=map[key]||(map[key]={chats:0,calls:0,fups:0});
+      g.chats+=a.chats||0;g.calls+=a.calls||0;g.fups+=a.fups||0;
+    });
+  });
+  return map;
+}
+// Pembagi rata-rata: tanggal 1 s/d HARI INI untuk bulan berjalan (hari tanpa
+// laporan tetap dihitung sebagai 0 — itu gunanya, biar kelihatan yang bolong),
+// atau seluruh hari bulan itu kalau melihat bulan lampau.
+function monthDaysElapsed(vd){
+  const now=new Date();
+  if(vd.getFullYear()===now.getFullYear()&&vd.getMonth()===now.getMonth())return now.getDate();
+  return new Date(vd.getFullYear(),vd.getMonth()+1,0).getDate();
+}
+
 // Omset LIVE per sales untuk bulan yang sedang dilihat (bukan per hari).
 // Dipakai halaman Salespeople: kartu menampilkan total bulan berjalan.
 function monthRevBySP(vd){
@@ -1045,7 +1070,13 @@ function renderSPGrid(entries,acts){
   // OMSET LIVE BULAN INI per sales (kartu pakai ini, bukan omset harian)
   const _vd=od(vOff);
   const moRev=monthRevBySP(_vd);
+  const moAct=monthActBySP(_vd);
+  const moDays=monthDaysElapsed(_vd);
   const moLbl='OMSET '+_vd.toLocaleDateString('id-ID',{month:'long'}).toUpperCase();
+  const avg=n=>moDays>0?(n/moDays).toFixed(1):'0.0';
+  const note=document.getElementById('spGridNote');
+  if(note)note.textContent='Rata-rata harian dihitung 1–'+moDays+' '+
+    _vd.toLocaleDateString('id-ID',{month:'long'})+' ('+moDays+' hari) · omset = total bulan berjalan';
 
   const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
   const teams=Object.keys(TM).sort((a,b)=>{
@@ -1058,7 +1089,7 @@ function renderSPGrid(entries,acts){
     if(!tc||!tc.m||tc.m.length===0)return '';
 
     // Team totals
-    const teamTotals={chats:0,calls:0,fups:0,closes:0,revenue:0,moRevenue:0};
+    const teamTotals={chats:0,calls:0,fups:0,closes:0,revenue:0,moRevenue:0,moChats:0,moCalls:0,moFups:0};
     tc.m.forEach(sp=>{
       const s=spMap[sp+'|'+tn]||{};
       teamTotals.chats+=s.chats||0;
@@ -1067,15 +1098,16 @@ function renderSPGrid(entries,acts){
       teamTotals.closes+=s.closes||0;
       teamTotals.revenue+=s.revenue||0;
       teamTotals.moRevenue+=moRev[sp+'|'+tn]||0;
+      const ma=moAct[sp+'|'+tn];
+      if(ma){teamTotals.moChats+=ma.chats;teamTotals.moCalls+=ma.calls;teamTotals.moFups+=ma.fups;}
     });
 
     const teamHeader=`<div class="spg-team-hdr" style="border-left:4px solid ${tc.c}">
       <div class="spg-team-name" style="color:${tc.c}">${tc.e} Team ${tn}</div>
       <div class="spg-team-stats">
-        <span style="color:#f5c518">💬 ${teamTotals.chats}</span>
-        <span style="color:#448aff">📞 ${teamTotals.calls}</span>
-        <span style="color:#ff6b1a">🔄 ${teamTotals.fups}</span>
-        <span style="color:#00e676">✅ ${teamTotals.closes}</span>
+        <span style="color:#f5c518">💬 ${avg(teamTotals.moChats)}/hari</span>
+        <span style="color:#448aff">📞 ${avg(teamTotals.moCalls)}/hari</span>
+        <span style="color:#ff6b1a">🔄 ${avg(teamTotals.moFups)}/hari</span>
         <span style="color:#6060a0;font-size:9px;letter-spacing:1px;align-self:center">${moLbl}</span>
         <span style="color:white;font-weight:800">${fFull(teamTotals.moRevenue)}</span>
       </div>
@@ -1088,10 +1120,14 @@ function renderSPGrid(entries,acts){
         <div class="spc-av" style="background:${tc.bg};color:${tc.c}">${sp[0].toUpperCase()}</div>
         <div class="spc-name">${sp}</div>
         <div class="spc-team">Team ${tn} ${tc.e}</div>
-        <div class="spc-row"><span class="spc-rl">💬 Chat Masuk</span><span class="spc-rv">${s.chats}</span></div>
-        <div class="spc-row"><span class="spc-rl">📞 Calls</span><span class="spc-rv">${s.calls}</span></div>
-        <div class="spc-row"><span class="spc-rl">🔄 Follow Up</span><span class="spc-rv">${s.fups}</span></div>
-        <div class="spc-row"><span class="spc-rl">✅ Closes</span><span class="spc-rv">${s.closes}</span></div>
+        ${(()=>{
+          const ma=moAct[sp+'|'+tn]||{chats:0,calls:0,fups:0};
+          // channel marketplace tidak wajib lapor call/FU → tampilkan "—", bukan 0.0
+          const v=n=>_isActExcluded(sp)?'—':avg(n);
+          return `<div class="spc-row"><span class="spc-rl">💬 Chat / hari</span><span class="spc-rv">${v(ma.chats)}</span></div>
+        <div class="spc-row"><span class="spc-rl">📞 Call / hari</span><span class="spc-rv">${v(ma.calls)}</span></div>
+        <div class="spc-row"><span class="spc-rl">🔄 Follow Up / hari</span><span class="spc-rv">${v(ma.fups)}</span></div>`;
+        })()}
         <div class="spc-rev-lbl"><span class="live-dot"></span>${moLbl}</div>
         <div class="spc-rev">${fFull(moRev[sp+'|'+tn]||0)}</div>
         <div class="spc-rev-sub">hari ini ${fFull(s.revenue)}</div>
