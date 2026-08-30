@@ -816,6 +816,22 @@ function monthRev(vd){
   return rev;
 }
 
+// Omset LIVE per sales untuk bulan yang sedang dilihat (bukan per hari).
+// Dipakai halaman Salespeople: kartu menampilkan total bulan berjalan.
+function monthRevBySP(vd){
+  const y=vd.getFullYear(),m=vd.getMonth()+1;
+  const map={};
+  Object.keys(allData).forEach(k=>{
+    const p=k.split('-');
+    if(+p[0]!==y||+p[1]!==m)return;
+    (allData[k]||[]).forEach(e=>{
+      if(!e||typeof e!=='object')return;
+      map[e.sp+'|'+e.team]=(map[e.sp+'|'+e.team]||0)+(e.revenue||0);
+    });
+  });
+  return map;
+}
+
 // ══ RENDER ALL ══
 function renderAll(){
   const entries=gE(),acts=gA();
@@ -1026,6 +1042,11 @@ function renderSPGrid(entries,acts){
   const spMap={};
   aggSP(entries,acts).forEach(s=>spMap[s.sp+'|'+s.team]=s);
 
+  // OMSET LIVE BULAN INI per sales (kartu pakai ini, bukan omset harian)
+  const _vd=od(vOff);
+  const moRev=monthRevBySP(_vd);
+  const moLbl='OMSET '+_vd.toLocaleDateString('id-ID',{month:'long'}).toUpperCase();
+
   const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
   const teams=Object.keys(TM).sort((a,b)=>{
     const ai=teamOrder.indexOf(a);const bi=teamOrder.indexOf(b);
@@ -1037,7 +1058,7 @@ function renderSPGrid(entries,acts){
     if(!tc||!tc.m||tc.m.length===0)return '';
 
     // Team totals
-    const teamTotals={chats:0,calls:0,fups:0,closes:0,revenue:0};
+    const teamTotals={chats:0,calls:0,fups:0,closes:0,revenue:0,moRevenue:0};
     tc.m.forEach(sp=>{
       const s=spMap[sp+'|'+tn]||{};
       teamTotals.chats+=s.chats||0;
@@ -1045,6 +1066,7 @@ function renderSPGrid(entries,acts){
       teamTotals.fups+=s.fups||0;
       teamTotals.closes+=s.closes||0;
       teamTotals.revenue+=s.revenue||0;
+      teamTotals.moRevenue+=moRev[sp+'|'+tn]||0;
     });
 
     const teamHeader=`<div class="spg-team-hdr" style="border-left:4px solid ${tc.c}">
@@ -1054,7 +1076,8 @@ function renderSPGrid(entries,acts){
         <span style="color:#448aff">📞 ${teamTotals.calls}</span>
         <span style="color:#ff6b1a">🔄 ${teamTotals.fups}</span>
         <span style="color:#00e676">✅ ${teamTotals.closes}</span>
-        <span style="color:white;font-weight:800">${fFull(teamTotals.revenue)}</span>
+        <span style="color:#6060a0;font-size:9px;letter-spacing:1px;align-self:center">${moLbl}</span>
+        <span style="color:white;font-weight:800">${fFull(teamTotals.moRevenue)}</span>
       </div>
     </div>`;
 
@@ -1069,7 +1092,9 @@ function renderSPGrid(entries,acts){
         <div class="spc-row"><span class="spc-rl">📞 Calls</span><span class="spc-rv">${s.calls}</span></div>
         <div class="spc-row"><span class="spc-rl">🔄 Follow Up</span><span class="spc-rv">${s.fups}</span></div>
         <div class="spc-row"><span class="spc-rl">✅ Closes</span><span class="spc-rv">${s.closes}</span></div>
-        <div class="spc-rev">${fFull(s.revenue)}</div>
+        <div class="spc-rev-lbl"><span class="live-dot"></span>${moLbl}</div>
+        <div class="spc-rev">${fFull(moRev[sp+'|'+tn]||0)}</div>
+        <div class="spc-rev-sub">hari ini ${fFull(s.revenue)}</div>
       </div>`;
     }).join('');
 

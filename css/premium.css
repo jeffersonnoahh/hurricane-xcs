@@ -87,3 +87,16 @@ header{min-height:70px;background:rgba(7,9,14,.9);border-color:var(--border);pad
 /* ══ LOGO BRAND — tornado Hurricane di dalam badge kuning ══ */
 .brand-logo{overflow:hidden;padding:0}
 .brand-logo img{width:76%;height:auto;display:block;object-fit:contain}
+
+/* ══ OMSET LIVE BULANAN di kartu Salespeople ══ */
+.spc-rev-lbl{
+  font-family:'Space Mono','DM Mono',monospace;
+  font-size:8.5px;letter-spacing:1.4px;color:var(--muted,#6060a0);
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--border,#252540);
+  display:flex;align-items:center;
+}
+.spc-rev{margin-top:2px;padding-top:0;border-top:none}
+.spc-rev-sub{
+  font-family:'Space Mono','DM Mono',monospace;
+  font-size:9px;color:#5a5a86;margin-top:3px;
+}
