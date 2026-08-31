@@ -24,8 +24,8 @@
   --softer:#48484a;
 
   /* aksen — warna sistem iOS dark */
-  --gold:#ffd60a;
-  --gold2:#ffd60a;
+  --gold:#30d158;
+  --gold2:#30d158;
   --orange:#ff9f0a;
   --green:#30d158;
   --red:#ff453a;
@@ -63,7 +63,7 @@ header{
 .nav-wrapper,.nav-bar{background:rgba(8,8,10,.82)!important;border-color:var(--border)!important}
 .nav-tab{color:var(--soft)!important;border-radius:10px;font-weight:600}
 .nav-tab:hover{color:var(--text)!important;background:var(--card)!important}
-.nav-tab.active{background:var(--gold)!important;color:#000!important;font-weight:700}
+.nav-tab.active{background:var(--green)!important;color:#fff!important;font-weight:800}
 
 /* ── day switcher & kontrol segmen ala iOS ── */
 .day-switcher{background:var(--card)!important;border:none!important;border-radius:11px;padding:3px}
@@ -85,20 +85,20 @@ header{
 }
 .omset-hero-lbl{color:var(--soft)!important;font-size:12px;letter-spacing:1.6px;font-weight:600;justify-content:flex-start}
 .omset-hero-val,#liveOmsetBig,#mOmsetBig{
-  color:#fff!important;font-weight:700!important;
-  font-size:clamp(28px,10vw,72px)!important;letter-spacing:-2.2px!important;line-height:1.05!important;
+  color:#fff!important;font-weight:800!important;
+  font-size:clamp(24px,8.5vw,72px)!important;letter-spacing:-2.2px!important;line-height:1.05!important;
   overflow-wrap:anywhere;
 }
 .omset-hero-sub{color:var(--muted)!important;letter-spacing:1.2px}
 
 /* ── angka & label kartu ── */
-.kpi-val,.mkv,.spc-rv{color:var(--text)}
+.kpi-val,.mkv,.spc-rv{color:var(--text);font-weight:800!important}
 .kpi-lbl,.sl{color:var(--muted)!important;letter-spacing:1.2px;font-weight:600}
 
 /* ── badge persentase: pill solid hijau/merah/kuning ala Stocks ── */
 .rb{border-radius:7px;font-weight:700!important;padding:3px 8px}
 .rb.great{background:var(--green)!important;color:#fff!important}
-.rb.good{background:var(--gold)!important;color:#000!important}
+.rb.good{background:#ffd60a!important;color:#000!important}
 .rb.low{background:var(--red)!important;color:#fff!important}
 
 /* ── tabel: hairline, bukan kotak ── */
@@ -111,8 +111,8 @@ tr:hover td{background:var(--surface)}
 .btn{background:var(--card);color:var(--text);border:none;border-radius:12px;font-weight:600}
 .btn:hover{background:var(--card2)}
 .btn-gold,.btn-primary,.btn.primary,.premium-quick-add{
-  background:var(--gold)!important;background-image:none!important;
-  color:#000!important;border:none!important;box-shadow:none!important;border-radius:12px!important;font-weight:700!important;
+  background:var(--green)!important;background-image:none!important;
+  color:#fff!important;border:none!important;box-shadow:none!important;border-radius:12px!important;font-weight:800!important;
 }
 .premium-head-ghost{background:var(--card)!important;color:var(--text)!important;border:none!important;border-radius:12px!important;box-shadow:none!important}
 .premium-head-ghost:hover{background:var(--card2)!important}
@@ -123,7 +123,7 @@ input,select,textarea{
   color:var(--text)!important;border-radius:11px;
 }
 input::placeholder,textarea::placeholder{color:var(--muted)!important}
-input:focus,select:focus,textarea:focus{border-color:var(--gold)!important;outline:none;box-shadow:0 0 0 3px rgba(255,214,10,.14)}
+input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outline:none;box-shadow:0 0 0 3px rgba(48,209,88,.16)}
 
 /* ── strip status & panel kecil premium ── */
 .premium-status-strip{background:transparent!important;border:none!important;box-shadow:none!important;gap:14px}
@@ -171,11 +171,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold)!important;outli
     border-top:1px solid var(--border)!important;box-shadow:none!important;
   }
   .nav-tab{background:transparent!important;color:var(--muted)!important}
-  .nav-tab.active{background:rgba(255,214,10,.14)!important;color:var(--gold)!important}
-  .nav-tab.active .premium-nav-label,.nav-tab.active .premium-nav-icon{color:var(--gold)!important}
+  .nav-tab.active{background:rgba(48,209,88,.16)!important;color:var(--green)!important}
+  .nav-tab.active .premium-nav-label,.nav-tab.active .premium-nav-icon{color:var(--green)!important}
   .premium-add-fab{
-    background:var(--gold)!important;background-image:none!important;color:#000!important;
-    border-color:#000!important;box-shadow:0 10px 26px rgba(255,214,10,.35)!important;
+    background:var(--green)!important;background-image:none!important;color:#fff!important;
+    border-color:#000!important;box-shadow:0 10px 26px rgba(48,209,88,.35)!important;
   }
   .premium-more-tab{background:transparent!important}
 }

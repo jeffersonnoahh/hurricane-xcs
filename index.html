@@ -10,9 +10,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <link rel="icon" type="image/png" href="img/favicon.png?v=20260830-spavg1">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png?v=20260830-spavg1">
-<link rel="stylesheet" href="css/style.css?v=20260831-stocks1">
-<link rel="stylesheet" href="css/premium.css?v=20260831-stocks1">
-<link rel="stylesheet" href="css/skin.css?v=20260831-stocks1">
+<link rel="stylesheet" href="css/style.css?v=20260831-stocks2">
+<link rel="stylesheet" href="css/premium.css?v=20260831-stocks2">
+<link rel="stylesheet" href="css/skin.css?v=20260831-stocks2">
 </head>
 
 <body>
@@ -165,7 +165,7 @@
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:end;">
           <div class="ig">
             <div class="igl">Date</div>
-            <div style="background:#141416;border:1px solid #3a3a3c;border-radius:8px;padding:8px 12px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#ffd60a;cursor:pointer;white-space:nowrap;" id="entryDateLabel" onclick="openEntryCal()">📅 Today</div>
+            <div style="background:#141416;border:1px solid #3a3a3c;border-radius:8px;padding:8px 12px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#30d158;cursor:pointer;white-space:nowrap;" id="entryDateLabel" onclick="openEntryCal()">📅 Today</div>
           </div>
           <div class="ig">
             <div class="igl">Team</div>
@@ -274,10 +274,10 @@
   <div class="sl">Log Calls & Follow Up</div>
 
   <!-- Date notice banner -->
-  <div style="background:rgba(255,214,10,0.08);border:1px solid rgba(255,214,10,0.2);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+  <div style="background:rgba(48,209,88,0.08);border:1px solid rgba(48,209,88,0.2);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
     <span style="font-size:20px">📋</span>
     <div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#ffd60a;letter-spacing:1px;">Log Calls, Chats & Follow Ups</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#30d158;letter-spacing:1px;">Log Calls, Chats & Follow Ups</div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#98989f;margin-top:2px;">Pick "Yesterday" to log past activity (deadline 2 PM) or "Today" to log activity you did today.</div>
     </div>
   </div>
@@ -296,7 +296,7 @@
       </div>
       <div class="ig">
         <div class="igl">Selected Date</div>
-        <div style="background:#141416;border:1px solid #2e2e31;border-radius:6px;padding:7px 9px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#ffd60a" id="aDateLabel">—</div>
+        <div style="background:#141416;border:1px solid #2e2e31;border-radius:6px;padding:7px 9px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#30d158" id="aDateLabel">—</div>
       </div>
     </div>
 
@@ -412,7 +412,7 @@
   <div id="monthlySummary" style="background:#1c1c1e;border:1px solid #2e2e31;border-radius:11px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:20px;">
     <div>
       <div class="kpi-lbl">Active Days</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:#ffd60a" id="mActiveDays">0</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:#30d158" id="mActiveDays">0</div>
     </div>
     <div style="flex:1">
       <div class="kpi-lbl" style="margin-bottom:6px;">Daily Average Revenue</div>
@@ -488,7 +488,7 @@
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="day-switcher" style="background:#232326;border:1px solid #3a3a3c;">
         <button class="day-btn" onclick="omsetPrevDay()">‹</button>
-        <span id="omsetDayLabel" style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;letter-spacing:1px;min-width:80px;text-align:center;cursor:pointer;border-bottom:1px dashed rgba(255,214,10,0.4);" onclick="openOmsetCal()">TODAY</span>
+        <span id="omsetDayLabel" style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;letter-spacing:1px;min-width:80px;text-align:center;cursor:pointer;border-bottom:1px dashed rgba(48,209,88,0.4);" onclick="openOmsetCal()">TODAY</span>
         <button class="day-btn" onclick="omsetNextDay()">›</button>
       </div>
       <button class="btn bg-gold" onclick="saveOmset()" style="height:34px;font-size:12px;">💾 Simpan</button>
@@ -496,14 +496,14 @@
   </div>
 
   <!-- Selected date label -->
-  <div style="background:rgba(255,214,10,0.06);border:1px solid rgba(255,214,10,0.15);border-radius:10px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+  <div style="background:rgba(48,209,88,0.06);border:1px solid rgba(48,209,88,0.15);border-radius:10px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
     <div>
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:#98989f;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Tanggal</div>
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:white;" id="omsetDateLabel">—</div>
     </div>
     <div style="text-align:right;">
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:#98989f;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Total Omset</div>
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:#ffd60a;" id="omsetTotal">Rp 0</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:#30d158;" id="omsetTotal">Rp 0</div>
     </div>
   </div>
 
@@ -629,9 +629,9 @@
       <div class="ins-kpi-val" id="insRepeatRate" style="color:#30d158;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insRepeatSub">Rp 0 of Rp 0</div>
     </div>
-    <div class="ins-kpi-card" style="border-color:rgba(255,214,10,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(48,209,88,0.3);">
       <div class="ins-kpi-lbl">Avg Ticket — Upsell</div>
-      <div class="ins-kpi-val" id="insAvgUpsell" style="color:#ffd60a;font-size:22px;">Rp 0</div>
+      <div class="ins-kpi-val" id="insAvgUpsell" style="color:#30d158;font-size:22px;">Rp 0</div>
       <div class="ins-kpi-sub" id="insAvgUpsellSub">vs Rp 0 regular</div>
     </div>
     <div class="ins-kpi-card" style="border-color:rgba(10,132,255,0.3);">
@@ -735,7 +735,7 @@
         <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:white;">📏 Performance Thresholds</div>
         <div style="font-family:'Space Mono',monospace;font-size:9px;color:#98989f;letter-spacing:1px;margin-top:2px;">Anyone below ANY of these is flagged</div>
       </div>
-      <button class="btn" style="background:rgba(255,214,10,0.1);border:1px solid rgba(255,214,10,0.3);color:#ffd60a;height:30px;font-size:10px;padding:0 12px;" onclick="toggleWarnThreshEdit()">✏️ Edit</button>
+      <button class="btn" style="background:rgba(48,209,88,0.1);border:1px solid rgba(48,209,88,0.3);color:#30d158;height:30px;font-size:10px;padding:0 12px;" onclick="toggleWarnThreshEdit()">✏️ Edit</button>
     </div>
     <div class="warn-thresh-grid" id="warnThreshGrid">
       <div class="warn-thresh-item">
@@ -782,7 +782,7 @@
   <!-- Per-category sections -->
   <div class="ins-grid-2">
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#ffd60a;">💰 Below Revenue (<span id="wsRevThresh">Rp 50M</span>)</div>
+      <div class="warn-section-title" style="color:#30d158;">💰 Below Revenue (<span id="wsRevThresh">Rp 50M</span>)</div>
       <div id="warnRev"></div>
     </div>
     <div class="warn-section">
@@ -834,8 +834,8 @@
     </div>
 
     <!-- Section: Quick Add Sale -->
-    <div class="omset-section" style="border-color:rgba(255,214,10,0.35);background:rgba(255,214,10,0.02);">
-      <div class="omset-section-title" style="color:#ffd60a;">⚡ Quick Add Sale</div>
+    <div class="omset-section" style="border-color:rgba(48,209,88,0.35);background:rgba(48,209,88,0.02);">
+      <div class="omset-section-title" style="color:#30d158;">⚡ Quick Add Sale</div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:#98989f;margin-bottom:14px;">Add a sale manually for any date and salesperson</div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
@@ -983,7 +983,7 @@
       <div class="omset-section-title" style="color:#ff453a;">⚠️ Danger Zone</div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:#98989f;margin-bottom:14px;">These actions cannot be undone. Use with caution.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button class="btn" style="background:rgba(255,214,10,0.1);border:1px solid rgba(255,214,10,0.3);color:#ffd60a;height:42px;" onclick="exportAllData()">📥 Export All Data (CSV)</button>
+        <button class="btn" style="background:rgba(48,209,88,0.1);border:1px solid rgba(48,209,88,0.3);color:#30d158;height:42px;" onclick="exportAllData()">📥 Export All Data (CSV)</button>
         <button class="btn" style="background:rgba(255,159,10,0.1);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;height:42px;" onclick="resetTodayData()">🔄 Reset Today's Data</button>
         <button class="btn" style="background:rgba(255,69,58,0.1);border:1px solid rgba(255,69,58,0.3);color:#ff453a;height:42px;grid-column:span 2;" onclick="resetAllData()">🗑️ Delete ALL Data</button>
       </div>
