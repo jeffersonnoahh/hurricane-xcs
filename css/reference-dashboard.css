@@ -18,5 +18,66 @@ header{min-height:82px!important;padding:12px max(30px,calc((100vw - 1580px)/2))
 #historyHeading{margin-top:0!important;margin-bottom:10px!important;color:#969da1!important}.sl{font-size:9px!important;letter-spacing:2.6px!important}.sl:after{background:#182023!important}.history-strip{gap:7px!important;padding:0 0 15px!important;margin-bottom:12px!important}.hday{flex:0 0 84px!important;min-height:104px!important;border-radius:5px!important;padding:10px 7px!important}.hday.has-data{background:#070b0a!important;border-color:#172822!important}.hday.active-day{background:#06110c!important;border-color:var(--ref-green)!important}.hd-date{font-size:8px!important}.hd-day{font-size:10px!important;color:#d4d8da!important;margin:4px 0 7px!important}.hd-dot{display:none!important}.hd-rev{font-size:8px!important;color:var(--ref-green)!important}.ref-history-bars{height:31px;display:flex;align-items:flex-end;justify-content:center;gap:2px;margin-top:7px}.ref-history-bars i{display:block;width:3px;background:rgba(32,216,131,.65);min-height:2px}
 .tab-row{width:max-content!important;margin:0 0 19px!important;border-radius:5px!important;background:#050708!important;padding:0!important;overflow:hidden!important}.tab{min-width:112px!important;justify-content:center!important;border-radius:0!important;min-height:40px!important;padding:8px 21px!important;font-size:11px!important;border-right:1px solid var(--ref-border)!important}.tab:last-child{border-right:0!important}.tab.active{background:linear-gradient(180deg,#0e7048,#075334)!important;color:#fff!important;box-shadow:none!important}.premium-performance-grid{grid-template-columns:minmax(0,1fr) 350px!important;gap:18px!important}.tw,.panel{border-radius:7px!important}.premium-leaderboard-panel{top:148px!important}
 @media(max-width:1050px){.premium-overview-grid{grid-template-columns:1fr!important}.premium-today-column{grid-template-columns:1.25fr 1fr!important;grid-template-rows:auto!important}.premium-overview-grid .goal-card{min-height:180px!important}.omset-hero{min-height:390px!important}}
-@media(max-width:768px){header{min-height:64px!important;padding:9px 13px!important}.brand-logo{width:40px!important;height:40px!important}.brand-name{font-size:14px!important}.brand-sub{display:none!important}.nav-wrapper{top:auto!important}.container{padding:18px 12px 100px!important}.premium-page-head h1{font-size:24px!important}.premium-page-head p{font-size:10px!important}.premium-kicker{font-size:8px!important}.premium-overview-grid{display:block!important}.premium-today-column{display:grid!important;grid-template-columns:1fr!important}.omset-hero{min-height:340px!important;padding:23px 17px 18px!important;margin-bottom:12px!important}.omset-hero-val{font-size:clamp(35px,10vw,50px)!important;white-space:normal!important}.ref-chart{height:150px;margin-top:10px}.ref-chart-label{font-size:8px}.ref-hero-foot{font-size:8px}.premium-overview-grid .goal-card{display:block!important;min-height:0!important;padding:19px!important}.premium-overview-grid .goal-stats{text-align:left!important}.premium-overview-grid .kpi-strip{grid-template-columns:1fr 1fr!important}.premium-overview-grid .kpi-card{min-height:112px!important;padding:16px!important}.premium-overview-grid .kpi-val{font-size:25px!important}.premium-status-strip{display:flex!important;gap:8px!important;background:transparent!important;border:0!important;margin:0 -12px 18px!important;padding:0 12px!important}.premium-status-strip>div{flex:0 0 150px!important;border:1px solid var(--ref-border)!important;border-radius:6px!important;padding:13px!important}.hday{flex-basis:76px!important;min-height:99px!important}.tab-row{width:100%!important}.tab{min-width:0!important;padding:8px 5px!important}.premium-performance-grid{grid-template-columns:1fr!important}}
+@media(max-width:768px){header{min-height:64px!important;padding:9px 13px!important}.brand-logo{width:40px!important;height:40px!important}.brand-name{font-size:14px!important}.brand-sub{display:none!important}.nav-wrapper{top:auto!important}.container{padding:18px 12px 100px!important}.premium-page-head h1{font-size:24px!important}.premium-page-head p{font-size:10px!important}.premium-kicker{font-size:8px!important}.premium-overview-grid{display:block!important}.premium-today-column{display:grid!important;grid-template-columns:1fr!important}.omset-hero{min-height:340px!important;padding:23px 17px 18px!important;margin-bottom:12px!important}.omset-hero-val{font-size:clamp(35px,10vw,50px)!important;white-space:normal!important}.ref-chart{height:150px;margin-top:10px}.ref-chart-label{font-size:8px}.ref-hero-foot{font-size:8px}.premium-overview-grid .goal-card{display:block!important;min-height:0!important;padding:19px!important}.premium-overview-grid .goal-stats{text-align:left!important}.premium-overview-grid .kpi-strip{grid-template-columns:1fr 1fr!important}.premium-overview-grid .kpi-card{min-height:112px!important;padding:16px!important}.premium-overview-grid .kpi-val{font-size:25px!important}.premium-status-strip{display:flex!important;gap:8px!important;background:transparent!important;border:0!important;margin:0 -12px 18px!important;padding:0 12px!important}.premium-status-strip>div{flex:0 0 150px!important;border:1px solid var(--ref-border)!important;border-radius:6px!important;padding:13px!important}.hday{flex-basis:76px!important;min-height:99px!important}.tab-row{width:100%!important}.tab{min-width:0!important;padding:8px 5px!important}.premium-performance-grid{grid-template-columns:1fr!important}.premium-nav-label{display:none!important}.premium-mobile-label{display:block!important}.nav-bar>.nav-tab[data-premium-index]{display:none!important}.nav-bar>.nav-tab[data-page="dashboard"],.nav-bar>.nav-tab[data-page="activity"],.nav-bar>.nav-tab[data-page="monthly"],.nav-bar>.premium-more-tab{display:flex!important;width:100%;height:59px;flex-direction:column;align-items:center;justify-content:center;padding:6px 3px!important}.nav-bar>.nav-tab[data-page="dashboard"]{grid-column:1}.nav-bar>.nav-tab[data-page="activity"]{grid-column:2}.nav-bar>.nav-tab[data-page="monthly"]{grid-column:4}.nav-bar>.premium-more-tab{grid-column:5}}
 @media(max-width:390px){.omset-hero-val{font-size:34px!important}.ref-compare-positive,.ref-compare-negative{font-size:14px!important}}
+
+/* True-black surface pass: remove the remaining charcoal/grey fills everywhere. */
+:root{
+  --bg:#000!important;
+  --surface:#000!important;
+  --card:#000!important;
+  --card2:#000!important;
+  --ref-bg:#000!important;
+  --ref-panel:#000!important;
+  --ref-panel-2:#000!important;
+}
+body,.page,.bg,.container{background-color:#000!important}
+.tw,.panel,.act-form,.act-log,.nr-panel,.spc,.ins-panel,.ins-kpi-card,
+.warn-thresh-card,.warn-section,.sp-lookup-box,.sp-lookup-card,.ms-search-card,
+.ms-kpi,.omset-section,.omset-total-card,.wl-panel,.premium-status-strip,
+.premium-status-strip>div,.goal-card,.kpi-card,.omset-hero,.hday,
+.cal-box,.mbox,.wa-box,.mo-box,.mk,.mpr,.wa-pre,.premium-entry-drawer,
+.premium-more-sheet,.premium-more-grid button,.premium-more-grid i,
+.warn-thresh-item,.warn-crit-card,.ms-profile-card,.ms-sale-card,
+.spg-team-card,.nr-card,.act-summary,.alog-wrap{
+  background:#000!important;
+  background-image:none!important;
+}
+table,thead,thead tr,tbody,tbody tr,tbody td,.ar,.alog-date-hdr,.alog-team-hdr,
+.spg-team-hdr,.warn-team-hdr,.ms-date-hdr,.wl-head,.wl-row{
+  background-color:#000!important;
+  background-image:none!important;
+}
+tbody tr:hover,.ar:hover,.wl-row:hover,.nav-tab:hover,.day-btn:hover,
+.premium-head-ghost,.premium-head-ghost:hover,.btn,.btn:hover,
+.tab-row,.ins-period-tabs,.day-switcher{
+  background:#000!important;
+}
+[style*="background:#1c1c1e"],[style*="background: #1c1c1e"],
+[style*="background:#232326"],[style*="background: #232326"],
+[style*="background:#141416"],[style*="background: #141416"],
+[style*="background:#171717"],[style*="background: #171717"],
+[style*="background:#12121e"],[style*="background: #12121e"],
+[style*="background:#1e1e32"],[style*="background: #1e1e32"],
+[style*="background:#252540"],[style*="background: #252540"]{
+  background:#000!important;
+  background-image:none!important;
+}
+
+/* Monthly Recap mirrors the home dashboard's visual hierarchy. */
+#page-monthly .premium-monthly-head{margin-bottom:18px!important;padding-bottom:0!important}
+#page-monthly .premium-monthly-hero{min-height:420px!important;margin-bottom:18px!important}
+#page-monthly .premium-monthly-hero .omset-hero-val{font-size:clamp(54px,7vw,96px)!important}
+#page-monthly .premium-monthly-hero .ref-chart{height:190px;margin-top:16px}
+#page-monthly .ref-month-chart .ref-chart-area{fill:url(#refMonthlyGradient)}
+#page-monthly #mKpiStrip{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:10px!important}
+#page-monthly #mKpiStrip .kpi-card{min-height:126px!important;padding:19px!important;border-radius:7px!important}
+#page-monthly #mKpiStrip .kpi-val{color:#f5f7f6!important;font-size:30px!important;font-weight:500!important}
+#page-monthly #mKpiStrip .kpi-card:nth-child(2) .kpi-val,
+#page-monthly #mKpiStrip .kpi-card:nth-child(5) .kpi-val{color:var(--ref-green)!important}
+#page-monthly #monthlySummary{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:0!important;padding:0!important;background:#000!important;border-color:var(--ref-border)!important;border-radius:7px!important;overflow:hidden}
+#page-monthly #monthlySummary>div{padding:18px 22px!important;border-right:1px solid var(--ref-border)!important}
+#page-monthly #monthlySummary>div:last-child{border-right:0!important}
+#page-monthly #mActiveDays,#page-monthly #mAvgRev,#page-monthly #mBestDay{font-family:'Space Grotesk',sans-serif!important;font-size:25px!important;font-weight:500!important;color:var(--ref-green)!important}
+#page-monthly .sp-lookup-input{background:#000!important}
+@media(max-width:900px){#page-monthly #mKpiStrip{grid-template-columns:repeat(2,minmax(0,1fr))!important}#page-monthly #monthlySummary{grid-template-columns:1fr!important}#page-monthly #monthlySummary>div{border-right:0!important;border-bottom:1px solid var(--ref-border)!important}#page-monthly #monthlySummary>div:last-child{border-bottom:0!important}}

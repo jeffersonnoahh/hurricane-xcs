@@ -47,6 +47,15 @@
     const originalTabs = Array.from(nav.querySelectorAll('.nav-tab[data-page]'));
     const tabsByPage = new Map(originalTabs.map((tab) => [tab.dataset.page, tab]));
     const originalLabels = new Map(originalTabs.map((tab) => [tab.dataset.page, tab.textContent.trim()]));
+    const labelParts = (label) => {
+      const value = String(label || '').trim();
+      const first = value.split(/\s+/)[0] || '';
+      const hasLeadingIcon = first && !/^[\p{L}\p{N}]/u.test(first);
+      return {
+        icon: hasLeadingIcon ? first : '',
+        text: hasLeadingIcon ? value.slice(first.length).trim() : value
+      };
+    };
 
     if (!tabsByPage.has('dashboard') || !tabsByPage.has('activity') || !tabsByPage.has('monthly')) {
       console.warn('Premium UI skipped because primary navigation is incomplete.');
@@ -138,6 +147,7 @@
     const mobileLabels = {
       dashboard: 'Dashboard',
       activity: 'Activity',
+      watchlist: 'Watchlist',
       salespeople: 'People',
       mysales: 'My Sales',
       monthly: 'Recap',
@@ -148,13 +158,12 @@
 
     originalTabs.forEach((tab, index) => {
       const originalLabel = originalLabels.get(tab.dataset.page);
-      const parts = originalLabel.split(/\s+/);
-      const icon = parts.shift();
+      const parts = labelParts(originalLabel);
       tab.dataset.premiumIndex = String(index);
       tab.innerHTML = [
-        '<b class="premium-nav-icon">', icon, '</b>',
-        '<span class="premium-nav-label">', parts.join(' '), '</span>',
-        '<span class="premium-mobile-label">', mobileLabels[tab.dataset.page], '</span>'
+        parts.icon ? '<b class="premium-nav-icon">' + parts.icon + '</b>' : '',
+        '<span class="premium-nav-label">', parts.text, '</span>',
+        '<span class="premium-mobile-label">', mobileLabels[tab.dataset.page] || parts.text, '</span>'
       ].join('');
     });
 
@@ -192,8 +201,8 @@
     ].join('');
     d.body.append(moreOverlay, moreSheet);
 
-    const morePages = ['salespeople', 'mysales', 'insights', 'warning', 'admin'];
-    const moreIcons = {salespeople: '', mysales: '', insights: '', warning: '', admin: ''};
+    const morePages = ['watchlist', 'salespeople', 'mysales', 'insights', 'warning', 'admin'];
+    const moreIcons = {watchlist: '', salespeople: '', mysales: '', insights: '', warning: '', admin: ''};
     const moreButtons = [];
     const moreGrid = moreSheet.querySelector('.premium-more-grid');
 
@@ -201,7 +210,7 @@
       const button = d.createElement('button');
       button.type = 'button';
       button.dataset.page = page;
-      button.innerHTML = '<i>' + moreIcons[page] + '</i><span>' + originalLabels.get(page).replace(/^\S+\s*/, '') + '</span>';
+      button.innerHTML = '<i>' + moreIcons[page] + '</i><span>' + labelParts(originalLabels.get(page)).text + '</span>';
       button.addEventListener('click', () => {
         tabsByPage.get(page)?.click();
         closeMore();

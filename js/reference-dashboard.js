@@ -39,7 +39,8 @@
     return series.length ? series[series.length - 1].cumulative : 0;
   }
 
-  function chartSvg(series, monthLabel) {
+  function chartSvg(series, monthLabel, gradientId) {
+    gradientId = gradientId || 'refRevenueGradient';
     const W = 850, H = 188, left = 58, right = 12, top = 10, bottom = 27;
     const innerW = W - left - right, innerH = H - top - bottom;
     const max = Math.max(1, ...series.map((d) => d.cumulative));
@@ -57,7 +58,7 @@
     const ticks = tickIndexes.map((i) => '<text class="ref-chart-label" text-anchor="middle" x="' + x(i) + '" y="' + (H-5) + '">' + series[i].day + ' ' + monthLabel + '</text>').join('');
     const dot = pts.length ? '<circle class="ref-chart-dot" cx="' + pts[pts.length-1][0] + '" cy="' + pts[pts.length-1][1] + '" r="4"></circle>' : '';
     return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Cumulative monthly revenue trend">' +
-      '<defs><linearGradient id="refRevenueGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#20d883" stop-opacity=".28"></stop><stop offset="1" stop-color="#20d883" stop-opacity=".015"></stop></linearGradient></defs>' +
+      '<defs><linearGradient id="'+gradientId+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#20d883" stop-opacity=".28"></stop><stop offset="1" stop-color="#20d883" stop-opacity=".015"></stop></linearGradient></defs>' +
       grids + (series.length ? '<path class="ref-chart-area" d="'+area+'"></path><path class="ref-chart-line" d="'+line+'"></path>' : '') + dot + ticks + '</svg>';
   }
 
@@ -108,18 +109,63 @@
         '<span>vs '+previousDate.toLocaleDateString('en-US',{month:'short',year:'numeric'})+' &nbsp; '+arrow+' '+money(Math.abs(delta))+'</span>';
     }
     const monthShort = viewed.toLocaleDateString('en-US',{month:'short'}).toUpperCase();
-    chart.innerHTML = chartSvg(series,monthShort);
+    chart.innerHTML = chartSvg(series,monthShort,'refRevenueGradient');
     const foot = hero.querySelector('.ref-hero-foot');
     if (foot) foot.textContent = viewed.toLocaleDateString('en-US',{month:'long',year:'numeric'}) + ' · live total omset';
     renderHistoryBars();
   }
 
+  function renderReferenceMonthly() {
+    const hero = $('monthlyOmsetHero');
+    if (!hero || typeof allData === 'undefined' || typeof mYear === 'undefined' || typeof mMonth === 'undefined') return;
+    const viewed = new Date(mYear,mMonth,1);
+    const series = monthSeries(viewed);
+    const current = series.length ? series[series.length-1].cumulative : 0;
+    const previousDate = new Date(mYear,mMonth-1,1);
+    const previous = monthTotal(previousDate);
+    const delta = current-previous;
+    const pct = previous>0 ? delta/previous*100 : null;
+    const big = $('mOmsetBig');
+    if (big) {
+      const desiredValue = window.matchMedia('(max-width:540px)').matches ? 'Rp '+compact(current) : money(current);
+      if (big.textContent !== desiredValue) big.textContent = desiredValue;
+    }
+    const sub = $('mOmsetSub');
+    if (sub) {
+      const cls = delta>=0 ? 'ref-compare-positive' : 'ref-compare-negative';
+      const arrow = delta>=0 ? '↑' : '↓';
+      const desiredSub = '<span class="'+cls+'">'+(pct===null?'—':((pct>=0?'+':'')+pct.toFixed(1)+'%'))+'</span>'+
+        '<span>vs '+previousDate.toLocaleDateString('en-US',{month:'short',year:'numeric'})+' &nbsp; '+arrow+' '+money(Math.abs(delta))+'</span>';
+      if (sub.innerHTML !== desiredSub) sub.innerHTML = desiredSub;
+    }
+    const signature = [mYear,mMonth,current,previous].join('|');
+    if (hero.dataset.refSignature === signature && hero.querySelector('.ref-month-chart')) return;
+    hero.dataset.refSignature = signature;
+
+    let chart = hero.querySelector('.ref-month-chart');
+    if (!chart) {
+      chart = document.createElement('div');
+      chart.className = 'ref-chart ref-month-chart';
+      hero.appendChild(chart);
+      const foot = document.createElement('div');
+      foot.className = 'ref-hero-foot ref-month-foot';
+      hero.appendChild(foot);
+    }
+    chart.innerHTML = chartSvg(series,viewed.toLocaleDateString('en-US',{month:'short'}).toUpperCase(),'refMonthlyGradient');
+    const foot = hero.querySelector('.ref-month-foot');
+    if (foot) foot.textContent = viewed.toLocaleDateString('en-US',{month:'long',year:'numeric'})+' · cumulative revenue trend';
+  }
+
   function init() {
     renderReferenceDashboard();
-    const watched = [$('liveOmsetBig'),$('dayLabel'),$('histStrip')].filter(Boolean);
-    const observer = new MutationObserver(() => requestAnimationFrame(renderReferenceDashboard));
+    renderReferenceMonthly();
+    const watched = [$('liveOmsetBig'),$('dayLabel'),$('histStrip'),$('mOmsetBig'),$('monthLabel')].filter(Boolean);
+    const observer = new MutationObserver(() => requestAnimationFrame(() => {
+      renderReferenceDashboard();
+      renderReferenceMonthly();
+    }));
     watched.forEach((node) => observer.observe(node,{childList:true,subtree:true,characterData:true}));
-    window.setInterval(renderReferenceDashboard,15000);
+    window.setInterval(() => { renderReferenceDashboard(); renderReferenceMonthly(); },15000);
   }
 
   if (document.readyState === 'complete') init();
