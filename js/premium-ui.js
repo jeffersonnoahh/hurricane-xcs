@@ -193,7 +193,7 @@
     d.body.append(moreOverlay, moreSheet);
 
     const morePages = ['salespeople', 'mysales', 'insights', 'warning', 'admin'];
-    const moreIcons = {salespeople: '👥', mysales: '🛍️', insights: '💡', warning: '⚠️', admin: '⚙️'};
+    const moreIcons = {salespeople: '', mysales: '', insights: '', warning: '', admin: ''};
     const moreButtons = [];
     const moreGrid = moreSheet.querySelector('.premium-more-grid');
 

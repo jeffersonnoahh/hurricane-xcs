@@ -8,14 +8,14 @@ const P={
 };
 // Fallback roster (used only until Firebase config/teams loads) — keep in sync with reality
 let TM={
-  'Christ A':{m:['Arfin','Erica','Nathan'],c:'#3b9eff',bg:'#0d1e30',e:'✝️'},
-  'Christ B':{m:['Rico','yuri','wati'],c:'#7b6fff',bg:'#150d30',e:'✝️'},
-  'Livia':   {m:['Syifa','FANI','Tokopedia','Live tiktok','Esia','Bilqis'],c:'#cc44cc',bg:'#2a1230',e:'🌸'},
-  'Valen':   {m:['Melda','Maryam','Amel','Shopee live','Shopee','ammar','caroline'],c:'#f5c518',bg:'#1a1400',e:'🔥'},
-  'Agung':   {m:['Agung','Koko','Luthfi','Ayu'],c:'#2eccc8',bg:'#0d2020',e:'🦁'},
-  'Ivan':    {m:['Ivan','Hendri','Eli'],c:'#ff6b1a',bg:'#2a1200',e:'⚡'},
-  'Noah':    {m:['Stanley','aurel'],c:'#2ecc71',bg:'#0d2015',e:'⚓'},
-  'REI':     {m:['Rei','Alif'],c:'#ff4d6d',bg:'#2a0d18',e:'🌀'},
+  'Christ A':{m:['Arfin','Erica','Nathan'],c:'#3b9eff',bg:'#0d1e30',e:''},
+  'Christ B':{m:['Rico','yuri','wati'],c:'#7b6fff',bg:'#150d30',e:''},
+  'Livia':   {m:['Syifa','FANI','Tokopedia','Live tiktok','Esia','Bilqis'],c:'#cc44cc',bg:'#2a1230',e:''},
+  'Valen':   {m:['Melda','Maryam','Amel','Shopee live','Shopee','ammar','caroline'],c:'#f5c518',bg:'#1a1400',e:''},
+  'Agung':   {m:['Agung','Koko','Luthfi','Ayu'],c:'#2eccc8',bg:'#0d2020',e:''},
+  'Ivan':    {m:['Ivan','Hendri','Eli'],c:'#ff6b1a',bg:'#2a1200',e:''},
+  'Noah':    {m:['Stanley','aurel'],c:'#2ecc71',bg:'#0d2015',e:''},
+  'REI':     {m:['Rei','Alif'],c:'#ff4d6d',bg:'#2a0d18',e:''},
 };
 // Keep a backup of default teams for recovery
 const TM_DEFAULT=JSON.parse(JSON.stringify(TM));
@@ -117,7 +117,7 @@ function setupMidnightRefresh(){
 }
 
 function midnightRefresh(){
-  console.log('🌅 Midnight auto-refresh triggered');
+  console.log('Midnight auto-refresh triggered');
   // Update active date keys
   if(typeof initActDate==='function')initActDate();
   // Re-render everything for new day
@@ -126,7 +126,7 @@ function midnightRefresh(){
   // Show a friendly toast
   if(typeof showToast==='function'){
     const today=new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'});
-    showToast('🌅 Hari baru! '+today,'info');
+    showToast('Hari baru! '+today,'info');
   }
 }
 
@@ -161,7 +161,7 @@ function fFull(n){return'Rp '+n.toLocaleString('id-ID');}
 function fRp(n){if(n>=1000000)return(n/1000000).toFixed(n%1000000===0?0:2)+'M';if(n>=1000)return(n/1000).toFixed(0)+'k';return n.toString();}
 function rc(r){return r>=10?'great':r>=7?'good':'low';}
 function mc(i){return['#f5c518','#aaa','#cd7f32'][i]||'#555';}
-function md(i){return['🥇','🥈','🥉'][i]||(i+1);}
+function md(i){return['','',''][i]||(i+1);}
 function rcl(i){return['r1','r2','r3'][i]||'rX';}
 
 // ══ CALENDAR PICKER — iOS STYLE ══
@@ -419,7 +419,7 @@ function updateDayUI(){
   document.getElementById('dayLabel').textContent=isT_?'TODAY':fShort(vd);
   const badge=document.getElementById('liveBadge');
   badge.className=isT_?'live-badge':'past-badge';
-  badge.innerHTML=isT_?'<span class="live-dot"></span>LIVE':'📅 PAST';
+  badge.innerHTML=isT_?'<span class="live-dot"></span>LIVE':'PAST';
   document.getElementById('roBanner').style.display=isT_?'none':'block';
   document.getElementById('roDate').textContent=vd.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   document.getElementById('inputArea').style.opacity=isT_?'1':'0.4';
@@ -438,6 +438,7 @@ function renderHist(){
     const hasD=entries.length>0,isT_=i===0,isAct=i===vOff;
     const div=document.createElement('div');
     div.className='hday'+(isAct?' active-day':'')+(hasD?' has-data':'')+(isT_?' today-day':'');
+    div.dataset.dateKey=k;
     div.onclick=(()=>{const off=i;return()=>{vOff=off;updateDayUI();};})();
     div.innerHTML=`<div class="hd-date">${fShort(d)}</div><div class="hd-day">${fDay(d)}</div><div class="hd-dot ${hasD?'g':''}${isT_&&!hasD?' b':''}"></div><div class="hd-rev">${hasD?fRp(rev):'—'}</div>`;
     strip.appendChild(div);
@@ -555,8 +556,8 @@ function addEntry(){
     const saleType=[...activeSaleTypes];
     const targetKey=getEntryDateKey();
 
-    if(!prod){showToast('⚠️ Pilih produk dulu!','error');return;}
-    if(saleType.length===0){showToast('⚠️ Pilih status order dulu: ✅ Order Complete / 🚗 Test Drive / Upselling / Cross / Repeat','error');return;}
+    if(!prod){showToast('Pilih produk dulu!','error');return;}
+    if(saleType.length===0){showToast('Pilih status order dulu: Order Complete / Test Drive / Upselling / Cross / Repeat','error');return;}
 
     // Get price based on mode
     let price=0;
@@ -564,7 +565,7 @@ function addEntry(){
       price=P[prod]||0;
     } else {
       price=parseFloat(document.getElementById('inCustom')?.value)||0;
-      if(!price){showToast('⚠️ Masukkan custom price!','error');return;}
+      if(!price){showToast('Masukkan custom price!','error');return;}
     }
 
     const newEntry={team,sp,prod,chats:0,units,price,revenue:price*units,saleType,notes,priceMode:currentPriceMode,ts:Date.now()};
@@ -574,16 +575,16 @@ function addEntry(){
 
     // Save to Firebase with feedback (atomic append — never rewrites the whole day)
     if(window.db){
-      showToast('💾 Saving...','info');
+      showToast('Saving...','info');
       _txnAppend('scores',targetKey,newEntry).then(()=>{
-        showToast('✅ '+prod+(units>1?' ×'+units:'')+' saved for '+sp+'!','success');
+        showToast(''+prod+(units>1?' ×'+units:'')+' saved for '+sp+'!','success');
       }).catch(err=>{
-        showToast('❌ Save failed — check internet: '+(err.message||''),'error');
+        showToast('Save failed — check internet: '+(err.message||''),'error');
         console.error('addEntry Firebase error:',err);
       });
     } else {
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
-      showToast('⚠️ Saved offline — Firebase not connected','info');
+      showToast('Saved offline — Firebase not connected','info');
     }
 
     // Reset form immediately (optimistic UI)
@@ -599,7 +600,7 @@ function addEntry(){
     renderAll();
   }catch(err){
     console.error('addEntry error:',err);
-    showToast('❌ Error: '+(err.message||'something went wrong'),'error');
+    showToast('Error: '+(err.message||'something went wrong'),'error');
   }
 }
 async function removeEntry(i){
@@ -613,8 +614,8 @@ async function removeEntry(i){
     _txnDeleteByTs('scores',gvk(),e.ts).then(()=>{
       allData[gvk()]=(allData[gvk()]||[]).filter(x=>!(x&&x.ts===e.ts));
       renderAll();
-      showToast('🗑️ Entry deleted','success');
-    }).catch(()=>showToast('❌ Delete failed — check internet','error'));
+      showToast('Entry deleted','success');
+    }).catch(()=>showToast('Delete failed — check internet','error'));
   }else{
     const arr=gE();const idx=e.ts?arr.findIndex(x=>x&&x.ts===e.ts):i;
     if(idx>=0){arr.splice(idx,1);sE(arr);}
@@ -653,7 +654,7 @@ function sE2(key,arr){
     if(!arr.length)window.db.ref('scores/'+key).remove();
     else window.db.ref('scores/'+key).set(arr).catch(err=>{
       console.error('sE2 save error:',err);
-      showToast('❌ Save error — check internet','error');
+      showToast('Save error — check internet','error');
     });
   } else {
     try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
@@ -689,7 +690,7 @@ function addActivity(){
     const notes=(notesEl?.value||'').trim();
 
     if(!chats&&!calls&&!fups){
-      showToast('⚠️ Enter at least one: chats, calls, or follow ups','error');return;
+      showToast('Enter at least one: chats, calls, or follow ups','error');return;
     }
 
     const targetKey=getActDateKey();
@@ -704,18 +705,18 @@ function addActivity(){
 
     allActs[targetKey]=arr;
     if(window.db){
-      showToast('💾 Saving...','info');
+      showToast('Saving...','info');
       _txnAppend('activities',targetKey,newAct).then(()=>{
         const dateLbl=new Date(targetKey+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-        showToast(isLate?'⚠️ Logged for '+dateLbl+' — LATE (after 2 PM)':'✅ Logged for '+dateLbl,isLate?'info':'success');
+        showToast(isLate?'Logged for '+dateLbl+' — LATE (after 2 PM)':'Logged for '+dateLbl,isLate?'info':'success');
       }).catch(err=>{
-        showToast('❌ Save failed — check internet: '+(err.message||''),'error');
+        showToast('Save failed — check internet: '+(err.message||''),'error');
       });
     } else {
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));
-        showToast('⚠️ Saved offline only — Firebase not connected','error');
+        showToast('Saved offline only — Firebase not connected','error');
       }catch(e){
-        showToast('❌ Cannot save — storage blocked','error');
+        showToast('Cannot save — storage blocked','error');
       }
     }
 
@@ -738,8 +739,8 @@ async function removeActivityByDate(dateKey,ts){
     _txnDeleteByTs('activities',dateKey,ts).then(()=>{
       allActs[dateKey]=(allActs[dateKey]||[]).filter(x=>!(x&&x.ts===ts));
       renderAll();
-      showToast('🗑️ Activity log deleted','success');
-    }).catch(()=>showToast('❌ Delete failed — check internet','error'));
+      showToast('Activity log deleted','success');
+    }).catch(()=>showToast('Delete failed — check internet','error'));
   }else{
     allActs[dateKey]=(allActs[dateKey]||[]).filter(x=>!(x&&x.ts===ts));
     try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
@@ -756,7 +757,7 @@ async function removeActivity(i){
     _txnDeleteByTs('activities',gvk(),a.ts).then(()=>{
       allActs[gvk()]=(allActs[gvk()]||[]).filter(x=>!(x&&x.ts===a.ts));
       renderAll();
-    }).catch(()=>showToast('❌ Delete failed — check internet','error'));
+    }).catch(()=>showToast('Delete failed — check internet','error'));
   }else{
     const arr=gA();const idx=a.ts?arr.findIndex(x=>x&&x.ts===a.ts):i;
     if(idx>=0){arr.splice(idx,1);sA(arr);}
@@ -890,9 +891,9 @@ function renderAll(){
   // TEAM TABLE
   const teams=aggTeams(entries,acts);
   document.getElementById('tTeam').innerHTML=teams.length===0
-    ?'<tr class="erow"><td colspan="6">No data yet — log entries below ↓</td></tr>'
+    ?'<tr class="erow"><td colspan="6">No data yet — log entries below </td></tr>'
     :teams.map((t,i)=>{
-      const tc=TM[t.n]||{c:'#888',bg:'#111',e:'👤',m:[]};
+      const tc=TM[t.n]||{c:'#888',bg:'#111',e:'',m:[]};
       return`<tr>
         <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:${tc.bg};color:${tc.c}">${tc.e}</div><div class="tn">${t.n}</div></div></td>
@@ -937,10 +938,10 @@ function renderAll(){
     return`<div class="ei">
       <span class="en" style="color:${tc.c}">${e.sp}</span>
       <span class="et">${e.team}</span>
-      ${e.chats?`<span class="et" style="color:#448aff">💬${e.chats}</span>`:''}
-      ${e.prod?`<span class="et" style="color:#00e676">✅${e.units}×${e.prod}</span>`:''}
-      ${e.priceMode==='custom'?'<span class="et" style="color:#ff6b1a">✏️ Custom</span>':''}
-      ${(Array.isArray(e.saleType)?e.saleType:e.saleType?[e.saleType]:[]).map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">⬆️ Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">🔀 Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">🔁 Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">🚗 Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">✅ Complete</span>':'').join('')}
+      ${e.chats?`<span class="et" style="color:#448aff">${e.chats}</span>`:''}
+      ${e.prod?`<span class="et" style="color:#00e676">${e.units}×${e.prod}</span>`:''}
+      ${e.priceMode==='custom'?'<span class="et" style="color:#ff6b1a">Custom</span>':''}
+      ${(Array.isArray(e.saleType)?e.saleType:e.saleType?[e.saleType]:[]).map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">Complete</span>':'').join('')}
       ${e.revenue?`<span class="et" style="color:#f5c518">${fFull(e.revenue)}</span>`:''}
       ${isT()?`<span class="ed" onclick="removeEntry(${i})">✕</span>`:''}
     </div>`;
@@ -1020,16 +1021,16 @@ function renderActLog(acts){
     };
 
     const dateHeader=`<div class="alog-date-hdr">
-      <div class="alog-date-lbl">📅 ${dateStr}</div>
+      <div class="alog-date-lbl">${dateStr}</div>
       <div class="alog-date-tot">
-        <span style="color:#f5c518">💬 ${dayTotals.chats}</span>
-        <span style="color:#448aff">📞 ${dayTotals.calls}</span>
-        <span style="color:#ff6b1a">🔄 ${dayTotals.fups}</span>
+        <span style="color:#f5c518">${dayTotals.chats}</span>
+        <span style="color:#448aff">${dayTotals.calls}</span>
+        <span style="color:#ff6b1a">${dayTotals.fups}</span>
       </div>
     </div>`;
 
     const teamSections=teamsPresent.map(team=>{
-      const tc=TM[team]||{c:'#888',bg:'#161624',e:'⭐'};
+      const tc=TM[team]||{c:'#888',bg:'#161624',e:''};
       const entries=teams[team].slice().sort((a,b)=>b.ts-a.ts);
       const teamTotals={
         chats:entries.reduce((s,a)=>s+(a.chats||0),0),
@@ -1105,9 +1106,9 @@ function renderSPGrid(entries,acts){
     const teamHeader=`<div class="spg-team-hdr" style="border-left:4px solid ${tc.c}">
       <div class="spg-team-name" style="color:${tc.c}">${tc.e} Team ${tn}</div>
       <div class="spg-team-stats">
-        <span style="color:#f5c518">💬 ${avg(teamTotals.moChats)}/hari</span>
-        <span style="color:#448aff">📞 ${avg(teamTotals.moCalls)}/hari</span>
-        <span style="color:#ff6b1a">🔄 ${avg(teamTotals.moFups)}/hari</span>
+        <span style="color:#f5c518">${avg(teamTotals.moChats)}/hari</span>
+        <span style="color:#448aff">${avg(teamTotals.moCalls)}/hari</span>
+        <span style="color:#ff6b1a">${avg(teamTotals.moFups)}/hari</span>
         <span style="color:#6060a0;font-size:9px;letter-spacing:1px;align-self:center">${moLbl}</span>
         <span style="color:white;font-weight:800">${fFull(teamTotals.moRevenue)}</span>
       </div>
@@ -1124,9 +1125,9 @@ function renderSPGrid(entries,acts){
           const ma=moAct[sp+'|'+tn]||{chats:0,calls:0,fups:0};
           // channel marketplace tidak wajib lapor call/FU → tampilkan "—", bukan 0.0
           const v=n=>_isActExcluded(sp)?'—':avg(n);
-          return `<div class="spc-row"><span class="spc-rl">💬 Chat / hari</span><span class="spc-rv">${v(ma.chats)}</span></div>
-        <div class="spc-row"><span class="spc-rl">📞 Call / hari</span><span class="spc-rv">${v(ma.calls)}</span></div>
-        <div class="spc-row"><span class="spc-rl">🔄 Follow Up / hari</span><span class="spc-rv">${v(ma.fups)}</span></div>`;
+          return `<div class="spc-row"><span class="spc-rl">Chat / hari</span><span class="spc-rv">${v(ma.chats)}</span></div>
+        <div class="spc-row"><span class="spc-rl">Call / hari</span><span class="spc-rv">${v(ma.calls)}</span></div>
+        <div class="spc-row"><span class="spc-rl">Follow Up / hari</span><span class="spc-rv">${v(ma.fups)}</span></div>`;
         })()}
         <div class="spc-rev-lbl"><span class="live-dot"></span>${moLbl}</div>
         <div class="spc-rev">${fFull(moRev[sp+'|'+tn]||0)}</div>
@@ -1191,19 +1192,19 @@ function buildWA(){
   const ds=vd.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const rate=T.chats>0?(T.closes/T.chats*100).toFixed(1):0;
   const cp=Math.round(T.chats/TC*100);
-  let txt='🌀 *HURRICANE XCS — DAILY REPORT*\n━━━━━━━━━━━━━━━━━━━━━━\n';
-  txt+=`📅 ${ds}\n\n📊 *SUMMARY*\n`;
-  txt+=`💬 Chats : ${T.chats}/160 (${cp}%)\n✅ Closes : ${T.closes} units\n📞 Calls : ${T.calls}\n🔄 Follow Up : ${T.fups}\n📈 Close Rate : ${rate}%\n💰 Revenue : ${fFull(T.revenue)}\n\n`;
-  txt+='🏆 *TEAM RANKING*\n';
+  let txt='*HURRICANE XCS — DAILY REPORT*\n━━━━━━━━━━━━━━━━━━━━━━\n';
+  txt+=`${ds}\n\n*SUMMARY*\n`;
+  txt+=`Chats : ${T.chats}/160 (${cp}%)\nCloses : ${T.closes} units\nCalls : ${T.calls}\nFollow Up : ${T.fups}\nClose Rate : ${rate}%\nRevenue : ${fFull(T.revenue)}\n\n`;
+  txt+='*TEAM RANKING*\n';
   const teams=aggTeams(entries,acts).filter(t=>t.chats>0||t.closes>0||t.calls>0);
   if(!teams.length)txt+='No data.\n';
-  else teams.forEach((t,i)=>{txt+=`${['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣'][i]||'▪️'} *${t.n}* — ${t.chats}c · ${t.calls} calls · ${t.closes}x · ${fFull(t.revenue)}\n`;});
-  txt+='\n👤 *TOP 5 SALESPEOPLE*\n';
+  else teams.forEach((t,i)=>{txt+=`${['','','','4','5','6','7'][i]||''} *${t.n}* — ${t.chats}c · ${t.calls} calls · ${t.closes}x · ${fFull(t.revenue)}\n`;});
+  txt+='\n*TOP 5 SALESPEOPLE*\n';
   const sps=aggSP(entries,acts).slice(0,5);
   if(!sps.length)txt+='No data.\n';
-  else sps.forEach((s,i)=>{txt+=`${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${s.sp} (${s.team}) — ${s.closes}x · ${fFull(s.revenue)}\n`;});
+  else sps.forEach((s,i)=>{txt+=`${['','','','4','5'][i]} ${s.sp} (${s.team}) — ${s.closes}x · ${fFull(s.revenue)}\n`;});
   txt+='\n━━━━━━━━━━━━━━━━━━━━━━\n';
-  txt+=cp>=100?'🔥 TARGET REACHED! Great work team!':'💪 Keep pushing — '+(160-T.chats)+' chats to go!';
+  txt+=cp>=100?'TARGET REACHED! Great work team!':'Keep pushing — '+(160-T.chats)+' chats to go!';
   txt+='\n_Hurricane XCS Performance System_';
   return txt;
 }
@@ -1211,8 +1212,8 @@ function openWA(){document.getElementById('waPre').textContent=buildWA();documen
 function closeWAMo(e){if(!e||e.target===document.getElementById('waMo'))document.getElementById('waMo').style.display='none';}
 function copyWAText(){
   const txt=buildWA();
-  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>showToast('✅ Copied!','success'));}
-  else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('✅ Copied!','success');}
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>showToast('Copied!','success'));}
+  else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Copied!','success');}
 }
 function sendWA(){window.open('https://wa.me/?text='+encodeURIComponent(buildWA()),'_blank');}
 
@@ -1318,7 +1319,7 @@ function renderMonthly(){
   document.getElementById('mTeamBody').innerHTML=sortedTeams.every(t=>t.revenue===0)
     ?'<tr class="erow"><td colspan="9">No data for this month</td></tr>'
     :sortedTeams.map((t,i)=>{
-      const tc=TM[t.n]||{c:'#888',bg:'#111',e:'👤'};
+      const tc=TM[t.n]||{c:'#888',bg:'#111',e:''};
       const barW=Math.round(t.revenue/maxTeamRev*100);
       return`<tr>
         <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
@@ -1390,7 +1391,7 @@ function renderSpLookup(){
   const monthLbl=window._monthLabel||'this month';
 
   if(!q){
-    resultEl.innerHTML='<div class="sp-lookup-empty">💡 Start typing to search. You can also click any name in the ranking table below to see their full monthly detail.</div>';
+    resultEl.innerHTML='<div class="sp-lookup-empty">Start typing to search. You can also click any name in the ranking table below to see their full monthly detail.</div>';
     return;
   }
 
@@ -1400,12 +1401,12 @@ function renderSpLookup(){
   }).sort((a,b)=>(b.revenue||0)-(a.revenue||0));
 
   if(matches.length===0){
-    resultEl.innerHTML=`<div class="sp-lookup-empty" style="color:#ff3b5c">❌ No salesperson found matching "<strong>${q}</strong>" for ${monthLbl}.</div>`;
+    resultEl.innerHTML=`<div class="sp-lookup-empty" style="color:#ff3b5c">No salesperson found matching "<strong>${q}</strong>" for ${monthLbl}.</div>`;
     return;
   }
 
   resultEl.innerHTML=matches.map(s=>{
-    const tc=TM[s.team]||{c:'#888',bg:'#161624',e:'⭐'};
+    const tc=TM[s.team]||{c:'#888',bg:'#161624',e:''};
     const rate=s.chats>0?(s.closes/s.chats*100).toFixed(1):'0';
     return `<div class="sp-lookup-card" style="border-left:4px solid ${tc.c}" onclick="openSPMonthly('${s.sp}','${s.team}')">
       <div class="sp-lookup-head">
@@ -1420,11 +1421,11 @@ function renderSpLookup(){
         </div>
       </div>
       <div class="sp-lookup-stats">
-        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">💬 Chats</div><div class="sp-lookup-stat-val" style="color:#f5c518">${s.chats||0}</div></div>
-        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">📞 Calls</div><div class="sp-lookup-stat-val" style="color:#448aff">${s.calls||0}</div></div>
-        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">🔄 Follow-ups</div><div class="sp-lookup-stat-val" style="color:#ff6b1a">${s.fups||0}</div></div>
-        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">✅ Closes</div><div class="sp-lookup-stat-val" style="color:#00e676">${s.closes||0}</div></div>
-        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">📈 Close Rate</div><div class="sp-lookup-stat-val" style="color:#7c4dff">${rate}%</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Chats</div><div class="sp-lookup-stat-val" style="color:#f5c518">${s.chats||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Calls</div><div class="sp-lookup-stat-val" style="color:#448aff">${s.calls||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Follow-ups</div><div class="sp-lookup-stat-val" style="color:#ff6b1a">${s.fups||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Closes</div><div class="sp-lookup-stat-val" style="color:#00e676">${s.closes||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Close Rate</div><div class="sp-lookup-stat-val" style="color:#7c4dff">${rate}%</div></div>
       </div>
     </div>`;
   }).join('');
@@ -1537,7 +1538,7 @@ async function generateBriefing(){
   const prompt=`Kamu adalah AI business analyst untuk Hurricane XCS, sebuah brand otomotif performa yang menjual voltage stabilizer (seri XCS). Kamu menganalisis performa sales team setiap hari dan memberikan briefing kepada owner (Jefferson, 20 tahun, entrepreneur).
 
 Data performa tim kemarin (${data.date}):
-- Total Chat Masuk: ${data.yesterday.chats} (target: ${data.yesterday.target}) ${data.yesterday.hitTarget?'✅ TARGET TERCAPAI':'❌ TIDAK MENCAPAI TARGET'}
+- Total Chat Masuk: ${data.yesterday.chats} (target: ${data.yesterday.target}) ${data.yesterday.hitTarget?'TARGET TERCAPAI':'TIDAK MENCAPAI TARGET'}
 - Total Closes: ${data.yesterday.closes} unit
 - Total Revenue: Rp ${data.yesterday.revenue.toLocaleString('id-ID')}
 - Close Rate: ${data.yesterday.closeRate}%
@@ -1549,7 +1550,7 @@ ${data.topSPs.map((s,i)=>`${i+1}. ${s.name} (Team ${s.team}): ${s.chats} chats, 
 
 ${data.bestTeam?`Tim terbaik: ${data.bestTeam.name} (${data.bestTeam.closes} closes, Rp ${data.bestTeam.revenue.toLocaleString('id-ID')})`:''}
 ${data.topProduct?`Produk terlaris: ${data.topProduct.name} (${data.topProduct.units} unit terjual)`:''}
-${data.notReportedCalls.length>0?`SP yang BELUM laporan calls/followup: ${data.notReportedCalls.join(', ')}`:'Semua SP sudah laporan ✅'}
+${data.notReportedCalls.length>0?`SP yang BELUM laporan calls/followup: ${data.notReportedCalls.join(', ')}`:'Semua SP sudah laporan '}
 
 Performa 7 hari terakhir:
 - Total Chat: ${data.week7.chats} (rata-rata ${data.week7.avgDaily}/hari)
@@ -1562,7 +1563,7 @@ Buat briefing harian dalam Bahasa Indonesia yang:
 3. Identifikasi masalah yang perlu diperhatikan
 4. Berikan 2-3 rekomendasi konkret untuk hari ini
 5. Motivasi tim dengan gaya yang energetik tapi profesional
-6. Format dengan sections yang jelas: 📊 Ringkasan, ⭐ Highlight, ⚠️ Perhatian, 🎯 Action Today
+6. Format dengan sections yang jelas: Ringkasan, Highlight, Perhatian, Action Today
 
 Gunakan data nyata di atas. Jangan terlalu panjang, maksimal 250 kata.`;
 
@@ -1581,10 +1582,10 @@ Gunakan data nyata di atas. Jangan terlalu panjang, maksimal 250 kata.`;
 
     // Format the text nicely
     const formatted=text
-      .replace(/📊[^\n]*/g,m=>`<div class="ai-section"><div class="ai-section-title">📊 Ringkasan</div><div class="ai-section-body">${m.replace('📊','').replace(/\*\*(.*?)\*\*/g,'<span class="ai-highlight">$1</span>').trim()}`)
-      .replace(/⭐[^\n]*/g,m=>`</div></div><div class="ai-section"><div class="ai-section-title">⭐ Highlight</div><div class="ai-section-body">${m.replace('⭐','').trim()}`)
-      .replace(/⚠️[^\n]*/g,m=>`</div></div><div class="ai-section"><div class="ai-section-title">⚠️ Perhatian</div><div class="ai-section-body">${m.replace('⚠️','').trim()}`)
-      .replace(/🎯[^\n]*/g,m=>`</div></div><div class="ai-section"><div class="ai-section-title">🎯 Action Today</div><div class="ai-section-body">${m.replace('🎯','').trim()}</div></div>`);
+      .replace(/[^\n]*/g,m=>`<div class="ai-section"><div class="ai-section-title">Ringkasan</div><div class="ai-section-body">${m.replace('','').replace(/\*\*(.*?)\*\*/g,'<span class="ai-highlight">$1</span>').trim()}`)
+      .replace(/[^\n]*/g,m=>`</div></div><div class="ai-section"><div class="ai-section-title">Highlight</div><div class="ai-section-body">${m.replace('','').trim()}`)
+      .replace(/[^\n]*/g,m=>`</div></div><div class="ai-section"><div class="ai-section-title">Perhatian</div><div class="ai-section-body">${m.replace('','').trim()}`)
+      .replace(/[^\n]*/g,m=>`</div></div><div class="ai-section"><div class="ai-section-title">Action Today</div><div class="ai-section-body">${m.replace('','').trim()}</div></div>`);
 
     // Clean display
     const cleanText=text
@@ -1611,11 +1612,11 @@ Gunakan data nyata di atas. Jangan terlalu panjang, maksimal 250 kata.`;
     }
 
   }catch(err){
-    body.innerHTML=`<div class="ai-empty" style="color:#ff3b5c">⚠️ Gagal generate briefing. Pastikan koneksi internet aktif.<br><span style="font-size:10px;color:#6060a0">${err.message}</span></div>`;
+    body.innerHTML=`<div class="ai-empty" style="color:#ff3b5c">Gagal generate briefing. Pastikan koneksi internet aktif.<br><span style="font-size:10px;color:#6060a0">${err.message}</span></div>`;
   }
 
   btn.disabled=false;
-  btn.textContent='✨ Generate';
+  btn.textContent='Generate';
 }
 
 function loadExistingBriefing(){
@@ -1685,7 +1686,7 @@ function renderNotReported(){
       <div class="nr-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
           <div class="nr-title" style="color:${missing.length>0?'var(--red)':'var(--green)'}">
-            ${missing.length>0?`⚠️ ${missing.length} SP belum laporan`:'✅ Semua sudah laporan'}
+            ${missing.length>0?`${missing.length} SP belum laporan`:'Semua sudah laporan'}
             ${lateSubmissions.size>0?`<span style="margin-left:8px;font-size:11px;color:#ff6b1a">· ${lateSubmissions.size} LATE</span>`:''}
           </div>
           <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;margin-top:2px;letter-spacing:1px;">Untuk ${tLabel}</div>
@@ -1708,7 +1709,7 @@ function renderNotReported(){
               <div class="nr-name">${s.sp}</div>
               <div class="nr-team">${s.team}</div>
             </div>
-            <div class="nr-status">❌</div>
+            <div class="nr-status"></div>
           </div>`).join('')}
         ${done.map(s=>`
           <div class="nr-item done">
@@ -1717,7 +1718,7 @@ function renderNotReported(){
               <div class="nr-name">${s.sp}</div>
               <div class="nr-team">${s.team}</div>
             </div>
-            <div class="nr-status">${lateSubmissions.has(s.sp+'|'+s.team)?'<span style="font-family:\'DM Mono\',monospace;font-size:8px;background:rgba(255,107,26,0.15);color:#ff6b1a;border:1px solid rgba(255,107,26,0.3);padding:1px 4px;border-radius:3px">LATE</span>':'✅'}</div>
+            <div class="nr-status">${lateSubmissions.has(s.sp+'|'+s.team)?'<span style="font-family:\'DM Mono\',monospace;font-size:8px;background:rgba(255,107,26,0.15);color:#ff6b1a;border:1px solid rgba(255,107,26,0.3);padding:1px 4px;border-radius:3px">LATE</span>':''}</div>
           </div>`).join('')}
       </div>
     </div>`;
@@ -1847,7 +1848,7 @@ function renderInsights(){
   }
   const renderLB=(arr,emptyMsg,color)=>{
     if(!arr.length)return `<div class="ins-lb-empty">${emptyMsg}</div>`;
-    const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
+    const medals=['','','','4','5'];
     return arr.map((s,i)=>`<div class="ins-lb-row">
       <div class="ins-lb-rank">${medals[i]||(i+1)}</div>
       <div><div class="ins-lb-name">${s.sp}</div><div class="ins-lb-team">${s.team}</div></div>
@@ -1875,8 +1876,8 @@ function renderInsights(){
     const tc=TM[t.team]||{c:'#888',e:''};
     const avgTicket=t.orders>0?Math.round(t.totalRev/t.orders):0;
     return `<tr>
-      <td><span class="med">${['🥇','🥈','🥉'][i]||(i+1)}</span></td>
-      <td><div class="tcell"><div class="tav" style="background:${tc.bg||'#161624'};color:${tc.c}">${tc.e||'⭐'}</div><div class="tn">${t.team}</div></div></td>
+      <td><span class="med">${['','',''][i]||(i+1)}</span></td>
+      <td><div class="tcell"><div class="tav" style="background:${tc.bg||'#161624'};color:${tc.c}">${tc.e||''}</div><div class="tn">${t.team}</div></div></td>
       <td><span class="nb">${t.orders}</span></td>
       <td><span style="color:#ff6b1a;font-weight:700">${pct(t.upsell,t.orders)}%</span></td>
       <td><span style="color:#7c4dff;font-weight:700">${pct(t.cross,t.orders)}%</span></td>
@@ -2006,7 +2007,7 @@ function saveWarnThresh(){
   };
   try{localStorage.setItem('hxcs_warn_thresh',JSON.stringify(_warnThresh));}catch(e){}
   toggleWarnThreshEdit();
-  showToast('✅ Thresholds saved','success');
+  showToast('Thresholds saved','success');
   renderWarning();
 }
 
@@ -2116,13 +2117,13 @@ function renderWarning(){
   const flbl=document.getElementById('warnFlaggedCountLbl');
   if(flbl)flbl.textContent='('+flaggedTotal+')';
   if(flaggedTotal===0){
-    document.getElementById('warnSummaryText').textContent='All clear! 🎉 Every SP meets all thresholds.';
+    document.getElementById('warnSummaryText').textContent='All clear! Every SP meets all thresholds.';
   } else {
     document.getElementById('warnSummaryText').textContent=`${flaggedTotal} salespeople below thresholds`;
   }
 
-  const tcGet=t=>TM[t]||{c:'#888',bg:'#161624',e:'⭐'};
-  const issueLbl=(t)=>({rev:'💰 LOW REV',chats:'💬 LOW CHATS',calls:'📞 LOW CALLS',fups:'🔄 LOW FUPS'}[t]||t);
+  const tcGet=t=>TM[t]||{c:'#888',bg:'#161624',e:''};
+  const issueLbl=(t)=>({rev:'LOW REV',chats:'LOW CHATS',calls:'LOW CALLS',fups:'LOW FUPS'}[t]||t);
 
   // Critical card
   const renderCriticalCard=x=>{
@@ -2162,7 +2163,7 @@ function renderWarning(){
 
   // ALL FLAGGED — grouped by team
   if(allFlagged.length===0){
-    document.getElementById('warnCritical').innerHTML='<div class="warn-empty">✅ All clear — every SP meets all thresholds</div>';
+    document.getElementById('warnCritical').innerHTML='<div class="warn-empty">All clear — every SP meets all thresholds</div>';
   } else {
     const grouped=groupByTeam(allFlagged);
     document.getElementById('warnCritical').innerHTML=grouped.map(g=>{
@@ -2198,7 +2199,7 @@ function renderWarning(){
       <div class="gap">${gapTxt}</div>
     </div>`;
   };
-  const renderEmpty='<div class="warn-empty">✅ All clear</div>';
+  const renderEmpty='<div class="warn-empty">All clear</div>';
 
   // Render category with team grouping
   const renderCategoryGrouped=(arr,issueType,sortFn)=>{
@@ -2226,7 +2227,7 @@ function renderWarning(){
       return `<div class="warn-good-row">
         <div class="av" style="background:${tc.bg};color:${tc.c}">${s.sp[0]}</div>
         <div><div class="nm">${s.sp}</div><div class="tm">${s.team} · ${fRp(s.revenue)} omset · last log ${s.lastDateLbl}</div></div>
-        <div class="badge">✓ ALL OK</div>
+        <div class="badge">ALL OK</div>
       </div>`;
     }).join('');
   }
@@ -2317,14 +2318,14 @@ function saveOmset(){
   if(window.db){
     window.db.ref('omset/'+key).set(data).then(()=>{
       showOmsetSaved();
-    }).catch(e=>showToast('❌ Gagal simpan: '+e.message,'error'));
+    }).catch(e=>showToast('Gagal simpan: '+e.message,'error'));
   } else {
     try{
       const all=JSON.parse(localStorage.getItem('hxcs_omset')||'{}');
       all[key]=data;
       localStorage.setItem('hxcs_omset',JSON.stringify(all));
       showOmsetSaved();
-    }catch(e){showToast('❌ Gagal simpan!','error');}
+    }catch(e){showToast('Gagal simpan!','error');}
   }
 }
 
@@ -2332,7 +2333,7 @@ function showOmsetSaved(){
   const btn=document.querySelector('#page-omset .btn.bg-gold');
   if(btn){
     const orig=btn.innerHTML;
-    btn.innerHTML='✅ Tersimpan!';
+    btn.innerHTML='Tersimpan!';
     btn.style.background='#00e676';
     setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';},2000);
   }
@@ -2557,7 +2558,7 @@ function renderEditRecords(){
           <div style="width:24px;height:24px;border-radius:6px;background:${tc.bg};color:${tc.c};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">${(r.sp||'?')[0]}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:white;">${r.sp}</div>
           <span style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;">${r.team} · ${time}</span>
-          <span style="margin-left:auto;background:rgba(0,230,118,0.1);color:#00e676;padding:3px 8px;border-radius:5px;font-size:9px;font-family:'Space Mono',monospace;letter-spacing:1px;">💰 SALE</span>
+          <span style="margin-left:auto;background:rgba(0,230,118,0.1);color:#00e676;padding:3px 8px;border-radius:5px;font-size:9px;font-family:'Space Mono',monospace;letter-spacing:1px;">SALE</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px;font-family:'Space Mono',monospace;color:#e8e8f8;margin-bottom:10px;">
           <div><span style="color:#6060a0;">Product:</span><br/><b style="color:#f5c518;">${r.prod||'—'}</b></div>
@@ -2565,8 +2566,8 @@ function renderEditRecords(){
           <div><span style="color:#6060a0;">Revenue:</span><br/><b style="color:#f5c518;">${fFull(r.revenue||0)}</b></div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button onclick="openEditMo('sale','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">✏️ Edit</button>
-          <button onclick="deleteRecord('sale','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;">🗑</button>
+          <button onclick="openEditMo('sale','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">Edit</button>
+          <button onclick="deleteRecord('sale','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;"></button>
         </div>
       </div>`;
     } else {
@@ -2575,17 +2576,17 @@ function renderEditRecords(){
           <div style="width:24px;height:24px;border-radius:6px;background:${tc.bg};color:${tc.c};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;">${(r.sp||'?')[0]}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:white;">${r.sp}</div>
           <span style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;">${r.team} · ${time}</span>${lateBadge}
-          <span style="margin-left:auto;background:rgba(68,138,255,0.1);color:#448aff;padding:3px 8px;border-radius:5px;font-size:9px;font-family:'Space Mono',monospace;letter-spacing:1px;">📞 ACTIVITY</span>
+          <span style="margin-left:auto;background:rgba(68,138,255,0.1);color:#448aff;padding:3px 8px;border-radius:5px;font-size:9px;font-family:'Space Mono',monospace;letter-spacing:1px;">ACTIVITY</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px;font-family:'Space Mono',monospace;color:#e8e8f8;margin-bottom:10px;">
           <div><span style="color:#6060a0;">Chats:</span><br/><b style="color:#f5c518;">${r.chats||0}</b></div>
           <div><span style="color:#6060a0;">Calls:</span><br/><b style="color:#448aff;">${r.calls||0}</b></div>
           <div><span style="color:#6060a0;">Followups:</span><br/><b style="color:#ff6b1a;">${r.fups||0}</b></div>
         </div>
-        ${r.notes?`<div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;margin-bottom:10px;">📝 ${r.notes}</div>`:''}
+        ${r.notes?`<div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;margin-bottom:10px;">${r.notes}</div>`:''}
         <div style="display:flex;gap:6px;">
-          <button onclick="openEditMo('activity','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">✏️ Edit</button>
-          <button onclick="deleteRecord('activity','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;">🗑</button>
+          <button onclick="openEditMo('activity','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">Edit</button>
+          <button onclick="deleteRecord('activity','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;"></button>
         </div>
       </div>`;
     }
@@ -2604,7 +2605,7 @@ function openEditMo(type,date,idx){
     const r=allData[date][idx];
     const existingTypes=Array.isArray(r.saleType)?r.saleType:(r.saleType?[r.saleType]:[]);
     existingTypes.forEach(t=>_editMoTypes.add(t));
-    document.getElementById('editMoTitle').textContent='✏️ Edit Sale — '+r.sp;
+    document.getElementById('editMoTitle').textContent='Edit Sale — '+r.sp;
     document.getElementById('editMoFields').innerHTML=`
       <div class="ig" style="margin-bottom:10px;">
         <div class="igl">Product</div>
@@ -2619,9 +2620,9 @@ function openEditMo(type,date,idx){
       <div class="ig" style="margin-bottom:10px;">
         <div class="igl">Sale Type</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
-          <button class="sale-type-btn${existingTypes.includes('upsell')?' active-upsell':''}" id="ertb_upsell" onclick="editMoToggle('upsell')">⬆️ Upselling</button>
-          <button class="sale-type-btn${existingTypes.includes('cross')?' active-cross':''}" id="ertb_cross" onclick="editMoToggle('cross')">🔀 Cross Selling</button>
-          <button class="sale-type-btn${existingTypes.includes('repeat')?' active-repeat':''}" id="ertb_repeat" onclick="editMoToggle('repeat')">🔁 Repeat Order</button>
+          <button class="sale-type-btn${existingTypes.includes('upsell')?' active-upsell':''}" id="ertb_upsell" onclick="editMoToggle('upsell')">Upselling</button>
+          <button class="sale-type-btn${existingTypes.includes('cross')?' active-cross':''}" id="ertb_cross" onclick="editMoToggle('cross')">Cross Selling</button>
+          <button class="sale-type-btn${existingTypes.includes('repeat')?' active-repeat':''}" id="ertb_repeat" onclick="editMoToggle('repeat')">Repeat Order</button>
         </div>
       </div>
       <div class="ig">
@@ -2630,12 +2631,12 @@ function openEditMo(type,date,idx){
       </div>`;
   } else {
     const r=allActs[date][idx];
-    document.getElementById('editMoTitle').textContent='✏️ Edit Activity — '+r.sp;
+    document.getElementById('editMoTitle').textContent='Edit Activity — '+r.sp;
     document.getElementById('editMoFields').innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-        <div class="ig"><div class="igl">💬 Chats</div><input type="text" inputmode="numeric" id="erChats" value="${r.chats||0}"/></div>
-        <div class="ig"><div class="igl">📞 Calls</div><input type="text" inputmode="numeric" id="erCalls" value="${r.calls||0}"/></div>
-        <div class="ig"><div class="igl">🔄 Follow Ups</div><input type="text" inputmode="numeric" id="erFups" value="${r.fups||0}"/></div>
+        <div class="ig"><div class="igl">Chats</div><input type="text" inputmode="numeric" id="erChats" value="${r.chats||0}"/></div>
+        <div class="ig"><div class="igl">Calls</div><input type="text" inputmode="numeric" id="erCalls" value="${r.calls||0}"/></div>
+        <div class="ig"><div class="igl">Follow Ups</div><input type="text" inputmode="numeric" id="erFups" value="${r.fups||0}"/></div>
       </div>
       <div class="ig">
         <div class="igl">Notes (optional)</div>
@@ -2672,14 +2673,14 @@ function saveEditMo(){
     r.saleType=[..._editMoTypes];
     r.editedAt=Date.now();
     if(window.db){
-      showToast('💾 Saving...','info');
+      showToast('Saving...','info');
       window.db.ref('scores/'+date).set(allData[date]).then(()=>{
-        showToast('✅ Sale updated!','success');
+        showToast('Sale updated!','success');
         renderEditRecords();renderAll();
-      }).catch(err=>showToast('❌ Save failed: '+err.message,'error'));
+      }).catch(err=>showToast('Save failed: '+err.message,'error'));
     } else {
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
-      showToast('✅ Updated (local)','success');
+      showToast('Updated (local)','success');
       renderEditRecords();renderAll();
     }
   } else {
@@ -2691,14 +2692,14 @@ function saveEditMo(){
     r.notes=document.getElementById('erNotes').value.trim();
     r.editedAt=Date.now();
     if(window.db){
-      showToast('💾 Saving...','info');
+      showToast('Saving...','info');
       window.db.ref('activities/'+date).set(allActs[date]).then(()=>{
-        showToast('✅ Activity updated!','success');
+        showToast('Activity updated!','success');
         renderEditRecords();renderAll();
-      }).catch(err=>showToast('❌ Save failed: '+err.message,'error'));
+      }).catch(err=>showToast('Save failed: '+err.message,'error'));
     } else {
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
-      showToast('✅ Updated (local)','success');
+      showToast('Updated (local)','success');
       renderEditRecords();renderAll();
     }
   }
@@ -2727,7 +2728,7 @@ async function deleteRecord(type,date,idx){
   }
   renderEditRecords();
   renderAll();
-  showToast('🗑️ Record deleted','success');
+  showToast('Record deleted','success');
 }
 
 // ══ TOAST NOTIFICATION ══
@@ -2772,7 +2773,7 @@ function saveTargets(){
     window._cfgChatTarget=chatTarget;
     window._cfgRevTarget=revTarget;
 
-    showToast('💾 Saving targets...','info');
+    showToast('Saving targets...','info');
 
     // Update goal card text immediately
     updateGoalCardText(chatTarget,revTarget);
@@ -2780,18 +2781,18 @@ function saveTargets(){
     if(window.db){
       // update() — NEVER set(): a whole-node set() here once wiped config/teams + config/products
       window.db.ref('config').update(cfg).then(()=>{
-        showToast('✅ Targets saved! Chat: '+chatTarget+' · Rp '+(revTarget/1000000).toFixed(1)+'M','success');
+        showToast('Targets saved! Chat: '+chatTarget+' · Rp '+(revTarget/1000000).toFixed(1)+'M','success');
         renderAll();
       }).catch(err=>{
-        showToast('⚠️ Local only: '+err.message,'error');
+        showToast('Local only: '+err.message,'error');
         renderAll();
       });
     } else {
-      showToast('✅ Targets saved locally','success');
+      showToast('Targets saved locally','success');
       renderAll();
     }
   } catch(e){
-    showToast('❌ Error: '+e.message,'error');
+    showToast('Error: '+e.message,'error');
   }
 }
 
@@ -2811,7 +2812,7 @@ function renderAdminProducts(){
         <span style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;">Rp</span>
         <input type="number" value="${price}" id="prodPrice_${name.replace(/[^a-zA-Z0-9]/g,'_')}" style="background:transparent;border:none;color:white;font-family:'Space Grotesk',sans-serif;font-size:13px;width:100%;outline:none;" onchange="updateProductPrice('${name}',this.value)"/>
       </div>
-      <button onclick="deleteProduct('${name}')" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.2);color:#ff3b5c;width:32px;height:32px;border-radius:6px;cursor:pointer;">🗑</button>
+      <button onclick="deleteProduct('${name}')" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.2);color:#ff3b5c;width:32px;height:32px;border-radius:6px;cursor:pointer;"></button>
     </div>`).join('');
 }
 
@@ -2832,15 +2833,15 @@ async function deleteProduct(name){
 function addNewProduct(){
   const name=document.getElementById('newProdName').value.trim().toUpperCase();
   const price=parseInt(document.getElementById('newProdPrice').value);
-  if(!name||!price){showToast('⚠️ Enter both name and price','error');return;}
-  if(P[name]){showToast('⚠️ Product already exists!','error');return;}
+  if(!name||!price){showToast('Enter both name and price','error');return;}
+  if(P[name]){showToast('Product already exists!','error');return;}
   P[name]=price;
   saveProductsToFirebase();
   document.getElementById('newProdName').value='';
   document.getElementById('newProdPrice').value='';
   renderAdminProducts();
   refreshProductDropdown();
-  showToast('✅ Product added: '+name,'success');
+  showToast('Product added: '+name,'success');
 }
 
 function saveProductsToFirebase(){
@@ -2875,7 +2876,7 @@ function renderAdminTeams(){
         ${tc.m.map(sp=>`
           <div style="display:flex;align-items:center;gap:7px;background:#161624;border:1px solid #252540;border-radius:20px;padding:5px 9px 5px 12px;">
             <span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;">${_htmlEsc(sp)}</span>
-            <span class="adm-mem-edit" data-team="${_htmlEsc(teamName)}" data-name="${_htmlEsc(sp)}" title="Rename" style="cursor:pointer;color:#f5c518;font-size:12px;">✏️</span>
+            <span class="adm-mem-edit" data-team="${_htmlEsc(teamName)}" data-name="${_htmlEsc(sp)}" title="Rename" style="cursor:pointer;color:#f5c518;font-size:12px;"></span>
             <span class="adm-mem-del" data-team="${_htmlEsc(teamName)}" data-name="${_htmlEsc(sp)}" title="Remove" style="cursor:pointer;color:#ff3b5c;font-size:14px;line-height:1;">✕</span>
           </div>`).join('')}
       </div>
@@ -2944,16 +2945,16 @@ function _renameInNode(ref,oldName,newName,teamScope){
 
 // Rename a salesperson everywhere: roster (config/teams) + all historical scores & activities
 async function renameMember(teamName,oldName){
-  if(window.db&&!window._cfgTeamsLoaded){showToast('⏳ Roster is still loading — try again in a moment','error');return;}
-  if(!TM[teamName]||!Array.isArray(TM[teamName].m)||!TM[teamName].m.includes(oldName)){showToast('⚠️ Member not found','error');return;}
+  if(window.db&&!window._cfgTeamsLoaded){showToast('Roster is still loading — try again in a moment','error');return;}
+  if(!TM[teamName]||!Array.isArray(TM[teamName].m)||!TM[teamName].m.includes(oldName)){showToast('Member not found','error');return;}
   // Marketplace channels are tied to a hardcoded warning-exclude list; renaming would silently un-exclude them.
-  if(typeof _isWarnExcluded==='function'&&_isWarnExcluded(oldName)){showToast('⚠️ "'+oldName+'" is a marketplace channel and can\'t be renamed here','error');return;}
+  if(typeof _isWarnExcluded==='function'&&_isWarnExcluded(oldName)){showToast('"'+oldName+'" is a marketplace channel and can\'t be renamed here','error');return;}
   const raw=await showPrompt('Rename Member','Rename "'+oldName+'" in team '+teamName+'. This also updates all of their past sales & activity records.',oldName,'Rename');
   if(raw===null)return;
   const newName=raw.trim();
-  if(!newName){showToast('⚠️ Name cannot be empty','error');return;}
+  if(!newName){showToast('Name cannot be empty','error');return;}
   if(newName===oldName)return;
-  if(TM[teamName].m.includes(newName)){showToast('⚠️ "'+newName+'" already exists in this team','error');return;}
+  if(TM[teamName].m.includes(newName)){showToast('"'+newName+'" already exists in this team','error');return;}
   // If the same name exists in ANOTHER team's roster it's a genuinely different person → scope to this team.
   // Otherwise rename by name across ALL teams, so records logged under a previous/mistyped team aren't orphaned.
   const ambiguous=Object.entries(TM).some(([t,tc])=>t!==teamName&&Array.isArray(tc.m)&&tc.m.includes(oldName));
@@ -2968,29 +2969,29 @@ async function renameMember(teamName,oldName){
   renderAdminTeams();refreshTeamDropdowns();if(typeof populateMsSPSelect==='function')populateMsSPSelect();renderAll();
   // 3) persist — await every write and surface failures honestly (no false "success")
   if(window.db){
-    showToast('⏳ Saving rename…','info');
+    showToast('Saving rename…','info');
     const writes=[Promise.resolve(saveTeamsToFirebase())];
     scoreDates.forEach(d=>writes.push(_renameInNode(window.db.ref('scores/'+d),oldName,newName,teamScope)));
     actDates.forEach(d=>writes.push(_renameInNode(window.db.ref('activities/'+d),oldName,newName,teamScope)));
     try{
       await Promise.all(writes);
-      showToast('✅ Renamed "'+oldName+'" → "'+newName+'" ('+recCount+' record'+(recCount!==1?'s':'')+' updated)','success');
+      showToast('Renamed "'+oldName+'" → "'+newName+'" ('+recCount+' record'+(recCount!==1?'s':'')+' updated)','success');
     }catch(err){
-      showToast('❌ Save failed — check internet and refresh; some records may be inconsistent','error');
+      showToast('Save failed — check internet and refresh; some records may be inconsistent','error');
     }
   }else{
     saveTeamsToFirebase();
     try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
-    showToast('✅ Renamed "'+oldName+'" → "'+newName+'" ('+recCount+' record'+(recCount!==1?'s':'')+' updated)','success');
+    showToast('Renamed "'+oldName+'" → "'+newName+'" ('+recCount+' record'+(recCount!==1?'s':'')+' updated)','success');
   }
 }
 
 function addMember(teamName){
-  if(window.db&&!window._cfgTeamsLoaded){showToast('⏳ Roster is still loading — try again in a moment','error');return;}
+  if(window.db&&!window._cfgTeamsLoaded){showToast('Roster is still loading — try again in a moment','error');return;}
   const input=document.getElementById('newMember_'+teamName.replace(/\s/g,'_'));
   const name=input.value.trim();
   if(!name)return;
-  if(TM[teamName].m.includes(name)){showToast('⚠️ Member already in this team','error');return;}
+  if(TM[teamName].m.includes(name)){showToast('Member already in this team','error');return;}
   TM[teamName].m.push(name);
   saveTeamsToFirebase();
   renderAdminTeams();
@@ -2999,7 +3000,7 @@ function addMember(teamName){
 }
 
 async function removeMember(teamName,memberName){
-  if(window.db&&!window._cfgTeamsLoaded){showToast('⏳ Roster is still loading — try again in a moment','error');return;}
+  if(window.db&&!window._cfgTeamsLoaded){showToast('Roster is still loading — try again in a moment','error');return;}
   const ok=await showConfirm('Remove Member',`Remove ${memberName} from team ${teamName}?`,'Remove',true);
   if(!ok)return;
   TM[teamName].m=TM[teamName].m.filter(m=>m!==memberName);
@@ -3024,10 +3025,10 @@ function refreshTeamDropdowns(){
 function adminRefreshAll(){
   if(!window.db){
     renderEditRecords();
-    showToast('🔄 Refreshed (local data)','info');
+    showToast('Refreshed (local data)','info');
     return;
   }
-  showToast('⏳ Fetching from Firebase...','info');
+  showToast('Fetching from Firebase...','info');
   Promise.all([
     window.db.ref('scores').once('value'),
     window.db.ref('activities').once('value')
@@ -3040,9 +3041,9 @@ function adminRefreshAll(){
     Object.keys(aData).forEach(k=>{const v=aData[k];allActs[k]=Array.isArray(v)?v:Object.values(v);});
     renderAll();
     renderEditRecords();
-    showToast('🔄 Data refreshed from Firebase!','success');
+    showToast('Data refreshed from Firebase!','success');
   }).catch(err=>{
-    showToast('⚠️ Refresh failed: '+err.message,'error');
+    showToast('Refresh failed: '+err.message,'error');
   });
 }
 
@@ -3074,7 +3075,7 @@ function exportAllData(){
       modal.id='csvExportMo';
       modal.className='mo';
       modal.style.display='none';
-      modal.innerHTML='<div style="background:#161624;border:1px solid #252540;border-radius:18px;padding:22px;max-width:500px;width:93%;max-height:85vh;overflow-y:auto;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:Space Grotesk,sans-serif;font-size:18px;font-weight:800;color:white;">📥 CSV Export</div><span onclick="document.getElementById(\'csvExportMo\').style.display=\'none\'" style="cursor:pointer;color:#6060a0;font-size:20px;">✕</span></div><div id="csvRowCount" style="font-family:Space Mono,monospace;font-size:11px;color:#6060a0;margin-bottom:10px;"></div><div style="display:flex;gap:8px;margin-bottom:12px;"><button onclick="copyCsvToClipboard()" class="btn bg-gold" style="flex:1;height:40px;font-size:13px;">📋 Copy All</button><button onclick="downloadCsvFile()" class="btn" style="flex:1;height:40px;font-size:13px;background:#00e676;color:#000;">💾 Download File</button></div><textarea id="csvOutput" readonly style="width:100%;height:300px;background:#0e0e1a;color:#e8e8f8;border:1px solid #252540;border-radius:8px;padding:10px;font-family:Space Mono,monospace;font-size:10px;resize:none;"></textarea><div style="font-family:Space Mono,monospace;font-size:9px;color:#6060a0;margin-top:10px;text-align:center;">💡 Tip: Tap inside textarea → Select All → Copy → paste into Excel</div></div>';
+      modal.innerHTML='<div style="background:#161624;border:1px solid #252540;border-radius:18px;padding:22px;max-width:500px;width:93%;max-height:85vh;overflow-y:auto;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:Space Grotesk,sans-serif;font-size:18px;font-weight:800;color:white;">CSV Export</div><span onclick="document.getElementById(\'csvExportMo\').style.display=\'none\'" style="cursor:pointer;color:#6060a0;font-size:20px;">✕</span></div><div id="csvRowCount" style="font-family:Space Mono,monospace;font-size:11px;color:#6060a0;margin-bottom:10px;"></div><div style="display:flex;gap:8px;margin-bottom:12px;"><button onclick="copyCsvToClipboard()" class="btn bg-gold" style="flex:1;height:40px;font-size:13px;">Copy All</button><button onclick="downloadCsvFile()" class="btn" style="flex:1;height:40px;font-size:13px;background:#00e676;color:#000;">Download File</button></div><textarea id="csvOutput" readonly style="width:100%;height:300px;background:#0e0e1a;color:#e8e8f8;border:1px solid #252540;border-radius:8px;padding:10px;font-family:Space Mono,monospace;font-size:10px;resize:none;"></textarea><div style="font-family:Space Mono,monospace;font-size:9px;color:#6060a0;margin-top:10px;text-align:center;">Tip: Tap inside textarea → Select All → Copy → paste into Excel</div></div>';
       document.body.appendChild(modal);
     }
     document.getElementById('csvOutput').value=csv;
@@ -3082,7 +3083,7 @@ function exportAllData(){
     modal.style.display='flex';
     window._csvData=csv;
   } catch(e){
-    showToast('❌ Export error: '+e.message,'error');
+    showToast('Export error: '+e.message,'error');
   }
 }
 
@@ -3092,11 +3093,11 @@ function copyCsvToClipboard(){
   ta.setSelectionRange(0,99999);
   try{
     document.execCommand('copy');
-    showToast('📋 CSV copied to clipboard!','success');
+    showToast('CSV copied to clipboard!','success');
   } catch(e){
     if(navigator.clipboard){
       navigator.clipboard.writeText(window._csvData).then(()=>{
-        showToast('📋 CSV copied to clipboard!','success');
+        showToast('CSV copied to clipboard!','success');
       });
     }
   }
@@ -3113,9 +3114,9 @@ function downloadCsvFile(){
     a.click();
     document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    showToast('💾 Downloaded!','success');
+    showToast('Downloaded!','success');
   } catch(e){
-    showToast('❌ Download failed. Use Copy instead.','error');
+    showToast('Download failed. Use Copy instead.','error');
   }
 }
 
@@ -3136,21 +3137,21 @@ async function resetTodayData(){
     ]).then(()=>{
       renderAll();
       if(typeof renderEditRecords==='function')renderEditRecords();
-      showToast('✅ Today\'s data cleared!','success');
+      showToast('Today\'s data cleared!','success');
     }).catch(err=>{
       console.error('Firebase delete error:',err);
-      showToast('❌ Firebase delete failed: '+err.message,'error');
+      showToast('Firebase delete failed: '+err.message,'error');
     });
   } else {
     try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
     renderAll();
     if(typeof renderEditRecords==='function')renderEditRecords();
-    showToast('✅ Today\'s data cleared (local)','success');
+    showToast('Today\'s data cleared (local)','success');
   }
 }
 
 async function resetAllData(){
-  const ok1=await showConfirm('⚠️ DELETE ALL DATA?','This will erase EVERY entry and activity from EVERY day. This cannot be undone!','Delete All',true);
+  const ok1=await showConfirm('DELETE ALL DATA?','This will erase EVERY entry and activity from EVERY day. This cannot be undone!','Delete All',true);
   if(!ok1)return;
   const ok2=await showConfirm('Final Confirmation','Are you absolutely sure? This is your last chance to cancel.','Yes Delete Everything',true);
   if(!ok2)return;
@@ -3167,28 +3168,28 @@ async function resetAllData(){
     ]).then(()=>{
       renderAll();
       if(typeof renderEditRecords==='function')renderEditRecords();
-      showToast('🗑️ All data deleted!','success');
+      showToast('All data deleted!','success');
     }).catch(err=>{
       console.error('Firebase delete error:',err);
-      showToast('❌ Firebase delete failed: '+err.message,'error');
+      showToast('Firebase delete failed: '+err.message,'error');
     });
   } else {
     try{localStorage.setItem('hxcs',JSON.stringify({s:{},a:{}}));}catch(e){}
     renderAll();
     if(typeof renderEditRecords==='function')renderEditRecords();
-    showToast('🗑️ All data deleted (local)','success');
+    showToast('All data deleted (local)','success');
   }
 }
 
 function changePassword(){
   const current=document.getElementById('currentPwd').value;
   const newP=document.getElementById('newPwd').value;
-  if(current!==getAdminPwd()){showToast('❌ Current password is wrong','error');return;}
-  if(newP.length<6){showToast('⚠️ New password must be at least 6 characters','error');return;}
+  if(current!==getAdminPwd()){showToast('Current password is wrong','error');return;}
+  if(newP.length<6){showToast('New password must be at least 6 characters','error');return;}
   localStorage.setItem('hxcs_admin_pwd',newP);
   document.getElementById('currentPwd').value='';
   document.getElementById('newPwd').value='';
-  showToast('✅ Password updated!','success');
+  showToast('Password updated!','success');
 }
 
 // Load admin config on page load (for everyone, applies settings)
@@ -3208,7 +3209,7 @@ function loadGlobalConfig(){
               m:teamData.m.filter(x=>typeof x==='string'&&x.trim().length>0),
               c:teamData.c||'#888',
               bg:teamData.bg||'#161624',
-              e:teamData.e||'⭐'
+              e:teamData.e||''
             };
           }
         });
@@ -3321,7 +3322,7 @@ function renderMySales(){
   const crossCnt=spSales.filter(e=>(Array.isArray(e.saleType)?e.saleType:[]).includes('cross')).length;
   const repeatCnt=spSales.filter(e=>(Array.isArray(e.saleType)?e.saleType:[]).includes('repeat')).length;
 
-  const tc=TM[team]||{c:'#888',bg:'#161624',e:'⭐'};
+  const tc=TM[team]||{c:'#888',bg:'#161624',e:''};
 
   // Render summary
   if(summary){
@@ -3335,22 +3336,22 @@ function renderMySales(){
       </div>
       <div class="ms-kpi-row">
         <div class="ms-kpi" style="border-color:rgba(245,197,24,0.3)">
-          <div class="ms-kpi-lbl">💰 Total Omset</div>
+          <div class="ms-kpi-lbl">Total Omset</div>
           <div class="ms-kpi-val" style="color:#f5c518;">${fFull(totalRev)}</div>
           <div class="ms-kpi-sub">${totalOrders} order${totalOrders!==1?'s':''} · ${totalUnits} unit${totalUnits!==1?'s':''}</div>
         </div>
         <div class="ms-kpi" style="border-color:rgba(255,107,26,0.3)">
-          <div class="ms-kpi-lbl">⬆️ Upselling</div>
+          <div class="ms-kpi-lbl">Upselling</div>
           <div class="ms-kpi-val" style="color:#ff6b1a;">${upsellCnt}</div>
           <div class="ms-kpi-sub">${totalOrders?Math.round(upsellCnt/totalOrders*100):0}% of orders</div>
         </div>
         <div class="ms-kpi" style="border-color:rgba(124,77,255,0.3)">
-          <div class="ms-kpi-lbl">🔀 Cross-Sell</div>
+          <div class="ms-kpi-lbl">Cross-Sell</div>
           <div class="ms-kpi-val" style="color:#7c4dff;">${crossCnt}</div>
           <div class="ms-kpi-sub">${totalOrders?Math.round(crossCnt/totalOrders*100):0}% of orders</div>
         </div>
         <div class="ms-kpi" style="border-color:rgba(0,230,118,0.3)">
-          <div class="ms-kpi-lbl">🔁 Repeat</div>
+          <div class="ms-kpi-lbl">Repeat</div>
           <div class="ms-kpi-val" style="color:#00e676;">${repeatCnt}</div>
           <div class="ms-kpi-sub">${totalOrders?Math.round(repeatCnt/totalOrders*100):0}% of orders</div>
         </div>
@@ -3360,7 +3361,7 @@ function renderMySales(){
   // Empty for this period
   if(!spSales.length){
     if(list)list.innerHTML=`<div style="text-align:center;padding:40px 20px;background:#0e0e1a;border:1px solid #1e1e32;border-radius:12px;">
-      <div style="font-size:32px;margin-bottom:10px;">📭</div>
+      <div style="font-size:32px;margin-bottom:10px;"></div>
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:white;margin-bottom:6px;">No sales in this period</div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;">Try switching to "All Time" above</div>
     </div>`;
@@ -3382,7 +3383,7 @@ function renderMySales(){
       const entries=byDate[date];
       return`<div class="ms-date-group">
         <div class="ms-date-hdr">
-          <div class="ms-date-lbl">📅 ${dateStr}</div>
+          <div class="ms-date-lbl">${dateStr}</div>
           <div class="ms-date-rev">${fFull(dayRev)}</div>
         </div>
         ${entries.map(e=>{
@@ -3395,10 +3396,10 @@ function renderMySales(){
             </div>
             <div class="ms-sale-meta">
               ${e.units>1?`<span class="ms-badge">×${e.units} units</span>`:''}
-              ${e.priceMode==='custom'?'<span class="ms-badge ms-badge-custom">✏️ Custom price</span>':''}
-              ${tags.map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">⬆️ Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">🔀 Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">🔁 Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">🚗 Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">✅ Complete</span>':'').join('')}
+              ${e.priceMode==='custom'?'<span class="ms-badge ms-badge-custom">Custom price</span>':''}
+              ${tags.map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">Complete</span>':'').join('')}
               ${!hasTags&&!e.units>1?'<span class="ms-badge" style="color:#6060a0;border-color:#252540;">Regular sale</span>':''}
-              ${e.notes?`<span class="ms-note">📝 ${e.notes}</span>`:''}
+              ${e.notes?`<span class="ms-note">${e.notes}</span>`:''}
             </div>
           </div>`;
         }).join('')}
@@ -3499,17 +3500,17 @@ async function adminAddSale(){
     const notes=(document.getElementById('adminAddNotes').value||'').trim();
     const saleType=[...adminAddTypes];
 
-    if(!date){showToast('⚠️ Select a date','error');return;}
-    if(!prod){showToast('⚠️ Select a product','error');return;}
-    if(!sp){showToast('⚠️ Select a salesperson','error');return;}
+    if(!date){showToast('Select a date','error');return;}
+    if(!prod){showToast('Select a product','error');return;}
+    if(!sp){showToast('Select a salesperson','error');return;}
 
     let price=0;
     if(adminAddPriceMode==='normal'){
       price=P[prod]||0;
-      if(!price){showToast('⚠️ Product has no price — use Custom','error');return;}
+      if(!price){showToast('Product has no price — use Custom','error');return;}
     } else {
       price=parseInt(String(document.getElementById('adminAddCustomVal').value||'').replace(/[^0-9]/g,''))||0;
-      if(!price){showToast('⚠️ Enter custom price','error');return;}
+      if(!price){showToast('Enter custom price','error');return;}
     }
 
     const existing=allData[date]||[];
@@ -3517,9 +3518,9 @@ async function adminAddSale(){
     allData[date]=existing;
 
     if(window.db){
-      showToast('💾 Saving...','info');
+      showToast('Saving...','info');
       window.db.ref('scores/'+date).set(existing).then(()=>{
-        showToast('✅ Sale added for '+sp+' on '+date,'success');
+        showToast('Sale added for '+sp+' on '+date,'success');
         renderAll();
         renderEditRecords();
         // Reset form
@@ -3530,15 +3531,15 @@ async function adminAddSale(){
         adminAddTypes.clear();
         ['upsell','cross','repeat'].forEach(t=>{const b=document.getElementById('aatb_'+t);if(b)b.className='sale-type-btn';});
         adminAddPriceMode='normal';
-      }).catch(err=>showToast('❌ Save failed: '+err.message,'error'));
+      }).catch(err=>showToast('Save failed: '+err.message,'error'));
     } else {
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
-      showToast('✅ Sale added (local)','success');
+      showToast('Sale added (local)','success');
       renderAll();
       renderEditRecords();
     }
   }catch(err){
-    showToast('❌ Error: '+err.message,'error');
+    showToast('Error: '+err.message,'error');
     console.error('adminAddSale error:',err);
   }
 }

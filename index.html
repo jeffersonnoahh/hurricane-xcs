@@ -8,18 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<link rel="icon" type="image/png" href="img/favicon.png?v=20260830-spavg1">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png?v=20260830-spavg1">
-<link rel="stylesheet" href="css/style.css?v=20260831-stocks7">
-<link rel="stylesheet" href="css/premium.css?v=20260831-stocks7">
-<link rel="stylesheet" href="css/skin.css?v=20260831-stocks7">
+<link rel="icon" type="image/png" href="img/favicon.png?v=20260901-wl3">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png?v=20260901-wl3">
+<link rel="stylesheet" href="css/style.css?v=20260901-wl3">
+<link rel="stylesheet" href="css/premium.css?v=20260901-wl3">
+<link rel="stylesheet" href="css/skin.css?v=20260901-wl3">
+<link rel="stylesheet" href="css/reference-dashboard.css?v=20260831-local1">
 </head>
 
 <body>
 
 <header>
   <div class="brand">
-    <div class="brand-logo"><img src="img/logo.png?v=20260830-spavg1" alt="Hurricane XCS"></div>
+    <div class="brand-logo"><img src="img/logo.png?v=20260901-wl3" alt="Hurricane XCS"></div>
     <div>
       <div class="brand-name">Hurricane XCS</div>
       <div class="brand-sub">PERFORMANCE DASHBOARD</div>
@@ -83,14 +84,15 @@
 
 <div class="nav-wrapper">
 <div class="nav-bar">
-  <div class="nav-tab active" data-page="dashboard" onclick="showPage('dashboard',this)">📊 Dashboard</div>
-  <div class="nav-tab" data-page="activity" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
-  <div class="nav-tab" data-page="salespeople" onclick="showPage('salespeople',this)">👥 Salespeople</div>
-  <div class="nav-tab" data-page="mysales" onclick="showPage('mysales',this)" style="color:#c07cf5">🛍️ My Sales</div>
-  <div class="nav-tab" data-page="monthly" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
-  <div class="nav-tab" data-page="insights" onclick="showPage('insights',this)" style="color:#30d158">💡 Sales Insights</div>
-  <div class="nav-tab" data-page="warning" onclick="showPage('warning',this)" style="color:#ff453a">⚠️ Warning</div>
-  <div class="nav-tab" data-page="admin" onclick="showPage('admin',this)" style="color:#c07cf5">⚙️ Admin</div>
+  <div class="nav-tab active" data-page="dashboard" onclick="showPage('dashboard',this)">Dashboard</div>
+  <div class="nav-tab" data-page="activity" onclick="showPage('activity',this)">Calls & Follow Up</div>
+  <div class="nav-tab" data-page="watchlist" onclick="showPage('watchlist',this)">Watchlist</div>
+  <div class="nav-tab" data-page="salespeople" onclick="showPage('salespeople',this)">Salespeople</div>
+  <div class="nav-tab" data-page="mysales" onclick="showPage('mysales',this)" style="color:#a78bfa">My Sales</div>
+  <div class="nav-tab" data-page="monthly" onclick="showPage('monthly',this)">Monthly Recap</div>
+  <div class="nav-tab" data-page="insights" onclick="showPage('insights',this)" style="color:#00e676">Sales Insights</div>
+  <div class="nav-tab" data-page="warning" onclick="showPage('warning',this)" style="color:#ff3b5c">Warning</div>
+  <div class="nav-tab" data-page="admin" onclick="showPage('admin',this)" style="color:#7c4dff">Admin</div>
 </div>
 </div>
 
@@ -98,7 +100,7 @@
 <div class="page active" id="page-dashboard">
 <div class="container" id="dashboardContainer">
 
-  <div id="roBanner" class="readonly-banner" style="display:none">📅 Viewing <strong id="roDate"></strong> — Read-only. Go back to TODAY to add entries.</div>
+  <div id="roBanner" class="readonly-banner" style="display:none">Viewing <strong id="roDate"></strong> — Read-only. Go back to TODAY to add entries.</div>
 
   <div class="sl" id="historyHeading">30-Day History</div>
   <div class="history-strip" id="histStrip"></div>
@@ -111,7 +113,7 @@
   </div>
 
   <div class="goal-card">
-    <div class="goal-icon">🎯</div>
+    <div class="goal-icon"></div>
     <div class="goal-text">
       <div class="goal-title" id="goalTitle">Today's Target</div>
       <div class="goal-main">160 Chats · Target Rp 70.000.000</div>
@@ -158,14 +160,14 @@
 
   <div class="bg">
     <div class="panel" id="saleEntryPanel">
-      <div class="pt"><span>➕ Log Entry</span></div>
+      <div class="pt"><span>Log Entry</span></div>
       <div id="inputArea">
 
         <!-- Row 1: Date + Team + SP -->
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin-bottom:8px;align-items:end;">
           <div class="ig">
             <div class="igl">Date</div>
-            <div style="background:#141416;border:1px solid #35353a;border-radius:8px;padding:8px 12px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#ffd426;cursor:pointer;white-space:nowrap;" id="entryDateLabel" onclick="openEntryCal()">📅 Today</div>
+            <div style="background:#0e0e1a;border:1px solid #252540;border-radius:8px;padding:8px 12px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#f5c518;cursor:pointer;white-space:nowrap;" id="entryDateLabel" onclick="openEntryCal()">Today</div>
           </div>
           <div class="ig">
             <div class="igl">Team</div>
@@ -209,13 +211,13 @@
         <div id="priceSection" style="display:none;margin-bottom:8px;">
           <div class="igl" style="margin-bottom:6px;">Harga</div>
           <div style="display:flex;gap:6px;margin-bottom:8px;">
-            <button class="price-toggle-btn active-normal" id="ptb_normal" onclick="setPriceMode('normal')">✅ Normal Price</button>
-            <button class="price-toggle-btn" id="ptb_custom" onclick="setPriceMode('custom')">✏️ Custom Price</button>
+            <button class="price-toggle-btn active-normal" id="ptb_normal" onclick="setPriceMode('normal')">Normal Price</button>
+            <button class="price-toggle-btn" id="ptb_custom" onclick="setPriceMode('custom')">Custom Price</button>
           </div>
           <!-- Normal price display -->
-          <div id="normalPriceDisplay" style="background:#141416;border:1px solid rgba(48,209,88,0.3);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;letter-spacing:1px;">NORMAL PRICE</span>
-            <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#30d158;" id="normalPriceVal">—</span>
+          <div id="normalPriceDisplay" style="background:#0e0e1a;border:1px solid rgba(0,230,118,0.3);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">NORMAL PRICE</span>
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00e676;" id="normalPriceVal">—</span>
           </div>
           <!-- Custom price input -->
           <div id="customPriceInput" style="display:none;">
@@ -223,7 +225,7 @@
               <span class="omset-rp">Rp</span>
               <input type="number" id="inCustom" placeholder="Masukkan harga custom..." class="omset-input" oninput="updateCustomPreview()"/>
             </div>
-            <div id="customPreview" style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;margin-top:4px;text-align:right;"></div>
+            <div id="customPreview" style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-top:4px;text-align:right;"></div>
           </div>
         </div>
 
@@ -236,11 +238,11 @@
           <div class="ig">
             <div class="igl">Sale Type (WAJIB — pilih minimal 1)</div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;padding-top:2px;">
-              <button class="sale-type-btn" id="stb_upsell" onclick="toggleSaleType('upsell')">⬆️ Upselling</button>
-              <button class="sale-type-btn" id="stb_cross" onclick="toggleSaleType('cross')">🔀 Cross Selling</button>
-              <button class="sale-type-btn" id="stb_repeat" onclick="toggleSaleType('repeat')">🔁 Repeat Order</button>
-              <button class="sale-type-btn" id="stb_testdrive" onclick="toggleSaleType('testdrive')">🚗 Test Drive</button>
-              <button class="sale-type-btn" id="stb_complete" onclick="toggleSaleType('complete')">✅ Order Complete</button>
+              <button class="sale-type-btn" id="stb_upsell" onclick="toggleSaleType('upsell')">Upselling</button>
+              <button class="sale-type-btn" id="stb_cross" onclick="toggleSaleType('cross')">Cross Selling</button>
+              <button class="sale-type-btn" id="stb_repeat" onclick="toggleSaleType('repeat')">Repeat Order</button>
+              <button class="sale-type-btn" id="stb_testdrive" onclick="toggleSaleType('testdrive')">Test Drive</button>
+              <button class="sale-type-btn" id="stb_complete" onclick="toggleSaleType('complete')">Order Complete</button>
             </div>
           </div>
         </div>
@@ -255,13 +257,13 @@
         </div>
 
       </div>
-      <div id="entryLog"><div style="color:#8b8b90;font-size:11px;font-family:'DM Mono',monospace;padding:5px 0;">No entries yet.</div></div>
+      <div id="entryLog"><div style="color:#333350;font-size:11px;font-family:'DM Mono',monospace;padding:5px 0;">No entries yet.</div></div>
     </div>
     <div class="panel" id="leaderboardPanel">
-      <div class="pt"><span>🏆 Top Performers</span>
-        <button class="btn bg-wa" onclick="openWA()" style="font-size:10px;height:24px;padding:0 8px">📲 WA</button>
+      <div class="pt"><span>Top Performers</span>
+        <button class="btn bg-wa" onclick="openWA()" style="font-size:10px;height:24px;padding:0 8px">WA</button>
       </div>
-      <div id="lb"><div style="color:#8b8b90;font-size:11px;font-family:'DM Mono',monospace;">Log entries to see rankings.</div></div>
+      <div id="lb"><div style="color:#333350;font-size:11px;font-family:'DM Mono',monospace;">Log entries to see rankings.</div></div>
     </div>
   </div>
 
@@ -274,16 +276,16 @@
   <div class="sl">Log Calls & Follow Up</div>
 
   <!-- Date notice banner -->
-  <div style="background:rgba(255,212,38,0.08);border:1px solid rgba(255,212,38,0.2);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
-    <span style="font-size:20px">📋</span>
+  <div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.2);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:20px"></span>
     <div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#ffd426;letter-spacing:1px;">Log Calls, Chats & Follow Ups</div>
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#a5a5aa;margin-top:2px;">Pick "Yesterday" to log past activity (deadline 2 PM) or "Today" to log activity you did today.</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#f5c518;letter-spacing:1px;">Log Calls, Chats & Follow Ups</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0;margin-top:2px;">Pick "Yesterday" to log past activity (deadline 2 PM) or "Today" to log activity you did today.</div>
     </div>
   </div>
 
   <div class="act-form">
-    <div class="pt">➕ Add Activity</div>
+    <div class="pt">Add Activity</div>
 
     <!-- Reporting date selector -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
@@ -296,7 +298,7 @@
       </div>
       <div class="ig">
         <div class="igl">Selected Date</div>
-        <div style="background:#141416;border:1px solid #242428;border-radius:6px;padding:7px 9px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#ffd426" id="aDateLabel">—</div>
+        <div style="background:#0e0e1a;border:1px solid #1e1e32;border-radius:6px;padding:7px 9px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#f5c518" id="aDateLabel">—</div>
       </div>
     </div>
 
@@ -308,21 +310,39 @@
         </select>
       </div>
       <div class="ig"><div class="igl">Salesperson</div><select id="aSP"><option>Arfin</option><option>Erica</option><option>Nathan</option></select></div>
-      <div class="ig"><div class="igl">💬 Chats</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aChats" placeholder="0"/></div>
-      <div class="ig"><div class="igl">📞 Calls Made</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aCalls" placeholder="0"/></div>
-      <div class="ig"><div class="igl">🔄 Follow Ups</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aFups" placeholder="0"/></div>
+      <div class="ig"><div class="igl">Chats</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aChats" placeholder="0"/></div>
+      <div class="ig"><div class="igl">Calls Made</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aCalls" placeholder="0"/></div>
+      <div class="ig"><div class="igl">Follow Ups</div><input type="text" inputmode="numeric" pattern="[0-9]*" id="aFups" placeholder="0"/></div>
       <div class="ig"><div class="igl">Notes (opt)</div><input type="text" id="aNotes" placeholder="e.g. warm lead"/></div>
       <button class="btn bg-gold" style="align-self:end" onclick="addActivity()">ADD</button>
     </div>
   </div>
   <!-- WHO HASN'T REPORTED -->
-  <div class="sl">⚠️ Who Hasn't Reported Yesterday</div>
+  <div class="sl">Who Hasn't Reported Yesterday</div>
   <div id="notReportedPanel" style="margin-bottom:18px;"></div>
 
   <div class="sl">Activity Log</div>
   <div class="act-log">
     <div class="alh" style="grid-template-columns:1fr .5fr .5fr .5fr 1fr auto"><span>Salesperson</span><span>Chats</span><span>Calls</span><span>F/Up</span><span>Notes</span><span></span></div>
-    <div id="actLog"><div style="color:#8b8b90;font-size:11px;font-family:'DM Mono',monospace;padding:16px;text-align:center;">No activity yet.</div></div>
+    <div id="actLog"><div style="color:#333350;font-size:11px;font-family:'DM Mono',monospace;padding:16px;text-align:center;">No activity yet.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ WATCHLIST PAGE ═══ -->
+<div class="page" id="page-watchlist">
+<div class="container">
+  <div class="sl">Sales Watchlist</div>
+  <div class="wl-note" id="wlSub"></div>
+  <div class="wl-panel">
+    <div class="wl-head">
+      <div class="wl-head-t">SALES</div>
+      <div class="wl-head-c">OMZET BULAN BERJALAN</div>
+      <div class="wl-head-v">TOTAL</div>
+      <div class="wl-head-r">HARI INI</div>
+    </div>
+    <div id="wlBody"></div>
+    <div class="wl-foot" id="wlMovers"></div>
   </div>
 </div>
 </div>
@@ -341,13 +361,13 @@
 <div class="container">
 
   <div style="margin-bottom:20px;">
-    <div class="sl" style="margin-bottom:4px;color:#c07cf5;">🛍️ My Sales</div>
-    <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;letter-spacing:1px;">Look up your logged orders, products sold, and total omset</div>
+    <div class="sl" style="margin-bottom:4px;color:#a78bfa;">My Sales</div>
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Look up your logged orders, products sold, and total omset</div>
   </div>
 
   <!-- SP Selector -->
   <div class="ms-search-card">
-    <div class="igl" style="margin-bottom:10px;font-size:11px;color:#c07cf5;letter-spacing:1.5px;">👤 SELECT YOUR NAME</div>
+    <div class="igl" style="margin-bottom:10px;font-size:11px;color:#a78bfa;letter-spacing:1.5px;">SELECT YOUR NAME</div>
     <select id="msSPSelect" onchange="renderMySales()" class="ms-sp-select">
       <option value="">— Pick your name —</option>
     </select>
@@ -370,9 +390,9 @@
 
   <!-- Empty state -->
   <div id="msEmpty" style="text-align:center;padding:60px 20px;">
-    <div style="font-size:52px;margin-bottom:16px;opacity:0.7;">🛍️</div>
+    <div style="font-size:52px;margin-bottom:16px;opacity:0.7;"></div>
     <div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:800;color:white;margin-bottom:8px;">Pick Your Name</div>
-    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#a5a5aa;line-height:1.7;">Select your name above to see your logged<br>sales, products, and total omset</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#6060a0;line-height:1.7;">Select your name above to see your logged<br>sales, products, and total omset</div>
   </div>
 
 </div>
@@ -409,10 +429,10 @@
   </div>
 
   <!-- Active Days -->
-  <div id="monthlySummary" style="background:#1c1c1e;border:1px solid #242428;border-radius:11px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:20px;">
+  <div id="monthlySummary" style="background:#12121e;border:1px solid #1e1e32;border-radius:11px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:20px;">
     <div>
       <div class="kpi-lbl">Active Days</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:#ffd426" id="mActiveDays">0</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:#f5c518" id="mActiveDays">0</div>
     </div>
     <div style="flex:1">
       <div class="kpi-lbl" style="margin-bottom:6px;">Daily Average Revenue</div>
@@ -420,8 +440,8 @@
     </div>
     <div style="flex:1">
       <div class="kpi-lbl" style="margin-bottom:6px;">Best Day Revenue</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#30d158" id="mBestDay">Rp 0</div>
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#a5a5aa" id="mBestDate">—</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#00e676" id="mBestDay">Rp 0</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6060a0" id="mBestDate">—</div>
     </div>
   </div>
 
@@ -437,10 +457,10 @@
   </div>
 
   <!-- SP Quick Lookup -->
-  <div class="sl">🔍 Lookup Salesperson</div>
+  <div class="sl">Lookup Salesperson</div>
   <div class="sp-lookup-box">
     <div class="sp-lookup-input-wrap">
-      <span class="sp-lookup-icon">🔍</span>
+      <span class="sp-lookup-icon"></span>
       <input type="text" id="mSpSearch" class="sp-lookup-input" placeholder="Type salesperson name (e.g. Nathan, Arfin, Stanley)..." oninput="renderSpLookup()" autocomplete="off"/>
       <button class="sp-lookup-clear" onclick="document.getElementById('mSpSearch').value='';renderSpLookup()">✕</button>
     </div>
@@ -484,26 +504,26 @@
 
   <!-- Date Picker Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-    <div class="sl" style="margin-bottom:0;flex:1">💰 Update Omset Harian</div>
+    <div class="sl" style="margin-bottom:0;flex:1">Update Omset Harian</div>
     <div style="display:flex;align-items:center;gap:10px;">
-      <div class="day-switcher" style="background:#232326;border:1px solid #35353a;">
+      <div class="day-switcher" style="background:#161624;border:1px solid #252540;">
         <button class="day-btn" onclick="omsetPrevDay()">‹</button>
-        <span id="omsetDayLabel" style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;letter-spacing:1px;min-width:80px;text-align:center;cursor:pointer;border-bottom:1px dashed rgba(255,212,38,0.4);" onclick="openOmsetCal()">TODAY</span>
+        <span id="omsetDayLabel" style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:white;letter-spacing:1px;min-width:80px;text-align:center;cursor:pointer;border-bottom:1px dashed rgba(245,197,24,0.4);" onclick="openOmsetCal()">TODAY</span>
         <button class="day-btn" onclick="omsetNextDay()">›</button>
       </div>
-      <button class="btn bg-gold" onclick="saveOmset()" style="height:34px;font-size:12px;">💾 Simpan</button>
+      <button class="btn bg-gold" onclick="saveOmset()" style="height:34px;font-size:12px;">Simpan</button>
     </div>
   </div>
 
   <!-- Selected date label -->
-  <div style="background:rgba(255,212,38,0.06);border:1px solid rgba(255,212,38,0.15);border-radius:10px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+  <div style="background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.15);border-radius:10px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
     <div>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#a5a5aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Tanggal</div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Tanggal</div>
       <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:white;" id="omsetDateLabel">—</div>
     </div>
     <div style="text-align:right;">
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#a5a5aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Total Omset</div>
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:#ffd426;" id="omsetTotal">Rp 0</div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Total Omset</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:#f5c518;" id="omsetTotal">Rp 0</div>
     </div>
   </div>
 
@@ -512,7 +532,7 @@
 
     <!-- Christ A & B -->
     <div class="omset-section">
-      <div class="omset-section-title">✝️ Team Christ</div>
+      <div class="omset-section-title">Team Christ</div>
       <div class="omset-grid">
         <div class="omset-item"><div class="omset-label">Christ A</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_christ_a" placeholder="0" oninput="recalcOmset()"/></div></div>
         <div class="omset-item"><div class="omset-label">Christ B</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_christ_b" placeholder="0" oninput="recalcOmset()"/></div></div>
@@ -521,7 +541,7 @@
 
     <!-- Valen Team -->
     <div class="omset-section">
-      <div class="omset-section-title">🔥 Team Valen</div>
+      <div class="omset-section-title">Team Valen</div>
       <div class="omset-grid">
         <div class="omset-item"><div class="omset-label">Valen Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_valen_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
         <div class="omset-item"><div class="omset-label">Valen Shopee</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_valen_shopee" placeholder="0" oninput="recalcOmset()"/></div></div>
@@ -532,7 +552,7 @@
 
     <!-- Livia Team -->
     <div class="omset-section">
-      <div class="omset-section-title">🌸 Team Livia</div>
+      <div class="omset-section-title">Team Livia</div>
       <div class="omset-grid">
         <div class="omset-item"><div class="omset-label">Livia Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_livia_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
         <div class="omset-item"><div class="omset-label">Livia Tokped</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_livia_tokped" placeholder="0" oninput="recalcOmset()"/></div></div>
@@ -543,7 +563,7 @@
 
     <!-- Noah -->
     <div class="omset-section">
-      <div class="omset-section-title">⚓ Team Noah</div>
+      <div class="omset-section-title">Team Noah</div>
       <div class="omset-grid">
         <div class="omset-item"><div class="omset-label">Stanley</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_stanley" placeholder="0" oninput="recalcOmset()"/></div></div>
       </div>
@@ -551,7 +571,7 @@
 
     <!-- Ivan Team -->
     <div class="omset-section">
-      <div class="omset-section-title">⚡ Team Ivan</div>
+      <div class="omset-section-title">Team Ivan</div>
       <div class="omset-grid">
         <div class="omset-item"><div class="omset-label">Ivan Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_ivan_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
         <div class="omset-item"><div class="omset-label">Hendri Meta</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_hendri_meta" placeholder="0" oninput="recalcOmset()"/></div></div>
@@ -560,7 +580,7 @@
 
     <!-- Motor Team (Agung) -->
     <div class="omset-section">
-      <div class="omset-section-title">🦁 Motor Team (Agung)</div>
+      <div class="omset-section-title">Motor Team (Agung)</div>
       <div class="omset-grid">
         <div class="omset-item"><div class="omset-label">Agung</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_agung" placeholder="0" oninput="recalcOmset()"/></div></div>
         <div class="omset-item"><div class="omset-label">Luthfi</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_luthfi" placeholder="0" oninput="recalcOmset()"/></div></div>
@@ -571,7 +591,7 @@
 
     <!-- XCSR Marketplace -->
     <div class="omset-section">
-      <div class="omset-section-title">🛒 XCSR Marketplace</div>
+      <div class="omset-section-title">XCSR Marketplace</div>
       <div class="omset-grid">
         <div class="omset-item"><div class="omset-label">XCSR Tokped</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_xcsr_tokped" placeholder="0" oninput="recalcOmset()"/></div></div>
         <div class="omset-item"><div class="omset-label">XCSR Shopee</div><div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="number" class="omset-input" id="o_xcsr_shopee" placeholder="0" oninput="recalcOmset()"/></div></div>
@@ -580,14 +600,14 @@
 
     <!-- TOTAL -->
     <div class="omset-total-card">
-      <div class="omset-total-label">🏆 TOTAL PENJUALAN</div>
+      <div class="omset-total-label">TOTAL PENJUALAN</div>
       <div class="omset-total-val" id="omsetTotalBig">Rp 0</div>
       <div class="omset-total-sub" id="omsetTotalSub">Isi form di atas untuk melihat total</div>
     </div>
 
     <!-- Save button bottom -->
     <button class="btn bg-gold" onclick="saveOmset()" style="width:100%;height:48px;font-size:16px;border-radius:12px;margin-top:4px;">
-      💾 Simpan Data Omset
+      Simpan Data Omset
     </button>
 
   </div>
@@ -602,8 +622,8 @@
   <!-- Header + Period Selector -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
     <div>
-      <div class="sl" style="margin-bottom:4px;">💡 Sales Insights</div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;letter-spacing:1px;">Upsell · Cross-sell · Repeat order analytics</div>
+      <div class="sl" style="margin-bottom:4px;">Sales Insights</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Upsell · Cross-sell · Repeat order analytics</div>
     </div>
     <div class="ins-period-tabs">
       <button class="ins-period-btn active" onclick="setInsightsPeriod('thisMonth',this)">This Month</button>
@@ -614,29 +634,29 @@
 
   <!-- KPI Row -->
   <div class="ins-kpi-row">
-    <div class="ins-kpi-card" style="border-color:rgba(255,159,10,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(255,107,26,0.3);">
       <div class="ins-kpi-lbl">Upsell Rate</div>
-      <div class="ins-kpi-val" id="insUpsellRate" style="color:#ff9f0a;">0<span class="u">%</span></div>
+      <div class="ins-kpi-val" id="insUpsellRate" style="color:#ff6b1a;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insUpsellSub">0 of 0 orders</div>
     </div>
-    <div class="ins-kpi-card" style="border-color:rgba(192,124,245,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(124,77,255,0.3);">
       <div class="ins-kpi-lbl">Cross-Sell Rate</div>
-      <div class="ins-kpi-val" id="insCrossRate" style="color:#c07cf5;">0<span class="u">%</span></div>
+      <div class="ins-kpi-val" id="insCrossRate" style="color:#7c4dff;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insCrossSub">0 of 0 orders</div>
     </div>
-    <div class="ins-kpi-card" style="border-color:rgba(48,209,88,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(0,230,118,0.3);">
       <div class="ins-kpi-lbl">Repeat Order Rate</div>
-      <div class="ins-kpi-val" id="insRepeatRate" style="color:#30d158;">0<span class="u">%</span></div>
+      <div class="ins-kpi-val" id="insRepeatRate" style="color:#00e676;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insRepeatSub">Rp 0 of Rp 0</div>
     </div>
-    <div class="ins-kpi-card" style="border-color:rgba(255,212,38,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(245,197,24,0.3);">
       <div class="ins-kpi-lbl">Avg Ticket — Upsell</div>
-      <div class="ins-kpi-val" id="insAvgUpsell" style="color:#ffd426;font-size:22px;">Rp 0</div>
+      <div class="ins-kpi-val" id="insAvgUpsell" style="color:#f5c518;font-size:22px;">Rp 0</div>
       <div class="ins-kpi-sub" id="insAvgUpsellSub">vs Rp 0 regular</div>
     </div>
-    <div class="ins-kpi-card" style="border-color:rgba(59,157,255,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(68,138,255,0.3);">
       <div class="ins-kpi-lbl">Tagged Coverage</div>
-      <div class="ins-kpi-val" id="insCoverage" style="color:#3b9dff;">0<span class="u">%</span></div>
+      <div class="ins-kpi-val" id="insCoverage" style="color:#448aff;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insCoverageSub">data hygiene</div>
     </div>
   </div>
@@ -644,12 +664,12 @@
   <!-- Revenue Mix -->
   <div class="ins-grid-2">
     <div class="ins-panel">
-      <div class="ins-pt">💰 Revenue Mix by Sale Type</div>
+      <div class="ins-pt">Revenue Mix by Sale Type</div>
       <div class="ins-stacked-bar" id="insRevBar"></div>
       <div id="insRevLegend" class="ins-legend"></div>
     </div>
     <div class="ins-panel">
-      <div class="ins-pt">📏 Average Ticket by Type</div>
+      <div class="ins-pt">Average Ticket by Type</div>
       <div id="insAvgTickets"></div>
     </div>
   </div>
@@ -657,21 +677,21 @@
   <!-- Leaderboards -->
   <div class="ins-grid-3">
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#ff9f0a">🔼 Top Upsellers</div>
+      <div class="ins-pt" style="color:#ff6b1a">Top Upsellers</div>
       <div id="insTopUpsellers"></div>
     </div>
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#c07cf5">🔀 Top Cross-Sellers</div>
+      <div class="ins-pt" style="color:#7c4dff">Top Cross-Sellers</div>
       <div id="insTopCross"></div>
     </div>
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#30d158">🔁 Top Repeat Drivers</div>
+      <div class="ins-pt" style="color:#00e676">Top Repeat Drivers</div>
       <div id="insTopRepeat"></div>
     </div>
   </div>
 
   <!-- Team Comparison -->
-  <div class="sl">🏟️ Team Comparison</div>
+  <div class="sl">Team Comparison</div>
   <div class="tw" style="margin-bottom:18px;">
     <table>
       <thead><tr>
@@ -682,30 +702,30 @@
   </div>
 
   <!-- Product Insights -->
-  <div class="sl">📦 Product Insights</div>
+  <div class="sl">Product Insights</div>
   <div class="ins-grid-3" style="margin-bottom:18px;">
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#ff9f0a">Most Upsold Products</div>
+      <div class="ins-pt" style="color:#ff6b1a">Most Upsold Products</div>
       <div id="insProdUpsell"></div>
     </div>
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#c07cf5">Most Cross-Sold Products</div>
+      <div class="ins-pt" style="color:#7c4dff">Most Cross-Sold Products</div>
       <div id="insProdCross"></div>
     </div>
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#30d158">Top Repeat Products</div>
+      <div class="ins-pt" style="color:#00e676">Top Repeat Products</div>
       <div id="insProdRepeat"></div>
     </div>
   </div>
 
   <!-- Trend -->
-  <div class="sl">📈 6-Month Trend</div>
+  <div class="sl">6-Month Trend</div>
   <div class="ins-panel" style="margin-bottom:18px;">
     <div id="insTrendChart"></div>
   </div>
 
   <!-- Recent Tagged Sales -->
-  <div class="sl">📜 Recent Tagged Sales</div>
+  <div class="sl">Recent Tagged Sales</div>
   <div class="tw">
     <table>
       <thead><tr>
@@ -724,85 +744,85 @@
 
   <!-- Header -->
   <div style="margin-bottom:20px;">
-    <div class="sl" style="margin-bottom:4px;color:#ff453a;">⚠️ Performance Warning</div>
-    <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;letter-spacing:1px;">Revenue = total omset · Chats/Calls/F-ups = most recent log per SP</div>
+    <div class="sl" style="margin-bottom:4px;color:#ff3b5c;">Performance Warning</div>
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Revenue = total omset · Chats/Calls/F-ups = most recent log per SP</div>
   </div>
 
   <!-- Threshold settings -->
   <div class="warn-thresh-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
       <div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:white;">📏 Performance Thresholds</div>
-        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#a5a5aa;letter-spacing:1px;margin-top:2px;">Anyone below ANY of these is flagged</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:white;">Performance Thresholds</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:1px;margin-top:2px;">Anyone below ANY of these is flagged</div>
       </div>
-      <button class="btn" style="background:rgba(255,212,38,0.1);border:1px solid rgba(255,212,38,0.3);color:#ffd426;height:30px;font-size:10px;padding:0 12px;" onclick="toggleWarnThreshEdit()">✏️ Edit</button>
+      <button class="btn" style="background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:30px;font-size:10px;padding:0 12px;" onclick="toggleWarnThreshEdit()">Edit</button>
     </div>
     <div class="warn-thresh-grid" id="warnThreshGrid">
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">💰 Min Total Omset</div>
+        <div class="warn-thresh-lbl">Min Total Omset</div>
         <div class="warn-thresh-val" id="wtRev">Rp 50.000.000</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtRevIn" value="50000000" style="display:none"/>
       </div>
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">💬 Min Chats (Last Log)</div>
+        <div class="warn-thresh-lbl">Min Chats (Last Log)</div>
         <div class="warn-thresh-val" id="wtChats">7</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtChatsIn" value="7" style="display:none"/>
       </div>
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">📞 Min Calls (Last Log)</div>
+        <div class="warn-thresh-lbl">Min Calls (Last Log)</div>
         <div class="warn-thresh-val" id="wtCalls">7</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtCallsIn" value="7" style="display:none"/>
       </div>
       <div class="warn-thresh-item">
-        <div class="warn-thresh-lbl">🔄 Min Follow-ups (Last Log)</div>
+        <div class="warn-thresh-lbl">Min Follow-ups (Last Log)</div>
         <div class="warn-thresh-val" id="wtFups">15</div>
         <input type="text" inputmode="numeric" class="warn-thresh-input" id="wtFupsIn" value="15" style="display:none"/>
       </div>
     </div>
-    <button class="btn bg-gold" id="warnThreshSaveBtn" style="margin-top:10px;width:100%;height:36px;font-size:12px;display:none;" onclick="saveWarnThresh()">💾 Save Thresholds</button>
+    <button class="btn bg-gold" id="warnThreshSaveBtn" style="margin-top:10px;width:100%;height:36px;font-size:12px;display:none;" onclick="saveWarnThresh()">Save Thresholds</button>
   </div>
 
   <!-- Critical Summary -->
   <div class="warn-summary-card">
-    <div class="warn-summary-icon">🚨</div>
+    <div class="warn-summary-icon"></div>
     <div style="flex:1;">
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#ff453a;letter-spacing:2px;text-transform:uppercase;">Critical Alert</div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#ff3b5c;letter-spacing:2px;text-transform:uppercase;">Critical Alert</div>
       <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:white;margin-top:2px;" id="warnSummaryText">Loading...</div>
     </div>
     <div style="text-align:right;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:#ff453a;line-height:1;" id="warnTotalCount">0</div>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#a5a5aa;letter-spacing:2px;margin-top:4px;">FLAGGED</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:#ff3b5c;line-height:1;" id="warnTotalCount">0</div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:2px;margin-top:4px;">FLAGGED</div>
     </div>
   </div>
 
   <!-- All flagged (failing 1+ threshold) -->
-  <div class="sl" style="color:#ff453a;">🚨 All Flagged Salespeople <span id="warnFlaggedCountLbl" style="font-family:'Space Mono',monospace;font-size:11px;color:#a5a5aa;letter-spacing:1px;">(0)</span></div>
+  <div class="sl" style="color:#ff3b5c;">All Flagged Salespeople <span id="warnFlaggedCountLbl" style="font-family:'Space Mono',monospace;font-size:11px;color:#6060a0;letter-spacing:1px;">(0)</span></div>
   <div id="warnCritical" style="margin-bottom:18px;"></div>
 
   <!-- Per-category sections -->
   <div class="ins-grid-2">
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#ffd426;">💰 Below Revenue (<span id="wsRevThresh">Rp 50M</span>)</div>
+      <div class="warn-section-title" style="color:#f5c518;">Below Revenue (<span id="wsRevThresh">Rp 50M</span>)</div>
       <div id="warnRev"></div>
     </div>
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#3b9dff;">💬 Below Chats (<span id="wsChatsThresh">7</span>)</div>
+      <div class="warn-section-title" style="color:#448aff;">Below Chats (<span id="wsChatsThresh">7</span>)</div>
       <div id="warnChats"></div>
     </div>
   </div>
   <div class="ins-grid-2">
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#5ac8fa;">📞 Below Calls (<span id="wsCallsThresh">7</span>)</div>
+      <div class="warn-section-title" style="color:#00e5ff;">Below Calls (<span id="wsCallsThresh">7</span>)</div>
       <div id="warnCalls"></div>
     </div>
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#ff9f0a;">🔄 Below Follow-ups (<span id="wsFupsThresh">15</span>)</div>
+      <div class="warn-section-title" style="color:#ff6b1a;">Below Follow-ups (<span id="wsFupsThresh">15</span>)</div>
       <div id="warnFups"></div>
     </div>
   </div>
 
   <!-- All clear / good performers -->
-  <div class="sl" style="color:#30d158;">✅ Performing Well</div>
+  <div class="sl" style="color:#00e676;">Performing Well</div>
   <div id="warnGood" style="margin-bottom:14px;"></div>
 
 </div>
@@ -814,12 +834,12 @@
 
   <!-- Login Screen -->
   <div id="adminLogin" style="max-width:400px;margin:60px auto;text-align:center;">
-    <div style="font-size:60px;margin-bottom:14px;">🔐</div>
+    <div style="font-size:60px;margin-bottom:14px;"></div>
     <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:white;margin-bottom:6px;">Admin Access</div>
-    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#a5a5aa;letter-spacing:1px;margin-bottom:24px;">Hanya untuk Jefferson</div>
-    <input type="password" id="adminPwd" placeholder="Enter password..." style="text-align:center;font-size:18px;padding:14px;background:#232326;border:1px solid #35353a;border-radius:12px;color:white;font-family:'Space Grotesk',sans-serif;width:100%;margin-bottom:12px;" onkeypress="if(event.key==='Enter')checkAdminPwd()"/>
-    <button class="btn bg-gold" onclick="checkAdminPwd()" style="width:100%;height:48px;font-size:15px;border-radius:12px;">🔓 Unlock Admin</button>
-    <div id="adminPwdError" style="color:#ff453a;font-family:'Space Mono',monospace;font-size:11px;margin-top:10px;display:none;">❌ Wrong password</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#6060a0;letter-spacing:1px;margin-bottom:24px;">Hanya untuk Jefferson</div>
+    <input type="password" id="adminPwd" placeholder="Enter password..." style="text-align:center;font-size:18px;padding:14px;background:#161624;border:1px solid #252540;border-radius:12px;color:white;font-family:'Space Grotesk',sans-serif;width:100%;margin-bottom:12px;" onkeypress="if(event.key==='Enter')checkAdminPwd()"/>
+    <button class="btn bg-gold" onclick="checkAdminPwd()" style="width:100%;height:48px;font-size:15px;border-radius:12px;">Unlock Admin</button>
+    <div id="adminPwdError" style="color:#ff3b5c;font-family:'Space Mono',monospace;font-size:11px;margin-top:10px;display:none;">Wrong password</div>
   </div>
 
   <!-- Admin Panel -->
@@ -827,16 +847,16 @@
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
       <div>
-        <div class="sl" style="margin-bottom:4px;">⚙️ Admin Control Panel</div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;letter-spacing:1px;">Settings persist for entire team</div>
+        <div class="sl" style="margin-bottom:4px;">Admin Control Panel</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:1px;">Settings persist for entire team</div>
       </div>
-      <button class="btn" style="background:#35353a;color:#ffffff;height:34px;font-size:11px;" onclick="adminLogout()">🔒 Lock Admin</button>
+      <button class="btn" style="background:#252540;color:#e8e8f8;height:34px;font-size:11px;" onclick="adminLogout()">Lock Admin</button>
     </div>
 
     <!-- Section: Quick Add Sale -->
-    <div class="omset-section" style="border-color:rgba(255,212,38,0.35);background:rgba(255,212,38,0.02);">
-      <div class="omset-section-title" style="color:#ffd426;">⚡ Quick Add Sale</div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;margin-bottom:14px;">Add a sale manually for any date and salesperson</div>
+    <div class="omset-section" style="border-color:rgba(245,197,24,0.35);background:rgba(245,197,24,0.02);">
+      <div class="omset-section-title" style="color:#f5c518;">Quick Add Sale</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:14px;">Add a sale manually for any date and salesperson</div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
         <div class="ig">
@@ -863,12 +883,12 @@
       <div id="adminAddPriceSection" style="display:none;margin-bottom:8px;">
         <div class="igl" style="margin-bottom:6px;">Price</div>
         <div style="display:flex;gap:6px;margin-bottom:6px;">
-          <button class="price-toggle-btn active-normal" id="adminPtbNormal" onclick="adminAddSetPriceMode('normal')">✅ Normal</button>
-          <button class="price-toggle-btn" id="adminPtbCustom" onclick="adminAddSetPriceMode('custom')">✏️ Custom</button>
+          <button class="price-toggle-btn active-normal" id="adminPtbNormal" onclick="adminAddSetPriceMode('normal')">Normal</button>
+          <button class="price-toggle-btn" id="adminPtbCustom" onclick="adminAddSetPriceMode('custom')">Custom</button>
         </div>
-        <div id="adminAddNormalPrice" style="background:#141416;border:1px solid rgba(48,209,88,0.3);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;">NORMAL PRICE</span>
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#30d158;" id="adminAddNormalPriceVal">—</span>
+        <div id="adminAddNormalPrice" style="background:#0e0e1a;border:1px solid rgba(0,230,118,0.3);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;">NORMAL PRICE</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:#00e676;" id="adminAddNormalPriceVal">—</span>
         </div>
         <div id="adminAddCustomPrice" style="display:none;">
           <div class="omset-input-wrap"><span class="omset-rp">Rp</span><input type="text" inputmode="numeric" id="adminAddCustomVal" placeholder="Enter custom price..." class="omset-input"/></div>
@@ -883,11 +903,11 @@
         <div class="ig">
           <div class="igl">Sale Type (optional)</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;padding-top:2px;">
-            <button class="sale-type-btn" id="aatb_upsell" onclick="adminAddToggleType('upsell')">⬆️ Upselling</button>
-            <button class="sale-type-btn" id="aatb_cross" onclick="adminAddToggleType('cross')">🔀 Cross Selling</button>
-            <button class="sale-type-btn" id="aatb_repeat" onclick="adminAddToggleType('repeat')">🔁 Repeat Order</button>
-            <button class="sale-type-btn" id="aatb_testdrive" onclick="adminAddToggleType('testdrive')">🚗 Test Drive</button>
-            <button class="sale-type-btn" id="aatb_complete" onclick="adminAddToggleType('complete')">✅ Order Complete</button>
+            <button class="sale-type-btn" id="aatb_upsell" onclick="adminAddToggleType('upsell')">Upselling</button>
+            <button class="sale-type-btn" id="aatb_cross" onclick="adminAddToggleType('cross')">Cross Selling</button>
+            <button class="sale-type-btn" id="aatb_repeat" onclick="adminAddToggleType('repeat')">Repeat Order</button>
+            <button class="sale-type-btn" id="aatb_testdrive" onclick="adminAddToggleType('testdrive')">Test Drive</button>
+            <button class="sale-type-btn" id="aatb_complete" onclick="adminAddToggleType('complete')">Order Complete</button>
           </div>
         </div>
       </div>
@@ -897,17 +917,17 @@
           <div class="igl">Notes (optional)</div>
           <input type="text" id="adminAddNotes" placeholder="e.g. customer name, order details..."/>
         </div>
-        <button class="btn bg-gold" onclick="adminAddSale()" style="height:36px;font-size:13px;padding:0 18px;">➕ ADD</button>
+        <button class="btn bg-gold" onclick="adminAddSale()" style="height:36px;font-size:13px;padding:0 18px;">ADD</button>
       </div>
     </div>
 
     <!-- Section: Edit Records -->
     <div class="omset-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div class="omset-section-title" style="margin-bottom:0;">📝 Edit / Delete Records</div>
-        <button onclick="adminRefreshAll()" class="btn" style="background:rgba(59,157,255,0.1);border:1px solid rgba(59,157,255,0.3);color:#3b9dff;height:30px;font-size:11px;padding:0 12px;">🔄 Refresh</button>
+        <div class="omset-section-title" style="margin-bottom:0;">Edit / Delete Records</div>
+        <button onclick="adminRefreshAll()" class="btn" style="background:rgba(68,138,255,0.1);border:1px solid rgba(68,138,255,0.3);color:#448aff;height:30px;font-size:11px;padding:0 12px;">Refresh</button>
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;margin-bottom:14px;">Fix wrong entries, edit any field, or delete mistakes.</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:14px;">Fix wrong entries, edit any field, or delete mistakes.</div>
 
       <!-- Filter bar -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
@@ -925,8 +945,8 @@
           <div class="igl">Type</div>
           <select id="editFilterType" onchange="renderEditRecords()">
             <option value="all">All</option>
-            <option value="sales">💰 Sales/Closes</option>
-            <option value="activity">📞 Calls/Followups</option>
+            <option value="sales">Sales/Closes</option>
+            <option value="activity">Calls/Followups</option>
           </select>
         </div>
       </div>
@@ -934,18 +954,18 @@
       <!-- Records list -->
       <div id="editRecordsList" style="display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto;"></div>
 
-      <div id="editRecordsEmpty" style="text-align:center;padding:30px;color:#a5a5aa;font-family:'Space Mono',monospace;font-size:11px;">
+      <div id="editRecordsEmpty" style="text-align:center;padding:30px;color:#6060a0;font-family:'Space Mono',monospace;font-size:11px;">
         Pick a date to see records
       </div>
     </div>
 
     <!-- Section: Daily Targets -->
     <div class="omset-section">
-      <div class="omset-section-title">🎯 Daily Targets</div>
+      <div class="omset-section-title">Daily Targets</div>
       <div class="omset-grid">
         <div class="omset-item">
           <div class="omset-label">Daily Chat Target</div>
-          <div class="omset-input-wrap"><span class="omset-rp">💬</span><input type="number" class="omset-input" id="setChatTarget" placeholder="160"/></div>
+          <div class="omset-input-wrap"><span class="omset-rp"></span><input type="number" class="omset-input" id="setChatTarget" placeholder="160"/></div>
         </div>
         <div class="omset-item">
           <div class="omset-label">Daily Revenue Target (Rp)</div>
@@ -953,49 +973,49 @@
         </div>
         <div class="omset-item">
           <div class="omset-label">Submission Deadline (Hour, 24h)</div>
-          <div class="omset-input-wrap"><span class="omset-rp">⏰</span><input type="number" class="omset-input" id="setDeadline" placeholder="14" min="0" max="23"/></div>
+          <div class="omset-input-wrap"><span class="omset-rp"></span><input type="number" class="omset-input" id="setDeadline" placeholder="14" min="0" max="23"/></div>
         </div>
       </div>
-      <button class="btn bg-gold" onclick="saveTargets()" style="margin-top:12px;width:100%;">💾 Save Targets</button>
+      <button class="btn bg-gold" onclick="saveTargets()" style="margin-top:12px;width:100%;">Save Targets</button>
     </div>
 
     <!-- Section: Product Prices -->
     <div class="omset-section">
-      <div class="omset-section-title">💰 Product Prices</div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;margin-bottom:12px;">Edit existing prices or add new products. Click 🗑 to delete.</div>
+      <div class="omset-section-title">Product Prices</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:12px;">Edit existing prices or add new products. Click to delete.</div>
       <div id="adminProductList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-top:14px;align-items:end;">
         <div class="ig"><div class="igl">New Product Name</div><input type="text" id="newProdName" placeholder="e.g. XCS PRO"/></div>
         <div class="ig"><div class="igl">Price (Rp)</div><input type="number" id="newProdPrice" placeholder="0"/></div>
-        <button class="btn bg-gold" onclick="addNewProduct()">➕ Add</button>
+        <button class="btn bg-gold" onclick="addNewProduct()">Add</button>
       </div>
     </div>
 
     <!-- Section: Team Members -->
     <div class="omset-section">
-      <div class="omset-section-title">👥 Team Members</div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;margin-bottom:12px;">Manage salespeople for each team. Add or remove members.</div>
+      <div class="omset-section-title">Team Members</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:12px;">Manage salespeople for each team. Add or remove members.</div>
       <div id="adminTeamList" style="display:flex;flex-direction:column;gap:14px;"></div>
     </div>
 
     <!-- Section: Data Management -->
     <div class="omset-section">
-      <div class="omset-section-title" style="color:#ff453a;">⚠️ Danger Zone</div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a5a5aa;margin-bottom:14px;">These actions cannot be undone. Use with caution.</div>
+      <div class="omset-section-title" style="color:#ff3b5c;">Danger Zone</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:14px;">These actions cannot be undone. Use with caution.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button class="btn" style="background:rgba(255,212,38,0.1);border:1px solid rgba(255,212,38,0.3);color:#ffd426;height:42px;" onclick="exportAllData()">📥 Export All Data (CSV)</button>
-        <button class="btn" style="background:rgba(255,159,10,0.1);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;height:42px;" onclick="resetTodayData()">🔄 Reset Today's Data</button>
-        <button class="btn" style="background:rgba(255,69,58,0.1);border:1px solid rgba(255,69,58,0.3);color:#ff453a;height:42px;grid-column:span 2;" onclick="resetAllData()">🗑️ Delete ALL Data</button>
+        <button class="btn" style="background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:42px;" onclick="exportAllData()">Export All Data (CSV)</button>
+        <button class="btn" style="background:rgba(255,107,26,0.1);border:1px solid rgba(255,107,26,0.3);color:#ff6b1a;height:42px;" onclick="resetTodayData()">Reset Today's Data</button>
+        <button class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:42px;grid-column:span 2;" onclick="resetAllData()">Delete ALL Data</button>
       </div>
     </div>
 
     <!-- Section: Change Password -->
     <div class="omset-section">
-      <div class="omset-section-title">🔑 Change Admin Password</div>
+      <div class="omset-section-title">Change Admin Password</div>
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
         <div class="ig"><div class="igl">Current Password</div><input type="password" id="currentPwd"/></div>
         <div class="ig"><div class="igl">New Password</div><input type="password" id="newPwd"/></div>
-        <button class="btn bg-gold" onclick="changePassword()">🔐 Update</button>
+        <button class="btn bg-gold" onclick="changePassword()">Update</button>
       </div>
     </div>
 
@@ -1006,27 +1026,27 @@
 
 <!-- EDIT RECORD MODAL -->
 <div class="mo" id="editRecordMo" style="display:none" onclick="if(event.target===this)closeEditMo()">
-  <div style="background:#232326;border:1px solid #35353a;border-radius:18px;padding:22px;max-width:440px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+  <div style="background:#161624;border:1px solid #252540;border-radius:18px;padding:22px;max-width:440px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div id="editMoTitle" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:white;">Edit Record</div>
-      <span onclick="closeEditMo()" style="cursor:pointer;color:#a5a5aa;font-size:22px;line-height:1;">✕</span>
+      <span onclick="closeEditMo()" style="cursor:pointer;color:#6060a0;font-size:22px;line-height:1;">✕</span>
     </div>
     <div id="editMoFields"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px;">
-      <button onclick="closeEditMo()" class="btn" style="background:#35353a;color:white;height:44px;font-size:13px;">Cancel</button>
-      <button onclick="saveEditMo()" class="btn bg-gold" style="height:44px;font-size:14px;">💾 Save</button>
+      <button onclick="closeEditMo()" class="btn" style="background:#252540;color:white;height:44px;font-size:13px;">Cancel</button>
+      <button onclick="saveEditMo()" class="btn bg-gold" style="height:44px;font-size:14px;">Save</button>
     </div>
   </div>
 </div>
 
 <!-- CUSTOM CONFIRM MODAL -->
 <div class="mo" id="confirmMo" style="display:none">
-  <div style="background:#232326;border:1px solid #35353a;border-radius:18px;padding:22px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+  <div style="background:#161624;border:1px solid #252540;border-radius:18px;padding:22px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
     <div id="confirmTitle" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:white;margin-bottom:8px;">Confirm</div>
-    <div id="confirmMessage" style="font-family:'Space Mono',monospace;font-size:12px;color:#ffffff;line-height:1.6;margin-bottom:18px;white-space:pre-wrap;"></div>
+    <div id="confirmMessage" style="font-family:'Space Mono',monospace;font-size:12px;color:#e8e8f8;line-height:1.6;margin-bottom:18px;white-space:pre-wrap;"></div>
     <div style="display:flex;gap:8px;">
-      <button onclick="closeConfirmMo(false)" class="btn" style="flex:1;background:#35353a;color:white;height:40px;">Cancel</button>
-      <button id="confirmOkBtn" onclick="closeConfirmMo(true)" class="btn" style="flex:1;background:#ff453a;color:white;height:40px;">Confirm</button>
+      <button onclick="closeConfirmMo(false)" class="btn" style="flex:1;background:#252540;color:white;height:40px;">Cancel</button>
+      <button id="confirmOkBtn" onclick="closeConfirmMo(true)" class="btn" style="flex:1;background:#ff3b5c;color:white;height:40px;">Confirm</button>
     </div>
   </div>
 </div>
@@ -1103,16 +1123,18 @@
 <!-- WA MODAL -->
 <div class="mo" id="waMo" style="display:none" onclick="closeWAMo(event)">
   <div class="wa-box" onclick="event.stopPropagation()">
-    <div class="pt"><span>📲 WhatsApp Report</span><span style="cursor:pointer;color:#a5a5aa" onclick="closeWAMo()">✕</span></div>
+    <div class="pt"><span>WhatsApp Report</span><span style="cursor:pointer;color:#6060a0" onclick="closeWAMo()">✕</span></div>
     <div class="wa-pre" id="waPre"></div>
     <div class="ma">
-      <button class="btn bg-wa" style="flex:1" onclick="copyWAText()">📋 Copy</button>
-      <button class="btn bg-gold" style="flex:1" onclick="sendWA()">📲 Open WA</button>
+      <button class="btn bg-wa" style="flex:1" onclick="copyWAText()">Copy</button>
+      <button class="btn bg-gold" style="flex:1" onclick="sendWA()">Open WA</button>
     </div>
   </div>
 </div>
 
-<script src="js/app.js?v=20260831-stocks7"></script>
-<script src="js/premium-ui.js?v=20260712-premium1"></script>
+<script src="js/app.js?v=20260901-wl3"></script>
+<script src="js/watchlist.js?v=20260901-wl3"></script>
+<script src="js/premium-ui.js?v=20260901-wl3"></script>
+<script src="js/reference-dashboard.js?v=20260831-local1"></script>
 </body>
 </html>

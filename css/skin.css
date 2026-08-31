@@ -264,3 +264,49 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 .ins-kpi-card{background:var(--card)!important;border:1px solid var(--border)!important}
 .ins-kpi-val{color:#fff!important}
 .ins-kpi-lbl,.ins-kpi-sub{color:var(--muted)!important}
+
+/* ══════════════════════════════════════════════════════════════════
+   WATCHLIST — baris rapat bergaya daftar saham
+   ══════════════════════════════════════════════════════════════════ */
+.wl-note{font-size:10.5px;letter-spacing:.4px;color:var(--muted);margin:-6px 0 14px 2px}
+.wl-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.wl-head,.wl-row{
+  display:grid;grid-template-columns:minmax(120px,1.5fr) 148px 96px 112px;
+  align-items:center;gap:12px;padding:10px 16px;
+}
+.wl-head{
+  font-size:9px;letter-spacing:1.4px;font-weight:700;color:var(--muted);
+  border-bottom:1px solid var(--border2);background:rgba(255,255,255,.02);
+}
+.wl-head-v,.wl-head-r{text-align:right}
+.wl-head-c{text-align:center}
+.wl-row{border-bottom:1px solid rgba(255,255,255,.05);transition:background .12s}
+.wl-row:last-child{border-bottom:none}
+.wl-row:hover{background:rgba(255,255,255,.035)}
+.wl-name{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.2px}
+.wl-team{font-size:10px;color:var(--muted);margin-top:1px;letter-spacing:.3px}
+.wl-chart{height:34px;display:flex;align-items:center;justify-content:center}
+.wl-spark{width:132px;height:34px;display:block}
+.wl-val{text-align:right}
+.wl-total{font-size:13.5px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.wl-right{text-align:right}
+.wl-chg{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.2px}
+.wl-chg.up{color:var(--green)}
+.wl-chg.idle{font-size:9.5px;letter-spacing:1px;color:var(--muted);font-weight:700}
+.wl-chg.bad{font-size:9.5px;letter-spacing:1px;color:var(--red);font-weight:700}
+.wl-sub{font-size:9.5px;color:var(--muted);margin-top:2px;letter-spacing:.3px}
+.wl-sub.bad{color:var(--red);opacity:.85}
+.wl-foot{padding:11px 16px;border-top:1px solid var(--border2);font-size:10.5px;
+  letter-spacing:.5px;color:var(--muted);background:rgba(255,255,255,.02)}
+.wl-empty{padding:28px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:768px){
+  .wl-head,.wl-row{grid-template-columns:minmax(90px,1.3fr) 96px 84px;gap:8px;padding:10px 12px}
+  .wl-head-v,.wl-val{display:none}
+  .wl-spark{width:96px}
+}
+
+/* nav: warna-warni per-tab (inline dari index.html) terlalu ramai untuk
+   tampilan serius — semua putih, hanya Warning yang merah. */
+.nav-tab[data-page]{color:#fff!important}
+.nav-tab[data-page="warning"]{color:var(--red)!important}
+.nav-tab.active,.nav-tab.active[data-page]{background:var(--green)!important;color:#000!important}
