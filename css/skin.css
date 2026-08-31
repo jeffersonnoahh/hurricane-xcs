@@ -45,9 +45,9 @@ body{background:var(--bg);color:var(--text);font-variant-numeric:tabular-nums;-w
 .card,.panel,.kpi,.sec,.box,.omset-section,.nr-panel,.spc,.warn-crit-card,
 .mk,.mpr,.goal-card,.cal-box,.mo-box{
   background:var(--card)!important;
-  border-color:transparent!important;
+  border:1px solid var(--border)!important;
   box-shadow:none!important;
-  border-radius:var(--radius);
+  border-radius:14px;
 }
 
 /* ── header: hitam translusen ala iOS ── */
@@ -66,24 +66,29 @@ header{
 .nav-tab.active{background:var(--green)!important;color:#fff!important;font-weight:800}
 
 /* ── day switcher & kontrol segmen ala iOS ── */
-.day-switcher{background:var(--card)!important;border:none!important;border-radius:11px;padding:3px}
+.day-switcher{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:11px;padding:3px}
 .day-btn{background:none;border:none;color:var(--soft);border-radius:8px}
 .day-btn:hover{background:var(--card2);color:var(--text)}
 .day-label{color:var(--text)!important;font-weight:700}
 .live-badge{background:rgba(48,209,88,.14)!important;border:none!important;color:var(--green)!important;border-radius:9px}
 
-.tab-row{background:var(--card)!important;border:none!important;border-radius:11px;padding:3px;gap:2px;box-shadow:none!important}
+.tab-row{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:11px;padding:3px;gap:2px;box-shadow:none!important}
 .tab{background:transparent!important;border:none!important;color:var(--soft)!important;border-radius:8px;font-weight:600}
 .tab:hover{color:var(--text)!important}
 .tab.active{background:var(--border2)!important;color:var(--text)!important;font-weight:700}
 
 /* ── HERO OMSET: angka raksasa langsung di atas hitam, ala harga saham ── */
 .omset-hero{
-  background:transparent!important;border:none!important;box-shadow:none!important;
-  text-align:left!important;padding:10px 6px 26px!important;
-  border-bottom:1px solid var(--border)!important;border-radius:0!important;
+  background:
+    radial-gradient(120% 90% at 85% 110%, rgba(48,209,88,.13), transparent 60%),
+    linear-gradient(180deg,#17181a, #0e0f11)!important;
+  border:1px solid var(--border2)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+  text-align:left!important;padding:24px 26px 30px!important;
+  border-radius:18px!important;
+  display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
 }
-.omset-hero-lbl{color:var(--soft)!important;font-size:12px;letter-spacing:1.6px;font-weight:600;justify-content:flex-start}
+.omset-hero-lbl{color:var(--soft)!important;font-size:11.5px;letter-spacing:1.8px;font-weight:700;justify-content:flex-start}
 .omset-hero-val,#liveOmsetBig,#mOmsetBig{
   color:#fff!important;font-weight:800!important;
   font-size:clamp(24px,8.5vw,72px)!important;letter-spacing:-2.2px!important;line-height:1.05!important;
@@ -103,23 +108,23 @@ header{
 
 /* ── tabel: hairline, bukan kotak ── */
 table{border-color:transparent}
-thead tr,th{background:transparent!important;color:var(--muted)!important;font-size:10px;letter-spacing:1px;font-weight:600}
+thead tr,th{background:transparent!important;color:var(--muted)!important;font-size:10px;letter-spacing:1.2px;font-weight:700;border-bottom:1px solid var(--border2)!important}
 td{border-color:var(--border)!important}
 tr:hover td{background:var(--surface)}
 
 /* ── tombol ── */
-.btn{background:var(--card);color:var(--text);border:none;border-radius:12px;font-weight:600}
+.btn{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:12px;font-weight:600}
 .btn:hover{background:var(--card2)}
 .btn-gold,.btn-primary,.btn.primary,.premium-quick-add{
   background:var(--green)!important;background-image:none!important;
   color:#fff!important;border:none!important;box-shadow:none!important;border-radius:12px!important;font-weight:800!important;
 }
-.premium-head-ghost{background:var(--card)!important;color:var(--text)!important;border:none!important;border-radius:12px!important;box-shadow:none!important}
+.premium-head-ghost{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:12px!important;box-shadow:none!important}
 .premium-head-ghost:hover{background:var(--card2)!important}
 
 /* ── input ala iOS: terisi abu gelap, tanpa border, fokus ring emas ── */
 input,select,textarea{
-  background:var(--card)!important;border:1px solid transparent!important;
+  background:var(--card)!important;border:1px solid var(--border)!important;
   color:var(--text)!important;border-radius:11px;
 }
 input::placeholder,textarea::placeholder{color:var(--muted)!important}
@@ -127,11 +132,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 
 /* ── strip status & panel kecil premium ── */
 .premium-status-strip{background:transparent!important;border:none!important;box-shadow:none!important;gap:14px}
-.premium-status-strip>div{background:var(--card);border:none;border-radius:var(--radius);padding:16px 18px}
+.premium-status-strip>div{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
 .premium-status-strip strong{color:var(--text)!important}
 .premium-status-strip span{color:var(--muted)!important}
 .premium-status-strip small{color:var(--soft)!important}
-.history-strip,.history-strip>div,.hday,.hist-day{background:var(--card)!important;border:none!important;border-radius:12px}
+.history-strip>div,.hday,.hist-day{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:12px}
+.history-strip{background:transparent!important;border:none!important}
 
 /* ── modal & kalender ── */
 .mo,[class*="-overlay"]{background:rgba(0,0,0,.72)!important;backdrop-filter:blur(6px)}
