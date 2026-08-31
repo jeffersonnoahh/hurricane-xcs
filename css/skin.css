@@ -24,14 +24,15 @@
   --softer:rgba(255,255,255,.34);
 
   /* aksen — warna sistem iOS dark */
-  --gold:#30d158;
+  --green:#30d158;   /* uang · closing · sukses */
+  --red:#ff453a;     /* buruk · peringatan · turun */
+  --gold:#30d158;    /* aksen brand = hijau (uang) */
   --gold2:#30d158;
-  --orange:#30d158;
-  --green:#30d158;
-  --red:#ff453a;
-  --blue:#30d158;
-  --purple:#30d158;
-  --cyan:#30d158;
+  --chat:#ffd426;    /* emas KHUSUS metrik chat */
+  --blue:#3b9dff;    /* CALL */
+  --orange:#ff9f0a;  /* FOLLOW UP */
+  --purple:#c07cf5;  /* test drive · kategori */
+  --cyan:#5ac8fa;    /* order complete */
 
   --radius-sm:10px; --radius:16px; --radius-lg:20px;
   --shadow:none;
@@ -103,7 +104,7 @@ header{
 /* ── badge persentase: pill solid hijau/merah/kuning ala Stocks ── */
 .rb{border-radius:7px;font-weight:700!important;padding:3px 8px}
 .rb.great{background:var(--green)!important;color:#000!important}
-.rb.good{background:transparent!important;border:1.5px solid var(--green)!important;color:var(--green)!important}
+.rb.good{background:rgba(255,212,38,.16)!important;border:none!important;color:var(--chat)!important}
 .rb.low{background:var(--red)!important;color:#fff!important}
 
 /* ── tabel: hairline, bukan kotak ── */
@@ -149,25 +150,39 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 ::-webkit-scrollbar-thumb{background:#3a3a3c;border-radius:99px;border:2px solid #000}
 ::-webkit-scrollbar-thumb:hover{background:#48484a}
 
-/* ══ WARNA INLINE DARI app.js / index.html ══
-   Kode menulis sebagian warna langsung ke elemen (style="...") dengan palet
-   lama. Kode TIDAK diubah — nilainya ditimpa dari sini. */
+/* ══ WARNA INLINE DARI app.js ══
+   app.js menulis warna langsung ke elemen (style="..."). Kodenya TIDAK
+   diubah — nilainya dipetakan ke palet baru, TETAP dengan makna aslinya:
+   emas=chat · biru=call · oranye=follow up · hijau=uang · merah=buruk. */
 [style*="background:#0e0e1a"],[style*="background: #0e0e1a"],
-[style*="background:#12121e"],[style*="background: #12121e"]{background:var(--card)!important;border-color:transparent!important}
+[style*="background:#12121e"],[style*="background: #12121e"]{background:var(--card)!important;border-color:var(--border)!important}
 [style*="background:#161624"],[style*="background: #161624"],
 [style*="background:#1e1e32"],[style*="background: #1e1e32"],
-[style*="background:#252540"],[style*="background: #252540"]{background:var(--card2)!important;border-color:transparent!important}
+[style*="background:#252540"],[style*="background: #252540"]{background:var(--card2)!important;border-color:var(--border)!important}
 [style*="1px solid #252540"],[style*="border:1px solid #252540"],
 [style*="border-top:1px solid #252540"]{border-color:var(--border)!important}
-[style*="color:#f5c518"],[style*="color: #f5c518"]{color:var(--gold)!important}
-[style*="color:#ff6b1a"],[style*="color: #ff6b1a"]{color:#fff!important}
-[style*="color:#448aff"],[style*="color: #448aff"]{color:#fff!important}
-[style*="color:#ff3b5c"],[style*="color: #ff3b5c"]{color:var(--red)!important}
-[style*="color:#00e676"],[style*="color: #00e676"]{color:var(--green)!important}
-[style*="color:#7c4dff"],[style*="color: #7c4dff"]{color:#fff!important}
-[style*="color:#a78bfa"],[style*="color: #a78bfa"]{color:#fff!important}
+
+[style*="color:#f5c518"],[style*="color: #f5c518"]{color:var(--chat)!important}     /* chat */
+[style*="color:#448aff"],[style*="color: #448aff"]{color:var(--blue)!important}     /* call */
+[style*="color:#ff6b1a"],[style*="color: #ff6b1a"]{color:var(--orange)!important}   /* follow up */
+[style*="color:#00e676"],[style*="color: #00e676"]{color:var(--green)!important}    /* closing/uang */
+[style*="color:#ff3b5c"],[style*="color: #ff3b5c"]{color:var(--red)!important}      /* buruk */
+[style*="color:#7c4dff"],[style*="color: #7c4dff"]{color:var(--purple)!important}
+[style*="color:#a78bfa"],[style*="color: #a78bfa"]{color:var(--purple)!important}
+[style*="color:#00e5ff"],[style*="color: #00e5ff"]{color:var(--cyan)!important}
 [style*="color:#6060a0"],[style*="color: #6060a0"]{color:var(--soft)!important}
+[style*="color:#333350"],[style*="color: #333350"],
+[style*="color:#404065"],[style*="color: #404065"]{color:var(--muted)!important}
 [style*="color:#e8e8f8"],[style*="color: #e8e8f8"]{color:var(--text)!important}
+[style*="background:#404065"],[style*="background: #404065"]{background:#8b8b90!important}
+
+[style*="background:#f5c518"],[style*="background: #f5c518"]{background:var(--chat)!important}
+[style*="background:#00e676"],[style*="background: #00e676"]{background:var(--green)!important}
+[style*="background:#ff3b5c"],[style*="background: #ff3b5c"]{background:var(--red)!important}
+[style*="background:#448aff"],[style*="background: #448aff"]{background:var(--blue)!important}
+[style*="background:#7c4dff"],[style*="background: #7c4dff"]{background:var(--purple)!important}
+[style*="background:#ff6b1a"],[style*="background: #ff6b1a"]{background:var(--orange)!important}
+
 
 /* ══ TAMPILAN HP (shell premium) ══ */
 @media (max-width:768px){
@@ -192,7 +207,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 [style*="background:#404065"],[style*="background: #404065"]{background:#8e8e93!important}
 
 /* background aksen inline dari app.js → palet iOS yang sama */
-[style*="background:#f5c518"],[style*="background: #f5c518"]{background:var(--gold)!important}
+[style*="background:#f5c518"],[style*="background: #f5c518"]{background:var(--chat)!important}
 [style*="background:#00e676"],[style*="background: #00e676"]{background:var(--green)!important}
 [style*="background:#ff3b5c"],[style*="background: #ff3b5c"]{background:var(--red)!important}
 [style*="background:#448aff"],[style*="background: #448aff"]{background:var(--blue)!important}
@@ -201,3 +216,51 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 
 /* tab More (shell HP): jangan abu */
 .premium-more-tab{background:var(--card)!important;color:#fff!important}
+
+/* ══════════════════════════════════════════════════════════════════
+   KODE WARNA SEMANTIK — hitam+hijau tetap jadi dasar, warna dipakai
+   HANYA untuk membedakan makna. Satu bahasa warna di seluruh app:
+   METRIK  🟡 emas=CHAT · 🔵 biru=CALL · 🟠 oranye=FOLLOW UP
+   HASIL   🟢 hijau=UANG/CLOSING · 🔴 merah=BURUK
+   TIPE    🟠 upsell · 🟣 cross · 🟢 repeat · 🔵 test drive · 🔷 complete
+           (sama persis dengan warna grafik yang digambar app.js)
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Sale type: satu warna per jenis, konsisten di tombol, log, & Insights ── */
+.sale-type-btn.active-upsell,.tag-upsell,.ins-tag.upsell{
+  background:rgba(255,159,10,.16)!important;border-color:rgba(255,159,10,.4)!important;color:#ff9f0a!important}
+.sale-type-btn.active-cross,.tag-cross,.ins-tag.cross{
+  background:rgba(192,124,245,.16)!important;border-color:rgba(192,124,245,.4)!important;color:#c07cf5!important}
+.sale-type-btn.active-repeat,.tag-repeat,.ins-tag.repeat{
+  background:rgba(48,209,88,.16)!important;border-color:rgba(48,209,88,.4)!important;color:#30d158!important}
+.sale-type-btn.active-testdrive,.tag-testdrive,.ins-tag.testdrive{
+  background:rgba(59,157,255,.16)!important;border-color:rgba(59,157,255,.4)!important;color:#3b9dff!important}
+.sale-type-btn.active-complete,.tag-complete,.ins-tag.complete{
+  background:rgba(90,200,250,.16)!important;border-color:rgba(90,200,250,.4)!important;color:#5ac8fa!important}
+
+/* batang tren Insights ikut bahasa warna yang sama */
+.ins-trend-bar.up{background:#ff9f0a!important}
+.ins-trend-bar.cr{background:#c07cf5!important}
+.ins-trend-bar.rp{background:#30d158!important}
+
+/* ── Kartu sales: Chat / Call / Follow Up masing-masing beda warna ──
+   Urutan baris dari app.js: 1 chat · 2 call · 3 follow up. */
+.spc-row:nth-child(5) .spc-rv{color:var(--chat)!important}
+.spc-row:nth-child(6) .spc-rv{color:var(--blue)!important}
+.spc-row:nth-child(7) .spc-rv{color:var(--orange)!important}
+.spc-row .spc-rl{color:var(--muted)!important}
+
+/* ── BURUK = MERAH, tegas ── */
+.nr-item.missing{background:rgba(255,69,58,.12)!important;border-color:rgba(255,69,58,.45)!important}
+.nr-item.missing *{color:var(--red)!important}
+.nr-item.done{background:rgba(48,209,88,.08)!important;border-color:rgba(48,209,88,.28)!important}
+.rb.low,.warn-crit-issue,.warn-team-tot,.gap,.bg-red{
+  background:rgba(255,69,58,.16)!important;color:var(--red)!important;border-color:rgba(255,69,58,.4)!important}
+.rb.low{background:var(--red)!important;color:#fff!important}
+.warn-summary-card{border-color:rgba(255,69,58,.45)!important}
+.warn-crit-name{color:#fff!important}
+
+/* ── Insights: kartu KPI netral, angka putih tebal, label redup ── */
+.ins-kpi-card{background:var(--card)!important;border:1px solid var(--border)!important}
+.ins-kpi-val{color:#fff!important}
+.ins-kpi-lbl,.ins-kpi-sub{color:var(--muted)!important}
