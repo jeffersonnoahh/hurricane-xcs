@@ -28,9 +28,11 @@
   --red:#ff453a;     /* buruk · peringatan · turun */
   --gold:#30d158;    /* aksen brand = hijau (uang) */
   --gold2:#30d158;
-  --chat:#ffd426;    /* emas KHUSUS metrik chat */
-  --blue:#3b9dff;    /* CALL */
-  --orange:#ff9f0a;  /* FOLLOW UP */
+  --chat:#ffd426;    /* CHAT  = kuning Hurricane */
+  --call:#30d158;    /* CALL  = hijau */
+  --fup:#ff453a;     /* FOLLOW UP = merah */
+  --blue:#3b9dff;    /* kategori lain */
+  --orange:#ff9f0a;
   --purple:#c07cf5;  /* test drive · kategori */
   --cyan:#5ac8fa;    /* order complete */
 
@@ -163,8 +165,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 [style*="border-top:1px solid #252540"]{border-color:var(--border)!important}
 
 [style*="color:#f5c518"],[style*="color: #f5c518"]{color:var(--chat)!important}     /* chat */
-[style*="color:#448aff"],[style*="color: #448aff"]{color:var(--blue)!important}     /* call */
-[style*="color:#ff6b1a"],[style*="color: #ff6b1a"]{color:var(--orange)!important}   /* follow up */
+[style*="color:#448aff"],[style*="color: #448aff"]{color:var(--call)!important}     /* call */
+[style*="color:#ff6b1a"],[style*="color: #ff6b1a"]{color:var(--fup)!important}      /* follow up */
 [style*="color:#00e676"],[style*="color: #00e676"]{color:var(--green)!important}    /* closing/uang */
 [style*="color:#ff3b5c"],[style*="color: #ff3b5c"]{color:var(--red)!important}      /* buruk */
 [style*="color:#7c4dff"],[style*="color: #7c4dff"]{color:var(--purple)!important}
@@ -220,7 +222,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 /* ══════════════════════════════════════════════════════════════════
    KODE WARNA SEMANTIK — hitam+hijau tetap jadi dasar, warna dipakai
    HANYA untuk membedakan makna. Satu bahasa warna di seluruh app:
-   METRIK  🟡 emas=CHAT · 🔵 biru=CALL · 🟠 oranye=FOLLOW UP
+   METRIK  kuning=CHAT · hijau=CALL · merah=FOLLOW UP
    HASIL   🟢 hijau=UANG/CLOSING · 🔴 merah=BURUK
    TIPE    🟠 upsell · 🟣 cross · 🟢 repeat · 🔵 test drive · 🔷 complete
            (sama persis dengan warna grafik yang digambar app.js)
@@ -246,8 +248,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 /* ── Kartu sales: Chat / Call / Follow Up masing-masing beda warna ──
    Urutan baris dari app.js: 1 chat · 2 call · 3 follow up. */
 .spc-row:nth-child(5) .spc-rv{color:var(--chat)!important}
-.spc-row:nth-child(6) .spc-rv{color:var(--blue)!important}
-.spc-row:nth-child(7) .spc-rv{color:var(--orange)!important}
+.spc-row:nth-child(6) .spc-rv{color:var(--call)!important}
+.spc-row:nth-child(7) .spc-rv{color:var(--fup)!important}
 .spc-row .spc-rl{color:var(--muted)!important}
 
 /* ── BURUK = MERAH, tegas ── */
@@ -329,3 +331,58 @@ header .brand .brand-logo img{
   width:76%!important;height:auto!important;display:block!important;
   mix-blend-mode:normal!important;opacity:1!important;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   HALAMAN CALLS & FOLLOW UP — samakan dengan bahasa warna dashboard.
+   Avatar tim sebelumnya warna-warni (dari database) sehingga halaman ini
+   terlihat ramai. Di sini statusnya yang berbicara: HIJAU sudah lapor,
+   MERAH belum lapor — sesuai kartu di sekitarnya.
+   ══════════════════════════════════════════════════════════════════ */
+#page-activity .nr-item{border-radius:11px!important;padding:11px 13px!important}
+#page-activity .nr-item.done{
+  background:rgba(48,209,88,.07)!important;border-color:rgba(48,209,88,.22)!important}
+#page-activity .nr-item.missing{
+  background:rgba(255,69,58,.09)!important;border-color:rgba(255,69,58,.38)!important}
+
+/* avatar: ikut status, bukan warna tim */
+#page-activity .nr-item .nr-av{
+  background:rgba(255,255,255,.06)!important;color:#fff!important;
+  border-radius:8px!important;font-weight:800!important}
+#page-activity .nr-item.done .nr-av{
+  background:rgba(48,209,88,.16)!important;color:var(--green)!important}
+#page-activity .nr-item.missing .nr-av{
+  background:rgba(255,69,58,.18)!important;color:var(--red)!important}
+
+#page-activity .nr-item .nr-name{color:#fff!important;font-weight:700!important}
+#page-activity .nr-item.missing .nr-name{color:var(--red)!important}
+#page-activity .nr-item .nr-team{color:var(--muted)!important}
+
+/* badge LATE: kuning peringatan, bukan oranye acak */
+#page-activity .nr-item [class*="late"],#page-activity .nr-late,
+#page-activity .nr-item .late{
+  background:rgba(255,212,38,.16)!important;color:var(--chat)!important;
+  border:none!important;border-radius:5px!important;font-weight:800!important}
+
+/* ── form Add Activity: tiap metrik memakai warnanya sendiri ──
+   dipilih lewat ID input (aChats/aCalls/aFups) agar tepat sasaran. */
+#page-activity .ig:has(#aChats) .igl{color:var(--chat)!important;font-weight:800!important}
+#page-activity .ig:has(#aCalls) .igl{color:var(--call)!important;font-weight:800!important}
+#page-activity .ig:has(#aFups)  .igl{color:var(--fup)!important;font-weight:800!important}
+#aChats{color:var(--chat)!important;font-weight:800!important}
+#aCalls{color:var(--call)!important;font-weight:800!important}
+#aFups {color:var(--fup)!important;font-weight:800!important}
+#aChats:focus{border-color:var(--chat)!important;box-shadow:0 0 0 3px rgba(255,212,38,.15)!important}
+#aCalls:focus{border-color:var(--call)!important;box-shadow:0 0 0 3px rgba(48,209,88,.15)!important}
+#aFups:focus {border-color:var(--fup)!important;box-shadow:0 0 0 3px rgba(255,69,58,.15)!important}
+
+/* Toggle Yesterday/Today: kontrol UI, jadi HIJAU — kuning kini berarti "chat". */
+#page-activity button[style*="background:#f5c518"],
+#page-activity button[style*="background: #f5c518"]{
+  background:var(--green)!important;color:#000!important;font-weight:800!important}
+
+/* Banner info: netral, jangan pakai kuning metrik */
+#page-activity .readonly-banner{
+  border-color:var(--border2)!important;color:#fff!important;
+  background:rgba(255,255,255,.03)!important}
+#page-activity .readonly-banner *{color:#fff!important}
+#page-activity .readonly-banner div:last-child{color:var(--muted)!important}

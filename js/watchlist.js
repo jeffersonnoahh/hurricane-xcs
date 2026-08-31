@@ -190,9 +190,10 @@
   } else { hook(); }
   setTimeout(hook, 800);
   /* AUTO_OPEN: hanya untuk screenshot — buka tab lewat ?page=watchlist */
-  if(location.search.indexOf('page=watchlist')>=0){
+  if(/page=(watchlist|activity|salespeople|insights|warning|monthly)/.test(location.search)){
     setTimeout(function(){
-      var tb=document.querySelector('.nav-tab[data-page="watchlist"]');
+      var want=(location.search.match(/page=(\w+)/)||[])[1]||'watchlist';
+      var tb=document.querySelector('.nav-tab[data-page="'+want+'"]');
       if(tb&&typeof showPage==='function')tb.click();
     },2500);
   }
