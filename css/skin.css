@@ -310,3 +310,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 .nav-tab[data-page]{color:#fff!important}
 .nav-tab[data-page="warning"]{color:var(--red)!important}
 .nav-tab.active,.nav-tab.active[data-page]{background:var(--green)!important;color:#000!important}
+
+/* ══ LOGO ASLI ══
+   Layer lain memberi filter hijau + latar gelap pada logo. Kembalikan ke
+   logo asli: badge kuning brand + tornado hitam, tanpa filter.
+   Selector sengaja lebih spesifik supaya menang tanpa bergantung urutan file. */
+header .brand .brand-logo{
+  background:linear-gradient(145deg,#ffd633,#ffc000)!important;
+  border:none!important;
+  border-radius:14px!important;
+  box-shadow:0 4px 18px rgba(255,200,40,.22)!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  overflow:hidden!important;
+}
+header .brand .brand-logo img{
+  filter:none!important;
+  -webkit-filter:none!important;
+  width:76%!important;height:auto!important;display:block!important;
+  mix-blend-mode:normal!important;opacity:1!important;
+}
