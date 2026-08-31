@@ -14,24 +14,24 @@
   --surface:#141416;
   --card:#1c1c1e;
   --card2:#2c2c2e;
-  --border:#2e2e31;
-  --border2:#3a3a3c;
+  --border:#1e3226;
+  --border2:#2c4a36;
 
-  /* teks */
+  /* teks — TANPA abu: putih tegas + hijau */
   --text:#ffffff;
-  --soft:#98989f;
-  --muted:#636366;
-  --softer:#48484a;
+  --soft:#ffffff;
+  --muted:#30d158;
+  --softer:#1f9e46;
 
   /* aksen — warna sistem iOS dark */
   --gold:#30d158;
   --gold2:#30d158;
-  --orange:#ff9f0a;
+  --orange:#30d158;
   --green:#30d158;
   --red:#ff453a;
-  --blue:#0a84ff;
-  --purple:#bf5af2;
-  --cyan:#64d2ff;
+  --blue:#30d158;
+  --purple:#30d158;
+  --cyan:#30d158;
 
   --radius-sm:10px; --radius:16px; --radius-lg:20px;
   --shadow:none;
@@ -57,13 +57,13 @@ header{
   border-bottom:1px solid var(--border)!important;
 }
 .brand-name{color:var(--text)!important;letter-spacing:.4px}
-.brand-sub{color:var(--muted)!important}
+.brand-sub{color:var(--green)!important;font-weight:700}
 
 /* ── navigasi atas: teks abu, aktif = pill emas (brand) ── */
 .nav-wrapper,.nav-bar{background:rgba(8,8,10,.82)!important;border-color:var(--border)!important}
-.nav-tab{color:var(--soft)!important;border-radius:10px;font-weight:600}
+.nav-tab{color:#fff!important;border-radius:10px;font-weight:700}
 .nav-tab:hover{color:var(--text)!important;background:var(--card)!important}
-.nav-tab.active{background:var(--green)!important;color:#fff!important;font-weight:800}
+.nav-tab.active{background:var(--green)!important;color:#000!important;font-weight:800}
 
 /* ── day switcher & kontrol segmen ala iOS ── */
 .day-switcher{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:11px;padding:3px}
@@ -73,42 +73,42 @@ header{
 .live-badge{background:rgba(48,209,88,.14)!important;border:none!important;color:var(--green)!important;border-radius:9px}
 
 .tab-row{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:11px;padding:3px;gap:2px;box-shadow:none!important}
-.tab{background:transparent!important;border:none!important;color:var(--soft)!important;border-radius:8px;font-weight:600}
+.tab{background:transparent!important;border:none!important;color:#fff!important;border-radius:8px;font-weight:700}
 .tab:hover{color:var(--text)!important}
-.tab.active{background:var(--border2)!important;color:var(--text)!important;font-weight:700}
+.tab.active{background:var(--green)!important;color:#000!important;font-weight:800}
 
 /* ── HERO OMSET: angka raksasa langsung di atas hitam, ala harga saham ── */
 .omset-hero{
   background:
     radial-gradient(120% 90% at 85% 110%, rgba(48,209,88,.13), transparent 60%),
     linear-gradient(180deg,#17181a, #0e0f11)!important;
-  border:1px solid var(--border2)!important;
+  border:1px solid rgba(48,209,88,.45)!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
   text-align:left!important;padding:24px 26px 30px!important;
   border-radius:18px!important;
   display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
 }
-.omset-hero-lbl{color:var(--soft)!important;font-size:11.5px;letter-spacing:1.8px;font-weight:700;justify-content:flex-start}
+.omset-hero-lbl{color:var(--green)!important;font-size:11.5px;letter-spacing:2px;font-weight:800;justify-content:flex-start}
 .omset-hero-val,#liveOmsetBig,#mOmsetBig{
   color:#fff!important;font-weight:800!important;
   font-size:clamp(24px,8.5vw,72px)!important;letter-spacing:-2.2px!important;line-height:1.05!important;
   overflow-wrap:anywhere;
 }
-.omset-hero-sub{color:var(--muted)!important;letter-spacing:1.2px}
+.omset-hero-sub{color:#fff!important;opacity:.92;letter-spacing:1.2px;font-weight:600}
 
 /* ── angka & label kartu ── */
 .kpi-val,.mkv,.spc-rv{color:var(--text);font-weight:800!important}
-.kpi-lbl,.sl{color:var(--muted)!important;letter-spacing:1.2px;font-weight:600}
+.kpi-lbl,.sl{color:var(--green)!important;letter-spacing:1.4px;font-weight:800}
 
 /* ── badge persentase: pill solid hijau/merah/kuning ala Stocks ── */
 .rb{border-radius:7px;font-weight:700!important;padding:3px 8px}
-.rb.great{background:var(--green)!important;color:#fff!important}
-.rb.good{background:#ffd60a!important;color:#000!important}
+.rb.great{background:var(--green)!important;color:#000!important}
+.rb.good{background:transparent!important;border:1.5px solid var(--green)!important;color:var(--green)!important}
 .rb.low{background:var(--red)!important;color:#fff!important}
 
 /* ── tabel: hairline, bukan kotak ── */
 table{border-color:transparent}
-thead tr,th{background:transparent!important;color:var(--muted)!important;font-size:10px;letter-spacing:1.2px;font-weight:700;border-bottom:1px solid var(--border2)!important}
+thead tr,th{background:transparent!important;color:var(--green)!important;font-size:10px;letter-spacing:1.4px;font-weight:800;border-bottom:1px solid var(--border2)!important}
 td{border-color:var(--border)!important}
 tr:hover td{background:var(--surface)}
 
@@ -127,15 +127,15 @@ input,select,textarea{
   background:var(--card)!important;border:1px solid var(--border)!important;
   color:var(--text)!important;border-radius:11px;
 }
-input::placeholder,textarea::placeholder{color:var(--muted)!important}
+input::placeholder,textarea::placeholder{color:var(--softer)!important}
 input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outline:none;box-shadow:0 0 0 3px rgba(48,209,88,.16)}
 
 /* ── strip status & panel kecil premium ── */
 .premium-status-strip{background:transparent!important;border:none!important;box-shadow:none!important;gap:14px}
 .premium-status-strip>div{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
 .premium-status-strip strong{color:var(--text)!important}
-.premium-status-strip span{color:var(--muted)!important}
-.premium-status-strip small{color:var(--soft)!important}
+.premium-status-strip span{color:var(--green)!important;font-weight:800}
+.premium-status-strip small{color:#fff!important;opacity:.9}
 .history-strip>div,.hday,.hist-day{background:var(--card)!important;border:1px solid var(--border)!important;border-radius:12px}
 .history-strip{background:transparent!important;border:none!important}
 
@@ -146,8 +146,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 /* ── scrollbar ── */
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#3a3a3c;border-radius:99px;border:2px solid #000}
-::-webkit-scrollbar-thumb:hover{background:#48484a}
+::-webkit-scrollbar-thumb{background:#1f9e46;border-radius:99px;border:2px solid #000}
+::-webkit-scrollbar-thumb:hover{background:var(--green)}
 
 /* ══ WARNA INLINE DARI app.js / index.html ══
    Kode menulis sebagian warna langsung ke elemen (style="...") dengan palet
@@ -176,7 +176,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
     backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;
     border-top:1px solid var(--border)!important;box-shadow:none!important;
   }
-  .nav-tab{background:transparent!important;color:var(--muted)!important}
+  .nav-tab{background:transparent!important;color:#fff!important}
   .nav-tab.active{background:rgba(48,209,88,.16)!important;color:var(--green)!important}
   .nav-tab.active .premium-nav-label,.nav-tab.active .premium-nav-icon{color:var(--green)!important}
   .premium-add-fab{
@@ -198,3 +198,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 [style*="background:#448aff"],[style*="background: #448aff"]{background:var(--blue)!important}
 [style*="background:#7c4dff"],[style*="background: #7c4dff"]{background:var(--purple)!important}
 [style*="background:#ff6b1a"],[style*="background: #ff6b1a"]{background:var(--orange)!important}
+
+/* tab More (shell HP): jangan abu */
+.premium-more-tab{background:var(--card)!important;color:#fff!important}

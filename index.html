@@ -10,9 +10,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <link rel="icon" type="image/png" href="img/favicon.png?v=20260830-spavg1">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png?v=20260830-spavg1">
-<link rel="stylesheet" href="css/style.css?v=20260831-stocks3">
-<link rel="stylesheet" href="css/premium.css?v=20260831-stocks3">
-<link rel="stylesheet" href="css/skin.css?v=20260831-stocks3">
+<link rel="stylesheet" href="css/style.css?v=20260831-stocks4">
+<link rel="stylesheet" href="css/premium.css?v=20260831-stocks4">
+<link rel="stylesheet" href="css/skin.css?v=20260831-stocks4">
 </head>
 
 <body>
@@ -86,11 +86,11 @@
   <div class="nav-tab active" data-page="dashboard" onclick="showPage('dashboard',this)">📊 Dashboard</div>
   <div class="nav-tab" data-page="activity" onclick="showPage('activity',this)">📞 Calls & Follow Up</div>
   <div class="nav-tab" data-page="salespeople" onclick="showPage('salespeople',this)">👥 Salespeople</div>
-  <div class="nav-tab" data-page="mysales" onclick="showPage('mysales',this)" style="color:#bf5af2">🛍️ My Sales</div>
+  <div class="nav-tab" data-page="mysales" onclick="showPage('mysales',this)" style="color:#30d158">🛍️ My Sales</div>
   <div class="nav-tab" data-page="monthly" onclick="showPage('monthly',this)">📅 Monthly Recap</div>
   <div class="nav-tab" data-page="insights" onclick="showPage('insights',this)" style="color:#30d158">💡 Sales Insights</div>
   <div class="nav-tab" data-page="warning" onclick="showPage('warning',this)" style="color:#ff453a">⚠️ Warning</div>
-  <div class="nav-tab" data-page="admin" onclick="showPage('admin',this)" style="color:#bf5af2">⚙️ Admin</div>
+  <div class="nav-tab" data-page="admin" onclick="showPage('admin',this)" style="color:#30d158">⚙️ Admin</div>
 </div>
 </div>
 
@@ -341,13 +341,13 @@
 <div class="container">
 
   <div style="margin-bottom:20px;">
-    <div class="sl" style="margin-bottom:4px;color:#bf5af2;">🛍️ My Sales</div>
+    <div class="sl" style="margin-bottom:4px;color:#30d158;">🛍️ My Sales</div>
     <div style="font-family:'Space Mono',monospace;font-size:10px;color:#98989f;letter-spacing:1px;">Look up your logged orders, products sold, and total omset</div>
   </div>
 
   <!-- SP Selector -->
   <div class="ms-search-card">
-    <div class="igl" style="margin-bottom:10px;font-size:11px;color:#bf5af2;letter-spacing:1.5px;">👤 SELECT YOUR NAME</div>
+    <div class="igl" style="margin-bottom:10px;font-size:11px;color:#30d158;letter-spacing:1.5px;">👤 SELECT YOUR NAME</div>
     <select id="msSPSelect" onchange="renderMySales()" class="ms-sp-select">
       <option value="">— Pick your name —</option>
     </select>
@@ -614,14 +614,14 @@
 
   <!-- KPI Row -->
   <div class="ins-kpi-row">
-    <div class="ins-kpi-card" style="border-color:rgba(255,159,10,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(48,209,88,0.3);">
       <div class="ins-kpi-lbl">Upsell Rate</div>
-      <div class="ins-kpi-val" id="insUpsellRate" style="color:#ff9f0a;">0<span class="u">%</span></div>
+      <div class="ins-kpi-val" id="insUpsellRate" style="color:#30d158;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insUpsellSub">0 of 0 orders</div>
     </div>
-    <div class="ins-kpi-card" style="border-color:rgba(191,90,242,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(48,209,88,0.3);">
       <div class="ins-kpi-lbl">Cross-Sell Rate</div>
-      <div class="ins-kpi-val" id="insCrossRate" style="color:#bf5af2;">0<span class="u">%</span></div>
+      <div class="ins-kpi-val" id="insCrossRate" style="color:#30d158;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insCrossSub">0 of 0 orders</div>
     </div>
     <div class="ins-kpi-card" style="border-color:rgba(48,209,88,0.3);">
@@ -634,9 +634,9 @@
       <div class="ins-kpi-val" id="insAvgUpsell" style="color:#30d158;font-size:22px;">Rp 0</div>
       <div class="ins-kpi-sub" id="insAvgUpsellSub">vs Rp 0 regular</div>
     </div>
-    <div class="ins-kpi-card" style="border-color:rgba(10,132,255,0.3);">
+    <div class="ins-kpi-card" style="border-color:rgba(48,209,88,0.3);">
       <div class="ins-kpi-lbl">Tagged Coverage</div>
-      <div class="ins-kpi-val" id="insCoverage" style="color:#0a84ff;">0<span class="u">%</span></div>
+      <div class="ins-kpi-val" id="insCoverage" style="color:#30d158;">0<span class="u">%</span></div>
       <div class="ins-kpi-sub" id="insCoverageSub">data hygiene</div>
     </div>
   </div>
@@ -657,11 +657,11 @@
   <!-- Leaderboards -->
   <div class="ins-grid-3">
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#ff9f0a">🔼 Top Upsellers</div>
+      <div class="ins-pt" style="color:#30d158">🔼 Top Upsellers</div>
       <div id="insTopUpsellers"></div>
     </div>
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#bf5af2">🔀 Top Cross-Sellers</div>
+      <div class="ins-pt" style="color:#30d158">🔀 Top Cross-Sellers</div>
       <div id="insTopCross"></div>
     </div>
     <div class="ins-panel">
@@ -685,11 +685,11 @@
   <div class="sl">📦 Product Insights</div>
   <div class="ins-grid-3" style="margin-bottom:18px;">
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#ff9f0a">Most Upsold Products</div>
+      <div class="ins-pt" style="color:#30d158">Most Upsold Products</div>
       <div id="insProdUpsell"></div>
     </div>
     <div class="ins-panel">
-      <div class="ins-pt" style="color:#bf5af2">Most Cross-Sold Products</div>
+      <div class="ins-pt" style="color:#30d158">Most Cross-Sold Products</div>
       <div id="insProdCross"></div>
     </div>
     <div class="ins-panel">
@@ -786,17 +786,17 @@
       <div id="warnRev"></div>
     </div>
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#0a84ff;">💬 Below Chats (<span id="wsChatsThresh">7</span>)</div>
+      <div class="warn-section-title" style="color:#30d158;">💬 Below Chats (<span id="wsChatsThresh">7</span>)</div>
       <div id="warnChats"></div>
     </div>
   </div>
   <div class="ins-grid-2">
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#64d2ff;">📞 Below Calls (<span id="wsCallsThresh">7</span>)</div>
+      <div class="warn-section-title" style="color:#30d158;">📞 Below Calls (<span id="wsCallsThresh">7</span>)</div>
       <div id="warnCalls"></div>
     </div>
     <div class="warn-section">
-      <div class="warn-section-title" style="color:#ff9f0a;">🔄 Below Follow-ups (<span id="wsFupsThresh">15</span>)</div>
+      <div class="warn-section-title" style="color:#30d158;">🔄 Below Follow-ups (<span id="wsFupsThresh">15</span>)</div>
       <div id="warnFups"></div>
     </div>
   </div>
@@ -905,7 +905,7 @@
     <div class="omset-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div class="omset-section-title" style="margin-bottom:0;">📝 Edit / Delete Records</div>
-        <button onclick="adminRefreshAll()" class="btn" style="background:rgba(10,132,255,0.1);border:1px solid rgba(10,132,255,0.3);color:#0a84ff;height:30px;font-size:11px;padding:0 12px;">🔄 Refresh</button>
+        <button onclick="adminRefreshAll()" class="btn" style="background:rgba(48,209,88,0.1);border:1px solid rgba(48,209,88,0.3);color:#30d158;height:30px;font-size:11px;padding:0 12px;">🔄 Refresh</button>
       </div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:#98989f;margin-bottom:14px;">Fix wrong entries, edit any field, or delete mistakes.</div>
 
@@ -984,7 +984,7 @@
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:#98989f;margin-bottom:14px;">These actions cannot be undone. Use with caution.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <button class="btn" style="background:rgba(48,209,88,0.1);border:1px solid rgba(48,209,88,0.3);color:#30d158;height:42px;" onclick="exportAllData()">📥 Export All Data (CSV)</button>
-        <button class="btn" style="background:rgba(255,159,10,0.1);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;height:42px;" onclick="resetTodayData()">🔄 Reset Today's Data</button>
+        <button class="btn" style="background:rgba(48,209,88,0.1);border:1px solid rgba(48,209,88,0.3);color:#30d158;height:42px;" onclick="resetTodayData()">🔄 Reset Today's Data</button>
         <button class="btn" style="background:rgba(255,69,58,0.1);border:1px solid rgba(255,69,58,0.3);color:#ff453a;height:42px;grid-column:span 2;" onclick="resetAllData()">🗑️ Delete ALL Data</button>
       </div>
     </div>

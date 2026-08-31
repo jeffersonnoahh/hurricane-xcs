@@ -2,8 +2,8 @@
 :root{
   --bg:#000000;--surface:#141416;--card:#1c1c1e;--card2:#232326;
   --border:#2e2e31;--border2:#3a3a3c;--gold:#30d158;--gold2:#30d158;
-  --orange:#ff9f0a;--green:#30d158;--red:#ff453a;--blue:#0a84ff;
-  --purple:#bf5af2;--muted:#98989f;--text:#ffffff;--soft:#aeaeb2;--softer:#6e6e73;
+  --orange:#30d158;--green:#30d158;--red:#ff453a;--blue:#30d158;
+  --purple:#30d158;--muted:#98989f;--text:#ffffff;--soft:#aeaeb2;--softer:#6e6e73;
 }
 
 /* Final premium polish and breakpoint corrections. */
@@ -19,7 +19,7 @@
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 html{background:var(--bg)}
-body{background:radial-gradient(ellipse 70% 40% at 50% -15%,rgba(191,90,242,.11),transparent 70%),linear-gradient(180deg,#0e0e0e,var(--bg) 38%);font-family:'Space Grotesk',sans-serif;color:var(--text)}
+body{background:radial-gradient(ellipse 70% 40% at 50% -15%,rgba(48,209,88,.11),transparent 70%),linear-gradient(180deg,#0e0e0e,var(--bg) 38%);font-family:'Space Grotesk',sans-serif;color:var(--text)}
 header{min-height:70px;background:rgba(7,9,14,.9);border-color:var(--border);padding:12px max(22px,calc((100vw - 1340px)/2));box-shadow:0 1px rgba(255,255,255,.025)}
 .brand-logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#ffd633,#ffc000);box-shadow:0 9px 28px rgba(48,209,88,.28)}
 .brand-name{font-size:16px;letter-spacing:1.4px}.brand-sub{color:var(--muted);letter-spacing:2.6px;margin-top:3px}
