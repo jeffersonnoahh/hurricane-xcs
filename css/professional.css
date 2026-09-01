@@ -111,7 +111,7 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
   .act-grid{grid-template-columns:1fr 1fr!important}
   .act-grid .btn{width:100%}
 }
-@media(max-width:540px){
+@media(max-width:768px){
   html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
   header{width:100%!important;max-width:100vw!important;min-height:62px!important;padding:8px 10px!important;gap:8px!important;overflow:hidden!important}
   .brand{min-width:0!important;gap:8px!important;flex:1 1 auto!important}
@@ -149,6 +149,8 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
     border:1px solid rgba(32,216,131,.5)!important;
     border-radius:7px!important;
     -webkit-overflow-scrolling:touch!important;
+    touch-action:pan-x pan-y!important;
+    overscroll-behavior-x:contain!important;
     scrollbar-width:thin!important;
     scrollbar-color:var(--pro-green) #06100b!important;
   }
@@ -180,7 +182,17 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
   }
   #vTeam th:first-child,#vSP th:first-child,#vTeam td:first-child,#vSP td:first-child{width:42px!important}
   #vTeam th:nth-child(2),#vSP th:nth-child(2),#vTeam td:nth-child(2),#vSP td:nth-child(2){min-width:150px!important}
-  #vTeam th:last-child,#vSP th:last-child,#vTeam td:last-child,#vSP td:last-child{min-width:145px!important;color:var(--pro-green)!important;text-align:right!important}
+  #vTeam th:last-child,#vSP th:last-child,#vTeam td:last-child,#vSP td:last-child{
+    min-width:145px!important;
+    color:var(--pro-green)!important;
+    text-align:right!important;
+    position:sticky!important;
+    right:0!important;
+    z-index:3!important;
+    background:#000!important;
+    box-shadow:-12px 0 18px rgba(0,0,0,.9),-1px 0 rgba(32,216,131,.35)!important;
+  }
+  #vTeam thead th:last-child,#vSP thead th:last-child{z-index:5!important}
   #vTeam tbody td:before,#vSP tbody td:before{display:none!important;content:none!important}
   #vTeam .tcell,#vSP .tcell{min-width:0!important}
 }
