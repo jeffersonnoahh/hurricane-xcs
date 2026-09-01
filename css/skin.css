@@ -394,3 +394,21 @@ header .brand .brand-logo img{
   font-size:8.5px;font-weight:800;letter-spacing:1px;vertical-align:middle;
   font-family:-apple-system,'SF Pro Text',sans-serif;
 }
+
+/* ══ PERBAIKAN GESER TABEL DI HP ══
+   Grid item default-nya min-width:auto, jadi .premium-performance-main
+   melebar mengikuti lebar tabel (620px) dan menjebol kolom grid — akibatnya
+   kotak .tw ikut selebar 667px di layar 375px, scrollWidth == clientWidth,
+   sehingga TIDAK ADA yang bisa digeser (dan <body> sudah overflow-x:hidden).
+   min-width:0 mengembalikan lebar kotak ke lebar layar, sehingga tabel
+   bisa digeser di dalamnya dan kolom OMSET yang sticky tetap menempel. */
+@media(max-width:768px){
+  .premium-performance-main,.premium-performance-grid>*,
+  #vTeam,#vSP,#vProd{
+    min-width:0!important;max-width:100%!important;
+  }
+  #vTeam .tw,#vSP .tw,#vProd .tw{
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;
+  }
+}
