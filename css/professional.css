@@ -74,6 +74,8 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
 #page-activity>.container>div:nth-child(2){background:#000!important;border-color:var(--pro-border)!important;border-radius:7px!important}
 #page-activity .act-form{padding:20px!important}
 #page-activity .act-grid{gap:10px!important}
+#page-activity .act-log .ar{border-bottom:1px solid rgba(32,216,131,.42)!important}
+#page-activity .act-log .ar:last-child{border-bottom:0!important}
 #page-salespeople #spGrid{gap:10px!important}
 #page-mysales .ms-search-card{max-width:560px;padding:20px!important}
 #page-insights .ins-grid-2,#page-insights .ins-grid-3{gap:10px!important}
