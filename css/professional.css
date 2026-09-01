@@ -92,6 +92,8 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
 .premium-page-head p,.premium-monthly-head p{max-width:520px;color:var(--pro-muted)!important}
 .premium-head-ghost{border-color:var(--pro-border)!important;background:#000!important}
 .omset-hero,.premium-monthly-hero{border-color:var(--pro-border)!important}
+.omset-watchlist-link{margin-left:auto;padding:0 0 3px;border:0;border-bottom:1px solid rgba(32,216,131,.38);background:transparent;color:var(--pro-green);font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2px;text-transform:none;cursor:pointer;transition:.18s ease}
+.omset-watchlist-link:hover{color:#8fffc2;border-bottom-color:var(--pro-green);transform:translateX(2px)}
 .ref-chart-grid{stroke:#14201a!important}
 .ref-chart-label{fill:#707c76!important}
 .history-strip{scrollbar-width:none}.history-strip::-webkit-scrollbar{display:none}
@@ -136,6 +138,7 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
   #page-monthly .premium-monthly-hero .ref-chart{height:145px!important;margin-top:14px!important}
   #page-monthly .premium-monthly-hero .ref-chart-label{font-size:7px!important}
   #page-monthly .premium-monthly-hero .ref-hero-foot{margin-top:8px!important;font-size:7px!important;letter-spacing:1px!important}
+  #homeOmsetHero .omset-watchlist-link{font-size:9px!important;white-space:nowrap!important}
   .kpi-card,.ins-kpi-card{min-height:100px!important;padding:14px!important}
   .kpi-val,.ins-kpi-val{font-size:24px!important}
   .act-grid{grid-template-columns:1fr!important}

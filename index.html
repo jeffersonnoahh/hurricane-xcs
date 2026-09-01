@@ -108,7 +108,11 @@
 
   <!-- ═══ GIANT LIVE OMSET ═══ -->
   <div class="omset-hero" id="homeOmsetHero">
-    <div class="omset-hero-lbl"><span class="live-dot"></span> MONTHLY LIVE OMSET</div>
+    <div class="omset-hero-lbl">
+      <span class="live-dot"></span>
+      <span>MONTHLY LIVE OMSET</span>
+      <button type="button" class="omset-watchlist-link" onclick="document.querySelector('.nav-tab[data-page=watchlist]').click()">View watchlist <span aria-hidden="true">→</span></button>
+    </div>
     <div class="omset-hero-val" id="liveOmsetBig">Rp 0</div>
     <div class="omset-hero-sub" id="liveOmsetSub">—</div>
   </div>
