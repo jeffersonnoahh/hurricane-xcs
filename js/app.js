@@ -1260,6 +1260,13 @@ function renderMonthly(){
 
   Object.keys(TM).forEach(k=>teamTotals[k]={chats:0,closes:0,revenue:0,calls:0,fups:0});
   Object.keys(P).forEach(k=>prodTotals[k]={count:0,revenue:0});
+  // Keep the monthly ranking roster-complete, including salespeople with no logs or omset.
+  Object.entries(TM).forEach(([team,config])=>{
+    (config.m||[]).forEach(sp=>{
+      const sk=sp+'|'+team;
+      if(!spTotals[sk])spTotals[sk]={sp,team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
+    });
+  });
 
   dayKeys.forEach(k=>{
     const entries=allData[k]||[];
