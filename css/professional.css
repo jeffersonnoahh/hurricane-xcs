@@ -138,4 +138,49 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
   .kpi-val,.ins-kpi-val{font-size:24px!important}
   .act-grid{grid-template-columns:1fr!important}
   .sl{margin-top:22px!important}
+
+  /* Performance tables stay swipeable on phones so Omset is always reachable. */
+  #vTeam .tw,#vSP .tw{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    border:1px solid rgba(32,216,131,.5)!important;
+    border-radius:7px!important;
+    -webkit-overflow-scrolling:touch!important;
+    scrollbar-width:thin!important;
+    scrollbar-color:var(--pro-green) #06100b!important;
+  }
+  #vTeam .tw:after,#vSP .tw:after{display:none!important}
+  #vTeam table,#vSP table{display:table!important;width:620px!important;min-width:620px!important}
+  #vTeam thead,#vSP thead{display:table-header-group!important}
+  #vTeam tbody,#vSP tbody{display:table-row-group!important}
+  #vTeam thead tr,#vSP thead tr,#vTeam tbody tr,#vSP tbody tr{
+    display:table-row!important;
+    width:auto!important;
+    height:48px!important;
+    margin:0!important;
+    padding:0!important;
+    background:#000!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+  #vTeam th,#vSP th,#vTeam td,#vSP td{
+    display:table-cell!important;
+    position:static!important;
+    width:auto!important;
+    min-width:0!important;
+    padding:10px 13px!important;
+    text-align:left!important;
+    white-space:nowrap!important;
+    border-bottom:1px solid rgba(32,216,131,.18)!important;
+    background:#000!important;
+  }
+  #vTeam th:first-child,#vSP th:first-child,#vTeam td:first-child,#vSP td:first-child{width:42px!important}
+  #vTeam th:nth-child(2),#vSP th:nth-child(2),#vTeam td:nth-child(2),#vSP td:nth-child(2){min-width:150px!important}
+  #vTeam th:last-child,#vSP th:last-child,#vTeam td:last-child,#vSP td:last-child{min-width:145px!important;color:var(--pro-green)!important;text-align:right!important}
+  #vTeam tbody td:before,#vSP tbody td:before{display:none!important;content:none!important}
+  #vTeam .tcell,#vSP .tcell{min-width:0!important}
 }
