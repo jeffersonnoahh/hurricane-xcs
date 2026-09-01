@@ -386,3 +386,11 @@ header .brand .brand-logo img{
   background:rgba(255,255,255,.03)!important}
 #page-activity .readonly-banner *{color:#fff!important}
 #page-activity .readonly-banner div:last-child{color:var(--muted)!important}
+
+/* Badge catatan sales (mis. ON LEAVE) — netral, tidak mencuri perhatian */
+.sp-note-badge{
+  display:inline-block;margin-left:7px;padding:2px 7px;border-radius:5px;
+  background:rgba(255,212,38,.15);color:var(--chat);
+  font-size:8.5px;font-weight:800;letter-spacing:1px;vertical-align:middle;
+  font-family:-apple-system,'SF Pro Text',sans-serif;
+}
