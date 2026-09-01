@@ -3,8 +3,8 @@
   --pro-bg:#000;
   --pro-surface:#030605;
   --pro-surface-raised:#060a08;
-  --pro-border:#17201c;
-  --pro-border-strong:#26352e;
+  --pro-border:rgba(32,216,131,.26);
+  --pro-border-strong:rgba(32,216,131,.55);
   --pro-text:#f4f7f5;
   --pro-muted:#8a9690;
   --pro-subtle:#5f6964;
@@ -53,7 +53,7 @@ header{border-bottom:1px solid var(--pro-border)!important}
 table{width:100%;border-collapse:collapse}
 thead tr{position:sticky;top:0;z-index:2;background:#020403!important}
 thead th{height:44px;padding:0 14px!important;font-family:'Space Mono',monospace!important;font-size:8px!important;letter-spacing:1px!important;color:var(--pro-muted)!important;border-bottom:1px solid var(--pro-border)!important}
-tbody tr{height:54px;background:#000!important;border-bottom:1px solid #101713!important}
+tbody tr{height:54px;background:#000!important;border-bottom:1px solid rgba(32,216,131,.18)!important}
 tbody tr:last-child{border-bottom:0}
 tbody tr:hover{background:#030705!important}
 td{padding:11px 14px!important;font-size:11px!important}
@@ -94,6 +94,15 @@ input:focus,select:focus,textarea:focus,.sp-lookup-input:focus{outline:none!impo
 .ref-chart-label{fill:#707c76!important}
 .history-strip{scrollbar-width:none}.history-strip::-webkit-scrollbar{display:none}
 .hday{border-radius:6px!important}
+
+/* Desktop performance tables: complete roster and omset remain visible. */
+@media(min-width:901px){
+  #vTeam thead tr,#vSP thead tr{height:40px!important}
+  #vTeam tbody tr,#vSP tbody tr{height:46px!important;border-bottom-color:rgba(32,216,131,.2)!important}
+  #vTeam td,#vSP td{padding-top:7px!important;padding-bottom:7px!important}
+  #vTeam .tav,#vSP .tav{width:32px!important;height:32px!important}
+  #vTeam .tw,#vSP .tw{border-color:rgba(32,216,131,.38)!important}
+}
 
 @media(max-width:900px){
   .container{padding:20px 16px 100px!important}
