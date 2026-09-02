@@ -72,22 +72,48 @@
     var y = vd.getFullYear(), m = vd.getMonth() + 1, upto = vd.getDate();
     var todayKey = dkey(vd);
 
+    /* Index roster: cocokkan record ke anggota roster SEKARANG.
+       Record menyimpan tim LAMA saat orang pindah tim (mis. Agatha pindah
+       Agung → REI, record-nya tetap 'Agung'), jadi kalau hanya dicocokkan
+       sp|team omzetnya hilang dan kartunya menampilkan 0. */
+    var byKey = {}, byName = {};
+    var norm = function (s) { return String(s == null ? '' : s).trim().toLowerCase(); };
+    Object.keys(TM).forEach(function (team) {
+      (TM[team].m || []).forEach(function (sp) {
+        var k = sp + '|' + team;
+        byKey[norm(sp) + '|' + norm(team)] = k;
+        var n = norm(sp);
+        byName[n] = (byName[n] === undefined) ? k : null;   /* null = nama dipakai 2 tim */
+      });
+    });
+    /* null = bukan anggota roster sekarang → diabaikan */
+    var resolve = function (sp, team) {
+      var k = byKey[norm(sp) + '|' + norm(team)];
+      return k || byName[norm(sp)] || null;
+    };
+
     /* omzet harian per sales untuk bulan berjalan */
     var daily = {};
     Object.keys(allData).forEach(function (k) {
       var p = k.split('-');
       if (+p[0] !== y || +p[1] !== m || +p[2] > upto) return;
       rows(allData[k]).forEach(function (e) {
-        var key = e.sp + '|' + e.team;
+        var key = resolve(e.sp, e.team);
+        if (!key) return;
         (daily[key] || (daily[key] = {}))[+p[2]] = (daily[key][+p[2]] || 0) + (e.revenue || 0);
       });
     });
 
-    /* tanggal order terakhir (lihat mundur, tidak hanya bulan ini) */
+    /* Order terakhir, TIDAK melewati tanggal yang sedang dilihat — kalau
+       tidak, membuka tanggal lampau menghasilkan selisih hari negatif. */
     var lastSale = {};
     Object.keys(allData).sort().forEach(function (k) {
+      if (k > todayKey) return;
       rows(allData[k]).forEach(function (e) {
-        if ((e.revenue || 0) > 0) lastSale[e.sp + '|' + e.team] = k;
+        if ((e.revenue || 0) > 0) {
+          var key = resolve(e.sp, e.team);
+          if (key) lastSale[key] = k;
+        }
       });
     });
 
@@ -104,7 +130,7 @@
         var days = null;
         if (lastSale[key]) {
           var a = new Date(lastSale[key] + 'T00:00:00'), b = new Date(todayKey + 'T00:00:00');
-          days = Math.round((b - a) / 864e5);
+          days = Math.max(0, Math.round((b - a) / 864e5));
         }
         out.push({
           sp: sp, team: team, color: tc.c || '#30d158',
@@ -189,13 +215,5 @@
     document.addEventListener('DOMContentLoaded', hook);
   } else { hook(); }
   setTimeout(hook, 800);
-  /* AUTO_OPEN: hanya untuk screenshot — buka tab lewat ?page=watchlist */
-  if(/page=(watchlist|activity|salespeople|insights|warning|monthly)/.test(location.search)){
-    setTimeout(function(){
-      var want=(location.search.match(/page=(\w+)/)||[])[1]||'watchlist';
-      var tb=document.querySelector('.nav-tab[data-page="'+want+'"]');
-      if(tb&&typeof showPage==='function')tb.click();
-    },2500);
-  }
   window.renderWatchlist = render;
 })();

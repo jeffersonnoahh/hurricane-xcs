@@ -1342,6 +1342,34 @@ function renderMonthly(){
     }).join('');
 
   // Expose spTotals globally for the lookup search box
+  // Satu orang bisa terpecah jadi dua baris kalau timnya dipindah: sebagian
+  // record memakai tim LAMA, sebagian tim BARU (kasus nyata: Agatha pindah
+  // Agung -> REI, omzet Agustus tercatat di Agung sedangkan sebagian aktivitas
+  // sudah di REI). Digabung jadi SATU baris per orang, memakai tim yang ada di
+  // roster sekarang, supaya ranking tidak menampilkan nama yang sama dua kali.
+  // Tabel TIM tetap dihitung dari record, jadi omzet tiap tim tidak berubah.
+  (function mergeSPByName(){
+    const rosterTeam={};
+    Object.entries(TM).forEach(([team,c])=>(c.m||[]).forEach(sp=>{rosterTeam[sp]=team;}));
+    const byName={};
+    Object.entries(spTotals).forEach(([k,v])=>{(byName[v.sp]=byName[v.sp]||[]).push([k,v]);});
+    Object.entries(byName).forEach(([nama,list])=>{
+      if(list.length<2)return;
+      // baris utama: tim sesuai roster, kalau tidak ada pakai yang omzetnya terbesar
+      let main=list.find(([,v])=>v.team===rosterTeam[nama]);
+      if(!main)main=list.slice().sort((a,b)=>b[1].revenue-a[1].revenue)[0];
+      list.forEach(([k,v])=>{
+        if(k===main[0])return;
+        main[1].chats+=v.chats||0; main[1].closes+=v.closes||0;
+        main[1].revenue+=v.revenue||0; main[1].calls+=v.calls||0; main[1].fups+=v.fups||0;
+        if(v.prods)Object.entries(v.prods).forEach(([pr,d])=>{
+          const pp=main[1].prods[pr]||(main[1].prods[pr]={u:0,r:0});
+          pp.u+=d.u||0; pp.r+=d.r||0;
+        });
+        delete spTotals[k];
+      });
+    });
+  })();
   window._monthSpTotals=spTotals;
   window._monthLabel=document.getElementById('monthLabel')?.textContent||'';
   renderSpLookup();

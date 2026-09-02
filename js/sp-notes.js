@@ -59,8 +59,13 @@
       }
       if (t) e.appendChild(badge(t));
     });
-    /* tabel Monthly Recap: kolom nama di dalam <td> */
-    root.querySelectorAll('td').forEach(function (td) {
+    /* Tabel Monthly Recap: HANYA kolom nama (kolom ke-2 tiap baris).
+       Sebelumnya semua <td> dipindai, sehingga sel apa pun yang teksnya
+       kebetulan sama dengan nama orang — nama produk, nama tim — ikut
+       diberi badge. Dibatasi ke sel nama saja. */
+    root.querySelectorAll('tbody tr').forEach(function (tr) {
+      var td = tr.children[1];
+      if (!td || td.tagName !== 'TD') return;
       if (td.querySelector('.sp-note-badge')) return;
       if (td.children.length) return;
       var t = noteFor(td.textContent.trim(), '');
