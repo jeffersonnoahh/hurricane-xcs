@@ -412,3 +412,37 @@ header .brand .brand-logo img{
     overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   PERBAIKAN FUNGSI (bukan sekadar tampilan)
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 1. Kalender HARUS di atas laci form penjualan (z-index 950). Sebelumnya
+      kalender z-index 500, jadi di DESKTOP kalender terbuka DI BALIK laci —
+      tanggal tidak bisa dipilih sehingga input mundur ("Yesterday") mustahil.
+      premium.css sudah memperbaiki ini, tapi hanya di dalam media query HP. */
+.cal-overlay,#entryCalOverlay,#calOverlay,#omsetCalOverlay{z-index:1100!important}
+
+@media(max-width:768px){
+  /* 2. Empat kartu status: pastikan semuanya bisa dijangkau dengan digeser.
+        Sebelumnya dua kartu terakhir terpotong tanpa cara menggulirnya. */
+  .premium-status-strip{
+    display:flex!important;flex-wrap:nowrap!important;
+    overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;
+    scroll-snap-type:x proximity!important;gap:10px!important;
+    padding-bottom:2px!important;
+  }
+  .premium-status-strip>div{
+    flex:0 0 58%!important;min-width:0!important;scroll-snap-align:start!important;
+    border-right:1px solid var(--border)!important;
+  }
+
+  /* 3. Tab aktif di bar bawah harus jelas terlihat, bukan cuma garis 2px. */
+  .nav-tab.active,.nav-tab.active[data-page]{
+    background:rgba(48,209,88,.18)!important;color:var(--green)!important;
+    border-radius:12px!important;
+  }
+  .nav-tab.active .premium-nav-label,.nav-tab.active .premium-mobile-label{
+    color:var(--green)!important;font-weight:800!important;
+  }
+}

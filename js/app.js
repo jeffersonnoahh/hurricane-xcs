@@ -2498,7 +2498,8 @@ function checkAdminPwd(){
 }
 
 function adminLogout(){
-  let adminUnlocked=false;
+  adminUnlocked=false;   // JANGAN pakai 'let': itu membuat variabel lokal baru
+                         // sehingga status global tetap terbuka walau panel ditutup.
   document.getElementById('adminLogin').style.display='block';
   document.getElementById('adminPanel').style.display='none';
 }
