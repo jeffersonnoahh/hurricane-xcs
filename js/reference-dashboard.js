@@ -39,6 +39,26 @@
     return series.length ? series[series.length - 1].cumulative : 0;
   }
 
+  /* Total bulan tsb HANYA sampai tanggal ke-upToDay, supaya perbandingan
+     adil: 1-4 September dibandingkan 1-4 Agustus, bukan Agustus sebulan
+     penuh (yang membuat awal bulan selalu terlihat anjlok ~-90%).
+     Kalau bulan pembanding lebih pendek (mis. Februari), dipakai hari
+     terakhirnya. */
+  function monthTotalUpTo(date, upToDay) {
+    const series = monthSeries(date);
+    if (!series.length) return 0;
+    let sum = 0;
+    for (let i = 0; i < series.length; i++) {
+      if (series[i].day <= upToDay) sum = series[i].cumulative;
+    }
+    return sum;
+  }
+  function sameDayLabel(prevDate, upToDay) {
+    const days = new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 0).getDate();
+    const d = Math.min(upToDay, days);
+    return '1\u2013' + d + ' ' + prevDate.toLocaleDateString('en-US', { month: 'short' });
+  }
+
   function chartSvg(series, monthLabel, gradientId) {
     gradientId = gradientId || 'refRevenueGradient';
     const W = 850, H = 188, left = 58, right = 12, top = 10, bottom = 27;
@@ -98,7 +118,8 @@
     const series = monthSeries(viewed);
     const current = series.length ? series[series.length - 1].cumulative : 0;
     const previousDate = new Date(viewed.getFullYear(), viewed.getMonth()-1, 1);
-    const previous = monthTotal(previousDate);
+    const upToDay = series.length ? series[series.length - 1].day : viewed.getDate();
+    const previous = monthTotalUpTo(previousDate, upToDay);
     const delta = current - previous;
     const pct = previous > 0 ? delta / previous * 100 : null;
     const sub = $('liveOmsetSub');
@@ -106,7 +127,7 @@
       const cls = delta >= 0 ? 'ref-compare-positive' : 'ref-compare-negative';
       const arrow = delta >= 0 ? '↑' : '↓';
       sub.innerHTML = '<span class="'+cls+'">'+(pct===null?'—':((pct>=0?'+':'')+pct.toFixed(1)+'%'))+'</span>' +
-        '<span>vs '+previousDate.toLocaleDateString('en-US',{month:'short',year:'numeric'})+' &nbsp; '+arrow+' '+money(Math.abs(delta))+'</span>';
+        '<span>vs '+sameDayLabel(previousDate, upToDay)+' &nbsp; '+arrow+' '+money(Math.abs(delta))+'</span>';
     }
     const monthShort = viewed.toLocaleDateString('en-US',{month:'short'}).toUpperCase();
     chart.innerHTML = chartSvg(series,monthShort,'refRevenueGradient');
@@ -122,7 +143,8 @@
     const series = monthSeries(viewed);
     const current = series.length ? series[series.length-1].cumulative : 0;
     const previousDate = new Date(mYear,mMonth-1,1);
-    const previous = monthTotal(previousDate);
+    const upToDayM = series.length ? series[series.length-1].day : 31;
+    const previous = monthTotalUpTo(previousDate, upToDayM);
     const delta = current-previous;
     const pct = previous>0 ? delta/previous*100 : null;
     const big = $('mOmsetBig');
@@ -135,7 +157,7 @@
       const cls = delta>=0 ? 'ref-compare-positive' : 'ref-compare-negative';
       const arrow = delta>=0 ? '↑' : '↓';
       const desiredSub = '<span class="'+cls+'">'+(pct===null?'—':((pct>=0?'+':'')+pct.toFixed(1)+'%'))+'</span>'+
-        '<span>vs '+previousDate.toLocaleDateString('en-US',{month:'short',year:'numeric'})+' &nbsp; '+arrow+' '+money(Math.abs(delta))+'</span>';
+        '<span>vs '+sameDayLabel(previousDate, upToDayM)+' &nbsp; '+arrow+' '+money(Math.abs(delta))+'</span>';
       if (sub.innerHTML !== desiredSub) sub.innerHTML = desiredSub;
     }
     const signature = [mYear,mMonth,current,previous].join('|');
