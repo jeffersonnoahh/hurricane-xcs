@@ -458,3 +458,14 @@ header .brand .brand-logo img{
     padding-bottom:12px!important;
   }
 }
+
+/* Sub-label kecil di kartu KPI modal sales — menyebut periode/rata-rata,
+   supaya angka besar di atasnya tidak ambigu (bulan vs hari). */
+.mk .mksub{
+  margin-top:6px;
+  font-family:'DM Mono','Space Mono',monospace;
+  font-size:9px;
+  letter-spacing:.4px;
+  color:var(--muted);
+  line-height:1.3;
+}

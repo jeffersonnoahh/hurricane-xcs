@@ -1116,7 +1116,7 @@ function renderSPGrid(entries,acts){
 
     const cards=tc.m.map(sp=>{
       const s=spMap[sp+'|'+tn]||{chats:0,closes:0,revenue:0,calls:0,fups:0};
-      return`<div class="spc" onclick="openSPModal('${sp}','${tn}')">
+      return`<div class="spc" onclick="openSPMonth('${sp}','${tn}')">
         <div class="spc-bar" style="background:${tc.c}"></div>
         <div class="spc-av" style="background:${tc.bg};color:${tc.c}">${sp[0].toUpperCase()}</div>
         <div class="spc-name">${sp}</div>
@@ -1142,36 +1142,100 @@ function renderSPGrid(entries,acts){
 }
 
 // ══ SP MODAL ══
-function openSPModal(sp,team){
-  const entries=gE(),acts=gA();
-  const spList=aggSP(entries,acts);
-  const s=spList.find(x=>x.sp===sp&&x.team===team)||{sp,team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
+// Modal yang sama dipakai dua halaman dengan CAKUPAN WAKTU BERBEDA:
+//   • Dashboard (tabel SP & leaderboard) → angka SATU HARI yang sedang dilihat
+//   • Salespeople (kartu)                → angka SATU BULAN berjalan
+// Dulu dua-duanya membaca gE()/gA() alias data satu hari, padahal kartu
+// Salespeople menampilkan total bulan — jadi omset di modal ≠ omset di kartu,
+// dan chat/call/FU tampil 0 kalau laporan hari itu belum masuk. Sekarang tiap
+// pemanggil membawa cakupannya sendiri, dan judul modal SELALU menyebut
+// periodenya supaya angkanya tidak pernah ambigu.
+
+/* Closing + produk sebulan per sales. Sengaja disusun dari allData dengan pola
+   yang sama seperti monthRevBySP, supaya modal dan kartu tidak mungkin beda. */
+function monthProdBySP(vd){
+  const y=vd.getFullYear(),m=vd.getMonth()+1;
+  const map={};
+  Object.keys(allData).forEach(k=>{
+    const p=k.split('-');
+    if(+p[0]!==y||+p[1]!==m)return;
+    (allData[k]||[]).forEach(e=>{
+      if(!e||typeof e!=='object')return;
+      const key=e.sp+'|'+e.team;
+      const g=map[key]||(map[key]={closes:0,prods:{}});
+      g.closes+=e.units||0;
+      if(e.prod){const pp=g.prods[e.prod]||(g.prods[e.prod]={u:0,r:0});pp.u+=e.units||0;pp.r+=e.revenue||0;}
+    });
+  });
+  return map;
+}
+
+/* Menggambar isi modal dari data yang sudah dinormalkan pemanggilnya. */
+function _spModalPaint(sp,team,d){
   const tc=TM[team]||{c:'#888',bg:'#111',e:'',m:[]};
-
-  document.getElementById('mAv').textContent=sp[0].toUpperCase();
-  document.getElementById('mAv').style.background=tc.bg;
-  document.getElementById('mAv').style.color=tc.c;
+  const av=document.getElementById('mAv');
+  av.textContent=String(sp||'?')[0].toUpperCase();
+  av.style.background=tc.bg;av.style.color=tc.c;
   document.getElementById('mName').textContent=sp;
-  document.getElementById('mTeam').textContent='Team '+team+' '+tc.e;
+  document.getElementById('mTeam').textContent='Team '+team+' '+tc.e+' · '+d.period;
 
-  document.getElementById('mKPIs').innerHTML=`
-    <div class="mk"><div class="mkl">Omset / Revenue</div><div class="mkv go" style="font-size:20px">${fFull(s.revenue)}</div></div>
-    <div class="mk"><div class="mkl">Chat Masuk</div><div class="mkv">${s.chats}</div></div>
-    <div class="mk"><div class="mkl">Calls / Telepon</div><div class="mkv bl">${s.calls}</div></div>
-    <div class="mk"><div class="mkl">Follow Up</div><div class="mkv or">${s.fups}</div></div>
-    <div class="mk"><div class="mkl">Closes</div><div class="mkv gr">${s.closes}</div></div>
-    <div class="mk"><div class="mkl">Close Rate</div><div class="mkv">${s.chats>0?(s.closes/s.chats*100).toFixed(1):0}%</div></div>`;
+  // channel marketplace tidak wajib lapor chat/call/FU → tampilkan "—", bukan 0 palsu
+  const excl=(typeof _isActExcluded==='function')&&_isActExcluded(sp);
+  const n=v=>excl?'—':String(v);
+  const s=t=>t?'<div class="mksub">'+t+'</div>':'';
+  // tanpa chat, close rate tidak punya penyebut — "0%" itu menyesatkan
+  const rate=(!excl&&d.chats>0)?(d.closes/d.chats*100).toFixed(1)+'%':'—';
 
-  const prods=Object.entries(s.prods||{}).sort((a,b)=>b[1].r-a[1].r);
+  document.getElementById('mKPIs').innerHTML=
+    '<div class="mk"><div class="mkl">Omset / Revenue</div><div class="mkv go" style="font-size:20px">'+fFull(d.revenue)+'</div>'+s(d.sub.rev)+'</div>'+
+    '<div class="mk"><div class="mkl">Chat Masuk</div><div class="mkv">'+n(d.chats)+'</div>'+s(excl?'':d.sub.chat)+'</div>'+
+    '<div class="mk"><div class="mkl">Calls / Telepon</div><div class="mkv bl">'+n(d.calls)+'</div>'+s(excl?'':d.sub.call)+'</div>'+
+    '<div class="mk"><div class="mkl">Follow Up</div><div class="mkv or">'+n(d.fups)+'</div>'+s(excl?'':d.sub.fup)+'</div>'+
+    '<div class="mk"><div class="mkl">Closes</div><div class="mkv gr">'+(d.closes||0)+'</div>'+s(d.sub.close)+'</div>'+
+    '<div class="mk"><div class="mkl">Close Rate</div><div class="mkv">'+rate+'</div>'+s(d.sub.rate)+'</div>';
+
+  const prods=Object.entries(d.prods||{}).sort((a,b)=>b[1].r-a[1].r);
   document.getElementById('mProds').innerHTML=prods.length===0
-    ?'<div style="color:#333350;font-size:11px;font-family:\'DM Mono\',monospace;padding:6px 0;">No closes yet.</div>'
-    :prods.map(([prod,d])=>`
-      <div class="mpr">
-        <div><div class="mpn">${prod}</div><div class="mpd">${d.u} unit × Rp ${fRp(d.u?Math.round(d.r/d.u):0)}</div></div>
-        <div class="mpr-r">${fFull(d.r)}</div>
-      </div>`).join('');
+    ?'<div style="color:#333350;font-size:11px;font-family:\'DM Mono\',monospace;padding:6px 0;">'+d.empty+'</div>'
+    :prods.map(([prod,x])=>
+      '<div class="mpr">'+
+        '<div><div class="mpn">'+prod+'</div><div class="mpd">'+x.u+' unit × Rp '+fRp(x.u?Math.round(x.r/x.u):0)+'</div></div>'+
+        '<div class="mpr-r">'+fFull(x.r)+'</div>'+
+      '</div>').join('');
 
   document.getElementById('spMo').style.display='flex';
+}
+
+/* Dashboard → angka HARI yang sedang dilihat. */
+function openSPModal(sp,team){
+  const vd=od(vOff);
+  const s=aggSP(gE(),gA()).find(x=>x.sp===sp&&x.team===team)
+        ||{chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
+  _spModalPaint(sp,team,{
+    period:vd.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
+    revenue:s.revenue,chats:s.chats,calls:s.calls,fups:s.fups,closes:s.closes,prods:s.prods,
+    sub:{rev:'',chat:'',call:'',fup:'',close:'',rate:'close ÷ chat'},
+    empty:'Belum ada closing di tanggal ini.'
+  });
+}
+
+/* Salespeople → angka BULAN berjalan, sumbernya sama persis dengan kartunya. */
+function openSPMonth(sp,team){
+  const vd=od(vOff),key=sp+'|'+team;
+  const rev=monthRevBySP(vd)[key]||0;
+  const a=monthActBySP(vd)[key]||{chats:0,calls:0,fups:0};
+  const p=monthProdBySP(vd)[key]||{closes:0,prods:{}};
+  const hari=monthDaysElapsed(vd);
+  const per=v=>hari>0?(v/hari).toFixed(1)+' / hari':'';
+  const hariIni=(gE()||[]).reduce((t,e)=>
+    t+((e&&e.sp===sp&&e.team===team)?(e.revenue||0):0),0);
+  _spModalPaint(sp,team,{
+    period:vd.toLocaleDateString('id-ID',{month:'long',year:'numeric'}),
+    revenue:rev,chats:a.chats,calls:a.calls,fups:a.fups,closes:p.closes,prods:p.prods,
+    sub:{rev:'hari ini '+fFull(hariIni),chat:per(a.chats),call:per(a.calls),fup:per(a.fups),
+         close:'dalam '+hari+' hari',rate:'close ÷ chat'},
+    empty:'Belum ada closing bulan ini.'
+  });
 }
 function closeSPMo(e){if(!e||e.target===document.getElementById('spMo'))document.getElementById('spMo').style.display='none';}
 
