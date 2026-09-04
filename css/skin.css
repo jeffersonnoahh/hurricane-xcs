@@ -446,3 +446,15 @@ header .brand .brand-logo img{
     color:var(--green)!important;font-weight:800!important;
   }
 }
+
+/* Beri jarak antara teks tab dan garis bawah.
+   professional.css memakai padding:0 16px + rata tengah, sehingga teks
+   nyaris menempel ke garis. Selector dibuat lebih spesifik (.nav-bar .nav-tab)
+   supaya menang atas aturan !important yang dimuat setelah file ini. */
+@media(min-width:769px){
+  .nav-bar .nav-tab{
+    min-height:64px!important;
+    padding-top:6px!important;
+    padding-bottom:12px!important;
+  }
+}
