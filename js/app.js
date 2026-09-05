@@ -817,6 +817,64 @@ function monthRev(vd){
   return rev;
 }
 
+// ══ ROSTER RESOLVER ══
+// RECORD menyimpan tim SAAT ITU; config/teams adalah roster SEKARANG. Orang
+// yang pindah tim (kasus nyata: Agatha Agung → REI — omzet Agustus tercatat di
+// 'Agung' padahal rosternya 'REI') tidak akan ketemu kalau dicocokkan sp|team
+// mentah, jadi kartunya menampilkan Rp 0. Watchlist dan halaman Warning sudah
+// punya penyelesaian sendiri; ini versi yang dipakai bersama.
+let _rosterIdx=null,_rosterSig='';
+function _rosterIndex(){
+  const sig=Object.keys(TM).map(t=>t+':'+((TM[t]||{}).m||[]).join(',')).join(';');
+  if(_rosterIdx&&_rosterSig===sig)return _rosterIdx;
+  const n=s=>String(s==null?'':s).trim().toLowerCase();
+  const byKey={},byName={},meta={};
+  Object.keys(TM).forEach(t=>((TM[t]||{}).m||[]).forEach(sp=>{
+    const k=sp+'|'+t;
+    byKey[n(sp)+'|'+n(t)]=k;
+    meta[k]={sp,team:t};
+    // nama yang dipakai dua tim tidak boleh ditebak → null
+    byName[n(sp)]=(byName[n(sp)]===undefined)?k:null;
+  }));
+  _rosterSig=sig;_rosterIdx={n,byKey,byName,meta};
+  return _rosterIdx;
+}
+// → 'Nama|Tim' menurut roster sekarang, atau null kalau sudah bukan anggota.
+// null itu disengaja: Ivan & Rico memang dikeluarkan dari dashboard, jadi
+// record lama mereka tetap ada di database tapi tidak berkartu.
+function rosterKey(sp,team){
+  const ix=_rosterIndex();
+  return ix.byKey[ix.n(sp)+'|'+ix.n(team)]||ix.byName[ix.n(sp)]||null;
+}
+// Agregasi harian per sales, record dipetakan lewat rosterKey.
+function aggSPByRoster(entries,acts){
+  const ix=_rosterIndex(),out={};
+  const put=k=>out[k]||(out[k]={sp:ix.meta[k].sp,team:ix.meta[k].team,
+    chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}});
+  Object.keys(ix.meta).forEach(put);
+  (entries||[]).forEach(e=>{
+    if(!e||typeof e!=='object')return;
+    const k=rosterKey(e.sp,e.team); if(!k)return;
+    const g=put(k);
+    g.chats+=e.chats||0;g.closes+=e.units||0;g.revenue+=e.revenue||0;
+    if(e.prod){const p=g.prods[e.prod]||(g.prods[e.prod]={u:0,r:0});
+      p.u+=e.units||0;p.r+=e.revenue||0;}
+  });
+  (acts||[]).forEach(a=>{
+    if(!a||typeof a!=='object')return;
+    const k=rosterKey(a.sp,a.team); if(!k)return;
+    const g=put(k);
+    g.calls+=a.calls||0;g.fups+=a.fups||0;g.chats+=a.chats||0;
+  });
+  return out;
+}
+// Nama sales masuk ke atribut onclick sebagai string JS ber-kutip-satu, jadi
+// apostrof pada nama ("O'Brien") akan mematahkan handler-nya kalau tidak di-escape.
+function _js(s){
+  return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+    .replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
 // Aktivitas (chat/call/follow-up) sebulan penuh per sales, untuk rata-rata harian.
 function monthActBySP(vd){
   const y=vd.getFullYear(),m=vd.getMonth()+1;
@@ -826,7 +884,8 @@ function monthActBySP(vd){
     if(+p[0]!==y||+p[1]!==m)return;
     (allActs[k]||[]).forEach(a=>{
       if(!a||typeof a!=='object')return;
-      const key=a.sp+'|'+a.team;
+      const key=rosterKey(a.sp,a.team);
+      if(!key)return;
       const g=map[key]||(map[key]={chats:0,calls:0,fups:0});
       g.chats+=a.chats||0;g.calls+=a.calls||0;g.fups+=a.fups||0;
     });
@@ -852,7 +911,9 @@ function monthRevBySP(vd){
     if(+p[0]!==y||+p[1]!==m)return;
     (allData[k]||[]).forEach(e=>{
       if(!e||typeof e!=='object')return;
-      map[e.sp+'|'+e.team]=(map[e.sp+'|'+e.team]||0)+(e.revenue||0);
+      const key=rosterKey(e.sp,e.team);
+      if(!key)return;
+      map[key]=(map[key]||0)+(e.revenue||0);
     });
   });
   return map;
@@ -911,7 +972,7 @@ function renderAll(){
     :sps.map((s,i)=>{
       const tc=TM[s.team]||{c:'#888'};
       const isEmpty=s.chats===0&&s.closes===0&&s.calls===0&&s.fups===0;
-      return`<tr onclick="openSPModal('${s.sp}','${s.team}')" style="${isEmpty?'opacity:0.5':''}">
+      return`<tr onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')" style="${isEmpty?'opacity:0.5':''}">
         <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
@@ -952,7 +1013,7 @@ function renderAll(){
   document.getElementById('lb').innerHTML=top6.length===0
     ?'<div style="color:#333350;font-size:11px;font-family:\'DM Mono\',monospace;">Log entries to see rankings.</div>'
     :top6.map((s,i)=>`
-      <div class="lbi" onclick="openSPModal('${s.sp}','${s.team}')">
+      <div class="lbi" onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')">
         <div class="lbr" style="color:${mc(i)}">${md(i)}</div>
         <div class="lbin">
           <div class="lbn">${s.sp}</div>
@@ -972,6 +1033,9 @@ function renderAll(){
 
   // NOT REPORTED (if on activity page)
   renderNotReported();
+
+  // modal yang sedang terbuka ikut diperbarui, jangan dibiarkan basi
+  if(typeof _spMoRepaint==='function')_spMoRepaint();
 }
 
 // ══ ACTIVITY LOG ══
@@ -1065,8 +1129,8 @@ function renderActLog(acts){
 
 // ══ SP GRID — Grouped by team ══
 function renderSPGrid(entries,acts){
-  const spMap={};
-  aggSP(entries,acts).forEach(s=>spMap[s.sp+'|'+s.team]=s);
+  // lewat rosterKey, supaya yang pindah tim tidak kehilangan angkanya
+  const spMap=aggSPByRoster(entries,acts);
 
   // OMSET LIVE BULAN INI per sales (kartu pakai ini, bukan omset harian)
   const _vd=od(vOff);
@@ -1075,6 +1139,7 @@ function renderSPGrid(entries,acts){
   const moDays=monthDaysElapsed(_vd);
   const moLbl='OMSET '+_vd.toLocaleDateString('id-ID',{month:'long'}).toUpperCase();
   const avg=n=>moDays>0?(n/moDays).toFixed(1):'0.0';
+  const _lblHari=vOff===0?'hari ini':_vd.toLocaleDateString('id-ID',{day:'numeric',month:'short'});
   const note=document.getElementById('spGridNote');
   if(note)note.textContent='Rata-rata harian dihitung 1–'+moDays+' '+
     _vd.toLocaleDateString('id-ID',{month:'long'})+' ('+moDays+' hari) · omset = total bulan berjalan';
@@ -1116,7 +1181,7 @@ function renderSPGrid(entries,acts){
 
     const cards=tc.m.map(sp=>{
       const s=spMap[sp+'|'+tn]||{chats:0,closes:0,revenue:0,calls:0,fups:0};
-      return`<div class="spc" onclick="openSPMonth('${sp}','${tn}')">
+      return`<div class="spc" onclick="openSPMonth('${_js(sp)}','${_js(tn)}')">
         <div class="spc-bar" style="background:${tc.c}"></div>
         <div class="spc-av" style="background:${tc.bg};color:${tc.c}">${sp[0].toUpperCase()}</div>
         <div class="spc-name">${sp}</div>
@@ -1131,7 +1196,7 @@ function renderSPGrid(entries,acts){
         })()}
         <div class="spc-rev-lbl"><span class="live-dot"></span>${moLbl}</div>
         <div class="spc-rev">${fFull(moRev[sp+'|'+tn]||0)}</div>
-        <div class="spc-rev-sub">hari ini ${fFull(s.revenue)}</div>
+        <div class="spc-rev-sub">${_lblHari} ${fFull(s.revenue)}</div>
       </div>`;
     }).join('');
 
@@ -1161,7 +1226,8 @@ function monthProdBySP(vd){
     if(+p[0]!==y||+p[1]!==m)return;
     (allData[k]||[]).forEach(e=>{
       if(!e||typeof e!=='object')return;
-      const key=e.sp+'|'+e.team;
+      const key=rosterKey(e.sp,e.team);
+      if(!key)return;
       const g=map[key]||(map[key]={closes:0,prods:{}});
       g.closes+=e.units||0;
       if(e.prod){const pp=g.prods[e.prod]||(g.prods[e.prod]={u:0,r:0});pp.u+=e.units||0;pp.r+=e.revenue||0;}
@@ -1171,7 +1237,10 @@ function monthProdBySP(vd){
 }
 
 /* Menggambar isi modal dari data yang sudah dinormalkan pemanggilnya. */
-function _spModalPaint(sp,team,d){
+function _spModalPaint(sp,team,d,reopen){
+  // Modal yang terbuka dulu membeku: data baru masuk dari Firebase, kartu di
+  // belakangnya ikut berubah, isi modal tidak. Simpan cara menggambar ulangnya.
+  window._spMoReopen=reopen||null;
   const tc=TM[team]||{c:'#888',bg:'#111',e:'',m:[]};
   const av=document.getElementById('mAv');
   av.textContent=String(sp||'?')[0].toUpperCase();
@@ -1204,19 +1273,30 @@ function _spModalPaint(sp,team,d){
       '</div>').join('');
 
   document.getElementById('spMo').style.display='flex';
+  // buka selalu dari atas — kalau tidak, modal berikutnya muncul ter-scroll
+  // melewati nama orangnya dan terbaca seperti data orang lain
+  const box=document.querySelector('#spMo .mbox');
+  if(box)box.scrollTop=0;
+}
+
+/* Gambar ulang modal yang sedang terbuka setelah data live berubah. */
+function _spMoRepaint(){
+  const mo=document.getElementById('spMo');
+  if(!mo||mo.style.display!=='flex')return;
+  if(typeof window._spMoReopen==='function')window._spMoReopen();
 }
 
 /* Dashboard → angka HARI yang sedang dilihat. */
 function openSPModal(sp,team){
   const vd=od(vOff);
-  const s=aggSP(gE(),gA()).find(x=>x.sp===sp&&x.team===team)
+  const s=aggSPByRoster(gE(),gA())[sp+'|'+team]
         ||{chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
   _spModalPaint(sp,team,{
     period:vd.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
     revenue:s.revenue,chats:s.chats,calls:s.calls,fups:s.fups,closes:s.closes,prods:s.prods,
     sub:{rev:'',chat:'',call:'',fup:'',close:'',rate:'close ÷ chat'},
     empty:'Belum ada closing di tanggal ini.'
-  });
+  },function(){openSPModal(sp,team);});
 }
 
 /* Salespeople → angka BULAN berjalan, sumbernya sama persis dengan kartunya. */
@@ -1227,15 +1307,17 @@ function openSPMonth(sp,team){
   const p=monthProdBySP(vd)[key]||{closes:0,prods:{}};
   const hari=monthDaysElapsed(vd);
   const per=v=>hari>0?(v/hari).toFixed(1)+' / hari':'';
-  const hariIni=(gE()||[]).reduce((t,e)=>
-    t+((e&&e.sp===sp&&e.team===team)?(e.revenue||0):0),0);
+  const dayAgg=aggSPByRoster(gE(),gA())[key];
+  const hariIni=(dayAgg&&dayAgg.revenue)||0;
+  // vOff!==0 berarti sedang melihat hari lampau — jangan sebut "hari ini"
+  const lblHari=vOff===0?'hari ini':vd.toLocaleDateString('id-ID',{day:'numeric',month:'short'});
   _spModalPaint(sp,team,{
     period:vd.toLocaleDateString('id-ID',{month:'long',year:'numeric'}),
     revenue:rev,chats:a.chats,calls:a.calls,fups:a.fups,closes:p.closes,prods:p.prods,
-    sub:{rev:'hari ini '+fFull(hariIni),chat:per(a.chats),call:per(a.calls),fup:per(a.fups),
+    sub:{rev:lblHari+' '+fFull(hariIni),chat:per(a.chats),call:per(a.calls),fup:per(a.fups),
          close:'dalam '+hari+' hari',rate:'close ÷ chat'},
     empty:'Belum ada closing bulan ini.'
-  });
+  },function(){openSPMonth(sp,team);});
 }
 function closeSPMo(e){if(!e||e.target===document.getElementById('spMo'))document.getElementById('spMo').style.display='none';}
 
@@ -1444,7 +1526,7 @@ function renderMonthly(){
     ?'<tr class="erow"><td colspan="7">No data for this month</td></tr>'
     :sortedSPs.map((s,i)=>{
       const tc=TM[s.team]||{c:'#888'};
-      return`<tr onclick="openSPMonthly('${s.sp}','${s.team}')">
+      return`<tr onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
         <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
@@ -1507,7 +1589,7 @@ function renderSpLookup(){
   resultEl.innerHTML=matches.map(s=>{
     const tc=TM[s.team]||{c:'#888',bg:'#161624',e:''};
     const rate=s.chats>0?(s.closes/s.chats*100).toFixed(1):'0';
-    return `<div class="sp-lookup-card" style="border-left:4px solid ${tc.c}" onclick="openSPMonthly('${s.sp}','${s.team}')">
+    return `<div class="sp-lookup-card" style="border-left:4px solid ${tc.c}" onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
       <div class="sp-lookup-head">
         <div class="sp-lookup-av" style="background:${tc.bg};color:${tc.c}">${s.sp[0].toUpperCase()}</div>
         <div>
@@ -1531,36 +1613,28 @@ function renderSpLookup(){
 }
 
 function openSPMonthly(sp,team){
-  // reuse existing SP modal but with monthly data
-  const dayKeys=[];
-  const days=getDaysInMonth(mYear,mMonth);
-  for(let d=1;d<=days;d++) dayKeys.push(dk(new Date(mYear,mMonth,d)));
-  const entries=dayKeys.flatMap(k=>allData[k]||[]);
-  const acts=dayKeys.flatMap(k=>allActs[k]||[]);
-  const spList=aggSP(entries,acts);
-  const s=spList.find(x=>x.sp===sp&&x.team===team)||{sp,team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
-  const tc=TM[team]||{c:'#888',bg:'#111',e:''};
-  document.getElementById('mAv').textContent=sp[0].toUpperCase();
-  document.getElementById('mAv').style.background=tc.bg;
-  document.getElementById('mAv').style.color=tc.c;
-  document.getElementById('mName').textContent=sp;
-  document.getElementById('mTeam').textContent='Team '+team+' '+tc.e+' · '+fMonthName(mYear,mMonth);
-  document.getElementById('mKPIs').innerHTML=`
-    <div class="mk"><div class="mkl">Revenue This Month</div><div class="mkv go" style="font-size:18px">${fFull(s.revenue)}</div></div>
-    <div class="mk"><div class="mkl">Total Chats</div><div class="mkv">${s.chats}</div></div>
-    <div class="mk"><div class="mkl">Total Calls</div><div class="mkv bl">${s.calls}</div></div>
-    <div class="mk"><div class="mkl">Follow Ups</div><div class="mkv or">${s.fups}</div></div>
-    <div class="mk"><div class="mkl">Total Closes</div><div class="mkv gr">${s.closes}</div></div>
-    <div class="mk"><div class="mkl">Close Rate</div><div class="mkv">${s.chats>0?(s.closes/s.chats*100).toFixed(1):0}%</div></div>`;
-  const prods=Object.entries(s.prods||{}).sort((a,b)=>b[1].r-a[1].r);
-  document.getElementById('mProds').innerHTML=prods.length===0
-    ?'<div style="color:#333350;font-size:11px;padding:6px 0;">No closes this month.</div>'
-    :prods.map(([prod,d])=>`
-      <div class="mpr">
-        <div><div class="mpn">${prod}</div><div class="mpd">${d.u} unit × Rp ${fRp(d.u?Math.round(d.r/d.u):0)}</div></div>
-        <div class="mpr-r">${fFull(d.r)}</div>
-      </div>`).join('');
-  document.getElementById('spMo').style.display='flex';
+  // Baris ranking Monthly Recap sudah DIGABUNG per nama oleh mergeSPByName
+  // (satu orang yang pindah tim punya record di dua tim). Modal ini dulu
+  // menghitung ulang dengan cocokan sp|team persis, jadi hasil gabungannya
+  // hilang dan angkanya beda dengan baris yang barusan diklik. Sekarang modal
+  // membaca snapshot yang SAMA dengan barisnya.
+  const key=sp+'|'+team;
+  let s=(window._monthSpTotals||{})[key];
+  if(!s){
+    // cadangan (mis. modal dibuka sebelum tabel sempat dirender)
+    const days=getDaysInMonth(mYear,mMonth),dayKeys=[];
+    for(let d=1;d<=days;d++) dayKeys.push(dk(new Date(mYear,mMonth,d)));
+    s=aggSPByRoster(dayKeys.flatMap(k=>allData[k]||[]),
+                    dayKeys.flatMap(k=>allActs[k]||[]))[key];
+  }
+  s=s||{chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
+  _spModalPaint(sp,team,{
+    period:fMonthName(mYear,mMonth),
+    revenue:s.revenue||0,chats:s.chats||0,calls:s.calls||0,fups:s.fups||0,
+    closes:s.closes||0,prods:s.prods,
+    sub:{rev:'',chat:'',call:'',fup:'',close:'',rate:'close ÷ chat'},
+    empty:'Belum ada closing bulan ini.'
+  },function(){openSPMonthly(sp,team);});
 }
 
 // ══ AI DAILY BRIEFING ══

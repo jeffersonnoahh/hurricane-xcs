@@ -13,10 +13,20 @@
 
   var NOTES = {};          /* "sp|team" → teks  ·  juga cocok per-nama saja */
   var DB = 'https://hurricane-scorecard-default-rtdb.firebaseio.com';
-  var NS = (typeof DATA_NS !== 'undefined' && DATA_NS) ? DATA_NS + '/' : '';
+
+  /* DATA_NS dideklarasikan dengan `const` DI DALAM window.onload di app.js,
+     jadi bukan variabel global: dibaca saat file ini dimuat hasilnya selalu
+     'undefined' dan dashboard Maria/Calvin ikut membaca catatan milik
+     Hurricane. Karena itu namespace dicari ULANG tiap kali load(), setelah
+     app.js sempat memasang window.DATA_NS. */
+  function ns() {
+    var v = (typeof window.DATA_NS !== 'undefined') ? window.DATA_NS
+          : (typeof DATA_NS !== 'undefined' ? DATA_NS : '');
+    return v ? v + '/' : '';
+  }
 
   function load() {
-    fetch(DB + '/' + NS + 'config/spNotes.json')
+    fetch(DB + '/' + ns() + 'config/spNotes.json')
       .then(function (r) { return r.json(); })
       .then(function (d) { NOTES = d || {}; apply(); })
       .catch(function () { });
