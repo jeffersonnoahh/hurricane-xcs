@@ -793,7 +793,7 @@ function aggSP(entries,acts){
     if(!s[k])s[k]={sp:a.sp,team:a.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
     s[k].calls+=a.calls;s[k].fups+=a.fups;s[k].chats+=a.chats;
   });
-  return Object.values(s).map(d=>({...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue||b.chats-a.chats);
+  return Object.values(s).filter(d=>!_isHiddenSP(d.sp,d.team,d.revenue)).map(d=>({...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue||b.chats-a.chats);
 }
 function aggProds(entries){
   const p={};Object.keys(P).forEach(k=>p[k]={count:0,revenue:0});
@@ -873,6 +873,19 @@ function aggSPByRoster(entries,acts){
 function _js(s){
   return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")
     .replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+// ══ SALES YANG SUDAH TIDAK JUALAN ══
+// Sudah keluar dari roster DAN tidak ada omzet di periode itu → tidak tampil di
+// ranking / daftar sales. Datanya TIDAK dihapus: total tim tetap dihitung dari
+// record, dan bulan saat mereka masih ada omzet tetap tampil (riwayat penjualan
+// asli jangan sampai hilang dari ranking). Masuk roster lagi = tampil lagi.
+const _HIDDEN_SP=['Ivan','gina','elvia'];
+function _isHiddenSP(sp,team,revenue){
+  if((revenue||0)>0)return false;
+  const n=String(sp==null?'':sp).trim().toLowerCase();
+  if(!_HIDDEN_SP.some(x=>x.toLowerCase()===n))return false;
+  return !rosterKey(sp,team);
 }
 
 // Aktivitas (chat/call/follow-up) sebulan penuh per sales, untuk rata-rata harian.
@@ -1516,6 +1529,12 @@ function renderMonthly(){
       });
     });
   })();
+  // sales yang sudah tidak jualan tidak masuk ranking (lihat _isHiddenSP);
+  // teamTotals di atas tidak disentuh, jadi total tim tetap utuh
+  Object.keys(spTotals).forEach(k=>{
+    const v=spTotals[k];
+    if(_isHiddenSP(v.sp,v.team,v.revenue))delete spTotals[k];
+  });
   window._monthSpTotals=spTotals;
   window._monthLabel=document.getElementById('monthLabel')?.textContent||'';
   renderSpLookup();
