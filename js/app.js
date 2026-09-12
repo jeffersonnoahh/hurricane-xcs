@@ -880,7 +880,14 @@ function _js(s){
 // ranking / daftar sales. Datanya TIDAK dihapus: total tim tetap dihitung dari
 // record, dan bulan saat mereka masih ada omzet tetap tampil (riwayat penjualan
 // asli jangan sampai hilang dari ranking). Masuk roster lagi = tampil lagi.
-const _HIDDEN_SP=['Ivan','gina','elvia'];
+//
+// wati & rizal resign September 2026. Keduanya TIDAK perlu tanggal khusus:
+// aturan "ada omzet = tetap tampil" sudah menahan mereka di bulan-bulan yang
+// ada penjualannya (wati Jul/Agu/Sep, rizal Sep) dan melepas mereka begitu
+// masuk Oktober karena omzetnya 0. Nama di sini juga jadi pengaman kalau ada
+// HP yang rosternya masih basi lalu mengirim laporan aktivitas atas nama
+// mereka di bulan berikutnya.
+const _HIDDEN_SP=['Ivan','gina','elvia','wati','rizal'];
 function _isHiddenSP(sp,team,revenue){
   if((revenue||0)>0)return false;
   const n=String(sp==null?'':sp).trim().toLowerCase();
