@@ -1327,7 +1327,18 @@ function _spMoRepaint(){
 /* Dashboard → angka HARI yang sedang dilihat. */
 function openSPModal(sp,team){
   const vd=od(vOff);
-  const s=aggSPByRoster(gE(),gA())[sp+'|'+team]
+  // Baris tabel SP & leaderboard Dashboard dibangun oleh aggSP yang kuncinya
+  // MENTAH (sp|team sesuai record). Modal ini sempat mencari di aggSPByRoster
+  // yang kuncinya roster SEKARANG dan membuang record orang non-roster, jadi
+  // kuncinya tidak ketemu: barisnya ada angkanya, modalnya Rp 0 (mis. wati
+  // 5 Sep: baris Rp 2.750.000, modal Rp 0). Untuk orang yang pindah tim, dua
+  // barisnya malah tertukar (Agatha 13 Agu: baris Agung Rp 1.750.000 -> modal
+  // Rp 0, baris REI Rp 0 -> modal Rp 1.750.000).
+  // Tampilan HARI kini memakai kunci mentah dari ujung ke ujung, jadi baris
+  // dan modal tidak mungkin berbeda. Penyelesaian roster tetap dipakai di
+  // tampilan BULAN (kartu Salespeople & ranking Monthly Recap) yang memang
+  // ber-kunci roster.
+  const s=aggSP(gE(),gA()).find(x=>x.sp===sp&&x.team===team)
         ||{chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
   _spModalPaint(sp,team,{
     period:vd.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
@@ -1673,8 +1684,12 @@ function openSPMonthly(sp,team){
     // cadangan (mis. modal dibuka sebelum tabel sempat dirender)
     const days=getDaysInMonth(mYear,mMonth),dayKeys=[];
     for(let d=1;d<=days;d++) dayKeys.push(dk(new Date(mYear,mMonth,d)));
-    s=aggSPByRoster(dayKeys.flatMap(k=>allData[k]||[]),
-                    dayKeys.flatMap(k=>allActs[k]||[]))[key];
+    // roster dulu (supaya orang yang pindah tim tetap tergabung), lalu kunci
+    // mentah (supaya baris orang non-roster seperti wati tidak jadi Rp 0)
+    const _ent=dayKeys.flatMap(k=>allData[k]||[]);
+    const _act=dayKeys.flatMap(k=>allActs[k]||[]);
+    s=aggSPByRoster(_ent,_act)[key]
+      ||aggSP(_ent,_act).find(x=>x.sp===sp&&x.team===team);
   }
   s=s||{chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
   _spModalPaint(sp,team,{
