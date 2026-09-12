@@ -1443,8 +1443,6 @@ function renderMonthly(){
       const sk=e.sp+'|'+e.team;
       if(!spTotals[sk])spTotals[sk]={sp:e.sp,team:e.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
       spTotals[sk].chats+=e.chats;spTotals[sk].closes+=e.units;spTotals[sk].revenue+=e.revenue;
-      // produk per sales — dulu tidak diisi di sini, jadi modal Monthly Recap selalu 'Belum ada closing'
-      if(e.prod){const pp=spTotals[sk].prods[e.prod]||(spTotals[sk].prods[e.prod]={u:0,r:0});pp.u+=e.units||0;pp.r+=e.revenue||0;}
       if(e.prod){if(!prodTotals[e.prod])prodTotals[e.prod]={count:0,revenue:0};prodTotals[e.prod].count+=e.units;prodTotals[e.prod].revenue+=e.revenue;
         // rincian produk PER SALES — dipakai daftar "Products Sold" di modal
         // Monthly Recap. Sebelumnya hanya prodTotals (total halaman) yang diisi,
