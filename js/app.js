@@ -446,10 +446,23 @@ function renderHist(){
 }
 
 // ══ DROPDOWNS ══
+// Config dibaca live (.on), jadi daftar nama bisa dibangun ulang KAPAN SAJA —
+// termasuk saat seseorang sedang mengisi form input. Kalau pilihan yang sedang
+// aktif tidak dikembalikan, select melompat ke opsi pertama dan penjualannya
+// tercatat atas nama orang lain (biasanya team lead) tanpa tanda apa pun di
+// layar. Dua fungsi lain di callback yang sama (refreshProductDropdown,
+// populateMsSPSelect) memang sudah menjaga pilihannya; dua ini belum.
+function _restoreSel(sel,prev){
+  if(!sel||!prev)return;
+  for(let i=0;i<sel.options.length;i++){
+    if(sel.options[i].value===prev){sel.value=prev;return;}
+  }
+}
 function updateSPList(){
   const teamSel=document.getElementById('inTeam');
   const spSel=document.getElementById('inSP');
   if(!teamSel||!spSel)return;
+  const prev=spSel.value;
   const t=teamSel.value;
   // If team doesn't exist in TM, default to first team
   if(!TM[t]||!TM[t].m||TM[t].m.length===0){
@@ -461,14 +474,17 @@ function updateSPList(){
     } else {
       spSel.innerHTML='<option value="">No salespeople — add in Admin</option>';
     }
+    _restoreSel(spSel,prev);
     return;
   }
   spSel.innerHTML=TM[t].m.map(x=>`<option>${x}</option>`).join('');
+  _restoreSel(spSel,prev);
 }
 function updateActSP(){
   const teamSel=document.getElementById('aTeam');
   const spSel=document.getElementById('aSP');
   if(!teamSel||!spSel)return;
+  const prev=spSel.value;
   const t=teamSel.value;
   const actM=(m)=>m.filter(x=>typeof _isActExcluded!=='function'||!_isActExcluded(x));
   if(!TM[t]||!TM[t].m||TM[t].m.length===0){
@@ -479,9 +495,11 @@ function updateActSP(){
     } else {
       spSel.innerHTML='<option value="">No salespeople — add in Admin</option>';
     }
+    _restoreSel(spSel,prev);
     return;
   }
   spSel.innerHTML=actM(TM[t].m).map(x=>`<option>${x}</option>`).join('');
+  _restoreSel(spSel,prev);
 }
 
 function getActDateKey(){
@@ -3445,13 +3463,20 @@ function loadGlobalConfig(){
       window._cfgTeamsLoaded=true; // roster writes are blocked until the shared config has loaded
       if(c.products&&typeof c.products==='object')Object.assign(P,c.products);
 
-      // Safe team merge — only accept valid team structures
-      if(c.teams&&typeof c.teams==='object'){
-        Object.entries(c.teams).forEach(([teamName,teamData])=>{
-          if(teamData&&typeof teamData==='object'&&Array.isArray(teamData.m)&&teamData.m.length>0){
-            // Valid structure with members
+      // Safe team merge — terima team yang ADA di config, termasuk yang
+      // anggotanya kosong. Dulu team beranggota 0 ditolak, lalu blok "restore"
+      // di bawah mengisinya dari TM_DEFAULT yang di-hardcode — jadi menghapus
+      // anggota TERAKHIR sebuah team menghidupkan kembali nama-nama lama
+      // (Rico, wati) di semua tab, sekaligus membatalkan _HIDDEN_SP karena
+      // orang yang kembali masuk roster dianggap masih aktif.
+      const _cfgTeams=(c.teams&&typeof c.teams==='object')?c.teams:null;
+      if(_cfgTeams){
+        Object.entries(_cfgTeams).forEach(([teamName,teamData])=>{
+          if(teamData&&typeof teamData==='object'){
             TM[teamName]={
-              m:teamData.m.filter(x=>typeof x==='string'&&x.trim().length>0),
+              m:Array.isArray(teamData.m)
+                ?teamData.m.filter(x=>typeof x==='string'&&x.trim().length>0)
+                :[],
               c:teamData.c||'#888',
               bg:teamData.bg||'#161624',
               e:teamData.e||''
@@ -3460,9 +3485,12 @@ function loadGlobalConfig(){
         });
       }
 
-      // Restore any team that got wiped to default
+      // Pengaman insiden 2026-07-11 (config/teams pernah terhapus total):
+      // pulihkan default HANYA untuk team yang tidak ada sama sekali di config,
+      // bukan untuk team yang sengaja dikosongkan.
       Object.keys(TM_DEFAULT).forEach(k=>{
-        if(!TM[k]||!TM[k].m||TM[k].m.length===0){
+        const onServer=_cfgTeams&&Object.prototype.hasOwnProperty.call(_cfgTeams,k);
+        if(!onServer&&(!TM[k]||!TM[k].m||TM[k].m.length===0)){
           TM[k]=JSON.parse(JSON.stringify(TM_DEFAULT[k]));
         }
       });
