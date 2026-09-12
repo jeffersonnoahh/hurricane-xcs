@@ -3163,7 +3163,10 @@ async function renameMember(teamName,oldName){
   // 3) persist — await every write and surface failures honestly (no false "success")
   if(window.db){
     showToast('Saving rename…','info');
-    const writes=[Promise.resolve(saveTeamsToFirebase())];
+    const writes=[_teamsWrite(function(t){
+      if(t[teamName]&&Array.isArray(t[teamName].m))
+        t[teamName].m=t[teamName].m.map(m=>m===oldName?newName:m);
+    })];
     scoreDates.forEach(d=>writes.push(_renameInNode(window.db.ref('scores/'+d),oldName,newName,teamScope)));
     actDates.forEach(d=>writes.push(_renameInNode(window.db.ref('activities/'+d),oldName,newName,teamScope)));
     try{
@@ -3186,7 +3189,10 @@ function addMember(teamName){
   if(!name)return;
   if(TM[teamName].m.includes(name)){showToast('Member already in this team','error');return;}
   TM[teamName].m.push(name);
-  saveTeamsToFirebase();
+  _teamsWrite(function(t){
+    const T=_teamMembers(t,teamName);
+    if(!T.m.some(x=>String(x).trim().toLowerCase()===name.toLowerCase()))T.m.push(name);
+  });
   renderAdminTeams();
   refreshTeamDropdowns();
   input.value='';
@@ -3197,16 +3203,46 @@ async function removeMember(teamName,memberName){
   const ok=await showConfirm('Remove Member',`Remove ${memberName} from team ${teamName}?`,'Remove',true);
   if(!ok)return;
   TM[teamName].m=TM[teamName].m.filter(m=>m!==memberName);
-  saveTeamsToFirebase();
+  _teamsWrite(function(t){
+    if(t[teamName]&&Array.isArray(t[teamName].m))
+      t[teamName].m=t[teamName].m.filter(m=>m!==memberName);
+  });
   renderAdminTeams();
   refreshTeamDropdowns();
 }
 
+// Roster ditulis lewat TRANSACTION yang menerapkan HANYA perubahannya ke nilai
+// yang ada di server. Dulu memakai ref('config/teams').set(TM) — seluruh roster
+// ditimpa salinan milik tab itu. Tab Admin yang sudah lama terbuka punya TM
+// basi (config dibaca sekali saja saat load), jadi begitu dia menambah atau
+// menghapus SATU orang, semua orang yang ditambahkan setelah tab itu dimuat
+// ikut TERHAPUS.
+// Kejadian nyata 2026-09-11: Zaki & Yora ditambahkan 15:07, hilang 16:07
+// terbawa penulisan yang menambahkan 'vita' — persis mekanisme yang sama yang
+// dulu menghapus Rico Sby.
+function _teamsWrite(apply){
+  if(!window.db){
+    apply(TM);
+    try{localStorage.setItem('hxcs_teams',JSON.stringify(TM));}catch(e){}
+    return Promise.resolve();
+  }
+  return window.db.ref('config/teams').transaction(function(cur){
+    // cur==null hanya kalau node-nya belum ada sama sekali
+    const base=(cur&&typeof cur==='object')?cur:JSON.parse(JSON.stringify(TM));
+    apply(base);
+    return base;
+  });
+}
+function _teamMembers(t,teamName){
+  const T=t[teamName]||(t[teamName]={m:[],c:'#888',bg:'#161624',e:''});
+  if(!Array.isArray(T.m))T.m=[];
+  return T;
+}
+
+// Dipakai hanya di jalur tanpa Firebase; ke Firebase selalu lewat _teamsWrite.
 function saveTeamsToFirebase(){
-  if(window.db){
-    return window.db.ref('config/teams').set(TM);
-  } else {
-    localStorage.setItem('hxcs_teams',JSON.stringify(TM));
+  if(!window.db){
+    try{localStorage.setItem('hxcs_teams',JSON.stringify(TM));}catch(e){}
   }
 }
 
@@ -3388,7 +3424,11 @@ function changePassword(){
 // Load admin config on page load (for everyone, applies settings)
 function loadGlobalConfig(){
   if(window.db){
-    window.db.ref('config').once('value',snap=>{
+    // .on, bukan .once: roster harus tetap segar di SEMUA tab. Dengan .once,
+    // tab yang dibuka pagi masih memakai roster pagi — orang yang baru
+    // ditambahkan tidak muncul di dropdown sampai halaman di-reload, dan TM
+    // basi itulah bahan baku bug penimpaan roster di atas.
+    window.db.ref('config').on('value',snap=>{
       const c=snap.val()||{};
       window._cfgTeamsLoaded=true; // roster writes are blocked until the shared config has loaded
       if(c.products&&typeof c.products==='object')Object.assign(P,c.products);
@@ -3423,6 +3463,10 @@ function loadGlobalConfig(){
       refreshProductDropdown();
       updateSPList();
       updateActSP();
+      // panel Admin ikut digambar ulang kalau sedang dibuka, supaya daftarnya
+      // tidak menampilkan roster yang sudah berubah di perangkat lain
+      const _pa=document.getElementById('page-admin');
+      if(typeof renderAdminTeams==='function'&&_pa&&_pa.classList.contains('active'))renderAdminTeams();
       if(typeof populateMsSPSelect==='function')populateMsSPSelect();
       renderAll();
     });
