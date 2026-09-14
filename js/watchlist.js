@@ -168,9 +168,14 @@
       var flat = r.month === 0;
       var color = up ? '#30d158' : (flat ? '#6e6e73' : '#8e8e93');
       var right, sub;
+      var leader = (typeof _isLeader === 'function') && _isLeader(r.sp);
       if (up) {
         right = '<div class="wl-chg up">+' + jt(r.today) + '</div>';
         sub = '<div class="wl-sub">hari ini</div>';
+      } else if (leader) {
+        /* team lead yang tidak lagi berjualan: jangan ditandai merah */
+        right = '<div class="wl-chg idle">LEADER</div>';
+        sub = '<div class="wl-sub">tidak wajib jualan</div>';
       } else if (r.everSold && r.daysIdle !== null) {
         var warn = r.daysIdle >= 3;
         right = '<div class="wl-chg ' + (warn ? 'bad' : 'idle') + '">BELUM ORDER</div>';

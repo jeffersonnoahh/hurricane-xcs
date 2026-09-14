@@ -14,11 +14,26 @@ let TM={
   'Valen':   {m:['Melda','Maryam','Amel','Shopee live','Shopee','ammar','caroline'],c:'#f5c518',bg:'#1a1400',e:''},
   'Agung':   {m:['Agung','Koko','Luthfi','Ayu'],c:'#2eccc8',bg:'#0d2020',e:''},
   'Ivan':    {m:['Ivan','Hendri','Eli'],c:'#ff6b1a',bg:'#2a1200',e:''},
-  'Noah':    {m:['Stanley','aurel'],c:'#2ecc71',bg:'#0d2015',e:''},
+  'Stanley': {m:['Stanley','Yora'],c:'#2ecc71',bg:'#0d2015',e:''},
   'REI':     {m:['Rei','Alif'],c:'#ff4d6d',bg:'#2a0d18',e:''},
 };
 // Keep a backup of default teams for recovery
 const TM_DEFAULT=JSON.parse(JSON.stringify(TM));
+
+// Urutan tampil team (Salespeople, ranking, pilihan Team di form input).
+// Team yang tidak tercantum ditaruh paling akhir.
+const _TEAM_ORDER=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Stanley','REI'];
+
+// ══ TEAM LEAD YANG TIDAK LAGI BERJUALAN ══
+// Tetap di roster — kartu Salespeople, Watchlist, Monthly Recap dan total tim
+// tetap menampilkan omzetnya — tetapi tidak wajib lapor apa pun: tidak muncul
+// di dropdown input penjualan maupun laporan chat/call/follow-up, tidak masuk
+// daftar "belum laporan", dan tidak dinilai di halaman Warning.
+const _LEADERS=['Agung'];
+function _isLeader(sp){
+  const n=String(sp==null?'':sp).trim().toLowerCase();
+  return _LEADERS.some(x=>x.toLowerCase()===n);
+}
 let TC=160,TR=70000000;
 // Load saved targets on startup
 try{
@@ -452,6 +467,26 @@ function renderHist(){
 // tercatat atas nama orang lain (biasanya team lead) tanpa tanda apa pun di
 // layar. Dua fungsi lain di callback yang sama (refreshProductDropdown,
 // populateMsSPSelect) memang sudah menjaga pilihannya; dua ini belum.
+// Pilihan "Team" di form input penjualan & aktivitas dulu di-hardcode di
+// index.html, jadi menambah atau me-rename team (REI; Noah -> Stanley) butuh
+// deploy kode dulu — sebelum itu anggotanya tidak bisa memilih timnya sendiri.
+// Sekarang dibangun dari roster, urut _TEAM_ORDER, pilihan aktif dipertahankan.
+function refreshTeamSelects(){
+  const names=Object.keys(TM).sort((a,b)=>{
+    const ai=_TEAM_ORDER.indexOf(a),bi=_TEAM_ORDER.indexOf(b);
+    return ((ai===-1?99:ai)-(bi===-1?99:bi))||a.localeCompare(b);
+  });
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  ['inTeam','aTeam'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    const cur=[...sel.options].map(o=>o.value);
+    if(cur.length===names.length&&cur.every((v,i)=>v===names[i]))return;
+    const prev=sel.value;
+    sel.innerHTML=names.map(n=>'<option>'+esc(n)+'</option>').join('');
+    _restoreSel(sel,prev);
+  });
+}
 function _restoreSel(sel,prev){
   if(!sel||!prev)return;
   for(let i=0;i<sel.options.length;i++){
@@ -463,6 +498,8 @@ function updateSPList(){
   const spSel=document.getElementById('inSP');
   if(!teamSel||!spSel)return;
   const prev=spSel.value;
+  // team lead yang tidak lagi berjualan tidak perlu input penjualan
+  const saleM=(m)=>m.filter(x=>!_isLeader(x));
   const t=teamSel.value;
   // If team doesn't exist in TM, default to first team
   if(!TM[t]||!TM[t].m||TM[t].m.length===0){
@@ -470,14 +507,14 @@ function updateSPList(){
     const firstValid=Object.keys(TM).find(k=>TM[k]&&TM[k].m&&TM[k].m.length>0);
     if(firstValid){
       teamSel.value=firstValid;
-      spSel.innerHTML=TM[firstValid].m.map(x=>`<option>${x}</option>`).join('');
+      spSel.innerHTML=saleM(TM[firstValid].m).map(x=>`<option>${x}</option>`).join('');
     } else {
       spSel.innerHTML='<option value="">No salespeople — add in Admin</option>';
     }
     _restoreSel(spSel,prev);
     return;
   }
-  spSel.innerHTML=TM[t].m.map(x=>`<option>${x}</option>`).join('');
+  spSel.innerHTML=saleM(TM[t].m).map(x=>`<option>${x}</option>`).join('');
   _restoreSel(spSel,prev);
 }
 function updateActSP(){
@@ -1103,7 +1140,7 @@ function renderActLog(acts){
 
   const sortedDates=Object.keys(byDate).sort().reverse();
   // Define team order matching navigation
-  const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
+  const teamOrder=_TEAM_ORDER;
 
   log.innerHTML=sortedDates.map(dateKey=>{
     const dateD=new Date(dateKey+'T00:00:00');
@@ -1182,7 +1219,7 @@ function renderSPGrid(entries,acts){
   if(note)note.textContent='Rata-rata harian dihitung 1–'+moDays+' '+
     _vd.toLocaleDateString('id-ID',{month:'long'})+' ('+moDays+' hari) · omset = total bulan berjalan';
 
-  const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
+  const teamOrder=_TEAM_ORDER;
   const teams=Object.keys(TM).sort((a,b)=>{
     const ai=teamOrder.indexOf(a);const bi=teamOrder.indexOf(b);
     return (ai===-1?99:ai)-(bi===-1?99:bi);
@@ -2254,7 +2291,7 @@ const _isWarnExcluded=(sp)=>_WARN_EXCLUDE.some(x=>x.toLowerCase()===String(sp||'
 // Channels that do NOT need to log daily calls/follow-ups — hidden from the
 // "belum laporan" tracker and the activity form (sales/omset unaffected)
 const _ACT_EXCLUDE=['Live tiktok','Shopee live'];
-const _isActExcluded=(sp)=>_ACT_EXCLUDE.some(x=>x.toLowerCase()===String(sp||'').toLowerCase());
+const _isActExcluded=(sp)=>_ACT_EXCLUDE.some(x=>x.toLowerCase()===String(sp||'').toLowerCase())||_isLeader(sp);   // team lead juga tidak lapor chat/call/follow-up
 
 function renderWarning(){
   // Update threshold display labels
@@ -2279,7 +2316,7 @@ function renderWarning(){
   const _wNorm=s=>String(s||'').trim().toLowerCase();
   Object.entries(TM).forEach(([team,tc])=>{
     (tc.m||[]).forEach(sp=>{
-      if(_isWarnExcluded(sp))return;
+      if(_isWarnExcluded(sp)||_isLeader(sp))return;
       const k=sp+'|'+team;
       spMap[k]={sp,team,revenue:0,chats:0,calls:0,fups:0,lastDate:null,lastDateLbl:'Never logged'};
       _wKey[_wNorm(sp)+'|'+_wNorm(team)]=k;
@@ -2379,7 +2416,7 @@ function renderWarning(){
     </div>`;
   };
   // Team ordering helper
-  const teamOrder=['Christ A','Christ B','Livia','Valen','Agung','Ivan','Noah'];
+  const teamOrder=_TEAM_ORDER;
   const sortByTeam=(a,b)=>{
     const ai=teamOrder.indexOf(a.team);const bi=teamOrder.indexOf(b.team);
     return (ai===-1?99:ai)-(bi===-1?99:bi);
@@ -3484,8 +3521,16 @@ function loadGlobalConfig(){
       // anggota TERAKHIR sebuah team menghidupkan kembali nama-nama lama
       // (Rico, wati) di semua tab, sekaligus membatalkan _HIDDEN_SP karena
       // orang yang kembali masuk roster dianggap masih aktif.
+      // Config adalah SUMBER KEBENARAN roster, termasuk untuk PENGHAPUSAN.
+      // Listener .on dulu hanya menambah/mengganti team dan tidak pernah
+      // membuang: team yang dihapus atau di-rename (mis. Noah -> Stanley)
+      // tertinggal di semua tab yang terbuka, dan anggotanya tampil dobel
+      // sampai halaman di-reload.
       const _cfgTeams=(c.teams&&typeof c.teams==='object')?c.teams:null;
-      if(_cfgTeams){
+      if(_cfgTeams&&Object.keys(_cfgTeams).length){
+        Object.keys(TM).forEach(k=>{
+          if(!Object.prototype.hasOwnProperty.call(_cfgTeams,k))delete TM[k];
+        });
         Object.entries(_cfgTeams).forEach(([teamName,teamData])=>{
           if(teamData&&typeof teamData==='object'){
             TM[teamName]={
@@ -3498,17 +3543,15 @@ function loadGlobalConfig(){
             };
           }
         });
+      }else{
+        // Pengaman insiden 2026-07-11: config/teams terhapus TOTAL -> kembali
+        // ke roster default supaya dashboard tetap bisa dipakai.
+        Object.keys(TM_DEFAULT).forEach(k=>{
+          if(!TM[k]||!TM[k].m||TM[k].m.length===0){
+            TM[k]=JSON.parse(JSON.stringify(TM_DEFAULT[k]));
+          }
+        });
       }
-
-      // Pengaman insiden 2026-07-11 (config/teams pernah terhapus total):
-      // pulihkan default HANYA untuk team yang tidak ada sama sekali di config,
-      // bukan untuk team yang sengaja dikosongkan.
-      Object.keys(TM_DEFAULT).forEach(k=>{
-        const onServer=_cfgTeams&&Object.prototype.hasOwnProperty.call(_cfgTeams,k);
-        if(!onServer&&(!TM[k]||!TM[k].m||TM[k].m.length===0)){
-          TM[k]=JSON.parse(JSON.stringify(TM_DEFAULT[k]));
-        }
-      });
 
       // Apply targets to global vars
       if(c.chatTarget){TC=c.chatTarget;window._cfgChatTarget=c.chatTarget;}
@@ -3516,6 +3559,7 @@ function loadGlobalConfig(){
       if(c.chatTarget||c.revTarget){updateGoalCardText(TC,TR);}
 
       refreshProductDropdown();
+      refreshTeamSelects();
       updateSPList();
       updateActSP();
       // panel Admin ikut digambar ulang kalau sedang dibuka, supaya daftarnya
