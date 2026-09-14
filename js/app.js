@@ -477,14 +477,30 @@ function refreshTeamSelects(){
     return ((ai===-1?99:ai)-(bi===-1?99:bi))||a.localeCompare(b);
   });
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  ['inTeam','aTeam'].forEach(id=>{
+  // pasangan: select team -> select nama sales milik team itu
+  [['inTeam','inSP'],['aTeam','aSP'],['adminAddTeam','adminAddSP']].forEach(([id,spId])=>{
     const sel=document.getElementById(id);
     if(!sel)return;
     const cur=[...sel.options].map(o=>o.value);
     if(cur.length===names.length&&cur.every((v,i)=>v===names[i]))return;
     const prev=sel.value;
     sel.innerHTML=names.map(n=>'<option>'+esc(n)+'</option>').join('');
-    _restoreSel(sel,prev);
+    if(!prev||names.includes(prev)){_restoreSel(sel,prev);return;}
+    // Team yang sedang dipilih hilang dari roster (di-rename atau dihapus).
+    // Jangan diam-diam pindah ke opsi pertama: form yang sedang diisi akan
+    // tersimpan atas nama orang lain (Noah -> Christ A / Arfin). Cari team yang
+    // SEKARANG berisi nama sales yang sedang dipilih; kalau tidak ada, paksa
+    // pilih ulang — addEntry/addActivity menolak team kosong.
+    const spEl=document.getElementById(spId);
+    const who=spEl?spEl.value:'';
+    const home=who?names.find(n=>((TM[n]||{}).m||[]).includes(who)):null;
+    if(home){sel.value=home;}
+    else{
+      sel.insertAdjacentHTML('afterbegin','<option value="">— pilih team —</option>');
+      sel.value='';
+      if(typeof showToast==='function')showToast('Team "'+prev+'" sudah tidak ada — pilih team lagi','error');
+    }
+    if(id==='adminAddTeam'&&typeof adminAddUpdateSP==='function')adminAddUpdateSP();
   });
 }
 function _restoreSel(sel,prev){
@@ -501,6 +517,7 @@ function updateSPList(){
   // team lead yang tidak lagi berjualan tidak perlu input penjualan
   const saleM=(m)=>m.filter(x=>!_isLeader(x));
   const t=teamSel.value;
+  if(!t){spSel.innerHTML='<option value="">— pilih team dulu —</option>';return;}
   // If team doesn't exist in TM, default to first team
   if(!TM[t]||!TM[t].m||TM[t].m.length===0){
     // Find first team that has members
@@ -523,6 +540,7 @@ function updateActSP(){
   if(!teamSel||!spSel)return;
   const prev=spSel.value;
   const t=teamSel.value;
+  if(!t){spSel.innerHTML='<option value="">— pilih team dulu —</option>';return;}
   const actM=(m)=>m.filter(x=>typeof _isActExcluded!=='function'||!_isActExcluded(x));
   if(!TM[t]||!TM[t].m||TM[t].m.length===0){
     const firstValid=Object.keys(TM).find(k=>TM[k]&&TM[k].m&&TM[k].m.length>0);
@@ -605,6 +623,7 @@ function addEntry(){
   try{
     const team=document.getElementById('inTeam').value;
     const sp=document.getElementById('inSP').value;
+    if(!team||!sp){showToast('Pilih team & nama sales dulu!','error');return;}
     const prod=document.getElementById('inProd').value;
     const units=parseInt(document.getElementById('inUnits').value)||1;
     const notes=document.getElementById('inNotes')?document.getElementById('inNotes').value.trim():'';
@@ -1096,7 +1115,7 @@ function renderAll(){
         </div>
         <div>
           <div class="lbs">${fFull(s.revenue)}</div>
-          <div class="lbr2">${s.rate.toFixed(1)}% rate</div>
+          <div class="lbr2">${(_isLeader(s.sp)&&!s.chats)?'— rate':s.rate.toFixed(1)+'% rate'}</div>
         </div>
       </div>`).join('');
 
@@ -1629,7 +1648,7 @@ function renderMonthly(){
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.calls}</span></td>
         <td><span class="nb">${s.closes}</span></td>
-        <td><span class="rb ${rc(s.rate)}">${s.rate.toFixed(1)}%</span></td>
+        <td>${(_isLeader(s.sp)&&!s.chats)?'<span class="nb">—</span>':`<span class="rb ${rc(s.rate)}">${s.rate.toFixed(1)}%</span>`}</td>
         <td><span class="rc">${fFull(s.revenue)}</span></td>
       </tr>`;
     }).join('');
@@ -3224,8 +3243,11 @@ async function renameMember(teamName,oldName){
   if(!TM[teamName]||!Array.isArray(TM[teamName].m)||!TM[teamName].m.includes(oldName)){showToast('Member not found','error');return;}
   // Marketplace channels are tied to a hardcoded warning-exclude list; renaming would silently un-exclude them.
   if(typeof _isWarnExcluded==='function'&&_isWarnExcluded(oldName)){showToast('"'+oldName+'" is a marketplace channel and can\'t be renamed here','error');return;}
+  // team lead dikenali lewat daftar nama _LEADERS; rename diam-diam membuatnya dinilai sebagai seller lagi
+  if(typeof _isLeader==='function'&&_isLeader(oldName)){showToast('"'+oldName+'" adalah team lead dan tidak bisa di-rename di sini','error');return;}
   const raw=await showPrompt('Rename Member','Rename "'+oldName+'" in team '+teamName+'. This also updates all of their past sales & activity records.',oldName,'Rename');
   if(raw===null)return;
+  if(!TM[teamName]||!Array.isArray(TM[teamName].m)){showToast('Team "'+teamName+'" sudah tidak ada — muat ulang halaman','error');return;}
   const newName=raw.trim();
   if(!newName){showToast('Name cannot be empty','error');return;}
   if(newName===oldName)return;
@@ -3269,9 +3291,14 @@ function addMember(teamName){
   const input=document.getElementById('newMember_'+teamName.replace(/\s/g,'_'));
   const name=input.value.trim();
   if(!name)return;
+  // roster dibaca live: team ini bisa saja baru dihapus/di-rename di perangkat lain
+  if(!TM[teamName]){showToast('Team "'+teamName+'" sudah tidak ada — muat ulang halaman','error');return;}
   if(TM[teamName].m.includes(name)){showToast('Member already in this team','error');return;}
   TM[teamName].m.push(name);
   _teamsWrite(function(t){
+    // JANGAN membuat team di sini. Tab Admin yang basi bisa menghidupkan kembali
+    // team yang sudah di-rename (mis. Noah) hanya dengan menambah satu anggota.
+    if(!t[teamName]||typeof t[teamName]!=='object')return;
     const T=_teamMembers(t,teamName);
     if(!T.m.some(x=>String(x).trim().toLowerCase()===name.toLowerCase()))T.m.push(name);
   });
@@ -3284,6 +3311,7 @@ async function removeMember(teamName,memberName){
   if(window.db&&!window._cfgTeamsLoaded){showToast('Roster is still loading — try again in a moment','error');return;}
   const ok=await showConfirm('Remove Member',`Remove ${memberName} from team ${teamName}?`,'Remove',true);
   if(!ok)return;
+  if(!TM[teamName]||!Array.isArray(TM[teamName].m)){showToast('Team "'+teamName+'" sudah tidak ada — muat ulang halaman','error');return;}
   TM[teamName].m=TM[teamName].m.filter(m=>m!==memberName);
   _teamsWrite(function(t){
     if(t[teamName]&&Array.isArray(t[teamName].m))
