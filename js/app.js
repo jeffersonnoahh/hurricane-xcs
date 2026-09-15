@@ -961,7 +961,9 @@ function _js(s){
 // masuk Oktober karena omzetnya 0. Nama di sini juga jadi pengaman kalau ada
 // HP yang rosternya masih basi lalu mengirim laporan aktivitas atas nama
 // mereka di bulan berikutnya.
-const _HIDDEN_SP=['Ivan','gina','elvia','wati','rizal'];
+// Koko resign September 2026 (omzet Mei-Sep, tidak ada bulan omzet 0) — sama
+// seperti wati & rizal: bulan yang ada penjualannya tetap tampil, hilang mulai Oktober.
+const _HIDDEN_SP=['Ivan','gina','elvia','wati','rizal','Koko'];
 function _isHiddenSP(sp,team,revenue){
   if((revenue||0)>0)return false;
   const n=String(sp==null?'':sp).trim().toLowerCase();
