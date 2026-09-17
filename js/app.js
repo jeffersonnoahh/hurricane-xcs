@@ -481,10 +481,20 @@ function refreshTeamSelects(){
   [['inTeam','inSP'],['aTeam','aSP'],['adminAddTeam','adminAddSP']].forEach(([id,spId])=>{
     const sel=document.getElementById(id);
     if(!sel)return;
-    const cur=[...sel.options].map(o=>o.value);
+    // placeholder '— pilih team —' tidak dihitung sebagai team
+    const hadPh=sel.value===''&&[...sel.options].some(o=>o.value==='');
+    const cur=[...sel.options].map(o=>o.value).filter(v=>v!=='');
     if(cur.length===names.length&&cur.every((v,i)=>v===names[i]))return;
     const prev=sel.value;
     sel.innerHTML=names.map(n=>'<option>'+esc(n)+'</option>').join('');
+    if(hadPh){
+      // Masih menunggu dipilih ulang. Tanpa ini, event roster berikutnya
+      // diam-diam memilih team pertama dan anggota pertamanya.
+      sel.insertAdjacentHTML('afterbegin','<option value="">— pilih team —</option>');
+      sel.value='';
+      if(id==='adminAddTeam'&&typeof adminAddUpdateSP==='function')adminAddUpdateSP();
+      return;
+    }
     if(!prev||names.includes(prev)){_restoreSel(sel,prev);return;}
     // Team yang sedang dipilih hilang dari roster (di-rename atau dihapus).
     // Jangan diam-diam pindah ke opsi pertama: form yang sedang diisi akan
@@ -1695,9 +1705,14 @@ function renderSpLookup(){
   }
 
   // Filter SPs by name (substring match)
-  const matches=Object.values(spTotals).filter(s=>{
-    return (s.sp||'').toLowerCase().includes(q)||(s.team||'').toLowerCase().includes(q);
-  }).sort((a,b)=>(b.revenue||0)-(a.revenue||0));
+  // Nama team kini sering sama dengan nama orang (Team Willy, Team Stanley,
+  // Team Agung). Kalau nama team ikut dicocokkan, mencari "Willy" memunculkan
+  // seluruh anggota timnya. Cocokkan nama orang dulu; nama team hanya dipakai
+  // kalau tidak ada nama orang yang cocok.
+  const _all=Object.values(spTotals);
+  let matches=_all.filter(s=>(s.sp||'').toLowerCase().includes(q));
+  if(!matches.length)matches=_all.filter(s=>(s.team||'').toLowerCase().includes(q));
+  matches=matches.sort((a,b)=>(b.revenue||0)-(a.revenue||0));
 
   if(matches.length===0){
     resultEl.innerHTML=`<div class="sp-lookup-empty" style="color:#ff3b5c">No salesperson found matching "<strong>${q}</strong>" for ${monthLbl}.</div>`;
@@ -3817,7 +3832,12 @@ function adminAddUpdateSP(){
   const spSel=document.getElementById('adminAddSP');
   if(!teamSel||!spSel)return;
   const team=teamSel.value;
+  const prev=spSel.value;
   spSel.innerHTML=(TM[team]?.m||[]).map(sp=>`<option>${sp}</option>`).join('');
+  // Pilihan dijaga. Tanpa ini, perubahan roster live (mis. team dipecah) yang
+  // memindahkan team di form Quick Add Sale juga mereset nama sales ke anggota
+  // pertama team, dan penjualan tercatat atas nama team lead.
+  if(typeof _restoreSel==='function')_restoreSel(spSel,prev);
 }
 
 function adminAddUpdatePrice(){
