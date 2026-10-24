@@ -3,110 +3,195 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0f17">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Hurricane Commission</title>
 <link rel="icon" type="image/png" href="../img/favicon.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-:root{--bg:#0b0f17;--card:#131a26;--card2:#18212f;--line:#243044;--tx:#e8edf5;--mut:#8b97ab;--acc:#f5c518;--good:#00e676;--bad:#ff3b5c}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);color:var(--tx);font-family:'Space Grotesk',system-ui,sans-serif}
-body{min-height:100vh;padding:0 16px calc(32px + env(safe-area-inset-bottom))}
-.wrap{max-width:640px;margin:0 auto}
-header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px}
-.brand{font-weight:700;font-size:18px}
-.brand small{display:block;font-size:11px;color:var(--mut);font-weight:500;letter-spacing:1.5px;text-transform:uppercase}
-.live{font-size:11px;color:var(--good);display:flex;align-items:center;gap:6px;font-family:'Space Mono',monospace}
-.live i{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);animation:p 1.6s infinite}
-.live.off{color:var(--bad)}.live.off i{background:var(--bad);box-shadow:none;animation:none}
-@keyframes p{50%{opacity:.35}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
-label.l{display:block;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
-select,input,button{font:inherit;color:var(--tx)}
-select,input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;outline:none}
-select:focus,input:focus{border-color:var(--acc)}
-.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
-.btn{background:var(--acc);color:#111;border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;font-size:14px}
-.hero{text-align:center;padding:22px 16px;background:linear-gradient(160deg,#1c1806,#131a26 60%)}
-.hero .who{font-size:13px;color:var(--mut)}
-.hero .amt{font-size:clamp(30px,9vw,44px);font-weight:700;color:var(--acc);margin:6px 0 2px;font-family:'Space Mono',monospace;word-break:break-all}
-.hero .sub{font-size:12px;color:var(--mut)}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
-.stat{background:var(--card2);border-radius:10px;padding:10px 6px}
-.stat b{display:block;font-size:15px;font-family:'Space Mono',monospace}
-.stat span{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:1px}
-h3{font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;font-weight:600}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;color:var(--mut);font-weight:500;font-size:11px;padding:6px 4px;border-bottom:1px solid var(--line)}
-td{padding:9px 4px;border-bottom:1px solid var(--line);vertical-align:top}
-td.n,th.n{text-align:right;font-family:'Space Mono',monospace;white-space:nowrap}
-tr:last-child td{border-bottom:0}
-.tag{font-size:10px;color:var(--mut)}
-.note{color:var(--mut);font-size:12px;margin-top:8px;line-height:1.5}
-.empty{color:var(--mut);text-align:center;padding:18px 0;font-size:14px}
-.bar{height:10px;background:var(--card2);border-radius:6px;overflow:hidden;position:relative;margin:10px 0 6px}
-.bar i{display:block;height:100%;background:linear-gradient(90deg,#b8900a,var(--acc));border-radius:6px}
-.bar u{position:absolute;top:0;bottom:0;width:2px;background:#fff6}
-.ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);font-family:'Space Mono',monospace}
-.big{font-size:20px;font-weight:700;font-family:'Space Mono',monospace}
-.ok{color:var(--good)}
-.foot{text-align:center;margin-top:20px}
-.foot a{color:var(--mut);font-size:12px;cursor:pointer;text-decoration:underline}
-#admin{display:none}
-.rates input{padding:6px 8px;font-size:13px;width:110px;text-align:right}
-.rates td{padding:5px 4px;vertical-align:middle}
-.msg{font-size:12px;margin-top:8px;color:var(--good);white-space:pre-wrap}
-.msg.err{color:var(--bad)}
-.hint{font-size:12px;color:var(--mut);line-height:1.5;margin-bottom:10px}
+:root{
+  --bg:#f2f2f7;--card:#ffffff;--fill:rgba(118,118,128,.12);--fill2:rgba(118,118,128,.08);
+  --label:#000;--label2:rgba(60,60,67,.6);--label3:rgba(60,60,67,.3);--sep:rgba(60,60,67,.29);
+  --blue:#007aff;--green:#34c759;--orange:#ff9500;--red:#ff3b30;--gold:#c99a06;
+  --ring1:#34c759;--ring2:#007aff;--bar:rgba(242,242,247,.72);
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+  --spring:cubic-bezier(.34,1.56,.64,1);--ease:cubic-bezier(.2,.8,.2,1);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#000;--card:#1c1c1e;--fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.16);
+  --label:#fff;--label2:rgba(235,235,245,.6);--label3:rgba(235,235,245,.3);--sep:rgba(84,84,88,.6);
+  --blue:#0a84ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--gold:#ffd60a;
+  --ring1:#30d158;--ring2:#0a84ff;--bar:rgba(0,0,0,.72);--shadow:none;
+}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--label)}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:calc(40px + env(safe-area-inset-bottom));letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:var(--label)}
+
+/* nav bar */
+.nav{position:sticky;top:0;z-index:20;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;background:transparent;transition:background .3s var(--ease),border-color .3s}
+.nav.scrolled{background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep)}
+.nav-in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:24px}
+.nav-title{font-weight:600;font-size:17px;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .35s var(--ease)}
+.nav.scrolled .nav-title{opacity:1;transform:none}
+.live{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--label2)}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--red);transition:background .3s}
+.live.on i{background:var(--green);animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(48,209,88,.5)}50%{box-shadow:0 0 0 5px rgba(48,209,88,0)}}
+
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+.eyebrow{font-size:13px;font-weight:600;color:var(--label2);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.large{font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1.15;margin:2px 0 14px}
+
+/* leader chips */
+.chips{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 16px;padding:8px 16px 10px;margin:0 -16px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{scroll-snap-align:start;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;transition:transform .35s var(--spring)}
+.chip:active{transform:scale(.92)}
+.av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:18px;box-shadow:0 0 0 0 var(--blue);transition:box-shadow .35s var(--spring),transform .35s var(--spring)}
+.chip span{font-size:12px;font-weight:500;color:var(--label2);transition:color .2s}
+.chip.on .av{box-shadow:0 0 0 3px var(--bg),0 0 0 5.5px var(--blue);transform:scale(1.04)}
+.chip.on span{color:var(--label);font-weight:600}
+
+/* month stepper */
+.month{display:flex;align-items:center;justify-content:space-between;background:var(--fill);border-radius:12px;padding:4px;margin:6px 0 18px}
+.month button{width:40px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--blue);transition:background .2s,opacity .2s}
+.month button:active{background:var(--fill)}
+.month button:disabled{opacity:.3}
+.month b{font-weight:600;font-size:15px}
+
+/* cards */
+.card{background:var(--card);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.in{animation:rise .7s var(--spring) both}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+.h{font-size:13px;font-weight:600;color:var(--label2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+
+/* hero */
+.hero{display:flex;align-items:center;gap:14px}
+.hero-l{flex:1;min-width:0}
+.hero .cap{font-size:15px;color:var(--label2);font-weight:500}
+.total{font-size:clamp(26px,7.6vw,40px);font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:4px 0 0;white-space:nowrap}
+.split{display:flex;gap:10px;margin-top:16px}
+.split>div{flex:1;min-width:0;background:var(--fill2);border-radius:14px;padding:10px 12px}
+.split small{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--label2);font-weight:500}
+.split small i{width:8px;height:8px;border-radius:50%}
+.split b{display:block;font-size:17px;font-weight:600;margin-top:3px;white-space:nowrap}
+.rings{width:92px;height:92px;flex:0 0 auto}
+.rings circle{fill:none;stroke-linecap:round}
+.rings .trk{opacity:.2}
+.rings .prg{transition:stroke-dashoffset 1.6s var(--ease)}
+
+/* bonus */
+.tiers{display:flex;flex-direction:column;gap:12px}
+.tier{display:flex;align-items:center;gap:12px}
+.dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:var(--fill);color:var(--label3);transition:background .5s,color .5s}
+.tier.hit .dot{color:#fff}
+.tier-b{flex:1;min-width:0}
+.tier-t{display:flex;justify-content:space-between;font-size:15px;font-weight:500}
+.tier-t span:last-child{color:var(--label2);font-weight:400}
+.track{height:6px;background:var(--fill);border-radius:3px;margin-top:7px;overflow:hidden}
+.track i{display:block;height:100%;border-radius:3px;width:0;transition:width 1.4s var(--ease)}
+.foot-note{font-size:13px;color:var(--label2);margin-top:14px;line-height:1.45}
+.foot-note b{color:var(--label);font-weight:600}
+
+/* lists */
+.list{margin:0 -18px -6px}
+.li{display:flex;align-items:center;gap:12px;padding:11px 18px;position:relative}
+.li+.li::before{content:"";position:absolute;top:0;left:18px;right:0;height:.5px;background:var(--sep)}
+.li-m{flex:1;min-width:0}
+.li-t{font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-s{font-size:13px;color:var(--label2);margin-top:1px}
+.li-r{text-align:right;flex:0 0 auto}
+.li-r b{font-size:16px;font-weight:600;display:block}
+.li-r span{font-size:13px;color:var(--label2)}
+.mini{height:4px;background:var(--fill2);border-radius:2px;margin-top:7px;overflow:hidden}
+.mini i{display:block;height:100%;border-radius:2px;background:var(--blue);width:0;transition:width 1.2s var(--ease)}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--fill);color:var(--label2);margin-left:6px;vertical-align:2px}
+.empty{text-align:center;color:var(--label2);padding:36px 12px;font-size:15px}
+.empty svg{display:block;margin:0 auto 12px;opacity:.5}
+.skel{height:120px;border-radius:20px;margin-bottom:14px;background:linear-gradient(90deg,var(--card) 0%,var(--fill2) 50%,var(--card) 100%);background-size:200% 100%;animation:sh 1.4s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+
+/* toast */
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);z-index:50;transform:translate(-50%,-140%) scale(.9);background:var(--card);box-shadow:0 10px 40px rgba(0,0,0,.18);border-radius:999px;padding:10px 18px 10px 12px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;opacity:0;transition:transform .6s var(--spring),opacity .3s;white-space:nowrap}
+.toast.show{transform:translate(-50%,0) scale(1);opacity:1}
+.toast i{width:28px;height:28px;border-radius:50%;background:var(--green);display:grid;place-items:center}
+
+/* admin */
+.admin-link{display:block;margin:26px auto 0;color:var(--blue);font-size:15px}
+#admin{display:none;margin-top:18px}
+.group-h{font-size:13px;color:var(--label2);text-transform:uppercase;letter-spacing:.04em;margin:22px 4px 7px}
+.group{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:10px;padding:0 16px;min-height:46px;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;left:16px;right:0;height:.5px;background:var(--sep)}
+.row label,.row .k{flex:1;font-size:16px;min-width:0}
+.row input{text-align:right;border:0;background:transparent;font-size:16px;width:46%;padding:12px 0;outline:none;color:var(--blue)}
+.row input::placeholder{color:var(--label3)}
+.row .v{font-size:15px;color:var(--label2);text-align:right}
+.row .v b{color:var(--label);font-weight:600}
+.group-f{font-size:13px;color:var(--label2);margin:7px 16px 0;line-height:1.4}
+.pwd{display:flex;gap:10px;padding:10px 12px}
+.pwd input{flex:1;background:var(--fill2);border:0;border-radius:10px;padding:11px 12px;font-size:16px;outline:none;color:var(--label);text-align:left;width:auto}
+.btn{background:var(--blue);color:#fff;border-radius:10px;padding:0 18px;font-weight:600;font-size:15px;transition:transform .3s var(--spring),opacity .2s}
+.btn:active{transform:scale(.95);opacity:.85}
+.msg{font-size:13px;margin:8px 16px 0;color:var(--green);min-height:18px}
+.msg.err{color:var(--red)}
+.shake{animation:shake .45s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">Hurricane XCS<small>Leader Commission</small></div>
-    <div class="live off" id="live"><i></i><span>connecting</span></div>
-  </header>
+<div class="nav" id="nav"><div class="nav-in">
+  <div class="nav-title" id="navTitle">Commission</div>
+  <div class="live" id="live"><i></i><span>Connecting</span></div>
+</div></div>
 
-  <div class="card">
-    <div class="row">
-      <div style="flex:1.3">
-        <label class="l" for="who">Team leader</label>
-        <select id="who"><option value="">Pick your name…</option></select>
-      </div>
-      <div>
-        <label class="l" for="month">Month</label>
-        <input type="month" id="month">
-      </div>
-    </div>
+<div class="wrap">
+  <div class="eyebrow">Hurricane XCS</div>
+  <h1 class="large">Commission</h1>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="month">
+    <button id="mPrev" aria-label="Previous month"><svg width="10" height="17" viewBox="0 0 10 17"><path d="M8.5 1.5 1.5 8.5l7 7" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <b id="mLabel"></b>
+    <button id="mNext" aria-label="Next month"><svg width="10" height="17" viewBox="0 0 10 17"><path d="m1.5 1.5 7 7-7 7" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
 
-  <div id="view"><div class="card empty">Pick your name to see your commission.</div></div>
+  <div id="view"></div>
 
-  <div class="foot"><a id="adminLink">Admin</a></div>
+  <button class="admin-link" id="adminLink">Admin</button>
 
-  <div id="admin" style="margin-top:12px">
-    <div class="card" id="lock">
-      <h3>Admin</h3>
-      <div class="row"><input type="password" id="pwd" placeholder="Admin password"><button class="btn" id="unlock" style="flex:0 0 auto">Unlock</button></div>
+  <div id="admin">
+    <div id="lock">
+      <div class="group-h">Admin access</div>
+      <div class="group" id="lockBox"><div class="pwd"><input type="password" id="pwd" placeholder="Password" autocomplete="current-password"><button class="btn" id="unlock">Unlock</button></div></div>
       <div class="msg err" id="lockMsg"></div>
     </div>
     <div id="editor" style="display:none">
-      <div class="card"><h3>All leaders this month</h3><div id="overview"></div></div>
-      <div class="card rates">
-        <h3>Commission per unit (Rp)</h3>
-        <p class="hint">Saves when you leave a box. Empty or 0 means no commission for that product.</p>
-        <div id="rateTable"></div>
-        <h3 style="margin-top:18px">Monthly bonus (Meta Ads revenue)</h3>
-        <p class="hint">Revenue at least the amount on the left earns the bonus on the right. Highest tier reached wins.</p>
-        <div id="tierTable"></div>
-        <div class="msg" id="edMsg"></div>
-      </div>
+      <div class="group-h">Payout this month</div>
+      <div class="group" id="overview"></div>
+      <div class="group-h">Commission per unit</div>
+      <div class="group" id="rateTable"></div>
+      <div class="group-f">Rupiah per unit sold. Changes save when you leave the field. Empty means no commission.</div>
+      <div class="group-h">Monthly bonus · Meta Ads revenue</div>
+      <div class="group" id="tierTable"></div>
+      <div class="group-f">Highest tier reached wins. TikTok, Shopee and Tokopedia sales don't count.</div>
+      <div class="msg" id="edMsg"></div>
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast"><i><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i><span id="toastT"></span></div>
 
 <script>
 // Hurricane = root namespace. Clones set 'maria' / 'calvin'.
@@ -120,6 +205,7 @@ const LEADERS={
   'Livia':['Livia'],'Valen':['Valen'],'Agung':['Agung'],
   'Stanley':['Stanley'],'Ivan':['Ivan'],'Rei':['REI'],
 };
+const LEADER_COLORS={Christ:['#0a84ff','#5e5ce6'],Livia:['#bf5af2','#ff375f'],Valen:['#ffd60a','#ff9f0a'],Agung:['#64d2ff','#0a84ff'],Stanley:['#30d158','#00c7be'],Ivan:['#ff9f0a','#ff453a'],Rei:['#ff375f','#bf5af2']};
 // Rp per unit sold, by catalog product name.
 const DEFAULT_RATES={
   'XCS 5':150000,'XCS 7':200000,'TWIN TURBO':250000,'SUPERFAST':350000,
@@ -146,6 +232,7 @@ const db=firebase.database();
 const ref=p=>db.ref(DATA_NS?(p?DATA_NS+'/'+p:DATA_NS):p);
 
 let TEAMS={},PRODS={},SAVED_RATES=null,SAVED_TIERS=null,DAYS={},teamsLoaded=false,cfgLoaded=false,daysLoaded=false;
+let LEADER='',MONTH='';
 const $=id=>document.getElementById(id);
 const n=s=>String(s==null?'':s).trim().toLowerCase();
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -155,6 +242,7 @@ const rp=v=>'Rp '+Math.round(v||0).toLocaleString('id-ID');
 const jt=v=>{const x=(v||0)/1e6;return (x>=100?Math.round(x):Math.round(x*100)/100).toLocaleString('id-ID')+' jt';};
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 const num=s=>{const v=Number(String(s==null?'':s).replace(/[^\d]/g,''));return isFinite(v)?v:0;};
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ── current rules
 function rates(){
@@ -193,14 +281,13 @@ ref('config/teams').on('value',s=>{
 ref('config/products').on('value',s=>{PRODS=s.val()||{};renderEditor();});
 ref('commission').on('value',s=>{const v=s.val()||{};SAVED_RATES=v.leaderRates||null;SAVED_TIERS=v.bonusTiers||null;cfgLoaded=true;render();
   if(!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#editor')))renderEditor();});
-db.ref('.info/connected').on('value',s=>{const on=!!s.val();$('live').className='live'+(on?'':' off');$('live').lastChild.textContent=on?'live':'offline';});
+db.ref('.info/connected').on('value',s=>{const on=!!s.val();$('live').className='live'+(on?' on':'');$('live').lastChild.textContent=on?'Live':'Offline';});
 
 let monthSub=null;
 function watchMonth(){
-  const m=$('month').value;if(!m)return;
   if(monthSub)monthSub.off();
   daysLoaded=false;DAYS={};render();
-  monthSub=ref('scores').orderByKey().startAt(m+'-01').endAt(m+'-31');
+  monthSub=ref('scores').orderByKey().startAt(MONTH+'-01').endAt(MONTH+'-31');
   monthSub.on('value',s=>{
     const v=s.val()||{};DAYS={};
     Object.keys(v).forEach(d=>{const x=v[d];DAYS[d]=(Array.isArray(x)?x:Object.values(x||{})).filter(e=>e&&typeof e==='object');});
@@ -211,11 +298,12 @@ function watchMonth(){
 // ── math
 function compute(leader){
   const R=rates(),byProd={},bySp={};
-  let comm=0,units=0,meta=0,allRev=0,tokped=0;
+  let comm=0,units=0,meta=0,allRev=0,tokped=0,count=0;
   Object.keys(DAYS).forEach(d=>DAYS[d].forEach(e=>{
     if(!e.prod)return;
     const team=teamOf(e.sp,e.team);
     if(leaderOfTeam(team)!==leader)return;
+    count++;
     const u=Number(e.units)||0,r=Number(e.revenue)||0,sp=String(e.sp||'').trim();
     allRev+=r;
     if(!NOT_META.includes(n(sp)))meta+=r;
@@ -227,53 +315,121 @@ function compute(leader){
   }));
   const T=tiers();let bonus=0,next=null;
   T.forEach(t=>{if(meta>=t.min)bonus=Math.max(bonus,t.bonus);else if(!next)next=t;});
-  return {comm,bonus,total:comm+bonus,units,meta,allRev,tokped,byProd,bySp,next,T};
+  return {comm,bonus,total:comm+bonus,units,meta,allRev,tokped,byProd,bySp,next,T,count};
+}
+
+// ── motion helpers
+const PREV={};
+function countUp(el,to,fmt){
+  const key=el.dataset.k,from=PREV[key]!=null?PREV[key]:0;PREV[key]=to;
+  if(reduced||from===to){el.textContent=fmt(to);return;}
+  const t0=performance.now(),dur=1100;
+  (function step(t){
+    const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,4);
+    el.textContent=fmt(from+(to-from)*e);
+    if(p<1)requestAnimationFrame(step);
+  })(t0);
+}
+// Elements render at their previous value, then move to the new one next frame.
+function settle(){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll('[data-w]').forEach(el=>{el.style.width=el.dataset.w+'%';});
+    document.querySelectorAll('[data-off]').forEach(el=>{el.style.strokeDashoffset=el.dataset.off;});
+  }));
+}
+function toast(t){
+  $('toastT').textContent=t;const el=$('toast');el.classList.add('show');
+  if(navigator.vibrate)try{navigator.vibrate(12)}catch(e){}
+  clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),2800);
 }
 
 // ── UI
-function fillPicker(){
-  const cur=$('who').value||ls.get('hxcs_lead_who')||'';
-  $('who').innerHTML='<option value="">Pick your name…</option>'+Object.keys(LEADERS).map(L=>`<option${L===cur?' selected':''}>${esc(L)}</option>`).join('');
+function initials(L){return L.slice(0,2).toUpperCase();}
+function fillChips(){
+  $('chips').innerHTML=Object.keys(LEADERS).map(L=>{const c=LEADER_COLORS[L]||['#8e8e93','#636366'];
+    return `<button class="chip${L===LEADER?' on':''}" data-l="${esc(L)}"><div class="av" style="background:linear-gradient(135deg,${c[0]},${c[1]})">${esc(initials(L))}</div><span>${esc(L)}</span></button>`;}).join('');
+  $('chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+    LEADER=b.dataset.l;ls.set('hxcs_lead_who',LEADER);
+    $('chips').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));
+    lastKey='';render();
+  });
+}
+function monthLabel(m){return new Date(m+'-01T00:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
+function nowMonth(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function shiftMonth(k){
+  const [y,m]=MONTH.split('-').map(Number),d=new Date(y,m-1+k,1);
+  const nm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  if(nm>nowMonth())return;
+  MONTH=nm;syncMonth();lastKey='';watchMonth();
+}
+function syncMonth(){$('mLabel').textContent=monthLabel(MONTH);$('mNext').disabled=MONTH>=nowMonth();}
+
+let lastKey='',lastCount=null;
+function ring(r,w,color,frac,key){
+  const C=2*Math.PI*r,prev=PREV['ring'+key]!=null?PREV['ring'+key]:0;PREV['ring'+key]=frac;
+  return `<circle class="trk" cx="59" cy="59" r="${r}" stroke="${color}" stroke-width="${w}"/>
+    <circle class="prg" cx="59" cy="59" r="${r}" stroke="${color}" stroke-width="${w}" stroke-dasharray="${C}" style="stroke-dashoffset:${C*(1-prev)}" data-off="${C*(1-Math.min(1,frac))}" transform="rotate(-90 59 59)"/>`;
 }
 function render(){
   renderOverview();
-  const L=$('who').value,v=$('view');
-  if(!L){v.innerHTML='<div class="card empty">Pick your name to see your commission.</div>';return;}
-  if(!teamsLoaded||!cfgLoaded||!daysLoaded){v.innerHTML='<div class="card empty">Loading live data…</div>';return;}
-  const m=$('month').value,mLabel=new Date(m+'-01T00:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-  const X=compute(L);
-  const top=X.T.length?X.T[X.T.length-1].min:1,scale=Math.max(top*1.1,X.meta);
+  const v=$('view');
+  if(!LEADER){v.innerHTML=`<div class="card empty in"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Choose your name above to see your commission.</div>`;return;}
+  if(!teamsLoaded||!cfgLoaded||!daysLoaded){v.innerHTML='<div class="skel"></div><div class="skel" style="height:90px"></div>';return;}
+  const key=LEADER+'|'+MONTH,fresh=key!==lastKey;lastKey=key;
+  const X=compute(LEADER),a=fresh?' in':'';
+  if(!fresh&&lastCount!=null&&X.count>lastCount)toast('New sale · '+rp(X.total-(PREV.total||0))+' added');
+  lastCount=X.count;
+  const T=X.T,t1=T[0],t2=T[1]||T[0];
+  const f1=t1?X.meta/t1.min:0,f2=t2?X.meta/t2.min:0;
+  const maxC=Math.max(1,...Object.values(X.byProd).map(p=>p.c));
+  const maxR=Math.max(1,...Object.values(X.bySp).map(p=>p.r));
   const prodRows=Object.keys(X.byProd).sort((a,b)=>X.byProd[b].c-X.byProd[a].c).map(p=>{const x=X.byProd[p];
-    return `<tr><td>${esc(p)}<div class="tag">${rp(x.rate)} / unit</div></td><td class="n">${x.u}</td><td class="n">${rp(x.c)}</td></tr>`;}).join('');
+    return `<div class="li"><div class="li-m"><div class="li-t">${esc(p)}</div><div class="li-s num">${x.u} unit${x.u>1?'s':''} · ${rp(x.rate)} each</div><div class="mini"><i data-w="${x.c/maxC*100}"></i></div></div><div class="li-r"><b class="num">${rp(x.c)}</b></div></div>`;}).join('');
   const spRows=Object.keys(X.bySp).sort((a,b)=>X.bySp[b].r-X.bySp[a].r).map(s=>{const x=X.bySp[s];
-    return `<tr><td>${esc(s)}${NOT_META.includes(n(s))?'<div class="tag">not Meta Ads</div>':''}</td><td class="n">${x.u}</td><td class="n">${jt(x.r)}</td><td class="n">${NO_COMMISSION.includes(n(s))?'<span class="tag">none</span>':rp(x.c)}</td></tr>`;}).join('');
+    const tag=NO_COMMISSION.includes(n(s))?'<span class="badge">No commission</span>':NOT_META.includes(n(s))?'<span class="badge">Not Meta</span>':'';
+    return `<div class="li"><div class="li-m"><div class="li-t">${esc(s)}${tag}</div><div class="li-s num">${x.u} unit${x.u>1?'s':''} · ${jt(x.r)}</div><div class="mini"><i style="background:var(--green)" data-w="${x.r/maxR*100}"></i></div></div><div class="li-r"><b class="num">${NO_COMMISSION.includes(n(s))?'—':rp(x.c)}</b></div></div>`;}).join('');
+  const tierRows=T.map((t,i)=>{const hit=X.meta>=t.min,col=i?'var(--ring2)':'var(--ring1)';
+    return `<div class="tier${hit?' hit':''}"><div class="dot" style="${hit?'background:'+col:''}">${hit?'<svg width="13" height="13" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>':'<b style="font-size:13px">'+(i+1)+'</b>'}</div>
+      <div class="tier-b"><div class="tier-t"><span>${jt(t.bonus)} bonus</span><span class="num">at ${jt(t.min)}</span></div><div class="track"><i style="background:${col}" data-w="${Math.min(100,X.meta/t.min*100)}"></i></div></div></div>`;}).join('');
   v.innerHTML=`
-  <div class="card hero">
-    <div class="who">${esc(L)} · ${esc(LEADERS[L].join(' + '))} · ${esc(mLabel)}</div>
-    <div class="amt">${rp(X.total)}</div>
-    <div class="sub">total so far · updates live</div>
-    <div class="stats">
-      <div class="stat"><b>${rp(X.comm)}</b><span>Commission</span></div>
-      <div class="stat"><b class="${X.bonus?'ok':''}">${rp(X.bonus)}</b><span>Bonus</span></div>
+  <div class="card${a}">
+    <div class="hero">
+      <div class="hero-l">
+        <div class="cap">${esc(LEADERS[LEADER].join(' + '))}</div>
+        <div class="total num" data-k="total"></div>
+      </div>
+      <svg class="rings" viewBox="0 0 118 118">${ring(52,13,'var(--ring1)',f1,1)}${ring(36,13,'var(--ring2)',f2,2)}</svg>
+    </div>
+    <div class="split">
+      <div><small><i style="background:var(--blue)"></i>Commission</small><b class="num" data-k="comm"></b></div>
+      <div><small><i style="background:var(--green)"></i>Bonus</small><b class="num" data-k="bonus" style="${X.bonus?'color:var(--green)':''}"></b></div>
     </div>
   </div>
-  <div class="card">
-    <h3>Bonus progress · Meta Ads</h3>
-    <div class="big">${rp(X.meta)}</div>
-    <div class="bar"><i style="width:${Math.min(100,X.meta/scale*100)}%"></i>${X.T.map(t=>`<u style="left:${t.min/scale*100}%"></u>`).join('')}</div>
-    <div class="ticks">${X.T.map(t=>`<span>${jt(t.min)} → ${jt(t.bonus)}</span>`).join('')}</div>
-    <div class="note">${X.next?`<b>${rp(X.next.min-X.meta)}</b> more Meta Ads revenue to reach the ${jt(X.next.bonus)} bonus.`:'<span class="ok">Top bonus reached.</span>'}
-    TikTok, Shopee and Tokopedia sales don't count here.</div>
+  <div class="card${a}" style="animation-delay:.06s">
+    <div class="h"><span>Meta Ads revenue</span><span class="live on" style="text-transform:none;letter-spacing:0"><i></i></span></div>
+    <div style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin:-4px 0 16px" class="num" data-k="meta"></div>
+    <div class="tiers">${tierRows}</div>
+    <div class="foot-note">${X.next?`<b class="num">${rp(X.next.min-X.meta)}</b> to go for the ${jt(X.next.bonus)} bonus.`:'All bonus tiers reached. 🎉'} TikTok, Shopee and Tokopedia don't count toward the bonus.</div>
   </div>
-  ${Object.keys(X.bySp).length?`
-  <div class="card"><h3>Commission by product</h3>
-    ${prodRows?`<table><tr><th>Product</th><th class="n">Units</th><th class="n">Commission</th></tr>${prodRows}</table>`:'<div class="empty">No commission products sold yet.</div>'}
-    ${X.tokped?`<div class="note">${X.tokped} unit${X.tokped>1?'s':''} sold on Tokopedia earn no commission.</div>`:''}
+  ${X.count?`
+  <div class="card${a}" style="animation-delay:.12s">
+    <div class="h"><span>By product</span><span class="num" style="text-transform:none">${X.units} units</span></div>
+    ${prodRows?`<div class="list">${prodRows}</div>`:'<div class="empty" style="padding:16px">No commission products sold yet.</div>'}
+    ${X.tokped?`<div class="foot-note">${X.tokped} unit${X.tokped>1?'s':''} sold on Tokopedia earn no commission.</div>`:''}
   </div>
-  <div class="card"><h3>Your team</h3>
-    <table><tr><th>Sales</th><th class="n">Units</th><th class="n">Revenue</th><th class="n">Comm.</th></tr>${spRows}</table>
-  </div>`:`<div class="card empty">No sales logged for ${esc(mLabel)} yet.</div>`}`;
+  <div class="card${a}" style="animation-delay:.18s">
+    <div class="h"><span>Your team</span><span style="text-transform:none">${Object.keys(X.bySp).length} sellers</span></div>
+    <div class="list">${spRows}</div>
+  </div>`:`<div class="card empty${a}" style="animation-delay:.12s"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>No sales logged for ${esc(monthLabel(MONTH))} yet.</div>`}`;
+  countUp(v.querySelector('[data-k=total]'),X.total,rp);
+  countUp(v.querySelector('[data-k=comm]'),X.comm,rp);
+  countUp(v.querySelector('[data-k=bonus]'),X.bonus,rp);
+  countUp(v.querySelector('[data-k=meta]'),X.meta,rp);
+  settle();
 }
+
+// ── scroll: compact nav bar like iOS large titles
+addEventListener('scroll',()=>$('nav').classList.toggle('scrolled',scrollY>44),{passive:true});
 
 // ── Admin
 const adminPwd=()=>ls.get('hxcs_admin_pwd')||DEFAULT_ADMIN_PWD;
@@ -282,7 +438,7 @@ function showAdmin(){$('admin').style.display='block';$('lock').style.display=un
 $('adminLink').onclick=()=>{if($('admin').style.display==='block'){$('admin').style.display='none';return;}showAdmin();$('admin').scrollIntoView({behavior:'smooth'});};
 function tryUnlock(){
   if($('pwd').value===adminPwd()){unlocked=true;try{sessionStorage.setItem('hxcs_comm_admin','1')}catch(e){}$('lockMsg').textContent='';showAdmin();}
-  else $('lockMsg').textContent='Wrong password.';
+  else{$('lockMsg').textContent='Wrong password.';const b=$('lockBox');b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');}
 }
 $('unlock').onclick=tryUnlock;$('pwd').onkeydown=e=>{if(e.key==='Enter')tryUnlock();};
 const adminOpen=()=>unlocked&&$('admin').style.display==='block';
@@ -291,23 +447,22 @@ function renderOverview(){
   if(!adminOpen()||!teamsLoaded||!cfgLoaded||!daysLoaded)return;
   let sum=0;
   const rows=Object.keys(LEADERS).map(L=>{const X=compute(L);sum+=X.total;
-    return `<tr><td>${esc(L)}<div class="tag">Meta ${jt(X.meta)}</div></td><td class="n">${jt(X.comm)}</td><td class="n">${jt(X.bonus)}</td><td class="n"><b>${jt(X.total)}</b></td></tr>`;}).join('');
-  $('overview').innerHTML=`<div style="overflow-x:auto"><table><tr><th>Leader</th><th class="n">Comm.</th><th class="n">Bonus</th><th class="n">Total</th></tr>${rows}
-    <tr><td><b>Total to pay</b></td><td></td><td></td><td class="n"><b>${rp(sum)}</b></td></tr></table></div>`;
+    return `<div class="row"><span class="k">${esc(L)}</span><span class="v num">${jt(X.comm)} + ${jt(X.bonus)} = <b>${jt(X.total)}</b></span></div>`;}).join('');
+  $('overview').innerHTML=rows+`<div class="row"><span class="k" style="font-weight:600">Total to pay</span><span class="v num"><b style="color:var(--blue)">${rp(sum)}</b></span></div>`;
 }
 function renderEditor(){
   if(!adminOpen())return;
   const R=rates(),names=new Set([...Object.keys(PRODS||{}),...Object.keys(DEFAULT_RATES)]);
-  $('rateTable').innerHTML='<table>'+[...names].sort().map(p=>`<tr><td>${esc(p)}</td><td class="n"><input inputmode="numeric" data-prod="${esc(p)}" value="${R[n(p)]?R[n(p)]:''}" placeholder="0"></td></tr>`).join('')+'</table>';
+  $('rateTable').innerHTML=[...names].sort().map(p=>`<div class="row"><label>${esc(p)}</label><input class="num" inputmode="numeric" data-prod="${esc(p)}" value="${R[n(p)]?R[n(p)]:''}" placeholder="0"></div>`).join('');
   $('rateTable').querySelectorAll('input').forEach(i=>i.onchange=()=>{
     const v=num(i.value);
     ref('commission/leaderRates').update({[fk(i.dataset.prod)]:v})
       .then(()=>msg(`Saved ${i.dataset.prod}: ${rp(v)} per unit`)).catch(e=>msg('Save failed: '+e.message,true));
   });
   const T=tiers();
-  $('tierTable').innerHTML='<table><tr><th>Revenue at least</th><th class="n">Bonus</th></tr>'+[0,1,2].map(i=>`<tr>
-    <td><input inputmode="numeric" data-i="${i}" data-f="min" value="${T[i]?T[i].min:''}" placeholder="—" style="width:100%;text-align:left"></td>
-    <td class="n"><input inputmode="numeric" data-i="${i}" data-f="bonus" value="${T[i]?T[i].bonus:''}" placeholder="—"></td></tr>`).join('')+'</table>';
+  $('tierTable').innerHTML=[0,1,2].map(i=>`
+    <div class="row"><label>Tier ${i+1} revenue</label><input class="num" inputmode="numeric" data-i="${i}" data-f="min" value="${T[i]?T[i].min:''}" placeholder="Not set"></div>
+    <div class="row"><label style="color:var(--label2)">Tier ${i+1} bonus</label><input class="num" inputmode="numeric" data-i="${i}" data-f="bonus" value="${T[i]?T[i].bonus:''}" placeholder="Not set"></div>`).join('');
   $('tierTable').querySelectorAll('input').forEach(i=>i.onchange=()=>{
     const out=[0,1,2].map(k=>({min:num($('tierTable').querySelector(`[data-i="${k}"][data-f="min"]`).value),bonus:num($('tierTable').querySelector(`[data-i="${k}"][data-f="bonus"]`).value)})).filter(t=>t.min>0);
     ref('commission').update({bonusTiers:out}).then(()=>msg('Saved bonus tiers')).catch(e=>msg('Save failed: '+e.message,true));
@@ -317,10 +472,10 @@ function msg(t,err){$('edMsg').className='msg'+(err?' err':'');$('edMsg').textCo
 
 // ── start
 (function(){
-  const d=new Date();$('month').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  fillPicker();
-  $('month').onchange=watchMonth;
-  $('who').onchange=()=>{ls.set('hxcs_lead_who',$('who').value);render();};
+  MONTH=nowMonth();
+  const saved=ls.get('hxcs_lead_who');if(saved&&LEADERS[saved])LEADER=saved;
+  fillChips();syncMonth();
+  $('mPrev').onclick=()=>shiftMonth(-1);$('mNext').onclick=()=>shiftMonth(1);
   watchMonth();
 })();
 </script>
