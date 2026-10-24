@@ -11,16 +11,13 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-:root{
-  --bg:#0b0f17;--card:#131a26;--card2:#18212f;--line:#243044;
-  --tx:#e8edf5;--mut:#8b97ab;--acc:#f5c518;--good:#00e676;--bad:#ff3b5c;--blue:#3b9eff;
-}
+:root{--bg:#0b0f17;--card:#131a26;--card2:#18212f;--line:#243044;--tx:#e8edf5;--mut:#8b97ab;--acc:#f5c518;--good:#00e676;--bad:#ff3b5c}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--tx);font-family:'Space Grotesk',system-ui,sans-serif}
 body{min-height:100vh;padding:0 16px calc(32px + env(safe-area-inset-bottom))}
 .wrap{max-width:640px;margin:0 auto}
 header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px}
-.brand{font-weight:700;font-size:18px;letter-spacing:.3px}
+.brand{font-weight:700;font-size:18px}
 .brand small{display:block;font-size:11px;color:var(--mut);font-weight:500;letter-spacing:1.5px;text-transform:uppercase}
 .live{font-size:11px;color:var(--good);display:flex;align-items:center;gap:6px;font-family:'Space Mono',monospace}
 .live i{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);animation:p 1.6s infinite}
@@ -28,18 +25,16 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 @keyframes p{50%{opacity:.35}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
 label.l{display:block;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
-select,input,textarea,button{font:inherit;color:var(--tx)}
-select,input,textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;outline:none}
-select:focus,input:focus,textarea:focus{border-color:var(--acc)}
+select,input,button{font:inherit;color:var(--tx)}
+select,input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;outline:none}
+select:focus,input:focus{border-color:var(--acc)}
 .row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
 .btn{background:var(--acc);color:#111;border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;font-size:14px}
-.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--line)}
-.btn.sm{padding:7px 10px;font-size:12px}
 .hero{text-align:center;padding:22px 16px;background:linear-gradient(160deg,#1c1806,#131a26 60%)}
 .hero .who{font-size:13px;color:var(--mut)}
 .hero .amt{font-size:clamp(30px,9vw,44px);font-weight:700;color:var(--acc);margin:6px 0 2px;font-family:'Space Mono',monospace;word-break:break-all}
 .hero .sub{font-size:12px;color:var(--mut)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
 .stat{background:var(--card2);border-radius:10px;padding:10px 6px}
 .stat b{display:block;font-size:15px;font-family:'Space Mono',monospace}
 .stat span{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:1px}
@@ -50,36 +45,35 @@ td{padding:9px 4px;border-bottom:1px solid var(--line);vertical-align:top}
 td.n,th.n{text-align:right;font-family:'Space Mono',monospace;white-space:nowrap}
 tr:last-child td{border-bottom:0}
 .tag{font-size:10px;color:var(--mut)}
-.warn{color:var(--bad);font-size:12px;margin-top:8px}
+.note{color:var(--mut);font-size:12px;margin-top:8px;line-height:1.5}
 .empty{color:var(--mut);text-align:center;padding:18px 0;font-size:14px}
-.day{font-size:11px;color:var(--mut);padding:10px 0 4px;text-transform:uppercase;letter-spacing:1px}
-.sale{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
-.sale:last-child{border-bottom:0}
-.sale .c{color:var(--good);font-family:'Space Mono',monospace;white-space:nowrap}
+.bar{height:10px;background:var(--card2);border-radius:6px;overflow:hidden;position:relative;margin:10px 0 6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#b8900a,var(--acc));border-radius:6px}
+.bar u{position:absolute;top:0;bottom:0;width:2px;background:#fff6}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);font-family:'Space Mono',monospace}
+.big{font-size:20px;font-weight:700;font-family:'Space Mono',monospace}
+.ok{color:var(--good)}
 .foot{text-align:center;margin-top:20px}
 .foot a{color:var(--mut);font-size:12px;cursor:pointer;text-decoration:underline}
 #admin{display:none}
-.rates{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.rates table{min-width:0}
-.rates input{padding:6px 8px;font-size:13px;width:88px;text-align:right}
-.rates td{padding:5px 4px}
+.rates input{padding:6px 8px;font-size:13px;width:110px;text-align:right}
+.rates td{padding:5px 4px;vertical-align:middle}
 .msg{font-size:12px;margin-top:8px;color:var(--good);white-space:pre-wrap}
 .msg.err{color:var(--bad)}
 .hint{font-size:12px;color:var(--mut);line-height:1.5;margin-bottom:10px}
-code{font-family:'Space Mono',monospace;font-size:11px;background:var(--card2);padding:1px 5px;border-radius:4px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">Hurricane XCS<small>Live Commission</small></div>
+    <div class="brand">Hurricane XCS<small>Leader Commission</small></div>
     <div class="live off" id="live"><i></i><span>connecting</span></div>
   </header>
 
   <div class="card">
     <div class="row">
       <div style="flex:1.3">
-        <label class="l" for="who">Your name</label>
+        <label class="l" for="who">Team leader</label>
         <select id="who"><option value="">Pick your name…</option></select>
       </div>
       <div>
@@ -91,26 +85,25 @@ code{font-family:'Space Mono',monospace;font-size:11px;background:var(--card2);p
 
   <div id="view"><div class="card empty">Pick your name to see your commission.</div></div>
 
-  <div class="foot"><a id="adminLink">Admin: commission rates</a></div>
+  <div class="foot"><a id="adminLink">Admin</a></div>
 
-  <div id="admin" class="card" style="margin-top:12px">
-    <h3>Commission rates</h3>
-    <div id="lock">
+  <div id="admin" style="margin-top:12px">
+    <div class="card" id="lock">
+      <h3>Admin</h3>
       <div class="row"><input type="password" id="pwd" placeholder="Admin password"><button class="btn" id="unlock" style="flex:0 0 auto">Unlock</button></div>
       <div class="msg err" id="lockMsg"></div>
     </div>
     <div id="editor" style="display:none">
-      <p class="hint">Type <code>50000</code> for Rp per unit sold, or <code>5%</code> for a percent of the sale's revenue. Empty means no commission. The <b>Default</b> row applies to anyone without their own rate for that product. Each box saves when you leave it.</p>
-      <label class="l" for="edWho">Edit rates for</label>
-      <select id="edWho" style="margin-bottom:10px"></select>
-      <div class="rates" id="rateTable"></div>
-      <div class="msg" id="edMsg"></div>
-
-      <h3 style="margin-top:20px">Bulk paste</h3>
-      <p class="hint">One line per rate: <code>Name, Product, Amount</code>. Use <code>Default</code> as the name for everyone. If a name exists in two teams, write <code>Name (Team)</code>.<br>Example: <code>Erica, XCS 5, 100000</code> or <code>Default, EV, 3%</code></p>
-      <textarea id="bulk" rows="6" placeholder="Erica, XCS 5, 100000"></textarea>
-      <div class="row" style="margin-top:8px"><button class="btn" id="bulkGo">Check &amp; save</button></div>
-      <div class="msg" id="bulkMsg"></div>
+      <div class="card"><h3>All leaders this month</h3><div id="overview"></div></div>
+      <div class="card rates">
+        <h3>Commission per unit (Rp)</h3>
+        <p class="hint">Saves when you leave a box. Empty or 0 means no commission for that product.</p>
+        <div id="rateTable"></div>
+        <h3 style="margin-top:18px">Monthly bonus (Meta Ads revenue)</h3>
+        <p class="hint">Revenue at least the amount on the left earns the bonus on the right. Highest tier reached wins.</p>
+        <div id="tierTable"></div>
+        <div class="msg" id="edMsg"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -119,10 +112,26 @@ code{font-family:'Space Mono',monospace;font-size:11px;background:var(--card2);p
 // Hurricane = root namespace. Clones set 'maria' / 'calvin'.
 const DATA_NS='';
 const DEFAULT_ADMIN_PWD='hurricane2026';
-const FALLBACK_P={'XCSR V2':550000,'XCSR V3':775000,'XCSR TURBO':1750000,'XCSR SUPERFAST':3850000,'ECOPOWER':1750000,'ECOTURBO':2780000,'ULTRABOOST':1850000,'EV':3150000,'EV POWER':5250000,'XCS 5':2595000,'XCS 7':3990000,'TWIN TURBO':5775000,'SUPERFAST':9555000,'COMPETITION':15750000,'SPRING BUFFER':2750000,'SPRING BUFFER 1 SET':1375000,'SUPER GROUND WIRE':2500000};
-// Channels, not people: hidden from the name picker.
-const NOT_PEOPLE=['tokopedia','live tiktok','shopee live','shopee'];
-const DEF_KEY='_default';
+
+// ══ RULES (defaults; Admin edits are saved in Firebase commission/ and win) ══
+// Leader → the dashboard teams whose sales pay that leader.
+const LEADERS={
+  'Christ':['Christ A','Christ B'],
+  'Livia':['Livia'],'Valen':['Valen'],'Agung':['Agung'],
+  'Stanley':['Stanley'],'Ivan':['Ivan'],'Rei':['REI'],
+};
+// Rp per unit sold, by catalog product name.
+const DEFAULT_RATES={
+  'XCS 5':150000,'XCS 7':200000,'TWIN TURBO':250000,'SUPERFAST':350000,
+  'COMPETITION':700000,'SPRING BUFFER':100000,
+  'XCSR V3':70000,'XCSR TURBO':100000,'XCSR SUPERFAST':200000,
+};
+// Monthly bonus on the team's Meta Ads revenue.
+const DEFAULT_TIERS=[{min:350000000,bonus:5000000},{min:550000000,bonus:7000000}];
+// Sales logged under these accounts never earn commission.
+const NO_COMMISSION=['tokopedia'];
+// Sales logged under these accounts don't count toward the Meta Ads bonus.
+const NOT_META=['tokopedia','live tiktok','shopee live','shopee'];
 
 firebase.initializeApp({
   apiKey:"AIzaSyDfWkhwB3flykNloLRKaXwkNWfxbY22H2g",
@@ -136,52 +145,54 @@ firebase.initializeApp({
 const db=firebase.database();
 const ref=p=>db.ref(DATA_NS?(p?DATA_NS+'/'+p:DATA_NS):p);
 
-let TEAMS={},PRODS={},RATES={},DAYS={},teamsLoaded=false,ratesLoaded=false,daysLoaded=false;
+let TEAMS={},PRODS={},SAVED_RATES=null,SAVED_TIERS=null,DAYS={},teamsLoaded=false,cfgLoaded=false,daysLoaded=false;
 const $=id=>document.getElementById(id);
 const n=s=>String(s==null?'':s).trim().toLowerCase();
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// Firebase keys cannot contain . # $ [ ] /
 const fk=s=>encodeURIComponent(String(s)).replace(/\./g,'%2E');
 const unfk=s=>{try{return decodeURIComponent(s)}catch(e){return s}};
 const rp=v=>'Rp '+Math.round(v||0).toLocaleString('id-ID');
+const jt=v=>{const x=(v||0)/1e6;return (x>=100?Math.round(x):Math.round(x*100)/100).toLocaleString('id-ID')+' jt';};
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const num=s=>{const v=Number(String(s==null?'':s).replace(/[^\d]/g,''));return isFinite(v)?v:0;};
 
-// ── roster: record team may be old (person moved), so match like the dashboard does
-function rosterIdx(){
-  const byKey={},byName={},meta={};
-  Object.keys(TEAMS).forEach(t=>(TEAMS[t]||[]).forEach(sp=>{
-    const k=sp+'|'+t;byKey[n(sp)+'|'+n(t)]=k;meta[k]={sp,team:t};
-    byName[n(sp)]=byName[n(sp)]===undefined?k:null;
-  }));
-  return {byKey,byName,meta};
+// ── current rules
+function rates(){
+  const out={};Object.keys(DEFAULT_RATES).forEach(p=>out[n(p)]=DEFAULT_RATES[p]);
+  if(SAVED_RATES)Object.keys(SAVED_RATES).forEach(k=>out[n(unfk(k))]=Number(SAVED_RATES[k])||0);
+  return out;
 }
-let IX=rosterIdx();
-const rosterKey=(sp,team)=>IX.byKey[n(sp)+'|'+n(team)]||IX.byName[n(sp)]||null;
+function tiers(){
+  const t=Array.isArray(SAVED_TIERS)?SAVED_TIERS.filter(x=>x&&x.min>0):DEFAULT_TIERS;
+  return t.slice().sort((a,b)=>a.min-b.min);
+}
 
-// ── rates: number = Rp per unit; "5%" = percent of revenue
-function parseRate(raw){
-  if(raw==null)return null;
-  const s=String(raw).trim().replace(/\s/g,'');
-  if(!s)return null;
-  if(s.endsWith('%')){const v=parseFloat(s.slice(0,-1).replace(',','.'));return isFinite(v)&&v>=0?{pct:true,v}:undefined;}
-  const v=Number(s.replace(/[.,](?=\d{3}(\D|$))/g,'').replace(/^rp/i,''));
-  return isFinite(v)&&v>=0?{pct:false,v}:undefined;
+// ── roster: a person who moved teams counts for their current team
+function teamOf(sp,team){
+  let byName=null,dup=false;
+  for(const t of Object.keys(TEAMS)){
+    for(const m of TEAMS[t]){
+      if(n(m)!==n(sp))continue;
+      if(n(t)===n(team))return t;
+      if(byName)dup=true;else byName=t;
+    }
+  }
+  return (!dup&&byName)||team;
 }
-const rateStr=r=>r?(r.pct?r.v+'%':String(r.v)):'';
-function rateFor(personKey,prod){
-  const own=RATES[fk(personKey)]||{},def=RATES[DEF_KEY]||{};
-  const raw=own[fk(prod)]!=null?own[fk(prod)]:def[fk(prod)];
-  return parseRate(raw)||null;
+function leaderOfTeam(team){
+  for(const L of Object.keys(LEADERS))if(LEADERS[L].some(t=>n(t)===n(team)))return L;
+  return null;
 }
 
 // ── live listeners
 ref('config/teams').on('value',s=>{
   const v=s.val()||{};TEAMS={};
-  Object.keys(v).forEach(t=>{const m=v[t]&&v[t].m;TEAMS[t]=Array.isArray(m)?m.filter(Boolean):m?Object.values(m).filter(Boolean):[];});
-  teamsLoaded=true;IX=rosterIdx();fillPickers();render();
+  Object.keys(v).forEach(t=>{const m=v[t]&&v[t].m;TEAMS[t]=(Array.isArray(m)?m:m?Object.values(m):[]).filter(Boolean);});
+  teamsLoaded=true;render();
 });
-ref('config/products').on('value',s=>{PRODS=s.val()||FALLBACK_P;render();renderEditor();});
-ref('commission/rates').on('value',s=>{RATES=s.val()||{};ratesLoaded=true;render();renderEditor();});
+ref('config/products').on('value',s=>{PRODS=s.val()||{};renderEditor();});
+ref('commission').on('value',s=>{const v=s.val()||{};SAVED_RATES=v.leaderRates||null;SAVED_TIERS=v.bonusTiers||null;cfgLoaded=true;render();
+  if(!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#editor')))renderEditor();});
 db.ref('.info/connected').on('value',s=>{const on=!!s.val();$('live').className='live'+(on?'':' off');$('live').lastChild.textContent=on?'live':'offline';});
 
 let monthSub=null;
@@ -197,151 +208,119 @@ function watchMonth(){
   });
 }
 
+// ── math
+function compute(leader){
+  const R=rates(),byProd={},bySp={};
+  let comm=0,units=0,meta=0,allRev=0,tokped=0;
+  Object.keys(DAYS).forEach(d=>DAYS[d].forEach(e=>{
+    if(!e.prod)return;
+    const team=teamOf(e.sp,e.team);
+    if(leaderOfTeam(team)!==leader)return;
+    const u=Number(e.units)||0,r=Number(e.revenue)||0,sp=String(e.sp||'').trim();
+    allRev+=r;
+    if(!NOT_META.includes(n(sp)))meta+=r;
+    const s=bySp[sp]||(bySp[sp]={u:0,r:0,c:0});s.u+=u;s.r+=r;
+    if(NO_COMMISSION.includes(n(sp))){tokped+=u;return;}
+    const rate=R[n(e.prod)]||0,c=u*rate;
+    s.c+=c;comm+=c;
+    if(rate){const p=byProd[e.prod]||(byProd[e.prod]={u:0,c:0,rate});p.u+=u;p.c+=c;units+=u;}
+  }));
+  const T=tiers();let bonus=0,next=null;
+  T.forEach(t=>{if(meta>=t.min)bonus=Math.max(bonus,t.bonus);else if(!next)next=t;});
+  return {comm,bonus,total:comm+bonus,units,meta,allRev,tokped,byProd,bySp,next,T};
+}
+
 // ── UI
-function fillPickers(){
-  const opts=Object.keys(TEAMS).map(t=>{
-    const people=TEAMS[t].filter(sp=>!NOT_PEOPLE.includes(n(sp)));
-    if(!people.length)return'';
-    return `<optgroup label="${esc(t)}">${people.map(sp=>`<option value="${esc(sp+'|'+t)}">${esc(sp)}</option>`).join('')}</optgroup>`;
-  }).join('');
-  const cur=$('who').value||ls.get('hxcs_comm_who')||'';
-  $('who').innerHTML='<option value="">Pick your name…</option>'+opts;
-  if([...$('who').options].some(o=>o.value===cur))$('who').value=cur;
-  const ed=$('edWho').value;
-  $('edWho').innerHTML=`<option value="${DEF_KEY}">Default (everyone)</option>`+opts;
-  if([...$('edWho').options].some(o=>o.value===ed))$('edWho').value=ed;
-  renderEditor();
+function fillPicker(){
+  const cur=$('who').value||ls.get('hxcs_lead_who')||'';
+  $('who').innerHTML='<option value="">Pick your name…</option>'+Object.keys(LEADERS).map(L=>`<option${L===cur?' selected':''}>${esc(L)}</option>`).join('');
 }
-
-function compute(personKey){
-  const byProd={},sales=[];let total=0,units=0,rev=0;const missing=new Set();
-  Object.keys(DAYS).sort().reverse().forEach(d=>{
-    DAYS[d].forEach(e=>{
-      if(!e.prod)return;
-      if(rosterKey(e.sp,e.team)!==personKey)return;
-      const u=Number(e.units)||0,r=Number(e.revenue)||0,rate=rateFor(personKey,e.prod);
-      const c=rate?(rate.pct?r*rate.v/100:u*rate.v):0;
-      if(!rate)missing.add(e.prod);
-      const p=byProd[e.prod]||(byProd[e.prod]={u:0,r:0,c:0,rate});
-      p.u+=u;p.r+=r;p.c+=c;total+=c;units+=u;rev+=r;
-      sales.push({d,prod:e.prod,u,r,c,ts:e.ts||0});
-    });
-  });
-  return {byProd,sales,total,units,rev,missing:[...missing]};
-}
-
 function render(){
-  const key=$('who').value,v=$('view');
-  if(!key){v.innerHTML='<div class="card empty">Pick your name to see your commission.</div>';return;}
-  if(!teamsLoaded||!ratesLoaded||!daysLoaded){v.innerHTML='<div class="card empty">Loading live data…</div>';return;}
-  const [sp]=key.split('|');const m=$('month').value;
-  const mLabel=new Date(m+'-01T00:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-  const R=compute(key);
-  const prodRows=Object.keys(R.byProd).sort((a,b)=>R.byProd[b].c-R.byProd[a].c).map(p=>{
-    const x=R.byProd[p];
-    return `<tr><td>${esc(p)}<div class="tag">${x.rate?(x.rate.pct?x.rate.v+'% of revenue':rp(x.rate.v)+' / unit'):'no rate set'}</div></td><td class="n">${x.u}</td><td class="n">${rp(x.c)}</td></tr>`;
-  }).join('');
-  let lastDay='',saleRows='';
-  R.sales.forEach(s=>{
-    if(s.d!==lastDay){lastDay=s.d;saleRows+=`<div class="day">${new Date(s.d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</div>`;}
-    saleRows+=`<div class="sale"><div>${s.u}× ${esc(s.prod)}<div class="tag">${rp(s.r)}</div></div><div class="c">+${rp(s.c)}</div></div>`;
-  });
+  renderOverview();
+  const L=$('who').value,v=$('view');
+  if(!L){v.innerHTML='<div class="card empty">Pick your name to see your commission.</div>';return;}
+  if(!teamsLoaded||!cfgLoaded||!daysLoaded){v.innerHTML='<div class="card empty">Loading live data…</div>';return;}
+  const m=$('month').value,mLabel=new Date(m+'-01T00:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  const X=compute(L);
+  const top=X.T.length?X.T[X.T.length-1].min:1,scale=Math.max(top*1.1,X.meta);
+  const prodRows=Object.keys(X.byProd).sort((a,b)=>X.byProd[b].c-X.byProd[a].c).map(p=>{const x=X.byProd[p];
+    return `<tr><td>${esc(p)}<div class="tag">${rp(x.rate)} / unit</div></td><td class="n">${x.u}</td><td class="n">${rp(x.c)}</td></tr>`;}).join('');
+  const spRows=Object.keys(X.bySp).sort((a,b)=>X.bySp[b].r-X.bySp[a].r).map(s=>{const x=X.bySp[s];
+    return `<tr><td>${esc(s)}${NOT_META.includes(n(s))?'<div class="tag">not Meta Ads</div>':''}</td><td class="n">${x.u}</td><td class="n">${jt(x.r)}</td><td class="n">${NO_COMMISSION.includes(n(s))?'<span class="tag">none</span>':rp(x.c)}</td></tr>`;}).join('');
   v.innerHTML=`
-    <div class="card hero">
-      <div class="who">${esc(sp)} · ${esc(mLabel)}</div>
-      <div class="amt">${rp(R.total)}</div>
-      <div class="sub">commission so far · updates live</div>
-      <div class="stats">
-        <div class="stat"><b>${R.sales.length}</b><span>Sales</span></div>
-        <div class="stat"><b>${R.units}</b><span>Units</span></div>
-        <div class="stat"><b>${rp(R.rev).replace('Rp ','')}</b><span>Revenue Rp</span></div>
-      </div>
+  <div class="card hero">
+    <div class="who">${esc(L)} · ${esc(LEADERS[L].join(' + '))} · ${esc(mLabel)}</div>
+    <div class="amt">${rp(X.total)}</div>
+    <div class="sub">total so far · updates live</div>
+    <div class="stats">
+      <div class="stat"><b>${rp(X.comm)}</b><span>Commission</span></div>
+      <div class="stat"><b class="${X.bonus?'ok':''}">${rp(X.bonus)}</b><span>Bonus</span></div>
     </div>
-    ${R.sales.length?`
-    <div class="card"><h3>By product</h3>
-      <table><tr><th>Product</th><th class="n">Units</th><th class="n">Commission</th></tr>${prodRows}</table>
-      ${R.missing.length?`<div class="warn">No commission rate set yet for: ${R.missing.map(esc).join(', ')}. Ask your admin.</div>`:''}
-    </div>
-    <div class="card"><h3>Every sale</h3>${saleRows}</div>`
-    :`<div class="card empty">No sales logged for ${esc(mLabel)} yet.</div>`}`;
+  </div>
+  <div class="card">
+    <h3>Bonus progress · Meta Ads</h3>
+    <div class="big">${rp(X.meta)}</div>
+    <div class="bar"><i style="width:${Math.min(100,X.meta/scale*100)}%"></i>${X.T.map(t=>`<u style="left:${t.min/scale*100}%"></u>`).join('')}</div>
+    <div class="ticks">${X.T.map(t=>`<span>${jt(t.min)} → ${jt(t.bonus)}</span>`).join('')}</div>
+    <div class="note">${X.next?`<b>${rp(X.next.min-X.meta)}</b> more Meta Ads revenue to reach the ${jt(X.next.bonus)} bonus.`:'<span class="ok">Top bonus reached.</span>'}
+    TikTok, Shopee and Tokopedia sales don't count here.</div>
+  </div>
+  ${Object.keys(X.bySp).length?`
+  <div class="card"><h3>Commission by product</h3>
+    ${prodRows?`<table><tr><th>Product</th><th class="n">Units</th><th class="n">Commission</th></tr>${prodRows}</table>`:'<div class="empty">No commission products sold yet.</div>'}
+    ${X.tokped?`<div class="note">${X.tokped} unit${X.tokped>1?'s':''} sold on Tokopedia earn no commission.</div>`:''}
+  </div>
+  <div class="card"><h3>Your team</h3>
+    <table><tr><th>Sales</th><th class="n">Units</th><th class="n">Revenue</th><th class="n">Comm.</th></tr>${spRows}</table>
+  </div>`:`<div class="card empty">No sales logged for ${esc(mLabel)} yet.</div>`}`;
 }
 
 // ── Admin
 const adminPwd=()=>ls.get('hxcs_admin_pwd')||DEFAULT_ADMIN_PWD;
 let unlocked=false;try{unlocked=sessionStorage.getItem('hxcs_comm_admin')==='1'}catch(e){}
-function showAdmin(){$('admin').style.display='block';$('lock').style.display=unlocked?'none':'block';$('editor').style.display=unlocked?'block':'none';renderEditor();}
+function showAdmin(){$('admin').style.display='block';$('lock').style.display=unlocked?'none':'block';$('editor').style.display=unlocked?'block':'none';renderEditor();renderOverview();}
 $('adminLink').onclick=()=>{if($('admin').style.display==='block'){$('admin').style.display='none';return;}showAdmin();$('admin').scrollIntoView({behavior:'smooth'});};
 function tryUnlock(){
   if($('pwd').value===adminPwd()){unlocked=true;try{sessionStorage.setItem('hxcs_comm_admin','1')}catch(e){}$('lockMsg').textContent='';showAdmin();}
   else $('lockMsg').textContent='Wrong password.';
 }
 $('unlock').onclick=tryUnlock;$('pwd').onkeydown=e=>{if(e.key==='Enter')tryUnlock();};
+const adminOpen=()=>unlocked&&$('admin').style.display==='block';
 
-function allProducts(){
-  const s=new Set(Object.keys(PRODS||{}));
-  Object.values(RATES).forEach(r=>Object.keys(r||{}).forEach(k=>s.add(unfk(k))));
-  return [...s].sort();
+function renderOverview(){
+  if(!adminOpen()||!teamsLoaded||!cfgLoaded||!daysLoaded)return;
+  let sum=0;
+  const rows=Object.keys(LEADERS).map(L=>{const X=compute(L);sum+=X.total;
+    return `<tr><td>${esc(L)}<div class="tag">Meta ${jt(X.meta)}</div></td><td class="n">${jt(X.comm)}</td><td class="n">${jt(X.bonus)}</td><td class="n"><b>${jt(X.total)}</b></td></tr>`;}).join('');
+  $('overview').innerHTML=`<div style="overflow-x:auto"><table><tr><th>Leader</th><th class="n">Comm.</th><th class="n">Bonus</th><th class="n">Total</th></tr>${rows}
+    <tr><td><b>Total to pay</b></td><td></td><td></td><td class="n"><b>${rp(sum)}</b></td></tr></table></div>`;
 }
 function renderEditor(){
-  if(!unlocked||$('admin').style.display!=='block')return;
-  const who=$('edWho').value||DEF_KEY;const mine=RATES[who===DEF_KEY?DEF_KEY:fk(who)]||{},def=RATES[DEF_KEY]||{};
-  const active=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.prod;
-  $('rateTable').innerHTML=`<table><tr><th>Product</th><th class="n">Price</th><th class="n">Rate</th>${who===DEF_KEY?'':'<th class="n">Default</th>'}</tr>`+
-    allProducts().map(p=>`<tr><td>${esc(p)}</td><td class="n tag">${PRODS[p]!=null?rp(PRODS[p]):'—'}</td>
-      <td class="n"><input inputmode="decimal" data-prod="${esc(p)}" value="${esc(rateStr(parseRate(mine[fk(p)])))}" placeholder="${who===DEF_KEY?'':esc(rateStr(parseRate(def[fk(p)])))}"></td>
-      ${who===DEF_KEY?'':`<td class="n tag">${esc(rateStr(parseRate(def[fk(p)])))||'—'}</td>`}</tr>`).join('')+'</table>';
-  $('rateTable').querySelectorAll('input').forEach(i=>{
-    i.onchange=()=>saveRate(who,i.dataset.prod,i.value,i);
-    if(active&&i.dataset.prod===active)i.focus();
+  if(!adminOpen())return;
+  const R=rates(),names=new Set([...Object.keys(PRODS||{}),...Object.keys(DEFAULT_RATES)]);
+  $('rateTable').innerHTML='<table>'+[...names].sort().map(p=>`<tr><td>${esc(p)}</td><td class="n"><input inputmode="numeric" data-prod="${esc(p)}" value="${R[n(p)]?R[n(p)]:''}" placeholder="0"></td></tr>`).join('')+'</table>';
+  $('rateTable').querySelectorAll('input').forEach(i=>i.onchange=()=>{
+    const v=num(i.value);
+    ref('commission/leaderRates').update({[fk(i.dataset.prod)]:v})
+      .then(()=>msg(`Saved ${i.dataset.prod}: ${rp(v)} per unit`)).catch(e=>msg('Save failed: '+e.message,true));
+  });
+  const T=tiers();
+  $('tierTable').innerHTML='<table><tr><th>Revenue at least</th><th class="n">Bonus</th></tr>'+[0,1,2].map(i=>`<tr>
+    <td><input inputmode="numeric" data-i="${i}" data-f="min" value="${T[i]?T[i].min:''}" placeholder="—" style="width:100%;text-align:left"></td>
+    <td class="n"><input inputmode="numeric" data-i="${i}" data-f="bonus" value="${T[i]?T[i].bonus:''}" placeholder="—"></td></tr>`).join('')+'</table>';
+  $('tierTable').querySelectorAll('input').forEach(i=>i.onchange=()=>{
+    const out=[0,1,2].map(k=>({min:num($('tierTable').querySelector(`[data-i="${k}"][data-f="min"]`).value),bonus:num($('tierTable').querySelector(`[data-i="${k}"][data-f="bonus"]`).value)})).filter(t=>t.min>0);
+    ref('commission').update({bonusTiers:out}).then(()=>msg('Saved bonus tiers')).catch(e=>msg('Save failed: '+e.message,true));
   });
 }
-$('edWho').onchange=renderEditor;
-
-// Narrow writes only: one person's node, one product key.
-function writeRates(personKey,patch){
-  const node=personKey===DEF_KEY?DEF_KEY:fk(personKey);
-  return ref('commission/rates/'+node).update(patch);
-}
-function saveRate(who,prod,raw,input){
-  const r=parseRate(raw);
-  if(r===undefined){$('edMsg').className='msg err';$('edMsg').textContent=`"${raw}" is not a valid rate for ${prod}.`;return;}
-  writeRates(who,{[fk(prod)]:r?(r.pct?r.v+'%':r.v):null})
-    .then(()=>{$('edMsg').className='msg';$('edMsg').textContent=`Saved ${prod}: ${r?rateStr(r):'removed'}`;})
-    .catch(e=>{$('edMsg').className='msg err';$('edMsg').textContent='Save failed: '+e.message;});
-}
-
-$('bulkGo').onclick=()=>{
-  const prods=allProducts(),byP={};prods.forEach(p=>byP[n(p)]=p);
-  const errs=[],patches={};let count=0;
-  $('bulk').value.split('\n').forEach((line,i)=>{
-    if(!line.trim())return;
-    const parts=line.split(/\t|,(?=[^,]*,[^,]*$)|,(?=[^,]*$)/).map(s=>s.trim());
-    if(parts.length!==3){errs.push(`Line ${i+1}: need Name, Product, Amount`);return;}
-    let [name,prod,amt]=parts;
-    let key;
-    if(n(name)==='default')key=DEF_KEY;
-    else{
-      const mt=name.match(/^(.*)\((.*)\)\s*$/);
-      key=mt?rosterKey(mt[1],mt[2]):IX.byName[n(name)];
-      if(mt&&key&&n(IX.meta[key].team)!==n(mt[2]))key=null;
-      if(!key){errs.push(`Line ${i+1}: "${name}" ${IX.byName[n(name)]===null?'is in two teams, write Name (Team)':'not found in roster'}`);return;}
-    }
-    const P=byP[n(prod)];if(!P){errs.push(`Line ${i+1}: product "${prod}" not found`);return;}
-    const r=parseRate(amt);if(!r){errs.push(`Line ${i+1}: "${amt}" is not a valid amount`);return;}
-    (patches[key]||(patches[key]={}))[fk(P)]=r.pct?r.v+'%':r.v;count++;
-  });
-  if(errs.length){$('bulkMsg').className='msg err';$('bulkMsg').textContent='Nothing saved. Fix these first:\n'+errs.join('\n');return;}
-  if(!count){$('bulkMsg').className='msg err';$('bulkMsg').textContent='Nothing to save.';return;}
-  Promise.all(Object.keys(patches).map(k=>writeRates(k,patches[k])))
-    .then(()=>{$('bulkMsg').className='msg';$('bulkMsg').textContent=`Saved ${count} rate${count>1?'s':''} for ${Object.keys(patches).length} people.`;$('bulk').value='';})
-    .catch(e=>{$('bulkMsg').className='msg err';$('bulkMsg').textContent='Save failed: '+e.message;});
-};
+function msg(t,err){$('edMsg').className='msg'+(err?' err':'');$('edMsg').textContent=t;}
 
 // ── start
 (function(){
   const d=new Date();$('month').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  fillPicker();
   $('month').onchange=watchMonth;
-  $('who').onchange=()=>{ls.set('hxcs_comm_who',$('who').value);render();};
+  $('who').onchange=()=>{ls.set('hxcs_lead_who',$('who').value);render();};
   watchMonth();
 })();
 </script>
