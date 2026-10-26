@@ -1,0 +1,171 @@
+/* ══════════════════════════════════════════════════════════════════════
+   FX BADGES — lencana pencapaian (js/fx-badges.js)
+   Chip kaca PADAT (tanpa backdrop-filter): isi gelap + kilau tepi atas +
+   garis tepi tipis. Hijau = pencapaian, kuning logo HANYA juara hari ini
+   (isi + tepi emas) dan rekor pribadi (glif + garis tepi emas, tanpa isi —
+   bahasa "rekor" emas sama dengan kapsul rekor fx-live, grafik & Wrapped),
+   putih/abu = info (pertama, juara kemarin). Tanpa animasi berulang: kilau
+   sekali saat lencana pertama kali terlihat di HP ini hari ini.
+   Tanpa flex gap / inset / aspect-ratio (iOS < 14.5). Font: skin.css memaksa
+   tumpukan font sistem untuk semua elemen, jadi di sini tidak diatur.
+   ══════════════════════════════════════════════════════════════════════ */
+:root{
+  --hx-bdg-green:#30d158;
+  --hx-bdg-gold:#ffd426;
+  --hx-bdg-silver:#d1d1d6;
+  --hx-bdg-fill:#121214;
+}
+
+/* ── kartu Salespeople: deretan chip di kanan avatar ─────────────────
+   Diletakkan absolut di dalam padding kartu — tata letak kartu tidak
+   berubah sama sekali. Tinggi = tinggi avatar supaya chip sejajar tengah. */
+.spc>.hx-bdg-row{
+  position:absolute;top:0;right:0;z-index:1;
+  padding-top:inherit;padding-right:inherit;
+  box-sizing:content-box;height:47px;
+  display:flex;align-items:center;justify-content:flex-end;
+  pointer-events:none;
+}
+/* chip menerima kursor (tooltip desktop); ketukan tetap naik ke onclick kartu */
+.spc>.hx-bdg-row>.hx-bdg{pointer-events:auto}
+@media(max-width:768px){.spc>.hx-bdg-row{height:40px}}
+
+.hx-bdg{
+  position:relative;overflow:hidden;flex:0 0 auto;
+  display:inline-flex;align-items:center;
+  height:20px;padding:0 7px 0 5px;margin-left:4px;border-radius:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.02)) var(--hx-bdg-fill);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(255,255,255,.075),0 4px 10px -6px rgba(0,0,0,.9);
+  font-size:10px;font-weight:600;line-height:1;letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;-webkit-font-feature-settings:'tnum';font-feature-settings:'tnum';
+  color:#e5e5ea;white-space:nowrap;
+  -webkit-font-smoothing:antialiased;
+}
+.hx-bdg:first-child{margin-left:0}
+.hx-bdg .hx-bdg-g{width:12px;height:12px;margin-right:4px;flex:0 0 auto;display:block}
+.hx-bdg-t{display:block;padding-top:1px}
+.hx-bdg.hx-bdg-ico{width:20px;padding:0;justify-content:center}
+.hx-bdg.hx-bdg-ico .hx-bdg-g{margin-right:0}
+.hx-bdg-more{
+  padding:0 6px;color:#8e8e93;font-size:9.5px;font-weight:700;letter-spacing:0;
+}
+
+/* nada warna */
+.hxb-green .hx-bdg-g{color:var(--hx-bdg-green)}
+.hxb-gold .hx-bdg-g,.hxb-goldl .hx-bdg-g{color:var(--hx-bdg-gold)}
+.hxb-silver .hx-bdg-g{color:var(--hx-bdg-silver)}
+.hx-bdg.hxb-green{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(48,209,88,.26),0 4px 10px -6px rgba(0,0,0,.9)}
+.hx-bdg.hxb-goldl{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(255,212,38,.27),0 4px 10px -6px rgba(0,0,0,.9)}
+.hx-bdg.hxb-gold{
+  color:#fff4cc;
+  background:linear-gradient(180deg,rgba(255,212,38,.15),rgba(255,212,38,.035)) var(--hx-bdg-fill);
+  box-shadow:inset 0 1px 0 rgba(255,236,160,.26),inset 0 0 0 1px rgba(255,212,38,.34),0 4px 12px -6px rgba(0,0,0,.9);
+}
+
+/* ── Top Performers: chip ikon setelah nama ──────────────────────────── */
+.hx-bdg-lb{
+  position:relative;overflow:hidden;
+  display:inline-flex;align-items:center;justify-content:center;
+  /* margin vertikal negatif: chip 18px tidak menambah tinggi baris nama
+     (tanpa ini baris bernama-chip 1,6px lebih tinggi), tengahnya = tengah teks */
+  width:18px;height:18px;margin:-5px 0 -5px 8px;border-radius:6px;vertical-align:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02)) var(--hx-bdg-fill);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.hx-bdg-lb.hxb-green{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(48,209,88,.3)}
+.hx-bdg-lb.hxb-goldl{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(255,212,38,.38)}
+/* "Juara sales hari ini" di baris 02+ (channel / team lead di 01) */
+.hx-bdg-lb.hxb-gold{
+  background:linear-gradient(180deg,rgba(255,212,38,.16),rgba(255,212,38,.04)) var(--hx-bdg-fill);
+  box-shadow:inset 0 1px 0 rgba(255,236,160,.26),inset 0 0 0 1px rgba(255,212,38,.38);
+}
+.hx-bdg-lb .hx-bdg-g{width:11px;height:11px;display:block}
+
+/* ── modal detail: bagian "Pencapaian" ───────────────────────────────── */
+.hx-bdg-sec{margin:0 0 6px}
+.hx-bdg-sec .hx-bdg-sl{margin-top:4px}
+.hx-bdg-list{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));
+  grid-gap:8px;gap:8px;
+}
+.hx-bdg-tile{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;min-width:0;
+  padding:10px 12px 10px 10px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015)) rgba(14,14,16,.94);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(255,255,255,.065);
+}
+.hx-bdg-disc{
+  flex:0 0 auto;width:32px;height:32px;margin-right:11px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+}
+.hx-bdg-disc .hx-bdg-g{width:16px;height:16px;display:block}
+.hx-bdg-tile.hxb-green .hx-bdg-disc{background:rgba(48,209,88,.11);box-shadow:inset 0 0 0 1px rgba(48,209,88,.3)}
+.hx-bdg-tile.hxb-gold .hx-bdg-disc{background:rgba(255,212,38,.12);box-shadow:inset 0 0 0 1px rgba(255,212,38,.38)}
+.hx-bdg-tile.hxb-goldl .hx-bdg-disc{background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,212,38,.42)}
+.hx-bdg-tile.hxb-gold{box-shadow:inset 0 1px 0 rgba(255,236,160,.2),inset 0 0 0 1px rgba(255,212,38,.2)}
+.hx-bdg-tx{display:block;min-width:0;flex:1 1 auto}
+.hx-bdg-tl{
+  display:block;font-size:13px;font-weight:700;line-height:1.2;color:#f5f5f7;letter-spacing:.01em;
+}
+.hx-bdg-td{
+  display:block;margin-top:3px;font-size:11px;font-weight:500;line-height:1.35;color:#a1a1a6;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;-webkit-font-feature-settings:'tnum';font-feature-settings:'tnum';
+}
+@media(max-width:360px){
+  .hx-bdg-tile{padding:9px 10px 9px 9px}
+  .hx-bdg-disc{width:30px;height:30px;margin-right:10px}
+}
+
+/* ── gerak: kilau sekali saat lencana pertama kali terlihat ──────────
+   Hanya transform/opacity pada pseudo-elemen & glif (compositor).
+   --hx-bdg-d = jeda (positif) atau posisi lanjut (negatif) bila app.js
+   membangun ulang daftar di tengah kilau. */
+.hx-bdg::before,.hx-bdg-lb::before,.hx-bdg-tile::before{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;border-radius:inherit;pointer-events:none;opacity:0;
+  box-shadow:inset 0 0 0 1px rgba(48,209,88,.95),inset 0 0 9px rgba(48,209,88,.4);
+}
+.hxb-gold::before,.hxb-goldl::before{box-shadow:inset 0 0 0 1px rgba(255,212,38,.95),inset 0 0 9px rgba(255,212,38,.38)}
+.hxb-silver::before{box-shadow:inset 0 0 0 1px rgba(255,255,255,.7),inset 0 0 9px rgba(255,255,255,.22)}
+.hx-bdg::after,.hx-bdg-lb::after,.hx-bdg-tile::after{
+  content:'';position:absolute;top:0;bottom:0;left:0;width:70%;pointer-events:none;opacity:0;
+  background:linear-gradient(100deg,rgba(255,255,255,0) 12%,rgba(255,255,255,.07) 34%,rgba(255,255,255,.46) 50%,rgba(255,255,255,.07) 66%,rgba(255,255,255,0) 88%);
+  -webkit-transform:translate3d(-110%,0,0);transform:translate3d(-110%,0,0);
+}
+.hx-bdg-tile::after{width:42%}
+.hxb-gold::after{background:linear-gradient(100deg,rgba(255,230,120,0) 12%,rgba(255,230,120,.08) 34%,rgba(255,244,200,.5) 50%,rgba(255,230,120,.08) 66%,rgba(255,230,120,0) 88%)}
+
+.hx-bdg-new::after{animation:hx-bdg-sweep 1.05s cubic-bezier(.45,0,.2,1) var(--hx-bdg-d,0ms) both}
+.hx-bdg-tile.hx-bdg-new::after{animation-name:hx-bdg-sweep-w}
+.hx-bdg-new::before{animation:hx-bdg-rim 1.35s cubic-bezier(.22,1,.36,1) var(--hx-bdg-d,0ms) both}
+.hx-bdg-new .hx-bdg-g{animation:hx-bdg-pop .62s cubic-bezier(.34,1.45,.64,1) var(--hx-bdg-d,0ms) both}
+
+@keyframes hx-bdg-sweep{
+  0%  {opacity:1;-webkit-transform:translate3d(-110%,0,0);transform:translate3d(-110%,0,0)}
+  100%{opacity:1;-webkit-transform:translate3d(160%,0,0);transform:translate3d(160%,0,0)}
+}
+@keyframes hx-bdg-sweep-w{
+  0%  {opacity:1;-webkit-transform:translate3d(-110%,0,0);transform:translate3d(-110%,0,0)}
+  100%{opacity:1;-webkit-transform:translate3d(260%,0,0);transform:translate3d(260%,0,0)}
+}
+@keyframes hx-bdg-rim{
+  0%  {opacity:0}
+  18% {opacity:1}
+  100%{opacity:0}
+}
+@keyframes hx-bdg-pop{
+  0%  {opacity:.15;-webkit-transform:scale(.35) rotate(-14deg);transform:scale(.35) rotate(-14deg)}
+  100%{opacity:1;-webkit-transform:none;transform:none}
+}
+
+/* modal: ubin naik masuk berurutan setelah modal memantul (lg-pop .38s) */
+.hx-bdg-tile.hx-bdg-in{animation:hx-bdg-rise .5s cubic-bezier(.22,1,.36,1) backwards}
+@keyframes hx-bdg-rise{
+  from{opacity:0;-webkit-transform:translate3d(0,8px,0) scale(.98);transform:translate3d(0,8px,0) scale(.98)}
+  to  {opacity:1;-webkit-transform:none;transform:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .hx-bdg-new::after,.hx-bdg-new::before,.hx-bdg-new .hx-bdg-g,.hx-bdg-tile.hx-bdg-in{animation:none}
+}

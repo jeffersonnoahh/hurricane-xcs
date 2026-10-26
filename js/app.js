@@ -198,7 +198,9 @@ function rc(r){return r>=10?'great':r>=7?'good':'low';}
 // css/fx-*.css bebas menimpanya.
 function md(i){return String(i+1).padStart(2,'0');}
 function mc(i){return['#ffd426','#f5f5f7','#c7c7cc'][i]||'#8e8e93';}
-function rcl(i){return 'hx-rk '+(['hx-rk1','hx-rk2','hx-rk3'][i]||'hx-rkX');}
+// has===false (baris tanpa omzet, mis. jam 03:00 belum ada order): angka tetap
+// '01', tapi abu biasa — Rp 0 bukan juara, jadi tidak dapat kuning/putih podium.
+function rcl(i,has){return 'hx-rk '+(has===false?'hx-rkX':(['hx-rk1','hx-rk2','hx-rk3'][i]||'hx-rkX'));}
 
 // ══ MONOGRAM TIM ══
 // config/teams/*/e berisi emoji (singa, api, salib, …). Emoji TIDAK PERNAH
@@ -729,8 +731,8 @@ function setPriceMode(mode){
 }
 
 function updateCustomPreview(){
-  const custom=parseFloat(document.getElementById('inCustom')?.value)||0;
-  const units=parseInt(document.getElementById('inUnits')?.value)||1;
+  const custom=parseFloat((document.getElementById('inCustom')||{}).value)||0;
+  const units=parseInt((document.getElementById('inUnits')||{}).value)||1;
   const preview=document.getElementById('customPreview');
   if(preview)preview.textContent=custom>0?'Total: '+fFull(custom*units):'';
 }
@@ -757,7 +759,7 @@ function addEntry(){
     if(currentPriceMode==='normal'){
       price=P[prod]||0;
     } else {
-      price=parseFloat(document.getElementById('inCustom')?.value)||0;
+      price=parseFloat((document.getElementById('inCustom')||{}).value)||0;
       if(!price){showToast('Masukkan custom price!','error');return;}
     }
 
@@ -877,10 +879,10 @@ function addActivity(){
 
     // Robust number parsing — strip whitespace and commas
     const parseNum=v=>{const n=parseInt(String(v||'').replace(/[^0-9-]/g,''));return isNaN(n)?0:n;};
-    const chats=parseNum(chatsEl?.value);
+    const chats=parseNum((chatsEl||{}).value);
     const calls=parseNum(callsEl.value);
     const fups=parseNum(fupsEl.value);
-    const notes=(notesEl?.value||'').trim();
+    const notes=((notesEl||{}).value||'').trim();
 
     if(!chats&&!calls&&!fups){
       showToast('Enter at least one: chats, calls, or follow ups','error');return;
@@ -1150,7 +1152,9 @@ function renderAll(){
   // Goal
   // % ASLI di teks (Rp189,7jt dari target Rp150jt = 126%, bukan 100%);
   // hanya lebar batangnya yang mentok di 100%.
-  const pct=TR>0?Math.round(T.revenue/TR*100):0;
+  // Belum tembus target tidak pernah tampil 100% (99,6% → 99%): event 'goal'
+  // 100% di fx-core baru menyala saat omzet benar-benar >= target.
+  const pct=TR>0?(T.revenue<TR?Math.min(99,Math.round(T.revenue/TR*100)):Math.round(T.revenue/TR*100)):0;
   document.getElementById('goalFill').style.width=Math.min(100,pct)+'%';
   document.getElementById('goalPct').textContent=pct+'%';
   document.getElementById('totalRev').textContent=fFull(T.revenue);
@@ -1173,7 +1177,7 @@ function renderAll(){
     :teams.map((t,i)=>{
       const tc=TM[t.n]||{c:'#888',bg:'#111',e:'',m:[]};
       return`<tr data-k="team:${_htmlEsc(t.n)}">
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
+        <td><span class="rnk ${rcl(i,t.revenue>0)}">${md(i)}</span></td>
         <td><div class="tcell">${teamTav(t.n,tc)}<div class="tn">${t.n}</div></div></td>
         <td><span style="font-size:9px;color:#6060a0;font-family:'DM Mono',monospace">${tc.m.join(' · ')}</span></td>
         <td><span class="nb">${t.chats}</span></td>
@@ -1190,7 +1194,7 @@ function renderAll(){
       const tc=TM[s.team]||{c:'#888'};
       const isEmpty=s.chats===0&&s.closes===0&&s.calls===0&&s.fups===0;
       return`<tr data-k="${_htmlEsc(s.sp+'|'+s.team)}" onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')" style="${isEmpty?'opacity:0.5':''}">
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
+        <td><span class="rnk ${rcl(i,s.revenue>0)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.closes}</span></td>
@@ -1248,7 +1252,7 @@ function renderAll(){
       }
       return`
       <div class="lbi" data-k="${_htmlEsc(k)}" onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')">
-        <div class="lbr ${rcl(i)}">${md(i)}</div>
+        <div class="lbr ${rcl(i,s.revenue>0)}">${md(i)}</div>
         <div class="lbin">
           <div class="lbn">${s.sp}</div>
           <div class="lbt">${sub}</div>
@@ -1582,21 +1586,27 @@ function buildWA(){
   const T=tots(entries,acts);
   const vd=od(vOff);
   const ds=vd.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const rate=T.chats>0?(T.closes/T.chats*100).toFixed(1):0;
-  const cp=Math.round(T.chats/TC*100);
+  // Chat sekarang dilaporkan lewat activities (bukan di record order), jadi
+  // dijumlah dari keduanya — sama seperti baris TEAM RANKING di bawah. Target
+  // chat dari config (TC), bukan angka 160 lama.
+  const chats=(+T.chats||0)+acts.reduce((s,a)=>s+((a&&+a.chats)||0),0);
+  const rate=chats>0?(T.closes/chats*100).toFixed(1):0;
+  // di bawah target tidak pernah tampil 100% (241/242 dibulatkan jadi 100%)
+  const cp=TC>0?(chats<TC?Math.min(99,Math.round(chats/TC*100)):Math.round(chats/TC*100)):0;
   let txt='*HURRICANE XCS — DAILY REPORT*\n━━━━━━━━━━━━━━━━━━━━━━\n';
   txt+=`${ds}\n\n*SUMMARY*\n`;
-  txt+=`Chats : ${T.chats}/160 (${cp}%)\nCloses : ${T.closes} units\nCalls : ${T.calls}\nFollow Up : ${T.fups}\nClose Rate : ${rate}%\nRevenue : ${fFull(T.revenue)}\n\n`;
+  txt+=`Chats : ${chats}/${TC} (${cp}%)\nCloses : ${T.closes} units\nCalls : ${T.calls}\nFollow Up : ${T.fups}\nClose Rate : ${rate}%\nRevenue : ${fFull(T.revenue)}\n\n`;
   txt+='*TEAM RANKING*\n';
   const teams=aggTeams(entries,acts).filter(t=>t.chats>0||t.closes>0||t.calls>0);
   if(!teams.length)txt+='No data.\n';
   else teams.forEach((t,i)=>{txt+=`${i+1}. *${t.n}* — ${t.chats}c · ${t.calls} calls · ${t.closes}x · ${fFull(t.revenue)}\n`;});
   txt+='\n*TOP 5 SALESPEOPLE*\n';
-  const sps=aggSP(entries,acts).slice(0,5);
+  // seller tanpa order/aktivitas sama sekali tidak dicetak sebagai 'Top 5'
+  const sps=aggSP(entries,acts).filter(s=>s.closes>0||s.revenue>0||s.chats>0||s.calls>0).slice(0,5);
   if(!sps.length)txt+='No data.\n';
   else sps.forEach((s,i)=>{txt+=`${i+1}. ${s.sp} (${s.team}) — ${s.closes}x · ${fFull(s.revenue)}\n`;});
   txt+='\n━━━━━━━━━━━━━━━━━━━━━━\n';
-  txt+=cp>=100?'TARGET REACHED! Great work team!':'Keep pushing — '+(160-T.chats)+' chats to go!';
+  txt+=chats>=TC?'TARGET REACHED! Great work team!':'Keep pushing — '+(TC-chats)+' chat'+(TC-chats===1?'':'s')+' to go!';
   txt+='\n_Hurricane XCS Performance System_';
   return txt;
 }
@@ -1726,7 +1736,7 @@ function renderMonthly(){
       const tc=TM[t.n]||{c:'#888',bg:'#111',e:''};
       const barW=Math.round(t.revenue/maxTeamRev*100);
       return`<tr data-k="team:${_htmlEsc(t.n)}">
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
+        <td><span class="rnk ${rcl(i,t.revenue>0)}">${md(i)}</span></td>
         <td><div class="tcell">${teamTav(t.n,tc)}<div class="tn">${t.n}</div></div></td>
         <td><span class="nb">${t.chats}</span></td>
         <td><span class="nb">${t.calls}</span></td>
@@ -1774,7 +1784,7 @@ function renderMonthly(){
     if(_isHiddenSP(v.sp,v.team,v.revenue))delete spTotals[k];
   });
   window._monthSpTotals=spTotals;
-  window._monthLabel=document.getElementById('monthLabel')?.textContent||'';
+  window._monthLabel=(document.getElementById('monthLabel')||{}).textContent||'';
   renderSpLookup();
 
   // SP table
@@ -1784,7 +1794,7 @@ function renderMonthly(){
     :sortedSPs.map((s,i)=>{
       const tc=TM[s.team]||{c:'#888'};
       return`<tr data-k="${_htmlEsc(s.sp+'|'+s.team)}" onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
+        <td><span class="rnk ${rcl(i,s.revenue>0)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.calls}</span></td>
@@ -2017,7 +2027,7 @@ Gunakan data nyata di atas. Jangan terlalu panjang, maksimal 250 kata.`;
       })
     });
     const json=await res.json();
-    const text=json.content?.[0]?.text||'Gagal generate briefing.';
+    const text=(json.content&&json.content[0]&&json.content[0].text)||'Gagal generate briefing.';
 
     // Format the text nicely
     const formatted=text
@@ -2732,7 +2742,7 @@ function recalcOmset(){
   let total=0;
   OMSET_FIELDS.forEach(f=>{
     const el=document.getElementById('o_'+f);
-    total+=parseFloat(el?.value||0)||0;
+    total+=parseFloat((el&&el.value)||0)||0;
   });
   const fmt=fFull(total);
   const el1=document.getElementById('omsetTotal');
@@ -2740,18 +2750,18 @@ function recalcOmset(){
   const el3=document.getElementById('omsetTotalSub');
   if(el1)el1.textContent=fmt;
   if(el2)el2.textContent=fmt;
-  if(el3)el3.textContent=total>0?`${OMSET_FIELDS.filter(f=>parseFloat(document.getElementById('o_'+f)?.value||0)>0).length} channel diisi`:'Isi form di atas untuk melihat total';
+  if(el3)el3.textContent=total>0?`${OMSET_FIELDS.filter(f=>parseFloat((document.getElementById('o_'+f)||{}).value||0)>0).length} channel diisi`:'Isi form di atas untuk melihat total';
 }
 
 function saveOmset(){
   const key=getOmsetKey();
   const data={};
   OMSET_FIELDS.forEach(f=>{
-    const v=parseFloat(document.getElementById('o_'+f)?.value||0)||0;
+    const v=parseFloat((document.getElementById('o_'+f)||{}).value||0)||0;
     if(v>0)data[f]=v;
   });
   data.savedAt=Date.now();
-  data.total=OMSET_FIELDS.reduce((a,f)=>a+(parseFloat(document.getElementById('o_'+f)?.value||0)||0),0);
+  data.total=OMSET_FIELDS.reduce((a,f)=>a+(parseFloat((document.getElementById('o_'+f)||{}).value||0)||0),0);
 
   if(window.db){
     window.db.ref('omset/'+key).set(data).then(()=>{
@@ -3961,7 +3971,7 @@ function adminAddUpdateSP(){
   if(!teamSel||!spSel)return;
   const team=teamSel.value;
   const prev=spSel.value;
-  spSel.innerHTML=(TM[team]?.m||[]).map(sp=>`<option>${sp}</option>`).join('');
+  spSel.innerHTML=((TM[team]&&TM[team].m)||[]).map(sp=>`<option>${sp}</option>`).join('');
   // Pilihan dijaga. Tanpa ini, perubahan roster live (mis. team dipecah) yang
   // memindahkan team di form Quick Add Sale juga mereset nama sales ke anggota
   // pertama team, dan penjualan tercatat atas nama team lead.

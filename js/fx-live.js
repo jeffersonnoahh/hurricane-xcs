@@ -1,7 +1,8 @@
 /* ══════════════════════════════════════════════════════════════════════
    FX LIVE — setiap penjualan rekan tim jadi momen bersama.
    HANYA MEMBACA data. Tidak pernah menulis ke Firebase. Yang ditulis hanya
-   localStorage HP ini: 'hx-last-visit' dan 'hxl-target100-<tanggal>'.
+   localStorage HP ini: 'hx-last-visit', 'hxl-target100-<tanggal>' dan
+   'hxl-rec' (jatah momen rekor hari ini).
 
    1. KAPSUL "CLOSING MASUK" (gaya Dynamic Island)
       Titik hijau muncul tepat di bawah header, mekar jadi kapsul kaca gelap:
@@ -28,13 +29,25 @@
                      motion.js (maybeCelebrate) — banner ini tidak menambah
                      konfeti; percikan motion.js terbang di atasnya.
    3. "SEJAK TERAKHIR DIBUKA" — sekali saat data pertama masuk ('ready').
+   4. REKOR PRIBADI — penjualan yang membuat total HARI INI seorang sales
+        melewati hari terbaiknya (>= 10 hari aktif sebelumnya), atau total
+        BULAN INI melewati bulan penuh terbaiknya (>= 2 bulan sebelumnya):
+        kapsul bertepi emas (satu-satunya tempat kuning logo dipakai di
+        sini) 'Rekor pribadi baru · Hendri · Rp 45jt hari ini · rekor lama
+        Rp 38jt · 12 Agu'. Juga di HP penjualnya sendiri. Sekali per sales
+        per hari per jenis. Didahulukan dari kapsul penjualan biasa dan
+        MENGGANTIKAN kapsul penjualan yang memicunya. Definisi rekor dibagi
+        ke modul lain lewat HX.records (lihat di bawah).
 
-   Wallpaper: HX.emit('ripple', {x, y, power}) saat kapsul mekar
-   (power 0..1: channel .25 · biasa .5 · ringkasan .7 · besar 1) dan
-   HX.emit('surge', {x, y, power:1}) di puncak banner 100%.
+   Event HX: 'ripple' {x, y, power} saat kapsul mekar (power 0..1:
+   channel .25 · biasa .5 · ringkasan .7 · rekor .9 · besar 1) dan 'surge'
+   {x, y, power:1} di puncak banner 100%. (Latar sekarang hitam polos —
+   saat ini tidak ada pendengarnya; tetap dikirim untuk modul lain.)
 
    ATURAN: semua gerak = transform/opacity lewat Web Animations (jalan di
    compositor — tetap mulus walau renderAll sedang membangun ulang daftar).
+   Setiap kapsul/banner yang ditutup membatalkan SEMUA animasinya (killAnims)
+   — animasi fill 'forwards' yang dibiarkan menahan elemen lepas di memori.
    Tanpa backdrop-filter. Tanpa loop tanpa henti. Tidak ada kerja di setiap
    render. "Kurangi Gerak" = fade saja.
    ══════════════════════════════════════════════════════════════════════ */
@@ -49,7 +62,7 @@
   var MERGE_MS = 3 * 60 * 1000;
   var STALE_MS = 2 * 60 * 1000;
   var STALE_100_MS = 15 * 60 * 1000;
-  var HOLD = { sale: 4500, ch: 3200, sum: 5200, goal: 4600, since: 5800 };
+  var HOLD = { sale: 4500, ch: 3200, sum: 5200, goal: 4600, since: 5800, rec: 6200 };
   var LS_VISIT = 'hx-last-visit';
   var LH = 1.2;                         // tinggi baris odometer (em) — sama dengan CSS
   var CAN = !!(window.Element && Element.prototype.animate);
@@ -63,18 +76,30 @@
   }
   function nice(s) { s = String(s == null ? '' : s).trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'; }
   function full(n) { return HX.moneyFull(Math.round(n || 0)); }
-  function dec(v, k) {
-    var s = v.toFixed(k);
-    if (s.indexOf('.') >= 0) s = s.replace(/0+$/, '').replace(/\.$/, '');
-    return s.replace('.', ',');
+  // bilangan bulat c dengan k desimal -> '9,56' (tanpa toFixed: 9.555.000
+  // harus jadi 9,56, bukan 9,55 karena galat float)
+  function fixed(c, k) {
+    if (!k) return String(c);
+    var p = Math.pow(10, k), w = Math.floor(c / p), f = String(c % p);
+    while (f.length < k) f = '0' + f;
+    return w + ',' + f;
   }
-  // 'Rp 24,3jt' / 'Rp 9,55jt' / 'Rp 2,95M' / 'Rp 850rb'
+  // cermin fRp (app.js) — hanya dipakai kalau fRp tidak ada
+  function fRpLocal(n) {
+    var a = Math.abs(n), sg = n < 0 ? '-' : '';
+    var d2 = function (c) { return c % 100 ? fixed(c, 2) : String(c / 100); };
+    if (a >= 999995000) return sg + d2(Math.round(a / 1e7)) + 'M';
+    if (a >= 999500) return sg + d2(Math.round(a / 1e4)) + 'jt';
+    if (a >= 1000) return sg + Math.round(a / 1e3) + 'rb';
+    return String(n);
+  }
+  // SATU format uang singkat dengan seluruh app (fRp lewat HX.money):
+  // 'Rp 24,30jt' / 'Rp 9,56jt' / 'Rp 1jt' / 'Rp 189,73jt' / 'Rp 2,95M' / 'Rp 850rb'
   function short(n) {
-    n = Math.round(n || 0);
-    if (n >= 1e9) return 'Rp ' + dec(n / 1e9, 2) + 'M';
-    if (n >= 1e6) { var v = n / 1e6; return 'Rp ' + dec(v, v >= 100 ? 0 : v >= 10 ? 1 : 2) + 'jt'; }
-    if (n >= 1e3) return 'Rp ' + Math.round(n / 1e3) + 'rb';
-    return 'Rp ' + n;
+    n = Math.round(+n || 0);
+    var s = null;
+    try { if (typeof fRp === 'function') s = HX.money(n); } catch (e) { s = null; }
+    return 'Rp ' + (s == null || s === '' ? fRpLocal(n) : s);
   }
   function ago(ts) {
     var m = Math.floor((Date.now() - (+ts || Date.now())) / 60000);
@@ -97,9 +122,39 @@
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
   function still() { return !CAN || HX.reduced(); }
+  /* Semua animasi modul ini dicatat. Animasi yang sudah selesai dengan fill
+     'forwards'/'both' (atau yang dijeda) tetap hidup dan MENAHAN elemennya
+     di memori walau kapsulnya sudah dibuang dari DOM — jadi setiap kapsul /
+     banner yang ditutup membatalkan (cancel) semua animasi di dalamnya.
+     Tanpa Element.getAnimations (baru ada di Chrome 84 / iOS 13.1+). */
+  var LIVE_A = [];
   function anim(el, kf, o) {
     if (!el || !CAN) return null;
-    try { return el.animate(kf, o); } catch (e) { return null; }
+    var a = null;
+    try { a = el.animate(kf, o); } catch (e) { return null; }
+    if (a) LIVE_A.push(a);
+    return a;
+  }
+  function attached(t) {
+    try { return t.isConnected !== undefined ? t.isConnected : D.documentElement.contains(t); } catch (e) { return false; }
+  }
+  // batalkan animasi di dalam root (dan semua yang targetnya sudah lepas dari DOM)
+  function killAnims(root) {
+    var keep = [];
+    for (var i = 0; i < LIVE_A.length; i++) {
+      var a = LIVE_A[i], t = null;
+      try { t = a.effect && a.effect.target; } catch (e) { t = null; }
+      if (!t || (root && (t === root || root.contains(t))) || !attached(t)) {
+        try { a.onfinish = null; a.cancel(); } catch (e) { }
+      } else keep.push(a);
+    }
+    LIVE_A = keep;
+  }
+  function dropAnim(a) {
+    if (!a) return;
+    try { a.onfinish = null; a.cancel(); } catch (e) { }
+    var i = LIVE_A.indexOf(a);
+    if (i >= 0) LIVE_A.splice(i, 1);
   }
   function dayOf(ts) {
     try { if (typeof dk === 'function') return dk(new Date(ts)); } catch (e) { }
@@ -162,17 +217,55 @@
   /* ── odometer: digit bergulir per kolom ──────────────────────────────
      Tiap kolom berisi [kosong, 0..9, 0..9]; indeks 0 = kosong, digit d ada
      di 1+d dan 11+d. Kolom selalu bergulir MAJU (angka tidak pernah mundur).
-     Tanpa nilai awal: setiap kolom berputar satu putaran penuh dari kosong. */
+     Tanpa nilai awal (kapsul baru): tiap digit NAIK MASUK dari bawah
+     jendelanya sambil menebal (gaya angka iOS), berurutan kiri -> kanan,
+     <= ±0,55 dtk. Kolomnya hanya berisi angka itu sendiri, jadi tidak
+     pernah ada potongan angka lain yang ikut terlihat (putaran penuh dulu
+     terbaca sebagai tumpukan potongan angka).
+     Dengan nilai awal: hanya digit yang BERUBAH yang bergulir maju; digit
+     yang sama diam, digit yang baru muncul (puluhan juta, 96% -> 101%) naik
+     masuk seperti di atas.
+     Jendela tiap kolom = tinggi tinta angka + tepi yang memudar (diukur dari
+     font yang benar-benar dipakai), dipasang selama SEMUA kolom bergerak dan
+     dilepas setelah kolom terakhir mendarat (onfinish), bukan dengan timer. */
   var STACK = (function () {
     var s = '<i>&nbsp;</i>';
     for (var r = 0; r < 2; r++) for (var d = 0; d < 10; d++) s += '<i>' + d + '</i>';
     return s;
   })();
   function digitsOf(str) { var a = []; String(str || '').replace(/\d/g, function (c) { a.push(+c); }); return a; }
+  // jendela tinta angka dalam em (baris = LH em): diukur sekali per font
+  var inkCache = {};
+  function inkMask(host) {
+    var cs = null;
+    try { cs = getComputedStyle(host); } catch (e) { cs = null; }
+    var fam = cs ? cs.fontFamily : '', wt = cs ? cs.fontWeight : '', key = fam + '|' + wt;
+    if (inkCache[key] !== undefined) return inkCache[key];
+    // bawaan (SF Pro / Roboto): garis dasar ±0,95em dari atas baris 1,2em,
+    // angka setinggi ±0,72em
+    var top = 0.235, bot = 0.955;
+    try {
+      var c = D.createElement('canvas').getContext('2d');
+      c.font = (cs ? cs.fontStyle + ' ' + wt + ' ' : '') + '100px ' + (fam || 'sans-serif');
+      var m = c.measureText('0123456789');
+      var a = m.actualBoundingBoxAscent, d = m.actualBoundingBoxDescent, A = m.fontBoundingBoxAscent, De = m.fontBoundingBoxDescent;
+      if (a > 55 && a < 90 && d > -10 && d < 12) {
+        // garis dasar: dari metrik font kalau ada, kalau tidak pakai bawaan
+        var base = (A > 50 && De >= 0 && A + De < 160) ? (LH * 100 - (A + De)) / 2 + A : 95.5;
+        top = (base - a) / 100; bot = (base + Math.max(0, d)) / 100;
+      }
+    } catch (e) { }
+    var pad = 0.03, fade = 0.15;
+    var e0 = Math.max(0, top - pad - fade), e1 = Math.max(0, top - pad), e2 = Math.min(LH, bot + pad), e3 = Math.min(LH, bot + pad + fade);
+    var f = function (x) { return x.toFixed(3) + 'em'; };
+    return (inkCache[key] = 'linear-gradient(180deg,transparent ' + f(e0) + ',#000 ' + f(e1) + ',#000 ' + f(e2) + ',transparent ' + f(e3) + ')');
+  }
   function odo(host, to, from, delay, dur) {
     if (!host) return 0;
     var R = still();
     to = String(to); dur = dur || 900; delay = delay || 0;
+    // guliran sebelumnya di elemen ini (angka diperbarui di tengah jalan) dibatalkan
+    if (host.__hxlA) { host.__hxlA.forEach(dropAnim); host.__hxlA = null; }
     var tD = digitsOf(to), fD = from == null ? null : digitsOf(from);
     var wrap = D.createElement('span');
     wrap.className = 'hxl-odo';
@@ -189,50 +282,72 @@
       var fi = fD ? fD.length - 1 - fromRight : -1;
       var fd = fD && fi >= 0 ? fD[fi] : null;
       var col = D.createElement('span'); col.className = 'hxl-dg';
-      var st = D.createElement('span'); st.className = 'hxl-dgs'; st.innerHTML = STACK;
+      var st = D.createElement('span'); st.className = 'hxl-dgs';
       col.appendChild(st); wrap.appendChild(col);
-      var start, end;
-      // angka baru: putar satu putaran penuh. Kolom yang baru MUNCUL saat
-      // angka bertambah (5.775.000 -> 15.330.000 / 96% -> 101%) tidak
-      // berputar — digitnya naik masuk dari bawah, supaya tidak sempat
-      // terbaca "75.095.000" atau "088%"
-      var grow = false;
-      if (fd == null && fD) { start = end = 1 + d; grow = true; }
-      else if (fd == null) { start = 0; end = 11 + d; }
-      else { start = 1 + fd; end = d >= fd ? 1 + d : 11 + d; }
-      st.style.transform = 'translateY(' + (-end * LH) + 'em)';
-      cols.push({ st: st, col: col, start: start, end: end, grow: grow });
+      var start = 0, end = 0, rise = fd == null || R;
+      if (rise || fd === d) {
+        // hanya angka itu sendiri (naik masuk, atau diam kalau tidak berubah)
+        st.innerHTML = '<i>' + d + '</i>';
+        rise = fd == null;
+      } else {
+        st.innerHTML = STACK;
+        start = 1 + fd; end = d >= fd ? 1 + d : 11 + d;
+        st.style.transform = 'translateY(' + (-end * LH) + 'em)';
+      }
+      cols.push({ st: st, col: col, start: start, end: end, rise: rise });
     }
     flushTxt();
     host.textContent = '';
     host.appendChild(wrap);
     if (R) return 0;
-    var moving = cols.filter(function (c) { return c.start !== c.end || c.grow; });
+    var moving = cols.filter(function (c) { return c.start !== c.end || c.rise; });
     if (!moving.length) return 0;
+    var mk = inkMask(host);
+    wrap.style.setProperty('--hxl-ink', mk);
     wrap.classList.add('is-rolling');
-    var step = Math.min(40, 220 / Math.max(1, moving.length)), endAt = 0;
+    // jeda antar-kolom total <= 120ms: angka selesai hampir bersamaan
+    var step = Math.min(24, 120 / Math.max(1, moving.length)), endAt = 0, lastA = null, list = [];
+    var rolls = moving.some(function (c) { return !c.rise; });
     moving.forEach(function (c, k) {
-      var dl = delay + k * step, du = dur + k * 18;
-      if (c.grow) {
-        anim(c.st, [{ opacity: 0, transform: 'translateY(' + (-c.end * LH + 0.7) + 'em)' }, { opacity: 1, transform: 'translateY(' + (-c.end * LH) + 'em)' }],
-          { duration: Math.round(du * 0.8), delay: dl + Math.round(du * 0.25), easing: EASE_OUT, fill: 'backwards' });
-        endAt = Math.max(endAt, dl + du);
-        return;
+      var dl = delay + k * step, du = dur, a, e;
+      if (c.rise) {
+        // naik masuk: mulai dari bawah tepi jendela, tanpa lewat batas
+        var rd = rolls ? Math.round(du * 0.2) : 0, rdu = Math.min(520, rolls ? Math.round(du * 0.8) : du);
+        a = anim(c.st, [{ opacity: 0, transform: 'translateY(.62em)' }, { opacity: 1, offset: 0.6 }, { opacity: 1, transform: 'translateY(0em)' }],
+          { duration: rdu, delay: dl + rd, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+        e = dl + rd + rdu;
+      } else {
+        // tanpa lewat batas (tidak ada overshoot): melambat halus ke angkanya
+        a = anim(c.st, [{ transform: 'translateY(' + (-c.start * LH) + 'em)' }, { transform: 'translateY(' + (-c.end * LH) + 'em)' }],
+          { duration: du, delay: dl, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'backwards' });
+        e = dl + du;
       }
-      anim(c.st, [{ transform: 'translateY(' + (-c.start * LH) + 'em)' }, { transform: 'translateY(' + (-c.end * LH) + 'em)' }],
-        { duration: du, delay: dl, easing: 'cubic-bezier(.12,.86,.22,1)', fill: 'backwards' });
-      endAt = Math.max(endAt, dl + du);
+      if (a) list.push(a);
+      if (e >= endAt) { endAt = e; lastA = a; }
     });
-    setTimeout(function () { wrap.classList.remove('is-rolling'); }, endAt + 30);
+    host.__hxlA = list;
+    var off = function () {
+      if (lastA) lastA.onfinish = null;
+      clearTimeout(tmo);
+      wrap.classList.remove('is-rolling');
+      if (host.__hxlA === list) host.__hxlA = null;
+    };
+    // cadangan kalau onfinish tidak pernah datang (tab disembunyikan, dsb.)
+    var tmo = setTimeout(off, endAt + 1500);
+    if (lastA) lastA.onfinish = off; else { clearTimeout(tmo); tmo = setTimeout(off, endAt + 60); }
     return endAt;
   }
 
-  /* ── peringkat hari ini (label "naik ke #2") ─────────────────────── */
+  /* ── peringkat hari ini di antara SALES (label "#1 sales hari ini") ──
+     Channel (Live TikTok, Shopee…) dan team lead tidak dihitung — sama
+     dengan lencana "Juara hari ini". Karena Top Performers ikut memuat
+     channel, labelnya selalu menyebut "sales" supaya tidak bertentangan
+     dengan nomor 01 di papan itu. */
   function rankOf(it) {
-    if (it.kind !== 'sale' || HX.isLeader(it.sp)) return null;
+    if (it.kind !== 'sale' || HX.isLeader(it.sp) || HX.isChannel(it.sp)) return null;
     var m = {}, me = norm(it.sp) + '|' + norm(it.team);
     todayList().forEach(function (e) {
-      if (HX.isChannel(e.sp)) return;
+      if (!e || HX.isChannel(e.sp) || HX.isLeader(e.sp)) return;
       var k = norm(e.sp) + '|' + norm(e.team);
       m[k] = (m[k] || 0) + (+e.revenue || 0);
     });
@@ -243,6 +358,257 @@
     if (r1 > 3) return null;
     if (before > 0 && r0 <= r1) return null;     // tidak naik
     return r1;
+  }
+
+  /* ── REKOR PRIBADI — SATU definisi untuk semua modul (HX.records) ─────
+     Identitas = nama sales (trim, huruf kecil), DIGABUNG lintas tim.
+     Channel (HX.isChannel) & team lead (HX.isLeader) tidak punya rekor.
+       HX.records.day(sp) -> { sp, key, team, best, bestDate, today, current,
+                               days, eligible, record, gain }
+           best     = total HARIAN terbesar di tanggal SEBELUM hari ini
+           bestDate = 'YYYY-MM-DD' (seri -> tanggal yang lebih dulu)
+           today    = total hari ini (= current)
+           days     = jumlah hari aktif sebelumnya (total > 0)
+           eligible = days >= 10 dan best > 0
+           record   = eligible dan today > best      gain = today/best - 1
+       HX.records.month(sp) -> { sp, key, team, best, bestMonth, month, current,
+                                 months, eligible, record, gain }
+           best = bulan PENUH terbaik sebelum bulan ini ('YYYY-MM'),
+           month = current = bulan berjalan s.d. hari ini,
+           months = jumlah bulan sebelumnya yang ada penjualan,
+           eligible = months >= 2 dan best > 0
+       HX.records.holders()      sales yang SEKARANG di atas rekornya
+       HX.records.history(sp)    { days:[[tgl,total]..], months:[[bln,total]..] }
+       HX.records.dateLabel('2026-08-12') -> '12 Agu'
+       HX.records.monthLabel('2026-08')   -> 'Agustus'
+     Murni membaca allData. Indeks dibangun malas (hanya kalau ditanya),
+     paling banyak sekali per render, dan dipakai ulang kalau datanya sama. */
+  var REC_MIN_DAYS = 10, REC_MIN_MONTHS = 2;
+  var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  var BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  var BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  var rxIdx = null, rxDirty = true, rxVer = 0;
+  HX.on('render', function () { rxDirty = true; });       // hanya menandai — tanpa kerja
+  function rxSeller(sp) { return !!norm(sp) && !HX.isChannel(sp) && !HX.isLeader(sp); }
+  function rxBuild() {
+    var data; try { data = allData || {}; } catch (e) { data = {}; }
+    var tk = HX.todayKey();
+    if (rxIdx && !rxDirty && rxIdx.data === data && rxIdx.tk === tk) return rxIdx;
+    rxDirty = false;
+    var keys = Object.keys(data), n = 0, i, j;
+    for (i = 0; i < keys.length; i++) { var a0 = data[keys[i]]; n += (a0 && a0.length) || 0; }
+    var sig = keys.length + ':' + n;
+    if (rxIdx && rxIdx.data === data && rxIdx.tk === tk && rxIdx.sig === sig) return rxIdx;
+    var per = {}, ok = {};
+    for (i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      if (!DATE_RE.test(k) || k > tk) continue;
+      var arr = data[k], loc = null;
+      if (!arr || !arr.length) continue;
+      for (j = 0; j < arr.length; j++) {
+        var e = arr[j];
+        if (!e || typeof e !== 'object') continue;
+        var id = norm(e.sp);
+        if (!id) continue;
+        var o = ok[id];
+        if (o === undefined) o = ok[id] = rxSeller(e.sp);
+        if (!o) continue;
+        if (!loc) loc = {};
+        loc[id] = (loc[id] || 0) + (+e.revenue || 0);
+        var p = per[id] || (per[id] = { id: id, nm: {}, team: '', last: '', dm: {}, mm: {}, D: null, M: null });
+        var nm = String(e.sp).trim();
+        p.nm[nm] = (p.nm[nm] || 0) + 1;
+        if (k >= p.last) { p.last = k; if (e.team) p.team = e.team; }
+      }
+      if (loc) for (var id2 in loc) {
+        var q = per[id2], mk = k.slice(0, 7);
+        q.dm[k] = loc[id2];
+        q.mm[mk] = (q.mm[mk] || 0) + loc[id2];
+      }
+    }
+    rxVer++;
+    return (rxIdx = { data: data, tk: tk, mk: tk.slice(0, 7), sig: sig, per: per });
+  }
+  function rxName(p, sp) {
+    var best = '', c = -1;
+    for (var k in p.nm) if (p.nm[k] > c) { c = p.nm[k]; best = k; }
+    return best || String(sp || '').trim();
+  }
+  function rxDayOf(p, tk) {
+    if (p.D) return p.D;
+    var best = 0, bd = null, days = 0;
+    for (var k in p.dm) {
+      if (k >= tk) continue;
+      var v = p.dm[k];
+      if (!(v > 0)) continue;
+      days++;
+      if (v > best || (v === best && bd && k < bd)) { best = v; bd = k; }
+    }
+    return (p.D = { best: best, bestDate: bd, today: p.dm[tk] || 0, days: days });
+  }
+  function rxMonthOf(p, mk) {
+    if (p.M) return p.M;
+    var best = 0, bm = null, months = 0;
+    for (var m in p.mm) {
+      if (m >= mk) continue;
+      var v = p.mm[m];
+      if (!(v > 0)) continue;
+      months++;
+      if (v > best || (v === best && bm && m < bm)) { best = v; bm = m; }
+    }
+    return (p.M = { best: best, bestMonth: bm, current: p.mm[mk] || 0, months: months });
+  }
+  function recDay(sp) {
+    var X = rxBuild(), id = norm(sp), p = X.per[id], seller = rxSeller(sp);
+    var d = p && seller ? rxDayOf(p, X.tk) : { best: 0, bestDate: null, today: 0, days: 0 };
+    var el = seller && d.days >= REC_MIN_DAYS && d.best > 0;
+    return {
+      sp: p ? rxName(p, sp) : String(sp || '').trim(), key: id, team: p ? p.team : '',
+      best: d.best, bestDate: d.bestDate, today: d.today, current: d.today, days: d.days,
+      eligible: el, record: el && d.today > d.best, gain: d.best > 0 ? d.today / d.best - 1 : 0
+    };
+  }
+  function recMonth(sp) {
+    var X = rxBuild(), id = norm(sp), p = X.per[id], seller = rxSeller(sp);
+    var m = p && seller ? rxMonthOf(p, X.mk) : { best: 0, bestMonth: null, current: 0, months: 0 };
+    var el = seller && m.months >= REC_MIN_MONTHS && m.best > 0;
+    return {
+      sp: p ? rxName(p, sp) : String(sp || '').trim(), key: id, team: p ? p.team : '',
+      best: m.best, bestMonth: m.bestMonth, month: m.current, current: m.current, months: m.months,
+      eligible: el, record: el && m.current > m.best, gain: m.best > 0 ? m.current / m.best - 1 : 0
+    };
+  }
+  // potongan data untuk grafik mini di kapsul rekor (n titik terakhir sebelum sekarang)
+  function rxSeries(id, type, n) {
+    var X = rxBuild(), p = X.per[id], out = [];
+    if (!p) return out;
+    var src = type === 'month' ? p.mm : p.dm, lim = type === 'month' ? X.mk : X.tk, ks = [];
+    for (var k in src) if (k < lim && src[k] > 0) ks.push(k);
+    ks.sort();
+    ks.slice(-n).forEach(function (k) { out.push(src[k]); });
+    return out;
+  }
+  function dateLabel(k) {
+    if (!k) return '';
+    var a = String(k).split('-'), t = HX.todayKey().slice(0, 4);
+    var s = (+a[2]) + ' ' + (BLN[+a[1] - 1] || '');
+    return a[0] !== t ? s + ' ' + a[0] : s;
+  }
+  function monthLabel(k) {
+    if (!k) return '';
+    var a = String(k).split('-'), t = HX.todayKey().slice(0, 4);
+    var s = BULAN[+a[1] - 1] || '';
+    return a[0] !== t ? s + ' ' + a[0] : s;
+  }
+  HX.records = {
+    MIN_DAYS: REC_MIN_DAYS, MIN_MONTHS: REC_MIN_MONTHS,
+    key: function (sp) { return norm(sp); },
+    counts: rxSeller,
+    day: recDay,
+    month: recMonth,
+    holders: function () {
+      var X = rxBuild(), out = [];
+      for (var id in X.per) {
+        var p = X.per[id], nm = rxName(p, id), d = recDay(nm), m = recMonth(nm);
+        if (d.record || m.record) out.push({ sp: nm, key: id, team: p.team, day: d.record ? d : null, month: m.record ? m : null });
+      }
+      return out;
+    },
+    history: function (sp) {
+      var X = rxBuild(), p = X.per[norm(sp)], d = [], m = [], k;
+      if (p) {
+        for (k in p.dm) d.push([k, p.dm[k]]);
+        for (k in p.mm) m.push([k, p.mm[k]]);
+        d.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
+        m.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
+      }
+      return { days: d, months: m };
+    },
+    dateLabel: dateLabel,
+    monthLabel: monthLabel,
+    version: function () { rxBuild(); return rxVer; }
+  };
+
+  /* ── deteksi momen rekor (dari penjualan BARU) ───────────────────────
+     Per sales: total hari ini SEBELUM penjualan baru <= rekor lama dan
+     SESUDAHNYA > rekor lama -> momen. Penjualan asli sudah ada di allData
+     (scan berjalan setelah renderAll); penjualan simulasi belum, jadi
+     dijumlah di memori (hanya untuk tes, tidak pernah disimpan).
+     Sekali per sales per hari per jenis: localStorage 'hxl-rec'
+     {d:'YYYY-MM-DD', k:{'day:hendri':1,...}} (+ cadangan di memori).
+     Simulasi hanya ditandai di memori — tes di HP tidak memakan jatah
+     momen asli hari itu. */
+  var LS_REC = 'hxl-rec', recMem = {}, simAdd = {}, simDay = '';
+  function recSeen(type, id, sim) {
+    var tk = HX.todayKey(), k = type + ':' + id;
+    if (recMem[(sim ? 'sim|' : '') + tk + '|' + k]) return true;
+    if (sim) return false;
+    try { var o = JSON.parse(lsGet(LS_REC) || 'null'); return !!(o && o.d === tk && o.k && o.k[k]); } catch (e) { return false; }
+  }
+  function recMark(type, id, sim, persist) {
+    var tk = HX.todayKey(), k = type + ':' + id;
+    recMem[(sim ? 'sim|' : '') + tk + '|' + k] = 1;
+    if (sim || !persist) return;
+    var o = null;
+    try { o = JSON.parse(lsGet(LS_REC) || 'null'); } catch (e) { }
+    if (!o || o.d !== tk || !o.k) o = { d: tk, k: {} };
+    o.k[k] = 1;
+    lsSet(LS_REC, JSON.stringify(o));
+  }
+  function findRecords(list) {
+    var tk = HX.todayKey(), groups = {}, order = [], out = [], inData = {};
+    if (simDay !== tk) { simDay = tk; simAdd = {}; }
+    // penjualan "asli" yang ternyata belum ada di allData (mis. event buatan
+    // modul lain) dihitung seperti simulasi, supaya garis rekor tidak salah
+    todayList().forEach(function (e) { if (e && e.ts) inData[e.ts] = 1; });
+    list.forEach(function (s) {
+      if (!s || !rxSeller(s.sp)) return;
+      var id = norm(s.sp);
+      if (!groups[id]) { groups[id] = []; order.push(id); }
+      groups[id].push(s);
+    });
+    order.forEach(function (id) {
+      var g = groups[id].slice().sort(function (a, b) { return (+a.ts || 0) - (+b.ts || 0); });
+      var d = recDay(g[0].sp), m = recMonth(g[0].sp), add = 0, sim = 0, anySim = false, missing = 0;
+      g.forEach(function (s) {
+        var r = +s.revenue || 0; add += r;
+        if (s.sim) { sim += r; anySim = true; } else if (!inData[s.ts]) missing += r;
+      });
+      // penjualan asli sudah ada di allData; simulasi ditambahkan di sini
+      // (tumpukan simulasi tidak pernah memengaruhi penjualan asli)
+      var prevSim = simAdd[id] || 0;
+      if (anySim) simAdd[id] = prevSim + sim;
+      [['day', d, d.today], ['month', m, m.current]].forEach(function (x) {
+        var type = x[0], r = x[1], after = x[2] + (anySim ? prevSim + sim : 0) + missing, before = after - add;
+        if (!r.eligible || !(before <= r.best && after > r.best)) return;
+        // penjualan yang tepat melewati garis rekor
+        var acc = before, cause = g[g.length - 1];
+        for (var i = 0; i < g.length; i++) { acc += +g[i].revenue || 0; if (acc > r.best) { cause = g[i]; break; } }
+        if (recSeen(type, id, !!cause.sim)) return;
+        recMark(type, id, !!cause.sim, false);
+        var series = rxSeries(id, type, type === 'month' ? 3 : 6);
+        series.push(after);
+        out.push({
+          kind: 'rec', type: type, key: 'rec:' + type + ':' + id, id: id,
+          sp: String(cause.sp || r.sp).trim(), team: cause.team || r.team,
+          value: after, best: r.best, bestKey: type === 'month' ? r.bestMonth : r.bestDate,
+          sales: g, n: 0, total: 0, last: +cause.ts || Date.now(), at: Date.now(),
+          sim: !!cause.sim, own: !!cause.own, series: series
+        });
+      });
+    });
+    return out;
+  }
+  // penjualan lain dari sales yang sama saat momen rekornya tampil / menunggu
+  function recAbsorb(s) {
+    if (!s || !rxSeller(s.sp)) return false;
+    var id = norm(s.sp), hit = false, r = +s.revenue || 0;
+    Q.forEach(function (q) { if (q.kind === 'rec' && q.id === id) { q.value += r; q.sales.push(s); hit = true; } });
+    if (cur && cur.kind === 'island' && cur.it.kind === 'rec' && cur.it.id === id && cur.state !== 'closing') {
+      cur.it.value += r; cur.it.sales.push(s); cur.refresh(); hit = true;
+    }
+    if (hit && s.sim) simAdd[id] = (simAdd[id] || 0) + r;
+    return hit;
   }
 
   /* ── item antrean ───────────────────────────────────────────────── */
@@ -290,6 +656,61 @@
     return it.n + ' produk · ' + names.join(', ');
   }
 
+  /* ── kapsul rekor: grafik mini dari data asli ─────────────────────────
+     Harian: garis 6 hari aktif terakhir + hari ini. Bulanan: batang 3 bulan
+     terakhir + bulan ini. Garis putus-putus = rekor lama; titik emas =
+     angka baru yang melewatinya. */
+  var UP = '<svg viewBox="0 0 10 10" width="7" height="7" aria-hidden="true"><path d="M5 1.2 9.2 8.4H.8z" fill="currentColor"/></svg>';
+  var GX0 = 13, GX1 = 39, GY0 = 15, GY1 = 36, GBW = 4.6;
+  function gainText(it) {
+    var g = it.best > 0 ? (it.value / it.best - 1) * 100 : 0;
+    if (!(g > 0)) return '';
+    var t = Math.max(1, Math.round(g * 10));              // persepuluhan persen, minimal 0,1
+    return '+' + (t < 100 ? (t % 10 ? fixed(t, 1) : String(t / 10)) : String(Math.round(g))) + '%';
+  }
+  function longDate(k) {
+    if (!k) return '';
+    var a = String(k).split('-');
+    return (+a[2]) + ' ' + (BULAN[+a[1] - 1] || '') + (a[0] !== HX.todayKey().slice(0, 4) ? ' ' + a[0] : '');
+  }
+  // angka lama dalam satuan & desimal angka baru (titik awal odometer).
+  // Satuan dan jumlah desimal diambil dari string fRp angka baru; dibulatkan
+  // dengan bilangan bulat seperti fRp. Sama persis -> null (tanpa angka awal).
+  function shortLike(n, like) {
+    var m = /Rp (\d+)(?:,(\d+))?(jt|M|rb)?/.exec(like);
+    if (!m) return null;
+    var u = m[3] || '', dp = (m[2] || '').length;
+    var div = u === 'M' ? 1e9 : u === 'jt' ? 1e6 : u === 'rb' ? 1e3 : 1;
+    var s = 'Rp ' + fixed(Math.max(0, Math.round(n / (div / Math.pow(10, dp)))), dp) + u;
+    return s === like ? null : s;
+  }
+  function glyphHTML(it) {
+    var v = it.series && it.series.length > 1 ? it.series : [it.best * 0.6, it.value];
+    var top = Math.max(it.value, it.best) || 1, n = v.length, h = '', px, py;
+    var Y = function (x) { return GY1 - Math.max(0, Math.min(x, top)) / top * (GY1 - GY0); };
+    var lvl = Y(it.best).toFixed(2);
+    h += '<i class="hxl-gl-lvl" style="top:' + lvl + 'px"></i><i class="hxl-gl-lvl hxl-gl-gold" style="top:' + lvl + 'px"></i>';
+    if (it.type === 'month') {
+      var step = n > 1 ? (GX1 - GX0 - GBW) / (n - 1) : 0, x0 = n > 1 ? GX0 : (GX0 + GX1 - GBW) / 2;
+      v.forEach(function (x, i) {
+        var bh = Math.max(1.5, GY1 - Y(x));
+        h += '<i class="hxl-gl-bar' + (i === n - 1 ? ' is-now' : '') + '" style="left:' + (x0 + i * step).toFixed(2) + 'px;top:' +
+             (GY1 - bh).toFixed(2) + 'px;height:' + bh.toFixed(2) + 'px"></i>';
+      });
+      px = x0 + (n - 1) * step + GBW / 2; py = Y(v[n - 1]);
+    } else {
+      var pts = v.map(function (x, i) { return [GX0 + (n > 1 ? i * (GX1 - GX0) / (n - 1) : 0), Y(x)]; }), len = 0;
+      for (var i = 1; i < pts.length; i++) len += Math.sqrt(Math.pow(pts[i][0] - pts[i - 1][0], 2) + Math.pow(pts[i][1] - pts[i - 1][1], 2));
+      len = Math.ceil(len + 2);
+      h += '<svg viewBox="0 0 52 52" width="52" height="52" aria-hidden="true"><path class="hxl-gl-line" d="M' +
+           pts.map(function (p) { return p[0].toFixed(2) + ' ' + p[1].toFixed(2); }).join('L') +
+           '" stroke-dasharray="' + len + ' ' + len + '" data-len="' + len + '"/></svg>';
+      px = pts[n - 1][0]; py = pts[n - 1][1];
+    }
+    var at = 'left:' + px.toFixed(2) + 'px;top:' + py.toFixed(2) + 'px';
+    return '<span class="hxl-glyph" aria-hidden="true">' + h + '<i class="hxl-gl-halo" style="' + at + '"></i><i class="hxl-gl-peak" style="' + at + '"></i></span>';
+  }
+
   // isi tiap jenis kapsul: chip | baris 1 | baris 2 | nominal | keterangan
   var CLOCK = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 12a8.4 8.4 0 1 0 2.5-6"/><path d="M3.4 4.2v4.4h4.4"/><path d="M12 7.6V12l3 1.9"/></svg>';
   var RING_C = 2 * Math.PI * 16;
@@ -303,6 +724,7 @@
       case 'ch': return {
         chip: '<span class="hxl-tag">' + esc(it.sp) + '</span>',
         name: '', l2: prodLine(it), amt: '+' + full(it.total), sub: '',
+        l2S: [it.n === 1 ? 'baru' : '×' + it.n],
         say: it.sp + ': ' + prodLine(it) + ', ' + full(it.total)
       };
       case 'sum': return {
@@ -314,8 +736,23 @@
         chip: '<span class="hxl-chip">' + CLOCK + '</span>',
         name: 'Sejak terakhir dibuka (' + gapText(it.gap) + ')',
         l2: '+' + it.n + ' penjualan · terakhir: ' + nice(it.lastSp), amt: '+' + short(it.total), sub: 'hari ini',
+        // HP sempit: bentuk pendek (jeda waktunya pindah ke bawah nominal)
+        nameS: 'Sejak dibuka', subS: gapText(it.gap), l2S: ['+' + it.n + ' penjualan · ' + nice(it.lastSp), '+' + it.n + ' penjualan'],
         say: 'Sejak terakhir dibuka, ' + gapText(it.gap) + ': ' + it.n + ' penjualan, ' + short(it.total)
       };
+      case 'rec': {
+        var isM = it.type === 'month', when = isM ? 'bulan ini' : 'hari ini';
+        var old = isM ? monthLabel(it.bestKey) : dateLabel(it.bestKey);
+        var longOld = isM ? old : longDate(it.bestKey);
+        return {
+          chip: glyphHTML(it),
+          kick: isM ? 'Rekor bulanan pribadi' : 'Rekor pribadi baru', gain: gainText(it),
+          name: nice(it.sp), val: short(it.value), when: when,
+          l2: 'rekor lama ' + short(it.best) + (old ? ' · ' + old : ''), amt: '', sub: '',
+          say: (isM ? 'Rekor bulanan pribadi: ' : 'Rekor pribadi baru: ') + nice(it.sp) + ', ' + short(it.value) + ' ' + when +
+               '. Rekor lama ' + short(it.best) + (longOld ? ', ' + longOld : '') + '.'
+        };
+      }
       case 'goal': return {
         chip: '<span class="hxl-ring"><svg viewBox="0 0 38 38" aria-hidden="true"><circle class="trk" cx="19" cy="19" r="16"/>' +
               '<circle class="arc" cx="19" cy="19" r="16" stroke-dasharray="' + RING_C.toFixed(2) + '" stroke-dashoffset="' +
@@ -323,6 +760,7 @@
         // tanpa kolom kanan: judulnya harus utuh di layar HP
         name: 'Target hari ini tembus ' + it.pct + '%',
         l2: (it.by && it.by.sp ? 'didorong ' + nice(it.by.sp) + ' · ' : '') + short(it.revenue) + ' dari ' + short(it.target).replace('Rp ', ''),
+        l2S: [(it.by && it.by.sp ? 'didorong ' + nice(it.by.sp) + ' · ' : '') + short(it.revenue)],
         amt: '', sub: '',
         say: 'Target hari ini tembus ' + it.pct + ' persen' + (it.by && it.by.sp ? ', didorong ' + nice(it.by.sp) : '')
       };
@@ -330,6 +768,14 @@
     return { chip: '', name: '', l2: '', amt: '', sub: '', say: '' };
   }
   function bodyHTML(it, v) {
+    if (it.kind === 'rec') {
+      return v.chip + '<span class="hxl-main">' +
+        '<span class="hxl-kick"><span class="hxl-kt">' + esc(v.kick) + '</span>' +
+          (v.gain ? '<span class="hxl-gain">' + UP + '<b>' + esc(v.gain) + '</b></span>' : '') + '</span>' +
+        '<span class="hxl-l1"><span class="hxl-name">' + esc(v.name) + '</span><span class="hxl-sep">·</span>' +
+          '<span class="hxl-rv"></span><span class="hxl-when">' + esc(v.when) + '</span></span>' +
+        '<span class="hxl-l2wrap"><span class="hxl-l2">' + esc(v.l2) + '</span></span></span>';
+    }
     var main = it.kind === 'ch'
       ? '<span class="hxl-main"><span class="hxl-l2wrap"><span class="hxl-l2">' + esc(v.l2) + '</span></span></span>'
       : '<span class="hxl-main"><span class="hxl-l1"><span class="hxl-name">' + esc(v.name) + '</span><span class="hxl-rank"></span></span>' +
@@ -343,7 +789,7 @@
   function stale(it, t) {
     // banner 100% dan ringkasan "sejak terakhir dibuka" boleh menunggu lebih
     // lama (mis. aplikasi dibuka di tab latar)
-    if (it.kind === 'goal100' || it.kind === 'since') return t - it.at > STALE_100_MS;
+    if (it.kind === 'goal100' || it.kind === 'since' || it.kind === 'rec') return t - it.at > STALE_100_MS;
     return t - it.at > STALE_MS;
   }
   function pump() {
@@ -439,12 +885,42 @@
   function schedule() { if (!flushT) flushT = setTimeout(flush, 0); }
   function flush() {
     flushT = 0;
-    var batch = buf.filter(function (s) { return !s.own; }), goals = gbuf;
+    var all = buf, goals = gbuf, recs = [], covered = {};
     buf = []; gbuf = [];
+    // 1. rekor pribadi — juga dari HP penjualnya sendiri (s.own)
+    try { recs = findRecords(all); } catch (e) { console.warn('[HX live] rekor', e); recs = []; }
+    recs.forEach(function (r) { covered[r.id] = 1; });
+    // 2. penjualan yang sudah diceritakan kapsul rekor tidak diumumkan lagi;
+    //    penjualan berikutnya dari sales yang rekornya sedang tampil/menunggu
+    //    ikut menambah angka rekornya
+    var batch = all.filter(function (s) {
+      if (rxSeller(s.sp) && covered[norm(s.sp)]) return false;
+      if (recAbsorb(s)) return false;
+      return !s.own;
+    });
     if (batch.length > 3) addSummary(batch);
     else batch.forEach(addSale);
+    if (recs.length) addRecords(recs);
     if (goals.length) addGoals(goals);
     pump();
+  }
+  // rekor: prioritas di atas kapsul penjualan biasa (di belakang banner 100%)
+  function addRecords(recs) {
+    recs.forEach(function (r) {
+      // kapsul penjualan sales ini yang masih menunggu -> dilebur ke rekornya
+      Q = Q.filter(function (q) {
+        if (q.kind === 'sale' && norm(q.sp) === r.id) { r.sales = q.sales.concat(r.sales); return false; }
+        return true;
+      });
+      var at = 0;
+      while (at < Q.length && (Q[at].kind === 'goal100' || Q[at].kind === 'rec' || Q[at].kind === 'since')) at++;
+      Q.splice(at, 0, r);
+      // kapsul penjualan sales yang sama sedang tampil -> dipersingkat,
+      // momen rekornya langsung menyusul
+      if (cur && cur.kind === 'island' && cur.it && cur.it.kind === 'sale' && norm(cur.it.sp) === r.id && cur.state !== 'closing') {
+        if (cur.state === 'hold') cur.close(false); else cur.shortHold = true;
+      }
+    });
   }
   HX.on('sale', take);
   HX.on('sales', function (arr) { if (arr && arr.forEach) arr.forEach(take); });
@@ -466,9 +942,9 @@
 
   function island(it) {
     var R = still(), vw = innerWidth, desk = vw >= 769;
-    var small = it.kind === 'ch';
-    var H = small ? 44 : 62;
-    var W = small ? fitWidth(it, H, vw) : Math.min(vw - 24, desk ? 420 : 400);
+    var small = it.kind === 'ch', rec = it.kind === 'rec';
+    var H = small ? 44 : rec ? 76 : 62;
+    var W = small ? fitWidth(it, H, vw) : Math.min(vw - 24, desk ? (rec ? 440 : 420) : 400);
     var off = (W - H) / 2, s0 = Math.min(1, 11 / H);
     var big = (it.kind === 'sale' && it.total >= BIG);
     var v = view(it);
@@ -483,19 +959,21 @@
     el.setAttribute('tabindex', '0');
     el.setAttribute('aria-label', v.say);
     el.innerHTML =
-      '<i class="hxl-bloom" aria-hidden="true"></i>' +
+      '<i class="hxl-shade" aria-hidden="true"></i><i class="hxl-bloom" aria-hidden="true"></i>' +
       '<span class="hxl-shape" aria-hidden="true"><i class="hxl-cap hxl-capL"></i><i class="hxl-cap hxl-capR"></i><i class="hxl-mid"></i></span>' +
-      '<i class="hxl-glass" aria-hidden="true"></i>' +
+      '<i class="hxl-glass" aria-hidden="true"></i>' + (rec ? '<i class="hxl-rim" aria-hidden="true"></i>' : '') +
       '<span class="hxl-body" aria-hidden="true">' + bodyHTML(it, v) + '<i class="hxl-sweep"></i><i class="hxl-prog"></i></span>' +
       '<i class="hxl-seed" aria-hidden="true"></i>';
     D.body.appendChild(el);
     var q = function (s) { return el.querySelector(s); };
     var P = {
       shape: q('.hxl-shape'), capL: q('.hxl-capL'), capR: q('.hxl-capR'), mid: q('.hxl-mid'),
-      glass: q('.hxl-glass'), body: q('.hxl-body'), seed: q('.hxl-seed'), bloom: q('.hxl-bloom'),
-      sweep: q('.hxl-sweep'), prog: q('.hxl-prog'), chip: q('.hxl-chip,.hxl-ring,.hxl-tag'),
+      glass: q('.hxl-glass'), body: q('.hxl-body'), seed: q('.hxl-seed'), bloom: q('.hxl-bloom'), shade: q('.hxl-shade'),
+      sweep: q('.hxl-sweep'), prog: q('.hxl-prog'), chip: q('.hxl-chip,.hxl-ring,.hxl-tag,.hxl-glyph'),
       badge: q('.hxl-badge'), name: q('.hxl-name'), rank: q('.hxl-rank'), l2wrap: q('.hxl-l2wrap'),
-      amt: q('.hxl-amt'), sub: q('.hxl-sub'), arc: q('.hxl-ring .arc')
+      amt: q('.hxl-amt'), sub: q('.hxl-sub'), arc: q('.hxl-ring .arc'),
+      rim: q('.hxl-rim'), rv: q('.hxl-rv'), gain: q('.hxl-gain'), gainT: q('.hxl-gain b'), glyph: q('.hxl-glyph'),
+      peak: q('.hxl-gl-peak'), halo: q('.hxl-gl-halo')
     };
     // posisi akhir ditulis langsung (animasi hanya menimpa sementara)
     P.capL.style.transform = 'translateX(' + (-off) + 'px)';
@@ -511,11 +989,15 @@
     say(v.say);
     guard();
 
-    var cy = top + H / 2, power = it.kind === 'ch' ? 0.25 : big ? 1 : it.kind === 'sum' || it.kind === 'since' ? 0.7 : it.kind === 'goal' ? 0.6 : 0.5;
+    var cy = top + H / 2, power = rec ? 0.9 : it.kind === 'ch' ? 0.25 : big ? 1 : it.kind === 'sum' || it.kind === 'since' ? 0.7 : it.kind === 'goal' ? 0.6 : 0.5;
+    // momen rekor dipakai jatahnya (sekali per sales per hari per jenis)
+    if (rec) recMark(it.type, it.id, it.sim, true);
     if (R) {
       // Kurangi Gerak: muncul pelan saja, tanpa gerak
-      P.body.style.opacity = '1'; P.glass.style.opacity = '1';
+      P.body.style.opacity = '1'; P.glass.style.opacity = '1'; P.shade.style.opacity = '1';
       if (v.amt) odo(P.amt, v.amt, null, 0);
+      if (rec) { recFx(c, 0, true); recFit(c); }
+      fitAlt(c, v);
       if (P.rank) paintRank(c, true);
       anim(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
       el.classList.add('is-live');
@@ -542,8 +1024,10 @@
     anim(P.capR, springKF(EXP, 0, off, function (x) { return { transform: 'translateX(' + x.toFixed(2) + 'px)' }; }), wide);
     anim(P.mid, springKF(EXP, 0, 1, function (x) { return { transform: 'scaleX(' + Math.max(0, x).toFixed(4) + ')' }; }), wide);
     // 3. kaca & isi (nilai akhir statis; animasi hanya menutupi awalnya)
-    P.glass.style.opacity = '1'; P.body.style.opacity = '1';
+    P.glass.style.opacity = '1'; P.body.style.opacity = '1'; P.shade.style.opacity = '1';
     anim(P.glass, [{ opacity: 0 }, { opacity: 1 }], { duration: 420, delay: AT + 300, easing: 'ease-out', fill: 'backwards' });
+    // bayangan pemisah (halo gelap) ikut kaca: baru muncul saat kapsul hampir selebar penuh
+    anim(P.shade, [{ opacity: 0 }, { opacity: 1 }], { duration: 460, delay: AT + 240, easing: 'ease-out', fill: 'backwards' });
     var bIn = [{ opacity: 0, transform: 'translateY(4px) scale(.965)' }, { opacity: 1, transform: 'none' }];
     if (blur) { bIn[0].filter = 'blur(6px)'; bIn[1].filter = 'blur(0px)'; }
     anim(P.body, bIn, { duration: 420, delay: AT + 250, easing: EASE_OUT, fill: 'backwards' });
@@ -554,10 +1038,12 @@
       anim(P.arc, [{ strokeDashoffset: (RING_C * (1 - f / 100)).toFixed(2) }, { strokeDashoffset: (RING_C * (1 - it.pct / 100)).toFixed(2) }],
         { duration: 1000, delay: AT + 380, easing: EASE_OUT, fill: 'backwards' });
     }
-    var rolled = v.amt ? odo(P.amt, v.amt, null, AT + 270, it.kind === 'ch' ? 620 : 760) : 0;
+    var rolled = v.amt ? odo(P.amt, v.amt, null, AT + 280, it.kind === 'ch' ? 420 : 460) : 0;
     if (P.rank) setTimeout(function () { if (cur === c) paintRank(c, false); }, Math.max(AT + 700, rolled - 150));
     // 4. closing besar: cahaya mekar + kilau menyapu
     if (big) bigFx(c, AT + 260);
+    if (rec) { recFx(c, AT, false); recFit(c); }
+    fitAlt(c, v);
     // 5. riak di wallpaper, tepat saat titik mekar
     setTimeout(function () { if (cur === c) HX.emit('ripple', { x: innerWidth / 2, y: cy, power: power }); }, AT);
     el.classList.add('is-live');
@@ -575,11 +1061,110 @@
       { duration: 1050, delay: delay + 380, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'backwards' });
   }
 
+  /* momen rekor: angka bergulir dari rekor lama ke angka baru, grafik mini
+     tergambar menembus garis rekor, lalu di titik tembus: titik emas,
+     tepi emas menyala, kilau, cahaya. Nilai akhir semua statis — animasi
+     hanya menutupi awalnya (fill backwards), jadi Kurangi Gerak / HP yang
+     tidak punya Web Animations langsung melihat keadaan akhir. */
+  function recFx(c, AT, R) {
+    var P = c.P, it = c.it, vStr = short(it.value);
+    c.amtStr = vStr;
+    if (P.rim) P.rim.style.opacity = '0.42';
+    var gold = P.glyph ? P.glyph.querySelector('.hxl-gl-gold') : null;
+    if (gold) gold.style.opacity = '1';
+    if (R) { odo(P.rv, vStr, null, 0); return; }
+    var CROSS = AT + 1000;                       // saat garis rekor ditembus
+    odo(P.rv, vStr, shortLike(it.best, vStr), AT + 300, 1000);
+    var g = P.glyph;
+    if (g) {
+      var lv = g.querySelector('.hxl-gl-lvl');
+      anim(lv, [{ opacity: 0, transform: 'scaleX(0)' }, { opacity: 1, transform: 'scaleX(1)' }],
+        { duration: 460, delay: AT + 280, easing: EASE_OUT, fill: 'backwards' });
+      if (gold) anim(gold, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: CROSS - 80, easing: 'ease-out', fill: 'backwards' });
+      var ln = g.querySelector('.hxl-gl-line');
+      if (ln) {
+        var L = +ln.getAttribute('data-len') || 80;
+        anim(ln, [{ strokeDashoffset: L }, { strokeDashoffset: 0 }],
+          { duration: 720, delay: AT + 360, easing: 'cubic-bezier(.5,.05,.3,1)', fill: 'backwards' });
+      }
+      var bs = g.querySelectorAll('.hxl-gl-bar');
+      Array.prototype.forEach.call(bs, function (b, i) {
+        var last = i === bs.length - 1;
+        if (last) anim(b, springKF(640, 0, 1, function (x) { return { transform: 'scaleY(' + Math.max(0, x).toFixed(4) + ')' }; }),
+          { duration: 640, delay: CROSS - 420, fill: 'backwards' });
+        else anim(b, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }],
+          { duration: 420, delay: AT + 340 + i * 80, easing: EASE_OUT, fill: 'backwards' });
+      });
+      if (P.peak) anim(P.peak, [{ opacity: 0, transform: 'scale(0)' }, { opacity: 1, transform: 'scale(1.7)', offset: 0.45 }, { opacity: 1, transform: 'scale(1)' }],
+        { duration: 540, delay: CROSS, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+      if (P.halo) anim(P.halo, [{ opacity: 0.95, transform: 'scale(.3)' }, { opacity: 0, transform: 'scale(2.6)' }],
+        { duration: 950, delay: CROSS + 40, easing: 'cubic-bezier(.1,.7,.3,1)' });
+    }
+    if (P.gain) anim(P.gain, [{ opacity: 0, transform: 'translateY(5px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 440, delay: CROSS + 80, easing: EASE_OUT, fill: 'backwards' });
+    // tepi emas menyala lalu tenang di 42%
+    if (P.rim) anim(P.rim, [{ opacity: 0 }, { opacity: 1, offset: 0.22 }, { opacity: 0.42 }],
+      { duration: 1600, delay: CROSS, easing: 'ease-out', fill: 'backwards' });
+    anim(P.bloom, [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0.9, transform: 'scale(1.06)', offset: 0.3 }, { opacity: 0.3, transform: 'scale(1)' }],
+      { duration: 1600, delay: CROSS - 120, easing: 'ease-out', fill: 'both' });
+    if (!lowTier()) anim(P.sweep, [{ transform: 'translateX(-140%) skewX(-16deg)' }, { transform: 'translateX(330%) skewX(-16deg)' }],
+      { duration: 1150, delay: CROSS + 30, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'backwards' });
+    // HP penjualnya sendiri (Android): getar pendek tepat saat tembus
+    if (it.own && navigator.vibrate) setTimeout(function () { if (cur === c) { try { navigator.vibrate([12, 40, 20]); } catch (e) { } } }, CROSS);
+  }
+  // teks yang tidak muat (HP 320px) -> bentuk pendeknya (kalau ada)
+  function fitAlt(c, v) {
+    var P = c.P;
+    try {
+      if (v.nameS && P.name && P.name.scrollWidth > P.name.clientWidth + 1) {
+        P.name.textContent = v.nameS;
+        if (v.subS && P.sub) P.sub.textContent = v.subS;
+      }
+      var l2 = P.l2wrap ? P.l2wrap.querySelector('.hxl-l2:not(.is-old)') : null;
+      for (var i = 0; v.l2S && l2 && i < v.l2S.length && l2.scrollWidth > l2.clientWidth + 1; i++) l2.textContent = v.l2S[i];
+    } catch (e) { }
+  }
+  // layar sempit (320px) + nilai panjang ('Rp 116,78jt'): nama sales tidak
+  // boleh terpotong -> 'hari ini' / 'bulan ini' disembunyikan (judul kapsul
+  // sudah menyebut jenis rekornya). Satu kali baca tata letak per kapsul.
+  function recFit(c) {
+    var n = c.P.name;
+    if (!n) return;
+    try {
+      c.el.classList.remove('is-tight');
+      if (n.scrollWidth > n.clientWidth + 1) c.el.classList.add('is-tight');
+    } catch (e) { }
+  }
+  // penjualan berikutnya dari sales yang sama saat kapsul rekornya tampil
+  function recRefresh(c) {
+    var it = c.it, P = c.P, R = c.R, v = view(it), vStr = short(it.value);
+    c.el.setAttribute('aria-label', v.say);
+    say(v.say);
+    if (vStr !== c.amtStr) { odo(P.rv, vStr, c.amtStr, 60, 520); c.amtStr = vStr; recFit(c); }
+    if (P.gainT && v.gain) P.gainT.textContent = v.gain;
+    if (!R) {
+      anim(P.shape, [{ transform: 'scale(1)' }, { transform: 'scale(1.04)', offset: 0.3 }, { transform: 'scale(.995)', offset: 0.68 }, { transform: 'scale(1)' }],
+        { duration: 560, easing: 'ease-in-out' });
+      anim(P.body, [{ transform: 'scale(1)' }, { transform: 'scale(1.025)', offset: 0.3 }, { transform: 'scale(1)' }],
+        { duration: 560, easing: 'ease-in-out' });
+      if (P.halo) anim(P.halo, [{ opacity: 0.9, transform: 'scale(.3)' }, { opacity: 0, transform: 'scale(2.4)' }],
+        { duration: 850, easing: 'cubic-bezier(.1,.7,.3,1)' });
+    }
+    HX.emit('ripple', { x: innerWidth / 2, y: c.top + c.H / 2, power: 0.6 });
+    if (c.state === 'hold') { clearTimeout(c.timer); startHold(c); }
+  }
+
   function paintRank(c, instant) {
     var P = c.P, r = rankOf(c.it);
     if (!P.rank || !r) return;
-    P.rank.textContent = r === 1 ? '#1 hari ini' : 'naik ke #' + r;
+    P.rank.textContent = r === 1 ? '#1 sales hari ini' : 'naik ke #' + r + ' sales';
     P.rank.classList.toggle('is-top', r === 1);
+    // layar sempit: nama tidak boleh terpotong demi label -> bentuk pendek,
+    // masih terpotong -> label tidak ditampilkan
+    try {
+      var clip = function () { return P.name && P.name.scrollWidth > P.name.clientWidth + 1; };
+      if (clip()) { P.rank.textContent = '#' + r + ' sales'; if (clip()) { P.rank.textContent = ''; return; } }
+    } catch (e) { }
     if (!instant) anim(P.rank, [{ opacity: 0, transform: 'translateX(-6px) scale(.9)' }, { opacity: 1, transform: 'none' }],
       { duration: 380, easing: EASE_OUT, fill: 'backwards' });
   }
@@ -600,6 +1185,7 @@
   // penjualan baru dari sales yang sama masuk saat kapsulnya tampil
   function refreshIsland(c) {
     if (cur !== c || c.state === 'closing') return;
+    if (c.it.kind === 'rec') { recRefresh(c); return; }
     var it = c.it, P = c.P, v = view(it), R = c.R;
     c.el.setAttribute('aria-label', v.say);
     say(v.say);
@@ -613,7 +1199,8 @@
         P.l2wrap.appendChild(nu);
         var a = anim(old, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-100%)' }], { duration: 320, easing: EASE_OUT, fill: 'forwards' });
         anim(nu, [{ opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: EASE_OUT, fill: 'backwards' });
-        var rm = function () { if (old.parentNode) old.parentNode.removeChild(old); };
+        // baris lama dibuang DAN animasinya dibatalkan (fill forwards menahan elemen)
+        var rm = function () { if (old.parentNode) old.parentNode.removeChild(old); dropAnim(a); };
         if (a) a.onfinish = rm; else rm();
       } else {
         if (old) old.parentNode.removeChild(old);
@@ -624,8 +1211,9 @@
     if (P.name && it.kind !== 'sale' && P.name.textContent !== v.name) P.name.textContent = v.name;
     if (P.chip && it.kind === 'sum') P.chip.textContent = '+' + it.n;
     if (P.sub && v.sub) P.sub.textContent = v.sub;
+    fitAlt(c, v);
     // nominal bergulir dari angka lama ke angka baru
-    if (v.amt && v.amt !== c.amtStr) { odo(P.amt, v.amt, c.amtStr, 60, 800); c.amtStr = v.amt; }
+    if (v.amt && v.amt !== c.amtStr) { odo(P.amt, v.amt, c.amtStr, 60, 520); c.amtStr = v.amt; }
     // jumlah closing di pojok monogram
     if (P.badge && it.n > 1) {
       P.badge.textContent = it.n;
@@ -663,6 +1251,11 @@
     el.classList.remove('is-live');
     function done() {
       if (fin) return; fin = true;
+      clearTimeout(c.timer);
+      // semua animasi kapsul ini (termasuk garis waktu yang dijeda) dibatalkan
+      // sebelum dibuang — kalau tidak, kapsulnya tertahan di memori selamanya
+      c.prog = null;
+      killAnims(el);
       if (el.parentNode) el.parentNode.removeChild(el);
       if (cur === c) cur = null;
       clearTimeout(pumpT); pumpT = setTimeout(pump, 140);
@@ -676,7 +1269,10 @@
     // kembali jadi titik: isi pudar -> tutup menyatu -> titik -> hilang
     anim(P.body, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.95)' }], { duration: 170, easing: EASE_IN, fill: 'forwards' });
     anim(P.glass, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-in', fill: 'forwards' });
+    anim(P.shade, [{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: 'ease-in', fill: 'forwards' });
     anim(P.bloom, [{ opacity: getComputedStyle(P.bloom).opacity }, { opacity: 0 }], { duration: 220, fill: 'forwards' });
+    // tepi emas = persegi bulat penuh: harus hilang sebelum tutupnya menyatu
+    if (P.rim) anim(P.rim, [{ opacity: getComputedStyle(P.rim).opacity }, { opacity: 0 }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
     var CD = 360, cdl = 90, sh = { duration: CD, delay: cdl, easing: 'cubic-bezier(.55,0,.2,1)', fill: 'forwards' };
     anim(P.capL, [{ transform: 'translateX(' + (-c.off) + 'px)' }, { transform: 'translateX(0px)' }], sh);
     anim(P.capR, [{ transform: 'translateX(' + c.off + 'px)' }, { transform: 'translateX(0px)' }], sh);
@@ -693,31 +1289,88 @@
   }
 
   // satu pengawas per tampilan: form/modal dibuka di tengah jalan -> tutup
+  // Tab tersembunyi: pengawas berhenti (waktu tahan juga dibekukan), dipasang
+  // lagi saat tab terlihat — tidak ada timer modul ini yang jalan di latar.
   function guard() {
-    clearInterval(guardT);
+    clearInterval(guardT); guardT = 0;
+    if (!cur || D.hidden) return;
     guardT = setInterval(function () {
-      if (!cur) { clearInterval(guardT); return; }
+      if (!cur || D.hidden) { clearInterval(guardT); guardT = 0; return; }
+      // jari sedang menekan kapsul ini sendiri ('hx-gesture' milik modul ini
+      // membuat HX.busy() true) -> bukan alasan untuk menutupnya
+      if (ownG) return;
       if (cur.state !== 'closing' && HX.busy()) cur.close(true);
     }, 400);
   }
 
   /* ── interaksi kapsul (satu pendengar untuk semua) ─────────────────── */
-  var press = null;
+  /* Geser ke atas = tutup. Di HP, begitu jari bergerak browser mengambil
+     alih untuk menggulir halaman dan mengirim pointercancel — jadi gerakan
+     jari dibaca dari touchmove (pasif: tetap dikirim selama halaman
+     menggulir). Halaman TETAP bisa digulir dari atas kapsul; tidak ada
+     preventDefault, touch-action tidak diubah. Mouse memakai pointermove.
+     Selama jari/mouse menekan kapsul, <html> diberi 'hx-gesture' (satu
+     pemilik gestur); kalau modul lain sedang memilikinya, kapsul diam. */
+  var press = null, ownG = false, HTML = D.documentElement;
+  function gOn() { if (!HTML.classList.contains('hx-gesture')) { HTML.classList.add('hx-gesture'); ownG = true; } }
+  function gOff() { if (ownG) { HTML.classList.remove('hx-gesture'); ownG = false; } }
+  function pillAt(t) {
+    var el = t && t.closest ? t.closest('.hxl-island.is-live') : null;
+    return el && cur && cur.el === el ? el : null;
+  }
+  function pressStart(x, y, touch) {
+    if (HTML.classList.contains('hx-gesture') && !ownG) { press = null; return; }   // gestur modul lain
+    press = { x: x, y: y, t: Date.now(), swiped: false, touch: !!touch };
+    gOn();
+  }
+  function pressMove(x, y) {
+    if (!press || press.swiped || !cur || cur.kind !== 'island') return;
+    if (y - press.y < -16 && Math.abs(x - press.x) < 60) { press.swiped = true; cur.close(false); }
+  }
+  function pressEnd() {
+    gOff();
+    // klik yang menyusul swipe harus tetap tahu bahwa ini swipe
+    setTimeout(function () { press = null; }, 0);
+  }
   D.addEventListener('pointerdown', function (e) {
-    var el = e.target && e.target.closest ? e.target.closest('.hxl-island.is-live') : null;
-    if (!el || !cur || cur.el !== el) return;
-    press = { x: e.clientX, y: e.clientY, t: Date.now(), swiped: false };
+    if (!pillAt(e.target)) return;
+    if (e.pointerType === 'touch' && press && press.touch) return;        // sudah dari touchstart
+    pressStart(e.clientX, e.clientY, false);
   }, true);
   D.addEventListener('pointermove', function (e) {
-    if (!press || !cur || cur.kind !== 'island') return;
-    if (e.clientY - press.y < -16 && Math.abs(e.clientX - press.x) < 60) { press.swiped = true; cur.close(false); press = null; }
+    if (e.pointerType !== 'touch') pressMove(e.clientX, e.clientY);
   }, { passive: true });
-  D.addEventListener('pointerup', function () { setTimeout(function () { press = null; }, 0); }, true);
+  D.addEventListener('pointerup', function (e) { if (!press || !press.touch || e.pointerType !== 'touch') pressEnd(); }, true);
+  // pointercancel (browser mulai menggulir) TIDAK menutup tekanan sentuh —
+  // touchmove/touchend di bawah yang menyelesaikannya
+  D.addEventListener('pointercancel', function (e) { if (press && !press.touch) pressEnd(); }, true);
+  D.addEventListener('lostpointercapture', function (e) { if (press && !press.touch) pressEnd(); }, true);
+  D.addEventListener('touchstart', function (e) {
+    var t = e.touches && e.touches[0];
+    if (!t || e.touches.length > 1) { if (press) pressEnd(); return; }       // dua jari = cubit-zoom
+    if (!pillAt(e.target)) return;
+    pressStart(t.clientX, t.clientY, true);
+  }, { capture: true, passive: true });
+  D.addEventListener('touchmove', function (e) {
+    var t = e.touches && e.touches[0];
+    if (!press || !press.touch || !t) return;
+    if (e.touches.length > 1) { pressEnd(); return; }
+    pressMove(t.clientX, t.clientY);
+  }, { capture: true, passive: true });
+  D.addEventListener('touchend', function (e) { if (press && press.touch && (!e.touches || !e.touches.length)) pressEnd(); }, { capture: true, passive: true });
+  D.addEventListener('touchcancel', function () { if (press && press.touch) pressEnd(); }, { capture: true, passive: true });
+  window.addEventListener('blur', function () { if (press) { press = null; gOff(); } });
+  D.addEventListener('visibilitychange', function () { if (D.hidden && press) { press = null; gOff(); } });
+  // tekan lama di kapsul/banner: tanpa menu konteks Android (hanya di permukaan ini)
+  D.addEventListener('contextmenu', function (e) {
+    var t = e.target;
+    if (t && t.closest && (t.closest('.hxl-island.is-live') || t.closest('.hxl-banner'))) e.preventDefault();
+  }, true);
   function act(c) {
     if (!c || c.kind !== 'island') return;
     var it = c.it;
     c.close(false);
-    if ((it.kind === 'sale' || it.kind === 'ch') && viewingToday() && typeof openSPModal === 'function') {
+    if ((it.kind === 'sale' || it.kind === 'ch' || it.kind === 'rec') && viewingToday() && typeof openSPModal === 'function') {
       // detail HARI INI orang itu (modal app.js, hanya membaca)
       setTimeout(function () { try { openSPModal(it.sp, it.team); } catch (e) { } }, 60);
     }
@@ -765,7 +1418,7 @@
       var w = Math.min(720, vw - 48);
       el.style.left = '50%'; el.style.right = 'auto'; el.style.width = w + 'px'; el.style.marginLeft = (-w / 2) + 'px';
     }
-    var sayTxt = 'Target harian tembus ' + pct + ' persen' + (by && by.sp ? ', didorong ' + nice(by.sp) : '') + '. Ketuk untuk menutup.';
+    var sayTxt = 'Target harian tembus ' + pct + ' persen' + (by && by.sp ? ', lewat penjualan ' + nice(by.sp) : '') + '. Ketuk untuk menutup.';
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
     el.setAttribute('aria-label', sayTxt);
@@ -776,13 +1429,17 @@
       '<i class="hxl-bn-rim" aria-hidden="true"></i>' +
       '<div class="hxl-bn-in" aria-hidden="true">' +
         '<div class="hxl-bn-top"><span class="hxl-bn-kick"><i class="hxl-bn-dot"></i>TARGET HARIAN TEMBUS</span>' +
-        '<span class="hxl-bn-clock">HARI INI · ' + clock + '</span></div>' +
+        '<span class="hxl-bn-clock"><span class="hxl-bn-today">HARI INI · </span>' + clock + '</span></div>' +
         '<div class="hxl-bn-row"><div class="hxl-bn-pct"><span class="hxl-bn-num"></span><span class="hxl-bn-sign">%</span></div>' +
         '<div class="hxl-bn-facts"><div class="hxl-bn-rev">' + esc(full(rev)) + '</div>' +
-        '<div class="hxl-bn-of">dari target ' + esc(full(T)) + '</div></div></div>' +
+        '<div class="hxl-bn-of">dari target <span class="hxl-nw">' + esc(full(T)) + '</span></div></div></div>' +
         '<div class="hxl-bn-bar"><i class="hxl-bn-fill"></i><i class="hxl-bn-head"></i></div>' +
+        // tiap bagian tidak boleh patah di dalam (mis. 'Rp' terpisah dari angkanya);
+        // baris hanya boleh patah di pemisah ' · '
         '<div class="hxl-bn-by">' + (by && by.sp
-          ? 'Didorong <b>' + esc(nice(by.sp)) + '</b>' + (by.team ? ' · Team ' + esc(by.team) : '') + (by.revenue ? ' · <em>+' + esc(full(by.revenue)) + '</em>' : '')
+          ? '<span class="hxl-nw">Lewat penjualan <b>' + esc(nice(by.sp)) + '</b></span>' +
+            (by.team ? ' · <span class="hxl-nw">Team ' + esc(by.team) + '</span>' : '') +
+            (by.revenue ? ' · <em class="hxl-nw">+' + esc(full(by.revenue)) + '</em>' : '')
           : 'Kerja seluruh tim hari ini') + '</div>' +
       '</div>';
     D.body.appendChild(el);
@@ -790,8 +1447,10 @@
     var B = {
       num: q('.hxl-bn-num'), pct: q('.hxl-bn-pct'), fill: q('.hxl-bn-fill'), head: q('.hxl-bn-head'), bar: q('.hxl-bn-bar'),
       bloom: q('.hxl-bn-bloom'), rings: el.querySelectorAll('.hxl-bn-ring'), sweep: q('.hxl-bn-sweep'), edge: q('.hxl-bn-edge'),
-      rim: q('.hxl-bn-rim'), kick: q('.hxl-bn-kick'), clock: q('.hxl-bn-clock'), facts: q('.hxl-bn-facts'), by: q('.hxl-bn-by')
+      rim: q('.hxl-bn-rim'), kick: q('.hxl-bn-kick'), clock: q('.hxl-bn-clock'), facts: q('.hxl-bn-facts'), by: q('.hxl-bn-by'),
+      rev: q('.hxl-bn-rev')
     };
+    fitText(B.rev, 12);
     var c = cur = { kind: 'banner', it: it, el: el, state: 'opening', timer: 0 };
     c.close = function (quick) { closeBanner(c, quick); };
     c.refresh = function () { };
@@ -859,6 +1518,20 @@
     }, CL);
   }
 
+  // angka satu baris yang tidak muat (HP 320px, font sistem besar): kecilkan
+  // font-nya sampai muat — sekali, saat banner dibuat
+  function fitText(n, min) {
+    if (!n) return;
+    try {
+      for (var i = 0; i < 3 && n.scrollWidth > n.clientWidth + 0.5; i++) {
+        var fs = parseFloat(getComputedStyle(n).fontSize) || 16;
+        var nf = Math.max(min, Math.floor(fs * n.clientWidth / n.scrollWidth * 2) / 2);
+        if (nf >= fs) break;
+        n.style.fontSize = nf + 'px';
+      }
+    } catch (e) { }
+  }
+
   function closeBanner(c) {
     if (!c || c.state === 'closing') return;
     c.state = 'closing';
@@ -866,6 +1539,8 @@
     var el = c.el, fin = false;
     function done() {
       if (fin) return; fin = true;
+      clearTimeout(c.timer);
+      killAnims(el);
       if (el.parentNode) el.parentNode.removeChild(el);
       if (cur === c) cur = null;
       clearTimeout(pumpT); pumpT = setTimeout(pump, 200);
@@ -885,15 +1560,25 @@
   /* ── tab tersembunyi: tahan antrean, bekukan waktu tahan ─────────── */
   D.addEventListener('visibilitychange', function () {
     if (cur && cur.prog) { try { if (D.hidden) cur.prog.pause(); else if (!cur.hover && cur.state === 'hold') cur.prog.play(); } catch (e) { } }
-    if (!D.hidden) pump();
+    if (D.hidden) { clearInterval(guardT); guardT = 0; }
+    else {
+      if (cur && cur.state !== 'closing') guard();
+      pump();
+    }
   });
 
   /* ── "Sejak terakhir dibuka" ─────────────────────────────────────── */
   var prevVisit = +lsGet(LS_VISIT) || 0;      // dibaca SEBELUM ditimpa
   function stamp() { lsSet(LS_VISIT, String(Date.now())); }
+  // tiap menit SELAMA terlihat (interval dihentikan saat tab tersembunyi)
+  var stampT = 0;
+  function stampLoop() {
+    clearInterval(stampT); stampT = 0;
+    if (!D.hidden) stampT = setInterval(stamp, 60000);
+  }
   stamp();
-  setInterval(function () { if (!D.hidden) stamp(); }, 60000);
-  D.addEventListener('visibilitychange', stamp);
+  stampLoop();
+  D.addEventListener('visibilitychange', function () { stamp(); stampLoop(); });
   window.addEventListener('pagehide', stamp);
   var sinceDone = false;
   function since() {
@@ -918,9 +1603,21 @@
 
   /* ── untuk tes / pemeriksaan (hanya membaca) ─────────────────────── */
   HX.live = {
-    state: function () { return { showing: cur ? (cur.kind === 'banner' ? 'goal100' : cur.it.kind) : null, phase: cur ? cur.state : null, queue: Q.map(function (q) { return q.kind + (q.n ? ':' + q.n : ''); }) }; },
+    state: function () {
+      return {
+        showing: cur ? (cur.kind === 'banner' ? 'goal100' : cur.it.kind + (cur.it.type ? ':' + cur.it.type : '')) : null,
+        phase: cur ? cur.state : null,
+        queue: Q.map(function (q) { return q.kind + (q.type ? ':' + q.type : '') + (q.n ? ':' + q.n : ''); })
+      };
+    },
     dismiss: function () { if (cur) cur.close(true); },
     close: function () { if (cur) cur.close(false); },
-    _short: short
+    // waktu membangun ulang indeks rekor (ms) — hanya untuk tes kinerja
+    _rxRebuild: function () { rxIdx = null; rxDirty = true; var t = performance.now(); rxBuild(); return performance.now() - t; },
+    _short: short,
+    _shortLike: shortLike,
+    // jumlah animasi modul ini yang masih tercatat (harus 0 saat tidak ada kapsul)
+    _anims: function () { return LIVE_A.length; },
+    _timers: function () { return { guard: !!guardT, stamp: !!stampT }; }
   };
 })();

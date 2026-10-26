@@ -82,7 +82,7 @@ tr .fxr-glow{border-radius:0}
    JS) supaya tidak menggeser tata letak tabel/kartu sama sekali. ─────── */
 .fxr-tag{
   position:absolute;z-index:6;pointer-events:none;
-  display:inline-flex;align-items:center;gap:4px;
+  display:inline-flex;align-items:center;
   margin:0;height:17px;padding:0 7px 0 6px;border-radius:999px;
   font:700 9.5px/1 'Space Grotesk',-apple-system,system-ui,sans-serif;
   letter-spacing:.02em;font-variant-numeric:tabular-nums;text-transform:none;white-space:nowrap;
@@ -94,7 +94,8 @@ tr .fxr-glow{border-radius:0}
   animation:fxr-tag 3.3s var(--fxr-ease) .16s forwards;
 }
 .fxr-tag::before{
-  content:"";width:0;height:0;flex:none;
+  /* jarak ke teks pakai margin, BUKAN flex gap (iOS < 14.5 / Chrome < 84) */
+  content:"";width:0;height:0;flex:none;margin-right:4px;
   border-left:3.5px solid transparent;border-right:3.5px solid transparent;
   border-bottom:4.5px solid currentColor;
 }
@@ -147,10 +148,13 @@ td > .rc.fxr-roll::after{text-align:center}
 
 /* keterangan kecil di judul "Salesperson Ranking This Month" */
 .fxr-legend{
-  order:2;display:inline-flex;align-items:center;gap:6px;flex:none;
+  order:2;display:inline-flex;align-items:center;flex:none;
   font:500 10px/1 'Space Mono',monospace;letter-spacing:.02em;text-transform:none;color:#8e8e93;
 }
-.fxr-legend .fxr-chip{margin-left:0;height:16px;min-width:22px;font-size:9.5px;padding:0 5px}
+/* judul .sl berjarak lewat flex gap; tanpa dukungan itu (lihat flexGap() di JS) */
+.fxr-legend.fxr-nogap{margin-left:10px}
+/* jarak antar-chip & ke teks pakai margin, BUKAN flex gap (iOS < 14.5) */
+.fxr-legend .fxr-chip{margin:0 6px 0 0;height:16px;min-width:22px;font-size:9.5px;padding:0 5px}
 @media (max-width:420px){
   .fxr-legend .fxr-chip.down{display:none}
   .fxr-legend{font-size:9px}

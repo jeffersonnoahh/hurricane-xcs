@@ -17,7 +17,16 @@
        "sekarang"; saat ada penjualan (HX 'sale'): cahaya berlari di
        garis, sapuan di area, denyut cincin, label +nominal.
      - batang omset harian tipis di dasar (seperti volume di grafik saham)
-     - geser / sentuh grafik = garis bidik + nilai hari itu vs hantu.
+     - SCRUB: geser jari mendatar (atau tahan 400 ms lalu geser) / arahkan
+       mouse = garis bidik kaca + titik yang menempel di garis omset, loncat
+       per hari; label kecil "17 OKT · +Rp 112jt · total Rp 1,45M"; batang
+       hari itu menyala; bagian sesudah hari itu meredup. Angka hero besar
+       ikut menunjukkan total s.d. hari itu — lewat LAPISAN di atas teks asli
+       (teks #liveOmsetBig/#mOmsetBig tidak pernah ditulis ulang: motion.js
+       & premium-ui.js mengamatinya). Lepas = titik meluncur pulang ke hari
+       ini dengan pegas lembut, angka hero menghitung kembali ke nilai asli.
+       Lapisan scrub = elemen HTML yang hanya digeser transform (kompositor),
+       SVG grafik tidak digambar ulang selama scrub.
    Perubahan data tidak menggambar ulang dari nol: garis MELUNCUR ke nilai
    baru (±0,75 dtk). Digambar ulang hanya kalau tanda tangan data berubah.
    ══════════════════════════════════════════════════════════════════════ */
@@ -32,21 +41,19 @@
   const TWEEN_MS = 760;
   const money = (n) => 'Rp ' + Math.round(n || 0).toLocaleString('id-ID');
 
-  /* ── format uang singkat (keputusan bersama): 850rb · 189,73jt · 5jt · 2,95M ── */
+  /* ── format uang singkat (keputusan bersama): 850rb · 189,73jt · 5jt · 2,95M ──
+     Sama persis dengan fRp di app.js (dipakai kalau ada); salinan aturannya
+     di sini hanya cadangan kalau app.js belum termuat. */
   const comma = (s) => String(s).replace('.', ',');
+  const fDec = (c) => { const w = Math.floor(c / 100), f = c % 100; return f ? w + ',' + (f < 10 ? '0' : '') + f : String(w); };
   function short(n) {
     n = Math.round(+n || 0);
-    const sign = n < 0 ? '-' : '';
-    const a = Math.abs(n);
-    if (a < 1000) return sign + a;
-    if (a < 1e6) { const k = Math.round(a / 1e3); if (k < 1000) return sign + k + 'rb'; }
-    if (a < 1e9) {
-      if (a % 1e6 === 0) return sign + (a / 1e6) + 'jt';
-      const j = (a / 1e6).toFixed(2);
-      if (+j < 1000) return sign + comma(j) + 'jt';
-    }
-    if (a % 1e9 === 0) return sign + (a / 1e9) + 'M';
-    return sign + comma((a / 1e9).toFixed(2)) + 'M';
+    try { if (typeof fRp === 'function') return fRp(n); } catch (e) { }
+    const a = Math.abs(n), sg = n < 0 ? '-' : '';
+    if (a >= 999995000) return sg + fDec(Math.round(a / 1e7)) + 'M';
+    if (a >= 999500) return sg + fDec(Math.round(a / 1e4)) + 'jt';
+    if (a >= 1000) return sg + Math.round(a / 1e3) + 'rb';
+    return String(n);
   }
   // label sumbu: angka bulat dari langkah "rapi" -> tanpa nol di belakang (1,5M · 750jt)
   function axisShort(n) {
@@ -224,7 +231,7 @@
     const id = st.key, W = st.W, H = st.H, cp = st.compact, n = M.vals.length;
     const F = frame(st);
     const ticks = ticksFor(dmax, cp ? 3 : 4);
-    const mShort = new Date(M.y, M.m, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const mShort = BLN[M.m].toUpperCase();   // 1 OKT · 9 OKT … (sama dengan label scrub)
     let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Omset kumulatif ' + BULAN[M.m] + ' ' + M.y + '">';
     s += '<defs>' +
       '<linearGradient id="' + st.area + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#30d158" stop-opacity=".34"></stop><stop offset=".6" stop-color="#30d158" stop-opacity=".09"></stop><stop offset="1" stop-color="#30d158" stop-opacity="0"></stop></linearGradient>' +
@@ -257,7 +264,6 @@
     if (n) s += '<path class="ref-chart-line" pathLength="1000" style="stroke:url(#hxLine-' + id + ')"></path>';
     if (n && M.live) s += '<path class="ref-chart-tail" stroke="url(#hxTail-' + id + ')"></path><path class="ref-chart-runner"></path>';
     if (M.cross) s += '<g class="ref-chart-record"><line class="ref-chart-record-stem"></line><path class="ref-chart-record-mark"></path></g>';
-    if (n) s += '<g class="ref-chart-scrub"><line class="ref-chart-scrub-line"></line>' + (M.ghost ? '<circle class="ref-chart-scrub-gdot" r="3"></circle>' : '') + '<circle class="ref-chart-scrub-dot" r="4.2"></circle></g>';
     if (n && M.live) s += '<circle class="ref-chart-glow" r="' + (cp ? 15 : 19) + '" fill="url(#hxGlow-' + id + ')"></circle><circle class="ref-chart-ring" r="5"></circle><circle class="ref-chart-ring" r="5"></circle>';
     if (n) s += '<circle class="ref-chart-dot" r="' + (cp ? 3.6 : 4) + '"></circle>';
     s += '</svg><div class="ref-chart-ov" aria-hidden="true">';
@@ -266,7 +272,14 @@
       s += '<span class="ref-chart-badge"><i></i><b>REKOR BULANAN BARU</b>' +
         (cp ? '' : '<em>' + BULAN[M.cross.m] + ' ' + short(M.cross.total) + ' terlampaui</em>') + '</span>';
     }
-    s += '<div class="ref-chart-tip"></div></div>';
+    // lapisan scrub (HTML, hanya transform): redup · batang hari · garis bidik · titik hantu · titik · label
+    if (n) {
+      s += '<div class="ref-scrub"><div class="ref-scrub-clip"><i class="ref-scrub-shade"></i></div>' +
+        (n > 1 ? '<i class="ref-scrub-pool"></i><i class="ref-scrub-bar"></i>' : '') + '<i class="ref-scrub-x"></i>' +
+        (M.ghost && M.ghost.vals.length ? '<i class="ref-scrub-gdot"></i>' : '') +
+        '<i class="ref-scrub-dot"></i><div class="ref-scrub-lab"></div></div>';
+    }
+    s += '</div>';
 
     st.el.innerHTML = s;
     st.el.classList.toggle('is-live', !!M.live);
@@ -278,10 +291,15 @@
       ghost: q('.ref-chart-ghost'), gend: q('.ref-chart-ghost-end'), now: q('.ref-chart-now'), line: q('.ref-chart-line'),
       tail: q('.ref-chart-tail'), tailG: q('.ref-chart-tailgrad'), runner: q('.ref-chart-runner'),
       rec: q('.ref-chart-record'), stem: q('.ref-chart-record-stem'), mark: q('.ref-chart-record-mark'),
-      scrub: q('.ref-chart-scrub'), sline: q('.ref-chart-scrub-line'), sdot: q('.ref-chart-scrub-dot'), sgdot: q('.ref-chart-scrub-gdot'),
       glow: q('.ref-chart-glow'), rings: qa('.ref-chart-ring'), dot: q('.ref-chart-dot'),
-      tag: q('.ref-chart-tag'), badge: q('.ref-chart-badge'), tip: q('.ref-chart-tip'), ov: q('.ref-chart-ov')
+      tag: q('.ref-chart-tag'), badge: q('.ref-chart-badge'), ov: q('.ref-chart-ov'),
+      sx: q('.ref-scrub-x'), sdot: q('.ref-scrub-dot'), sgdot: q('.ref-scrub-gdot'), sbar: q('.ref-scrub-bar'), spool: q('.ref-scrub-pool'),
+      shade: q('.ref-scrub-shade'), slab: q('.ref-scrub-lab')
     };
+    st.labKey = null; st.labW = 0; st.ylabW = null; st.sxY = false;
+    st.el.classList.remove('sx-ylab');
+    // posisi lapisan scrub baru dibuat: pasang tanpa transisi (tidak meluncur dari pojok kiri)
+    if (st.sx && st.sx.mode !== 'idle') sxJump(st);
     st.ticks = ticks;
     st.tagW = null;
     st.M = M;
@@ -302,6 +320,7 @@
     });
     const p = points(F, cur.vals, n, cur.dmax);
     st.pts = p;
+    st.tan = null;
     if (!p.length) return;
     const head = p[p.length - 1];
     const lineD = curvePath(p);
@@ -310,14 +329,27 @@
     set(N.area, { d: areaD });
     set(N.clip, { d: areaD });
     N.xlab.forEach((el) => { const i = +el.getAttribute('data-i'); el.setAttribute('x', f1(n <= 1 ? F.innerW : i / (n - 1) * F.innerW)); });
-    // batang omset harian
+    // batang omset harian (geometrinya disimpan untuk batang sorot scrub)
+    st.vol = null;
     if (N.vols.length) {
       let mx = 0; const dl = cur.vals.map((v, i) => { const d = Math.max(0, v - (i ? cur.vals[i - 1] : 0)); if (d > mx) mx = d; return d; });
       const bw = Math.max(1.5, Math.min(7, F.innerW / n * 0.38)), hmax = ih * 0.2;
+      const xs = [], hs = [];
       N.vols.forEach((r, i) => {
         const h = mx > 0 ? Math.max(dl[i] > 0 ? 1.5 : 0, dl[i] / mx * hmax) : 0;
-        set(r, { x: f1(p[i][0] - (i === 0 ? 0 : i === n - 1 ? bw : bw / 2)), y: f1(F.base - h), width: f1(bw), height: f1(h) });
+        const x = p[i][0] - (i === 0 ? 0 : i === n - 1 ? bw : bw / 2);
+        xs.push(x); hs.push(h);
+        set(r, { x: f1(x), y: f1(F.base - h), width: f1(bw), height: f1(h) });
       });
+      st.vol = { bw, hmax, xs, hs };
+    }
+    // lapisan scrub: ukuran tetap (per gambar, bukan per gerakan)
+    if (N.sx) {
+      const px = (v) => f1(v) + 'px';
+      N.sx.style.top = px(F.lane - 1); N.sx.style.height = px(F.base - F.lane + 1);
+      if (N.shade) { N.shade.style.top = px(F.lane - 4); N.shade.style.height = px(F.H - F.lane + 4); N.shade.style.width = px(F.W + 64); }
+      if (N.sbar && st.vol) { N.sbar.style.top = px(F.base - st.vol.hmax); N.sbar.style.width = px(st.vol.bw); N.sbar.style.height = px(st.vol.hmax); }
+      if (N.spool && st.vol) { const ph = st.vol.hmax + 14; N.spool.style.top = px(F.base - ph); N.spool.style.height = px(ph); }
     }
     // hantu
     if (N.ghost) {
@@ -369,7 +401,9 @@
       st.crossAt = c;
       placeBadge(st, F, c, head);
     }
-    if (st.scrubI != null) scrubTo(st, st.scrubI);
+    // scrub aktif: ikut geometri baru (data masuk / ukuran berubah). Saat
+    // meluncur pulang, bingkai luncuran berikutnya yang memasang posisinya.
+    if (st.sx && st.sx.mode === 'active' && st.sx.i != null) sxPlace(st, st.sx.i, true);
   }
 
   function placeBadge(st, F, c, head) {
@@ -390,67 +424,375 @@
     }
   }
 
-  /* ── garis bidik (geser / sentuh) ─────────────────────────────────── */
-  function scrubTo(st, i) {
-    const N = st.nodes, M = st.M, p = st.pts, cur = st.cur;
-    if (!N || !N.scrub || !p || !p.length || !cur) return;
-    const n = M.vals.length;
-    i = Math.max(0, Math.min(n - 1, i));
-    st.scrubI = i;
-    const F = frame(st), pt = n <= 1 ? p[p.length - 1] : p[i];
-    N.sline.setAttribute('x1', f1(pt[0])); N.sline.setAttribute('x2', f1(pt[0]));
-    N.sline.setAttribute('y1', F.lane); N.sline.setAttribute('y2', F.base);
-    N.sdot.setAttribute('cx', f1(pt[0])); N.sdot.setAttribute('cy', f1(pt[1]));
-    const v = cur.vals[i] || 0, prevV = i ? cur.vals[i - 1] : 0;
-    let gtxt = '';
-    if (N.sgdot && cur.gvals && i < cur.gvals.length) {
-      const ih = F.base - F.top, gy = F.base - (cur.gvals[i] / cur.dmax) * ih;
-      N.sgdot.setAttribute('cx', f1(pt[0])); N.sgdot.setAttribute('cy', f1(gy)); N.sgdot.style.display = '';
-      const g = cur.gvals[i], d = g > 0 ? (v - g) / g * 100 : null;
-      gtxt = '<span class="g">' + (M.ghost.kind === 'record' ? 'Rekor ' : '') + BLN[M.ghost.m] + ' ' + short(g) + '</span>' +
-        (d == null ? '' : '<span class="' + (d >= 0 ? 'up' : 'dn') + '">' + pct1(d) + '</span>');
-    } else if (N.sgdot) N.sgdot.style.display = 'none';
-    const today = M.live && i === n - 1;
-    N.tip.innerHTML = '<span class="d">' + (today ? 'Hari ini' : (i + 1) + ' ' + BLN[M.m]) + '</span>' +
-      '<span class="v">' + short(v) + '</span><span class="day">+' + short(v - prevV) + '</span>' +
-      (gtxt ? '<span class="br"></span>' + gtxt : '');
-    const leftSide = pt[0] > F.W / 2;
-    N.tip.style.top = '0px';
-    if (leftSide) { N.tip.style.left = 'auto'; N.tip.style.right = f1(F.W - pt[0] + 10) + 'px'; }
-    else { N.tip.style.right = 'auto'; N.tip.style.left = f1(pt[0] + 10) + 'px'; }
-    st.el.classList.add('is-scrub');
+  /* ── SCRUB: geser / tahan / arahkan mouse di grafik ──────────────────
+     Keadaan per grafik di st.sx = { mode: 'active' | 'glide', type, id, i, big, ... }
+       active = jari / mouse sedang memilih hari (loncat per hari)
+       glide  = dilepas: titik meluncur pulang ke hari ini (pegas lembut)
+     Gerak jari: touch-action pan-y (gulir tegak tetap milik browser).
+     Scrub mulai hanya kalau 8px pertama jelas MENDATAR (|dx| > 1,3·|dy|),
+     atau jari diam 400 ms (tahan ≈ long-press bawaan HP). Mulai dari geser
+     mendatar: pointer ditangkap, touchmove dicegah (halaman diam). Mulai
+     dari tahan: arah gerak pertama (>8px) yang memutuskan — TEGAK = scrub
+     dibatalkan & touchmove TIDAK dicegah (halaman bergulir seperti biasa),
+     mendatar/miring = scrub dikunci. Jari kedua (cubit-zoom) = scrub
+     berhenti, zoom milik browser (touch-action: pan-y pinch-zoom). Satu
+     pemilik gerakan: kelas 'hx-gesture' di <html> (selama jari scrub). */
+  const root = document.documentElement;
+  const SX_SLOP = 8, SX_HOLD = 400;
+  function canBuzz() { const ua = navigator.userActivation; return !ua || ua.hasBeenActive; }
+  function buzz(ms) { try { if (navigator.vibrate && canBuzz()) navigator.vibrate(ms); } catch (e) { } }
+  const f2 = (v) => Math.round(v * 100) / 100;
+  const tf = (el, x, y) => { if (el) el.style.transform = 'translate3d(' + f2(x) + 'px,' + f2(y) + 'px,0)'; };
+  // garis 1px tajam: tepi kirinya di piksel perangkat yang utuh
+  const snapPx = (x) => { const r = window.devicePixelRatio || 1; return Math.round((x - 0.5) * r) / r; };
+
+  // titik tepat di kurva pada indeks pecahan u (0..n-1). Titik kendali kurva
+  // berjarak sama secara mendatar, jadi x linear terhadap parameter.
+  function curveAt(st, u) {
+    const p = st.pts, n = st.M ? st.M.vals.length : 0;
+    if (!p || !p.length || !n) return null;
+    if (n <= 1) return p[p.length - 1];
+    u = Math.max(0, Math.min(n - 1, u));
+    const i = Math.min(n - 2, Math.floor(u)), s = u - i;
+    if (s <= 1e-4) return p[i];
+    if (s >= 1 - 1e-4) return p[i + 1];
+    const t = st.tan || (st.tan = tangents(p)), a = p[i], b = p[i + 1], h = (b[0] - a[0]) / 3, v = 1 - s;
+    const c1 = a[1] + t[i] * h, c2 = b[1] - t[i + 1] * h;
+    return [a[0] + (b[0] - a[0]) * s, v * v * v * a[1] + 3 * v * v * s * c1 + 3 * v * s * s * c2 + s * s * s * b[1]];
   }
-  function scrubOff(st) {
-    st.scrubI = null;
-    if (st.el) st.el.classList.remove('is-scrub');
+  function valAt(st, u) {
+    const v = st.cur ? st.cur.vals : null;
+    if (!v || !v.length) return 0;
+    u = Math.max(0, Math.min(v.length - 1, u));
+    const i = Math.floor(u), s = u - i;
+    return i >= v.length - 1 ? v[v.length - 1] : v[i] + (v[i + 1] - v[i]) * s;
+  }
+  // label: "17 OKT │ +Rp 112jt │ total Rp 1,45M" (+ "vs Rekor Jul +19,6%" di layar lebar)
+  function labHtml(st, i) {
+    const M = st.M, cur = st.cur, n = M.vals.length;
+    const v = cur.vals[i] || 0, d = Math.max(0, v - (i ? cur.vals[i - 1] : 0));
+    const today = M.live && i === n - 1;
+    let h = '<span class="d">' + (today ? '<i class="now"></i>' : '') + (i + 1) + ' ' + BLN[M.m].toUpperCase() + '</span><i class="sep"></i>' +
+      '<span class="a' + (d > 0 ? '' : ' z') + '">+Rp ' + short(d) + '</span><i class="sep"></i>' +
+      '<span class="t"><em>total</em> Rp ' + short(v) + '</span>';
+    if (!st.compact && M.ghost && cur.gvals && i < cur.gvals.length && cur.gvals[i] > 0) {
+      const g = cur.gvals[i], pc = (v - g) / g * 100;
+      h += '<i class="sep"></i><span class="g">vs ' + (M.ghost.kind === 'record' ? 'Rekor ' : '') + BLN[M.ghost.m] +
+        ' <b class="' + (pc >= 0 ? 'up' : 'dn') + '">' + pct1(pc) + '</b></span>';
+    }
+    return h;
+  }
+  // pasang lapisan scrub di indeks u. full = indeks bulat: juga batang hari,
+  // titik hantu dan label (luncuran pulang hanya menggeser garis + titik).
+  function sxPlace(st, u, full) {
+    const N = st.nodes;
+    if (!N || !N.sx || !st.cur) return;
+    const pt = curveAt(st, u);
+    if (!pt) return;
+    const F = frame(st), x = pt[0];
+    tf(N.sx, snapPx(x), 0);
+    tf(N.sdot, x, pt[1]);
+    tf(N.shade, x + 2, 0);
+    sxYLabels(st, x);
+    if (!full) return;
+    const n = st.M.vals.length, i = Math.max(0, Math.min(n - 1, Math.round(u)));
+    if (N.spool) tf(N.spool, x, 0);
+    if (N.sbar && st.vol && st.vol.xs[i] != null) {
+      const sc = Math.max(2, st.vol.hs[i]) / st.vol.hmax;
+      N.sbar.style.transform = 'translate3d(' + f1(st.vol.xs[i]) + 'px,0,0) scaleY(' + sc.toFixed(3) + ')';
+    }
+    if (N.sgdot) {
+      const g = st.cur.gvals;
+      if (g && i < g.length) {
+        const ih = F.base - F.top;
+        tf(N.sgdot, x, F.base - (g[i] / st.cur.dmax) * ih);
+        N.sgdot.style.visibility = '';
+      } else N.sgdot.style.visibility = 'hidden';
+    }
+    if (N.slab) {
+      const key = i + '|' + Math.round(st.cur.vals[i] || 0) + '|' + (st.compact ? 1 : 0);
+      if (st.labKey !== key) { N.slab.innerHTML = labHtml(st, i); st.labKey = key; st.labW = N.slab.offsetWidth || st.labW; }
+      const w = st.labW || 0;
+      tf(N.slab, Math.max(0, Math.min(F.W - w, x - w / 2)), 0);
+    }
+  }
+  // garis bidik di atas label sumbu Y (hari-hari awal): label itu meredup
+  // (hanya kelas di .ref-chart, berganti saat melewati batas — bukan per gerakan)
+  function sxYLabels(st, x) {
+    const N = st.nodes;
+    if (!N || !N.ylab.length) return;
+    if (st.ylabW == null) {
+      let w = 0;
+      N.ylab.forEach((t) => { try { const b = t.getBBox(); if (b.width > w) w = b.width; } catch (e) { } });
+      st.ylabW = w;
+    }
+    const on = !!(st.sx && st.sx.mode !== 'idle') && x < st.ylabW + 7;
+    if (on !== st.sxY) { st.sxY = on; st.el.classList.toggle('sx-ylab', on); }
+  }
+  // lapisan baru / scrub baru: pasang posisi tanpa transisi selama satu frame
+  function sxJump(st) {
+    const el = st.el;
+    if (!el) return;
+    el.classList.add('ref-sx-jump');
+    cancelAnimationFrame(st.jumpRaf);
+    st.jumpRaf = requestAnimationFrame(() => { st.jumpRaf = requestAnimationFrame(() => el.classList.remove('ref-sx-jump')); });
+  }
+
+  /* angka hero besar selama scrub: lapisan .ref-big-ov tepat di atas teks
+     asli (gaya huruf disalin, posisi dicocokkan dengan kotak teks). Teks
+     asli hanya disembunyikan lewat kelas .ref-big-hide; isinya tidak disentuh. */
+  const BIG_COPY = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variant-numeric',
+    'font-variant-ligatures', 'font-variant-caps', 'font-feature-settings', 'font-variation-settings', 'font-kerning',
+    'font-optical-sizing', 'font-synthesis', 'letter-spacing', 'word-spacing', 'line-height', 'text-transform', 'text-align',
+    'text-indent', 'text-rendering', 'text-shadow', 'direction', '-webkit-font-smoothing', '-moz-osx-font-smoothing',
+    'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+    'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'];
+  const bigEl = (st) => $(st.key === 'dash' ? 'liveOmsetBig' : 'mOmsetBig');
+  function textRect(node) {
+    const r = document.createRange();
+    r.selectNodeContents(node);
+    const rs = r.getClientRects();
+    return { r: r.getBoundingClientRect(), lines: rs.length };
+  }
+  // odometer / guliran js/motion.js yang sedang jalan di angka ini: dipotong
+  // HANYA lewat kelas & atribut (motion.js sendiri membereskan sisanya)
+  function cutMotion(hero, el) {
+    const ns = hero.querySelectorAll('.hx-odo,.hx-odo-dl');
+    for (let k = 0; k < ns.length; k++) ns[k].setAttribute('data-ref-cut', '');
+    if (el.classList.contains('lg-rolling') || el.hasAttribute('data-lg')) { el.classList.remove('lg-rolling'); el.removeAttribute('data-lg'); }
+  }
+  function bigOpen(st) {
+    let ov = null;
+    try {
+      const el = bigEl(st), hero = el && el.parentElement;
+      if (!hero || !st.M || !st.M.vals.length || root.classList.contains('lg-loading')) return null;
+      const tn = el.firstChild;
+      if (!tn || tn.nodeType !== 3 || el.childNodes.length !== 1 || el.offsetParent !== hero) return null;
+      const real = Math.round(st.M.vals[st.M.vals.length - 1] || 0), text = tn.data;
+      // gaya teks sekarang: lengkap ("Rp 2.987.622.749") atau singkat ("Rp 2,99M")
+      const fmt = text === money(real) ? money : text === 'Rp ' + short(real) ? (v) => 'Rp ' + short(v) : null;
+      if (!fmt) return null;
+      cutMotion(hero, el);
+      const cs = getComputedStyle(el);
+      ov = document.createElement('div');
+      ov.className = 'ref-big-ov';
+      ov.setAttribute('aria-hidden', 'true');
+      const s = ov.style;
+      BIG_COPY.forEach((p) => { const v = cs.getPropertyValue(p); if (v) s.setProperty(p, v); });
+      s.color = cs.color;
+      s.setProperty('-webkit-text-fill-color', cs.color);
+      s.boxSizing = 'border-box';
+      s.width = el.offsetWidth + 'px';
+      s.left = el.offsetLeft + 'px';
+      s.top = el.offsetTop + 'px';
+      ov.textContent = text;
+      hero.appendChild(ov);
+      const a = textRect(tn);
+      if (a.lines !== 1) throw 0;                       // angka terlipat dua baris: tidak dilapisi
+      const sc = el.getBoundingClientRect().width / (el.offsetWidth || 1) || 1;
+      let b = textRect(ov.firstChild);
+      s.left = (el.offsetLeft + (a.r.left - b.r.left) / sc) + 'px';
+      s.top = (el.offsetTop + (a.r.top - b.r.top) / sc) + 'px';
+      b = textRect(ov.firstChild);
+      if (Math.abs(b.r.left - a.r.left) > 1 || Math.abs(b.r.top - a.r.top) > 1 || Math.abs(b.r.width - a.r.width) > 1.5) throw 0;
+      el.classList.add('ref-big-hide');
+      hero.classList.add('ref-big-on');
+      return { el, hero, ov, fmt, last: text };
+    } catch (e) {
+      if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
+      return null;
+    }
+  }
+  function bigSet(st, v) {
+    const b = st.sx && st.sx.big;
+    if (!b) return;
+    const t = b.fmt(Math.round(v));
+    if (t === b.last) return;
+    b.last = t;
+    if (b.ov.firstChild) b.ov.firstChild.data = t; else b.ov.textContent = t;
+  }
+  // kembali ke teks asli: lapisan berisi teks asli persis, lalu ditukar
+  function bigClose(st) {
+    const b = st.sx && st.sx.big;
+    if (!b) return;
+    st.sx.big = null;
+    cutMotion(b.hero, b.el);
+    b.el.classList.remove('ref-big-hide');
+    b.hero.classList.remove('ref-big-on');
+    if (b.ov.parentNode) b.ov.parentNode.removeChild(b.ov);
+  }
+
+  function sxIdx(st, clientX) {
+    const sx = st.sx, n = st.M ? st.M.vals.length : 0;
+    if (!n || !sx) return null;
+    if (sx.rw == null || sx.W !== st.W) {
+      const r = st.el.getBoundingClientRect();
+      sx.rl = r.left; sx.rw = r.width; sx.W = st.W;
+    }
+    if (!sx.rw) return null;
+    const F = frame(st), x = (clientX - sx.rl) * (st.W / sx.rw);
+    return n <= 1 ? 0 : Math.round(Math.max(0, Math.min(1, x / F.innerW)) * (n - 1));
+  }
+  function sxSet(st, i, jump) {
+    const sx = st.sx;
+    if (!sx || i == null || (i === sx.i && !jump)) return;
+    sx.i = i;
+    if (jump) sxJump(st);
+    sxPlace(st, i, true);
+    bigSet(st, st.cur ? st.cur.vals[i] || 0 : 0);
+    if (sx.type !== 'mouse') buzz(6);
+  }
+  function sxStart(st, o) {
+    if (!st.el || !st.M || !st.M.vals.length || !st.nodes || !st.nodes.sx || !st.cur || !pageActive(st) || document.hidden) return false;
+    let sx = st.sx;
+    const fresh = !sx;
+    // disentuh lagi saat masih meluncur pulang: lanjut dari posisi sekarang (meluncur ke jari, tanpa loncat)
+    if (sx && sx.mode === 'glide') { cancelAnimationFrame(sx.raf); clearTimeout(sx.tmo); sx.i = null; }
+    if (!sx) sx = st.sx = { i: null, big: null };
+    sx.mode = 'active'; sx.type = o.type; sx.id = o.id; sx.rw = null;
+    // jari: arah sudah pasti (geser mendatar) atau belum (tahan) — lihat touchmove
+    sx.lock = !o.hold; sx.x0 = o.x; sx.y0 = o.y == null ? 0 : o.y;
+    if (o.type !== 'mouse') {
+      if (!sx.gest && !root.classList.contains('hx-gesture')) { root.classList.add('hx-gesture'); sx.gest = true; }
+      try { st.el.setPointerCapture(o.id); } catch (e) { }
+    }
+    st.el.classList.remove('is-glide');
+    st.el.classList.add('is-scrub');
+    if (!sx.big) sx.big = bigOpen(st);
+    sxSet(st, sxIdx(st, o.x), fresh);
+    return true;
+  }
+  // lepas: titik meluncur pulang ke hari ini (pegas teredam kritis, mulai
+  // diam lalu menetap tanpa memantul), angka hero menghitung ke nilai asli
+  function sxRelease(st, instant) {
+    const sx = st.sx;
+    if (!sx || sx.mode !== 'active') return;
+    if (sx.gest) { root.classList.remove('hx-gesture'); sx.gest = false; }
+    st.sxEndAt = performance.now(); st.sxEndType = sx.type;
+    const n = st.M ? st.M.vals.length : 0, from = sx.i;
+    if (instant || reduced() || !window.requestAnimationFrame || from == null || !n || from >= n - 1 || document.hidden || !st.pts) {
+      sxFinish(st, !instant && from != null && from < n - 1 && !reduced());
+      return;
+    }
+    sx.mode = 'glide';
+    st.el.classList.remove('is-scrub');
+    st.el.classList.add('is-glide');
+    const dur = Math.round(460 + 300 * Math.min(1, (n - 1 - from) / Math.max(1, n - 1)));
+    const w = 7.2 / dur, end = 1 - (1 + 7.2) * Math.exp(-7.2), t0 = performance.now();
+    const step = (now) => {
+      if (st.sx !== sx || sx.mode !== 'glide') return;
+      const t = Math.max(0, now - t0), k = t / dur;
+      const e = k >= 1 ? 1 : (1 - (1 + w * t) * Math.exp(-w * t)) / end;
+      const to = st.M.vals.length - 1;               // data bisa bertambah saat meluncur
+      const u = from + (to - from) * Math.min(1, e);
+      sxPlace(st, u, false);
+      bigSet(st, valAt(st, u));
+      if (k < 1) sx.raf = requestAnimationFrame(step); else sxFinish(st, true);
+    };
+    sx.raf = requestAnimationFrame(step);
+    sx.tmo = setTimeout(() => { if (st.sx === sx && sx.mode === 'glide') sxFinish(st, true); }, dur + 450);
+  }
+  // selesai (atau dipotong): semua kembali ke keadaan diam
+  function sxFinish(st, landed) {
+    const sx = st.sx;
+    if (!sx) return;
+    cancelAnimationFrame(sx.raf); clearTimeout(sx.tmo);
+    if (sx.gest) { root.classList.remove('hx-gesture'); sx.gest = false; }
+    if (sx.mode === 'active' || sx.mode === 'glide') { st.sxEndAt = performance.now(); st.sxEndType = sx.type; }
+    sx.mode = 'idle';
+    if (st.nodes && st.cur && st.pts && st.M && st.M.vals.length) sxPlace(st, st.M.vals.length - 1, false);
+    bigClose(st);
+    st.sx = null;
+    if (st.el) st.el.classList.remove('is-scrub', 'is-glide', 'sx-ylab');
+    st.sxY = false;
+    // titik pulang menyatu dengan kepala garis: kepala berdenyut sekali
+    const N = st.nodes;
+    if (landed && N && N.dot && N.dot.animate && !reduced()) {
+      try { N.dot.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.5)', offset: 0.35 }, { transform: 'scale(1)' }], { duration: 560, easing: 'cubic-bezier(.34,1.4,.64,1)' }); } catch (e) { }
+    }
+  }
+  function sxKill(st) {
+    clearTimeout(st.lpT);
+    st.pd = null;
+    if (st.sx) sxFinish(st, false);
   }
   function bindScrub(st) {
     const el = st.el;
     if (el.__refScrub) return;
     el.__refScrub = true;
-    let raf = 0, lastX = 0, hideT = 0, active = false;
-    const idxAt = (clientX) => {
-      const r = el.getBoundingClientRect(), n = st.M ? st.M.vals.length : 0;
-      if (!n || !r.width) return null;
-      const F = frame(st), x = (clientX - r.left) * (st.W / r.width);
-      return n <= 1 ? 0 : Math.round(Math.max(0, Math.min(1, x / F.innerW)) * (n - 1));
+    // gerakan milik modul lain sedang berlangsung?
+    const other = () => root.classList.contains('hx-gesture') && !(st.sx && st.sx.gest);
+    const active = (id) => st.sx && st.sx.mode === 'active' && (id == null || st.sx.id === id);
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' || !e.isPrimary) return;
+      if (other() || !st.M || !st.M.vals.length) return;
+      const pd = st.pd = { id: e.pointerId, type: e.pointerType || 'touch', x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY };
+      clearTimeout(st.lpT);
+      // tahan diam 400 ms = scrub juga; arah gerak pertama sesudahnya yang
+      // menentukan: tegak = gulir halaman (scrub batal), mendatar = scrub
+      st.lpT = setTimeout(() => {
+        if (st.pd !== pd || other()) return;
+        st.pd = null;
+        sxStart(st, { type: pd.type, id: pd.id, x: pd.x, y: pd.y, hold: true });
+      }, SX_HOLD);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') {
+        // desktop: cukup arahkan (tanpa tekan)
+        if (active()) { if (st.sx.type === 'mouse') sxSet(st, sxIdx(st, e.clientX)); return; }
+        if (other()) return;
+        sxStart(st, { type: 'mouse', id: e.pointerId, x: e.clientX });
+        return;
+      }
+      if (active(e.pointerId)) { sxSet(st, sxIdx(st, e.clientX)); return; }
+      const pd = st.pd;
+      if (!pd || pd.id !== e.pointerId) return;
+      pd.x = e.clientX; pd.y = e.clientY;
+      const dx = e.clientX - pd.x0, dy = e.clientY - pd.y0;
+      if (dx * dx + dy * dy < SX_SLOP * SX_SLOP) return;
+      clearTimeout(st.lpT);
+      st.pd = null;
+      // jelas mendatar = scrub; selain itu = gulir halaman (milik browser)
+      if (Math.abs(dx) > 1.3 * Math.abs(dy) && !other()) sxStart(st, { type: pd.type, id: pd.id, x: e.clientX, y: e.clientY });
+    });
+    const up = (e) => {
+      if (st.pd && st.pd.id === e.pointerId) { clearTimeout(st.lpT); st.pd = null; }
+      if (active(e.pointerId) && st.sx.type !== 'mouse') sxRelease(st, false);
     };
-    const go = () => { raf = 0; const i = idxAt(lastX); if (i != null) scrubTo(st, i); };
-    const move = (e) => {
-      if (e.pointerType !== 'mouse' && !active) return;
-      lastX = e.clientX; clearTimeout(hideT);
-      if (!raf) raf = requestAnimationFrame(go);
-    };
-    const end = (e) => {
-      active = false;
-      clearTimeout(hideT);
-      hideT = setTimeout(() => scrubOff(st), e && e.pointerType === 'mouse' ? 0 : 1400);
-    };
-    el.addEventListener('pointerdown', (e) => { active = true; lastX = e.clientX; clearTimeout(hideT); if (!raf) raf = requestAnimationFrame(go); });
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') end(e); });
-    el.addEventListener('pointercancel', end);
-    el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') end(e); });
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    // hanya tangkapan milik grafik ini: anak SVG yang kehilangan tangkapan
+    // implisit (Chrome) saat kita menangkap pointer juga mengirim event ini
+    el.addEventListener('lostpointercapture', (e) => { if (e.target === el) up(e); });
+    el.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse' && active() && st.sx.type === 'mouse') sxRelease(st, false);
+    });
+    // selama jari scrub: halaman tidak ikut bergulir (listener non-pasif hanya di grafik).
+    // Scrub dari tahan belum dikunci: gerak < 8px dibiarkan (browser masih boleh
+    // memilih gulir); gerak pertama yang TEGAK membatalkan scrub tanpa
+    // preventDefault, jadi halaman bergulir seperti biasa.
+    el.addEventListener('touchmove', (e) => {
+      const sx = st.sx;
+      if (!active() || sx.type === 'mouse') return;
+      if (e.touches && e.touches.length > 1) { sxKill(st); return; }   // jari kedua: cubit-zoom milik browser
+      if (!sx.lock) {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        const dx = t.clientX - sx.x0, dy = t.clientY - sx.y0;
+        if (dx * dx + dy * dy < SX_SLOP * SX_SLOP) return;
+        if (Math.abs(dy) > 1.3 * Math.abs(dx)) { sxKill(st); return; }
+        sx.lock = true;
+      }
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    // tahan lama di Android: tanpa menu konteks (klik kanan mouse tetap normal)
+    el.addEventListener('contextmenu', (e) => {
+      if (st.pd || (active() && st.sx.type !== 'mouse')) e.preventDefault();
+    });
+    // scrub dengan jari bukan ketukan: klik susulan tidak diteruskan
+    el.addEventListener('click', (e) => {
+      if (st.sxEndType && st.sxEndType !== 'mouse' && performance.now() - (st.sxEndAt || 0) < 450) { e.stopPropagation(); e.preventDefault(); }
+    }, true);
   }
 
   /* ── gambar / perbarui ────────────────────────────────────────────── */
@@ -631,7 +973,7 @@
   }
   function sameDayLabel(prevDate, upToDay) {
     const d = Math.min(upToDay, dim(prevDate.getFullYear(), prevDate.getMonth()));
-    return '1–' + d + ' ' + prevDate.toLocaleDateString('en-US', { month: 'short' });
+    return '1–' + d + ' ' + BLN[prevDate.getMonth()];
   }
   function compareHtml(M) {
     const current = M.vals.length ? M.vals[M.vals.length - 1] : 0;
@@ -655,7 +997,7 @@
     const sub = $('liveOmsetSub');
     if (sub) { const h = compareHtml(M); if (sub.__refHtml !== h || !sub.firstElementChild) { sub.innerHTML = h; sub.__refHtml = h; } }
     const foot = st.el.parentNode.querySelector('.ref-hero-foot');
-    const ft = viewed.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' · live total omset';
+    const ft = BULAN[viewed.getMonth()] + ' ' + viewed.getFullYear() + (M.live ? ' · omset berjalan' : ' · total omset');
     if (foot && foot.textContent !== ft) foot.textContent = ft;
     if (vis) draw(st, M, allowTween);
     st.wasVisible = vis && !document.hidden;
@@ -686,7 +1028,7 @@
     }
     if (st.el !== chart) { st.el = chart; observe(st); }
     const foot = hero.querySelector('.ref-month-foot');
-    const ft = new Date(mYear, mMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' · cumulative revenue trend';
+    const ft = BULAN[mMonth] + ' ' + mYear + ' · tren omset kumulatif';
     if (foot && foot.textContent !== ft) foot.textContent = ft;
     const vis = pageActive(st);
     if (vis) draw(st, M, allowTween);
@@ -728,6 +1070,12 @@
         if (w === st.W && h === st.H) return;
         st.W = w; st.H = h;
         if (st === charts.dash) renderReferenceDashboard(false); else renderReferenceMonthly(false);
+        // ukuran berubah di tengah scrub: ukuran huruf angka hero ikut lebar layar — lapisan dipasang ulang
+        if (st.sx && st.sx.big) {
+          bigClose(st);
+          st.sx.big = bigOpen(st);
+          if (st.sx.i != null && st.cur) bigSet(st, st.cur.vals[st.sx.i] || 0);
+        }
       });
     });
     ro.observe(st.el);
@@ -747,8 +1095,8 @@
       if (!p) return;
       if (p.id === 'page-dashboard') renderReferenceDashboard(false);
       else if (p.id === 'page-monthly') renderReferenceMonthly(false);
-      if (p.from === 'page-dashboard' && p.id !== 'page-dashboard') { charts.dash.wasVisible = false; scrubOff(charts.dash); }
-      if (p.from === 'page-monthly' && p.id !== 'page-monthly') { charts.month.wasVisible = false; scrubOff(charts.month); }
+      if (p.from === 'page-dashboard' && p.id !== 'page-dashboard') { charts.dash.wasVisible = false; sxKill(charts.dash); }
+      if (p.from === 'page-monthly' && p.id !== 'page-monthly') { charts.month.wasVisible = false; sxKill(charts.month); }
     });
     HX.on('sale', onSale);
     HX.on('ready', () => { renderReferenceDashboard(false); renderReferenceMonthly(false); });
@@ -782,14 +1130,17 @@
     // ganti hari (tengah malam) & kembali dari latar: murah — tidak ada kerja bila data sama
     window.setInterval(() => { if (!document.hidden) { renderReferenceDashboard(false); if (pageActive(charts.month)) renderReferenceMonthly(false); } }, 60000);
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { charts.dash.wasVisible = charts.month.wasVisible = false; return; }
+      if (document.hidden) { charts.dash.wasVisible = charts.month.wasVisible = false; sxKill(charts.dash); sxKill(charts.month); return; }
       renderReferenceDashboard(false);
       if (pageActive(charts.month)) renderReferenceMonthly(false);
     });
+    // jendela kehilangan fokus (notifikasi, pindah aplikasi) di tengah scrub: langsung beres
+    window.addEventListener('blur', () => { sxKill(charts.dash); sxKill(charts.month); });
+    window.addEventListener('orientationchange', () => { sxKill(charts.dash); sxKill(charts.month); });
   }
 
   // untuk tes & modul lain (hanya membaca)
-  window.HXChart = { short, axisShort, model, charts };
+  window.HXChart = { short, axisShort, model, charts, sxState: (k) => { const st = charts[k]; return st && st.sx ? { mode: st.sx.mode, i: st.sx.i, type: st.sx.type, big: !!st.sx.big } : null; } };
 
   if (document.readyState === 'complete') init();
   else window.addEventListener('load', init, { once: true });

@@ -34,6 +34,15 @@
      HX.moneyFull(n)     'Rp 5.775.000' (fFull)
      HX._simulateSale(o) UNTUK TES SAJA: memicu 'sale' palsu (sim:true),
                          tidak menyentuh allData / Firebase.
+     HX.spAction({id, label, icon, order, show(sp,team), run(sp,team)})
+                         tombol di baris aksi modal detail sales (#spMo),
+                         di bawah kotak KPI. Satu baris bersama untuk semua
+                         modul (urut 'order'); dibangun ulang tiap modal
+                         digambar. Event 'spmodal' {sp, team, modal, box}
+                         menyusul setiap kali modal selesai digambar.
+     HX.spCurrent        {sp, team} modal yang terakhir dibuka
+     HX.monthAgg(y,m[,d]) satu hitungan bulanan bersama (lihat di bawah)
+     HX.dayKey(date)      'YYYY-MM-DD' untuk tanggal mana pun (= app.js dk)
    ══════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -79,6 +88,10 @@
     var b = document.body;
     if (!b) return false;
     if (b.classList.contains('premium-form-open') || b.classList.contains('premium-more-open')) return true;
+    // layar penuh milik modul efek (replay, wrapped, kartu, peta bintang)
+    if (document.documentElement.classList.contains('hx-overlay-open')) return true;
+    // jari sedang memainkan gestur (geser grafik, tahan-pecah omset, tarik sheet)
+    if (document.documentElement.classList.contains('hx-gesture')) return true;
     var mos = document.querySelectorAll('.mo, .cal-overlay');
     for (var i = 0; i < mos.length; i++) if (mos[i].style.display && mos[i].style.display !== 'none') return true;
     var a = document.activeElement;
@@ -111,6 +124,102 @@
   function isReady() {
     try { return Object.keys(data()).length > 0 && !!window._cfgTeamsLoaded; } catch (e) { return false; }
   }
+
+  /* ── SATU hitungan bulanan untuk semua modul (pecah omset, wrapped, kartu,
+        peta bintang) — supaya peringkat, jumlah sales dan total tim SAMA di
+        mana pun dilihat.
+     HX.monthAgg(y, m[, sampaiTanggal]) -> {
+       total, closes,                      // semua record bulan itu (= monthRev)
+       sellers: [s...],                    // sales asli, urut omzet, s.rank 1..n
+       nSellers,                           // penyebut peringkat yang sama untuk semua
+       leaders: [s...], channels: [c...],  // tidak diperingkat
+       teams: [{team, revenue, revenueSellers, revenueChannels, closes, members}],
+       get(nama) -> s | null }
+     s = {sp, team, revenue, closes, rank, activeDays, days:{tanggal:omzet},
+          best:{date, revenue}, biggest:{revenue, prod, date, ts}, topProd, prods}
+     Aturan: sales digabung per NAMA (tanpa beda huruf besar/kecil, lintas
+     tim); timnya = tim roster SEKARANG bila namanya ada di roster, selain itu
+     tim record terakhir (orang yang sudah keluar tetap dihitung di tim
+     lamanya). Channel (Tokopedia, Shopee, …) masuk total tim sesuai record,
+     tidak diperingkat. Team lead (_LEADERS) masuk total tim, tidak diperingkat. */
+  var aggCache = {};
+  HX.on('render', function () { aggCache = {}; });
+  function rosterTeamOf(name) {
+    var n = norm(name);
+    try {
+      for (var t in TM) {
+        var mm = (TM[t] && TM[t].m) || [];
+        for (var i = 0; i < mm.length; i++) if (norm(mm[i]) === n) return t;
+      }
+    } catch (e) { }
+    return null;
+  }
+  HX.monthAgg = function (y, m, upto) {
+    var nDays = new Date(y, m + 1, 0).getDate();
+    upto = Math.max(1, Math.min(nDays, upto || nDays));
+    var ck = y + '-' + m + '-' + upto;
+    if (aggCache[ck]) return aggCache[ck];
+    var D = data(), sel = {}, chan = {}, total = 0, closes = 0;
+    for (var d = 1; d <= upto; d++) {
+      var key = HX.dayKey(new Date(y, m, d));
+      (D[key] || []).forEach(function (e) {
+        if (!e) return;
+        var rev = +e.revenue || 0, u = +e.units || 1, nm = String(e.sp == null ? '' : e.sp).trim(), k = norm(nm);
+        total += rev; closes += u;
+        if (HX.isChannel(nm)) {
+          var c = chan[k] || (chan[k] = { sp: nm, team: e.team, revenue: 0, closes: 0 });
+          c.revenue += rev; c.closes += u;
+          return;
+        }
+        var s = sel[k] || (sel[k] = { key: k, sp: nm, revenue: 0, closes: 0, days: {}, prods: {}, biggest: { revenue: 0 }, lastTs: -1, lastTeam: e.team });
+        s.revenue += rev; s.closes += u;
+        s.days[key] = (s.days[key] || 0) + rev;
+        if ((e.ts || 0) >= s.lastTs) { s.lastTs = e.ts || 0; s.lastTeam = e.team; s.sp = nm; }
+        if (rev > s.biggest.revenue) s.biggest = { revenue: rev, prod: e.prod, date: key, ts: e.ts || 0 };
+        var p = s.prods[e.prod] || (s.prods[e.prod] = { units: 0, revenue: 0 });
+        p.units += u; p.revenue += rev;
+      });
+    }
+    var all = Object.keys(sel).map(function (k) {
+      var s = sel[k];
+      s.team = rosterTeamOf(s.sp) || s.lastTeam;
+      s.leader = HX.isLeader(s.sp);
+      s.activeDays = 0; s.best = { date: null, revenue: 0 };
+      Object.keys(s.days).forEach(function (dd) {
+        s.activeDays++;
+        if (s.days[dd] > s.best.revenue) s.best = { date: dd, revenue: s.days[dd] };
+      });
+      var tp = null;
+      Object.keys(s.prods).forEach(function (pn) { if (!tp || s.prods[pn].revenue > s.prods[tp].revenue) tp = pn; });
+      s.topProd = tp;
+      return s;
+    });
+    var sellers = all.filter(function (s) { return !s.leader; })
+      .sort(function (a, b) { return b.revenue - a.revenue || b.closes - a.closes || (a.sp < b.sp ? -1 : 1); });
+    sellers.forEach(function (s, i) { s.rank = i + 1; });
+    var leaders = all.filter(function (s) { return s.leader; });
+    leaders.forEach(function (s) { s.rank = null; });
+    var channels = Object.keys(chan).map(function (k) { return chan[k]; }).sort(function (a, b) { return b.revenue - a.revenue; });
+    var T = {};
+    function team(t) { return T[t] || (T[t] = { team: t, revenue: 0, revenueSellers: 0, revenueChannels: 0, closes: 0, members: [] }); }
+    all.forEach(function (s) { var x = team(s.team); x.revenue += s.revenue; x.revenueSellers += s.revenue; x.closes += s.closes; x.members.push(s); });
+    channels.forEach(function (c) { var x = team(c.team); x.revenue += c.revenue; x.revenueChannels += c.revenue; x.closes += c.closes; });
+    var teams = Object.keys(T).map(function (t) { return T[t]; }).sort(function (a, b) { return b.revenue - a.revenue; });
+    teams.forEach(function (x) { x.members.sort(function (a, b) { return b.revenue - a.revenue; }); });
+    var byName = {};
+    all.forEach(function (s) { byName[s.key] = s; });
+    var out = {
+      y: y, m: m, upto: upto, total: total, closes: closes,
+      sellers: sellers, nSellers: sellers.length, leaders: leaders, channels: channels, teams: teams,
+      get: function (name) { return byName[norm(name)] || null; }
+    };
+    aggCache[ck] = out;
+    return out;
+  };
+  HX.dayKey = function (d) {
+    try { if (typeof dk === 'function') return dk(d); } catch (e) { }
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
 
   /* ── penjualan sendiri (HP ini) — tidak perlu diumumkan ke diri sendiri ─ */
   var ownTs = {};
@@ -181,6 +290,58 @@
     return s;
   };
 
+  /* ── modal detail sales: baris aksi bersama + event 'spmodal' ────── */
+  var spActs = [];
+  HX.spCurrent = null;
+  HX.spAction = function (def) {
+    if (!def || !def.id || typeof def.run !== 'function') return;
+    spActs = spActs.filter(function (a) { return a.id !== def.id; });
+    spActs.push(def);
+    spActs.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+    if (HX.spCurrent) {
+      var mo = document.getElementById('spMo');
+      if (mo && mo.style.display && mo.style.display !== 'none') decorateSp(HX.spCurrent.sp, HX.spCurrent.team, true);
+    }
+  };
+  function escTxt(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function decorateSp(sp, team, quiet) {
+    var mo = document.getElementById('spMo');
+    var box = mo && mo.querySelector('.mbox');
+    if (!box) return;
+    HX.spCurrent = { sp: sp, team: team };
+    var row = null;
+    for (var i = 0; i < box.children.length; i++) if (box.children[i].className === 'hx-sp-actions') row = box.children[i];
+    if (!row) {
+      row = document.createElement('div');
+      row.className = 'hx-sp-actions';
+      var k = document.getElementById('mKPIs');
+      if (k && k.parentNode === box) box.insertBefore(row, k.nextSibling); else box.appendChild(row);
+    }
+    row.innerHTML = '';
+    spActs.forEach(function (a) {
+      try { if (a.show && !a.show(sp, team)) return; } catch (e) { return; }
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'hx-sp-act';
+      b.setAttribute('data-act', a.id);
+      b.innerHTML = (a.icon || '') + '<span>' + escTxt(a.label) + '</span>';
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); try { a.run(sp, team); } catch (e) { console.warn('[HX] spAction ' + a.id, e); } });
+      row.appendChild(b);
+    });
+    row.style.display = row.children.length ? '' : 'none';
+    if (!quiet) HX.emit('spmodal', { sp: sp, team: team, modal: mo, box: box });
+  }
+  function wrapSpModal() {
+    if (did.spm || typeof window._spModalPaint !== 'function') return;
+    did.spm = true;
+    var orig = window._spModalPaint;
+    window._spModalPaint = keepMarkers(orig, function (sp, team) {
+      var r = orig.apply(this, arguments);
+      try { decorateSp(sp, team); } catch (e) { console.warn('[HX] spmodal', e); }
+      return r;
+    });
+  }
+
   /* ── bungkus fungsi app.js tanpa menghapus penanda skrip lain ────── */
   function keepMarkers(from, to) {
     for (var k in from) if (Object.prototype.hasOwnProperty.call(from, k)) to[k] = from[k];
@@ -210,7 +371,7 @@
     });
     window.showPage.__hx = true;
   }
-  function hook() { wrapRender(); wrapShow(); wrapAppend(); scan(); }
+  function hook() { wrapRender(); wrapShow(); wrapAppend(); wrapSpModal(); scan(); }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
   window.addEventListener('load', hook);

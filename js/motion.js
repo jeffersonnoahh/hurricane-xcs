@@ -187,7 +187,8 @@
 
   /* ── 1b. ODOMETER — angka hero (#liveOmsetBig, #mOmsetBig) ───────────
      Tiap digit adalah pita vertikal yang berputar ke angka tujuannya,
-     bergiliran dari kanan ke kiri (titik pemisah ribuan diam), dengan
+     bergiliran dari kanan ke kiri (titik pemisah ribuan diam), di jendela
+     yang dipotong pas di TINTA angka (tepi atas/bawah memudar), dengan
      blur gerak VERTIKAL saat cepat (salinan pita ber-filter SVG yang
      saling-silang dengan pita tajam), cahaya hijau saat mendarat, dan
      mendarat lembut (sedikit lewat lalu kembali). Prinsipnya sama dengan data-lg:
@@ -196,8 +197,8 @@
      digambar di lapisan .hx-odo DI DALAM kartu hero (bukan di dalam elemen
      angka: subtree-nya diamati skrip lain), gaya hurufnya disalin dari
      elemen, lalu posisinya DIPERIKSA huruf per huruf terhadap teks asli.
-     Meleset > 0,75px (font lain, baris patah lain) = batal, pakai guliran
-     lama. Saat membuka halaman, guliran mulai dari angka yang TERAKHIR
+     Meleset (> 1,5px mendatar / 0,75px tegak: font lain, baris patah lain)
+     = batal, pakai guliran lama. Saat membuka halaman, guliran mulai dari angka yang TERAKHIR
      dilihat di HP ini (localStorage 'hx-last-omset' {month, value}) —
      yang bergulir adalah berita nyata; belum ada catatan bulan ini: dari 0.
      Penjualan baru saat layar terbuka: lencana "+Rp 5,78jt" naik & pudar. */
@@ -273,6 +274,7 @@
     try { localStorage.setItem(SEEN_KEY, JSON.stringify({ month: month, value: v })); } catch (e) { }
   }
   function isShown(el) {
+    if (root.classList.contains('hx-overlay-open')) return false;   // layar penuh fx-* menutupinya
     var pg = el && el.closest ? el.closest('.page') : null;
     return !!el && (!pg || pg.classList.contains('active')) && el.getClientRects().length > 0;
   }
@@ -391,6 +393,13 @@
       o.onDone = function () { heroDone(h, o); };
       o.timer = setTimeout(o.onDone, o.total + 900);   // pengaman
       if (badge) o.badgeT = setTimeout(function () { heroBadge(h, delta); }, o.landAt);
+      return;
+    }
+    // bentuk teks tidak dikenal: angka antara tidak bisa ditulis dengan gaya
+    // yang sama (bentuk lengkap terpotong di HP) — angka final langsung
+    if (!F) {
+      if (badge) heroBadge(h, delta);
+      heroSeen(h);
       return;
     }
     // cadangan: guliran lama lewat data-lg
@@ -550,7 +559,7 @@
   // Filter ada di salinan pita yang hanya digeser transform — digambar sekali,
   // bukan per frame. '' = gagal dibuat (odometer jalan tanpa blur).
   function odoBlur(fs) {
-    var d = Math.round(Math.max(1.5, Math.min(9, fs * .085)) * 2) / 2;
+    var d = Math.round(Math.max(1.5, Math.min(7, fs * .07)) * 2) / 2;
     var id = 'hx-odo-vb' + String(d).replace('.', '_');
     if (document.getElementById(id)) return id;
     try {
@@ -796,7 +805,7 @@
         // menggantikan pita tajam; pita tajam kembali sebelum mendarat. Pita
         // pendek (1-2 langkah) hampir tidak buram — memang lambat.
         if (s.b) {
-          var bk = Math.min(1, (s.t.steps - 1) / 5), lo = 1 - .8 * bk;
+          var bk = .82 * Math.min(1, (s.t.steps - 1) / 5), lo = 1 - .72 * bk;
           o.anims.push(s.b.animate(kf, { duration: dur, delay: dl, fill: 'both' }));
           o.anims.push(s.b.animate([{ opacity: 0 }, { opacity: bk, offset: .1 }, { opacity: bk, offset: .26 }, { opacity: 0, offset: .48 }, { opacity: 0 }],
             { duration: dur, delay: dl, fill: 'both' }));
@@ -937,13 +946,18 @@
       '.hx-odo-r.b{opacity:0;color:#d9ffe4}' +
       // cahaya pendaratan DI BELAKANG angka (z-index -1 di dalam lapisan)
       '.hx-odo-gl{position:absolute;z-index:-1;left:50%;top:50%;width:1.7em;height:1.25em;margin:calc(-.62em + var(--hx-gy,0px)) 0 0 -.85em;border-radius:50%;opacity:0;' +
-        'background:radial-gradient(closest-side,rgba(48,209,88,.42),rgba(48,209,88,.12) 58%,rgba(48,209,88,0))}' +
+        'background:radial-gradient(closest-side,rgba(48,209,88,.32),rgba(48,209,88,.09) 58%,rgba(48,209,88,0))}' +
       '.hx-odo-dl{position:absolute;z-index:3;left:0;top:0;pointer-events:none;white-space:nowrap;opacity:0;' +
         'font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.01em;line-height:1;padding:.38em .68em .36em;border-radius:999px;' +
         'color:#46e06d;background:linear-gradient(180deg,rgba(48,209,88,.22),rgba(48,209,88,.08)),rgba(9,20,13,.9);' +
         'box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(48,209,88,.4),0 8px 22px -8px rgba(48,209,88,.55)}' +
       '.hx-odo-dl.neg{color:#ff6b62;background:linear-gradient(180deg,rgba(255,69,58,.2),rgba(255,69,58,.07)),rgba(22,10,10,.9);' +
-        'box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,69,58,.4),0 8px 22px -8px rgba(255,69,58,.45)}';
+        'box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,69,58,.4),0 8px 22px -8px rgba(255,69,58,.45)}' +
+      // target harian tembus: lapisan di DALAM kartu (terpotong sudutnya)
+      '.hx-win{position:absolute;top:0;right:0;bottom:0;left:0;z-index:2;pointer-events:none;overflow:hidden;border-radius:inherit}' +
+      '.hx-win>canvas{position:absolute;top:0;left:0;pointer-events:none}' +
+      '.hx-win-rim{position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit;opacity:0;' +
+        'box-shadow:inset 0 0 0 1px rgba(48,209,88,.62),inset 0 1px 0 rgba(255,255,255,.2),inset 0 0 36px -6px rgba(48,209,88,.3)}';
     (document.head || document.documentElement).appendChild(st);
   }
 
@@ -960,7 +974,6 @@
     // kartu-kartu baru saja dibuat dari data pertama -> beri animasi masuk
     var act = document.querySelector('.page.active');
     if (act) enterPage(act.id, false);
-    setTimeout(maybeCelebrate, 900);
   }
 
   /* ── 5. animasi masuk halaman ─────────────────────────────────────── */
@@ -1147,96 +1160,217 @@
     loadingDone = true;
   }
 
-  /* ── 3. satu perayaan per hari: target harian tercapai ───────────── */
+  /* ── 3. target harian tembus: jawaban kecil DI KARTU target ──────────
+     Hanya untuk penyeberangan LANGSUNG (HX 'goal' pct >= 100 saat aplikasi
+     terbuka). Membuka aplikasi berjam-jam sesudah target tembus tidak
+     merayakan apa pun — kartunya sendiri sudah bercerita (fx-pace:
+     "Target tembus 15:13 · penjualan Hendri").
+     Momen utamanya = banner fx-live di atas layar. Kartu menjawab SESUDAH
+     banner pergi (mata tidak ditarik ke dua ujung layar sekaligus): cahaya
+     menyusuri batang sampai ujungnya, percikan hijau halus dari ujung
+     batang, tepi kartu menyala hijau sebentar. Semuanya DI DALAM kartu
+     (lapisan absolut yang ikut terpotong sudut kartu, di bawah header dan
+     navigasi) — tidak pernah di atas modal, form, atau layar penuh
+     (HX.busy()). Belum terlihat (halaman lain, kartu tergulir keluar,
+     melihat hari lain, animasi masuk halaman masih jalan, tab di latar):
+     ditunda sampai terlihat, paling lama 5 menit. Sekali sehari per HP
+     ('lg-target-<tgl>'). Kurangi Gerak: hanya tepi kartu memudar. */
   function dayKey() {
     var d = new Date();
     return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
   }
-  function cardVisible(card) {
-    var r = card.getBoundingClientRect();
-    var shown = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
-    return r.height > 0 && shown >= r.height * 0.5;
+  var CELE_WAIT = 700, CELE_POLL = 300, CELE_TTL = 5 * 60 * 1000;
+  // jeda tenang sebelum mulai, menurut penghalang terakhir: sesudah banner
+  // pergi; sesudah modal/form tertutup (fx-live mencoba lagi tiap 700ms —
+  // banner-nya harus sempat muncul duluan); sesudah kartu mulai terlihat
+  var CELE_QUIET = { start: 700, banner: 450, busy: 1000, view: 350 };
+  var cele = null;            // { key, at, quiet, why, t }
+  var celeMem = {};
+  function celeKey() { return 'lg-target-' + dayKey(); }
+  function celeDone(key) {
+    if (celeMem[key]) return true;
+    try { return !!localStorage.getItem(key); } catch (e) { return false; }
   }
-  function maybeCelebrate() {
-    if (!loadingDone) return;
-    // Target asli (config/revTarget, mis. Rp150jt) belum dimuat -> app.js masih
-    // memakai bawaan Rp70jt, jadi "100%" bisa palsu. Tunggu config dulu.
-    if (!window._cfgTeamsLoaded) return;
-    var g = document.getElementById('goalPct');
-    if (!g || !(parseInt(g.textContent, 10) >= 100)) return;
-    try { if (typeof vOff !== 'undefined' && vOff !== 0) return; } catch (e) { }   // hanya untuk HARI INI
+  function celeMark(key) {
+    celeMem[key] = 1;
+    try { localStorage.setItem(key, '1'); } catch (e) { }
+  }
+  function celeArm(g) {
+    if (!g || !(g.pct >= 100)) return;
+    var key = celeKey();
+    if ((cele && cele.key === key) || celeDone(key)) return;
+    if (cele) clearTimeout(cele.t);
+    cele = { key: key, at: Date.now(), quiet: 0, why: 'start', t: 0 };
+    cele.t = setTimeout(celeCheck, CELE_WAIT);
+  }
+  // batang target utuh di layar: di bawah header lengket, di atas navigasi bawah HP
+  function barInView(bar) {
+    var r = bar.getBoundingClientRect();
+    if (!r.width || !r.height) return false;
+    var top = 0, hd = document.querySelector('header');
+    if (hd) {
+      var p = getComputedStyle(hd).position;
+      if (p === 'fixed' || p === 'sticky' || p === '-webkit-sticky') top = Math.max(0, hd.getBoundingClientRect().bottom);
+    }
+    return r.top >= top && r.bottom <= fold();
+  }
+  // null = siap; selain itu = alasan menunggu
+  function celeBlock(card) {
+    if (window.HX && HX.busy && HX.busy()) return 'busy';
+    if (document.querySelector('.hxl-banner')) return 'banner';      // momen utama masih tampil
     var dash = document.getElementById('page-dashboard');
-    if (!dash || !dash.classList.contains('active')) return;
-    var key = 'lg-target-' + dayKey();
-    try { if (localStorage.getItem(key)) return; } catch (e) { return; }
-    var card = document.querySelector('#page-dashboard .goal-card');
-    // Jatah sekali-sehari HANYA dipakai kalau benar-benar terlihat: tab di
-    // latar, layar terkunci, atau kartu tergulir keluar -> coba lagi nanti
-    // (lihat pendengar visibilitychange & scroll di hook()).
-    if (document.hidden || !card || !cardVisible(card)) return;
-    try { localStorage.setItem(key, '1'); } catch (e) { return; }
-    card.classList.add('lg-goal-hit');
-    setTimeout(function () { card.classList.remove('lg-goal-hit'); }, 2600);
-    buzz([14, 50, 14, 50, 28]);
-    // modul fx-* boleh ikut merayakan tepat di saat yang sama:
-    // HX 'celebrate' {x, y} = titik asal percikan (px layar). Juga saat Kurangi
-    // Gerak (pendengar memeriksa HX.reduced() sendiri).
-    try {
-      if (window.HX && HX.emit) {
-        var gb = (card.querySelector('.goal-bar') || card).getBoundingClientRect();
-        HX.emit('celebrate', { x: gb.left + gb.width * .85, y: gb.top + gb.height / 2 });
-      }
-    } catch (e) { }
-    if (!REDUCED) sparks(card);
+    if (!dash || !dash.classList.contains('active') || dash.classList.contains('lg-enter')) return 'view';
+    var bar = card && card.querySelector('.goal-bar');
+    if (!bar || !barInView(bar)) return 'view';
+    return null;
   }
+  function celeCheck() {
+    var c = cele;
+    if (!c) return;
+    clearTimeout(c.t); c.t = 0;
+    var now = Date.now();
+    if (c.key !== celeKey() || now - c.at > CELE_TTL || celeDone(c.key)) { cele = null; return; }
+    if (now - c.at < CELE_WAIT) { c.t = setTimeout(celeCheck, CELE_WAIT - (now - c.at)); return; }
+    if (document.hidden) { c.quiet = 0; return; }                   // visibilitychange memanggil lagi
+    if (!loadingDone) { c.quiet = 0; c.t = setTimeout(celeCheck, CELE_POLL); return; }
+    var today = true;
+    try { if (typeof vOff !== 'undefined' && vOff !== 0) today = false; } catch (e) { }
+    var card = document.querySelector('#page-dashboard .goal-card');
+    if (today) {
+      // data dikoreksi, hari ini ternyata belum 100%: tidak ada yang dirayakan
+      var g = document.getElementById('goalPct');
+      if (g && !(parseInt(g.textContent, 10) >= 100)) { cele = null; return; }
+    }
+    var why = today ? celeBlock(card) : 'view';
+    if (why) { c.quiet = 0; c.why = why; c.t = setTimeout(celeCheck, CELE_POLL); return; }
+    if (!c.quiet) c.quiet = now;
+    var need = CELE_QUIET[c.why] || 700;
+    if (now - c.quiet < need) { c.t = setTimeout(celeCheck, Math.min(CELE_POLL, need - (now - c.quiet) + 16)); return; }
+    cele = null;
+    celeMark(c.key);
+    celePlay(card);
+  }
+  // nama lama — dipanggil dari beberapa tempat: hanya memeriksa yang tertunda
+  function maybeCelebrate() { celeCheck(); }
 
-  // percikan halus warna Hurricane (hijau, kuning, putih) dari batang target
-  function sparks(card) {
-    var r = card.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > innerHeight) return;
+  function celePlay(card) {
+    var bar = card.querySelector('.goal-bar');
+    var fill = document.getElementById('goalFill');
+    var cr = card.getBoundingClientRect(), br = bar.getBoundingClientRect();
+    var fr = fill && bar.contains(fill) ? fill.getBoundingClientRect() : null;
+    var hx = fr && fr.width ? Math.min(fr.right, br.right) : br.right, hy = br.top + br.height / 2;
+    buzz([14, 50, 14, 50, 28]);
+    // modul fx-* boleh ikut: HX 'celebrate' {x, y} = ujung batang (px layar)
+    try { if (window.HX && HX.emit) HX.emit('celebrate', { x: hx, y: hy }); } catch (e) { }
+    var old = card.querySelector('.hx-win');
+    if (old) old.parentNode.removeChild(old);
+    var fx = mk('span', 'hx-win');
+    fx.setAttribute('aria-hidden', 'true');
+    var rim = mk('i', 'hx-win-rim', fx);
+    card.appendChild(fx);
+    var gone = function () { if (fx.parentNode) fx.parentNode.removeChild(fx); };
+    try {
+      var ra = rim.animate(REDUCED
+        ? [{ opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: 1, offset: .6 }, { opacity: 0 }]
+        : [{ opacity: 0 }, { opacity: 1, offset: .18 }, { opacity: .5, offset: .55 }, { opacity: 0 }],
+        { duration: REDUCED ? 1600 : 2000, delay: REDUCED ? 0 : 480, easing: 'ease-out', fill: 'both' });
+      ra.onfinish = gone;
+    } catch (e) { }
+    if (!REDUCED) {
+      try { celeSparks(fx, card, cr, br, hx, hy); } catch (e) { }
+    }
+    setTimeout(gone, 3000);   // pengaman
+  }
+  // Cahaya menyusuri batang (0-560ms) -> mekar kecil di ujungnya -> 10-20
+  // percikan hijau halus (garis pendek, bukan kertas konfeti) naik dan
+  // memudar, ±2,2 detik. Canvas seukuran kartu, di dalam kartu.
+  function celeSparks(fx, card, cr, br, hx, hy) {
+    var W = card.clientWidth, H = card.clientHeight;
+    if (!(W > 0 && H > 0) || !card.offsetWidth) return;
+    var sc = cr.width / card.offsetWidth || 1;
+    var X = function (v) { return (v - cr.left) / sc - card.clientLeft; };
+    var Y = function (v) { return (v - cr.top) / sc - card.clientTop; };
     var dpr = Math.min(2, window.devicePixelRatio || 1);
-    var cv = document.createElement('canvas');
-    cv.className = 'lg-sparks';
-    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
-    // ukuran tampilan = ukuran gambar. 100vh di CSS = viewport BESAR di HP
-    // (bilah alamat tersembunyi), jadi percikan akan meregang & bergeser.
-    cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
-    document.body.appendChild(cv);
+    var cv = mk('canvas', '', fx);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    cv.style.width = W + 'px'; cv.style.height = H + 'px';
     var ctx = cv.getContext('2d');
+    if (!ctx) return;
     ctx.scale(dpr, dpr);
-    var bar = card.querySelector('.goal-bar') || card;
-    var b = bar.getBoundingClientRect();
-    var ox = b.left + b.width * 0.85, oy = b.top + b.height / 2;
-    var COLORS = ['#30d158', '#46e06d', '#ffd426', '#ffffff'];
-    var P = [];
-    for (var i = 0; i < 64; i++) {
-      var a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.1;
-      var v = 3 + Math.random() * 6.5;
+    var x0 = X(br.left), ox = X(hx), oy = Y(hy), bh = Math.max(4, br.height / sc);
+    var low = odoTier() === 'low', N = low ? 10 : 20;
+    var COLORS = ['#30d158', '#5ef08a', '#c8fbd6'];
+    var P = [], i;
+    for (i = 0; i < N; i++) {
+      // ke atas, condong ke kiri (ujung batang dekat tepi kanan kartu)
+      var a = -Math.PI / 2 + (Math.random() - .62) * Math.PI * .9;
+      var v = 55 + Math.random() * 125;
       P.push({
-        x: ox + (Math.random() - 0.5) * b.width * 0.5, y: oy,
+        x: ox - Math.random() * 5, y: oy + (Math.random() - .5) * bh * .6,
         vx: Math.cos(a) * v, vy: Math.sin(a) * v,
-        w: 2 + Math.random() * 3, h: 5 + Math.random() * 7,
-        rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.35,
-        c: COLORS[i % COLORS.length], life: 1
+        born: 520 + Math.random() * 300, life: 620 + Math.random() * 560,
+        w: .9 + Math.random() * .9, c: COLORS[i % COLORS.length]
       });
     }
-    var t0 = performance.now(), DUR = 1700, raf = 0;
+    var END = 0;
+    P.forEach(function (p) { END = Math.max(END, p.born + p.life); });
+    var SW = 560, t0 = 0, prev = 0, raf = 0, dead = false;
+    var stop = function () { dead = true; if (raf) cancelAnimationFrame(raf); raf = 0; };
     function draw(now) {
-      var t = (now - t0) / DUR;
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
-      P.forEach(function (p) {
-        p.vy += 0.22; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      raf = 0;
+      if (dead || !cv.parentNode) return;
+      if (!t0) { t0 = now; prev = now; }
+      var t = now - t0, dt = Math.min(.05, Math.max(0, (now - prev) / 1000));
+      prev = now;
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+      // 1. cahaya menyusuri batang, dipotong di batang
+      if (t < SW + 120 && ox > x0) {
+        var k = Math.min(1, t / SW), e = 1 - Math.pow(1 - k, 3);
+        var len = ox - x0, band = Math.max(28, len * .22), cx = x0 - band / 2 + (len + band / 2) * e;
+        var al = (t < 80 ? t / 80 : 1) * (t > SW ? Math.max(0, 1 - (t - SW) / 120) : 1);
         ctx.save();
-        ctx.globalAlpha = Math.max(0, 1 - t);
-        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-        ctx.fillStyle = p.c;
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.beginPath(); ctx.rect(x0, oy - bh / 2 - 1, len, bh + 2); ctx.clip();
+        var gr = ctx.createLinearGradient(cx - band / 2, 0, cx + band / 2, 0);
+        gr.addColorStop(0, 'rgba(200,251,214,0)');
+        gr.addColorStop(.6, 'rgba(200,251,214,' + (.75 * al).toFixed(3) + ')');
+        gr.addColorStop(1, 'rgba(200,251,214,0)');
+        ctx.fillStyle = gr;
+        ctx.fillRect(cx - band / 2, oy - bh / 2 - 1, band, bh + 2);
         ctx.restore();
-      });
-      if (t < 1) raf = requestAnimationFrame(draw); else cv.remove();
+      }
+      // 2. mekar kecil di ujung batang
+      if (t > SW - 60 && t < SW + 640) {
+        var q = (t - (SW - 60)) / 700, rr = 6 + 20 * Math.sqrt(q), ba = .5 * Math.sin(Math.PI * Math.min(1, q * 1.15));
+        var rg = ctx.createRadialGradient(ox, oy, 0, ox, oy, rr);
+        rg.addColorStop(0, 'rgba(94,240,138,' + ba.toFixed(3) + ')');
+        rg.addColorStop(1, 'rgba(48,209,88,0)');
+        ctx.fillStyle = rg;
+        ctx.fillRect(ox - rr, oy - rr, rr * 2, rr * 2);
+      }
+      // 3. percikan: garis pendek searah gerak, gravitasi ringan
+      ctx.lineCap = 'round';
+      var drag = Math.pow(.25, dt);
+      for (var n = 0; n < P.length; n++) {
+        var p = P[n], age = t - p.born;
+        if (age < 0 || age > p.life) continue;
+        p.vy += 150 * dt; p.vx *= drag; p.vy *= drag;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        var f = 1 - age / p.life, alpha = Math.pow(f, 1.4) * (age < 90 ? age / 90 : 1);
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = p.c;
+        ctx.lineWidth = p.w;
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.vx * .045, p.y - p.vy * .045);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      if (t < END) raf = requestAnimationFrame(draw);
+      else { stop(); if (cv.parentNode) cv.parentNode.removeChild(cv); }
     }
     raf = requestAnimationFrame(draw);
-    setTimeout(function () { cancelAnimationFrame(raf); cv.remove(); }, DUR + 400);   // pengaman
+    setTimeout(function () { stop(); if (cv.parentNode) cv.parentNode.removeChild(cv); }, END + 600);   // pengaman
   }
 
   /* ── pasang tanpa menyentuh app.js ────────────────────────────────── */
@@ -1244,12 +1378,8 @@
     odoCss();
     Object.keys(TARGETS).forEach(function (id) { if (HERO[id]) watchHero(id); else watchValue(id); });
 
-    var g = document.getElementById('goalPct');
-    if (g && !g.__lgCele) {
-      g.__lgCele = true;
-      new MutationObserver(function () { setTimeout(maybeCelebrate, 600); })
-        .observe(g, { childList: true, characterData: true, subtree: true });
-    }
+    // target harian tembus: HANYA penyeberangan langsung (lihat bagian 3)
+    if (window.HX && HX.on && !hook.__goal) { hook.__goal = true; HX.on('goal', celeArm); }
     if (typeof window.showPage === 'function' && !window.showPage.__lgm) {
       var origShow = window.showPage;
       window.showPage = keepMarkers(origShow, function (p) {
@@ -1272,7 +1402,7 @@
           });
         }
         navPill();
-        if (p === 'dashboard') setTimeout(maybeCelebrate, 500);
+        if (cele) setTimeout(celeCheck, 60);
         return r;
       });
       window.showPage.__lgm = true;
@@ -1302,17 +1432,21 @@
       document.addEventListener('visibilitychange', function () {
         // ke latar: angka hero yang tampil = "terakhir dilihat"
         if (document.hidden) { heroSeenAll(); return; }
-        setTimeout(maybeCelebrate, 400);
+        setTimeout(celeCheck, 400);
         // kembali: penjualan selama tidak dilihat bergulir dari angka lama
         setTimeout(heroWake, 350);
       });
-      var lastScroll = 0;
-      window.addEventListener('scroll', function () {
-        var now = Date.now();
-        if (now - lastScroll < 400) return;
-        lastScroll = now;
-        maybeCelebrate();
-      }, { passive: true });
+      // layar penuh fx-* (replay, wrapped, kartu, peta bintang) ditutup:
+      // penjualan yang masuk selama itu bergulir dari angka terakhir dilihat
+      if (window.MutationObserver) {
+        var ovl = root.classList.contains('hx-overlay-open');
+        new MutationObserver(function () {
+          var o = root.classList.contains('hx-overlay-open');
+          if (o === ovl) return;
+          ovl = o;
+          if (!o) { setTimeout(heroWake, 380); if (cele) setTimeout(celeCheck, 60); }
+        }).observe(root, { attributes: true, attributeFilter: ['class'] });
+      }
     }
   }
 

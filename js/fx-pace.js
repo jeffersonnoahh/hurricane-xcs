@@ -12,15 +12,23 @@
         (termasuk yang dicatat belakangan). Kotak 15 menit, dihitung sekali
         per hari. Cek data Okt 2026: ±14% jam 12, ±26% jam 13, ±37% jam 14,
         ±65% jam 16.
-     2. SATU baris di bawah batang: "Di depan jalur +Rp 35jt" /
-        "Tertinggal Rp 8jt dari jalur" (hanya angka yang berwarna). Tidak
-        pernah "pasti tembus": target hanya tercapai ±5 dari 26 hari.
+     2. SATU baris di bawah batang: "Di depan jalur +Rp 35,12jt" /
+        "Tertinggal Rp 8,40jt dari jalur" (hanya angka yang berwarna; format
+        uang = HX.money/fRp, sama dengan seluruh app). Tidak pernah "pasti
+        tembus": target hanya tercapai ±5 dari 26 hari.
      3. TAKIK 25/50/75% yang menyala saat dilewati (live: kilau singkat +
-        riak kecil di wallpaper lewat HX 'ripple').
-     4. PUTARAN KEDUA lewat 100%: lapisan lebih terang dari kiri selebar
-        kelebihannya (126% -> 26%), kilau sekali saat muncul, dan baris
-        "Target tembus 15:13 · penjualan Hendri".
+        HX 'ripple' di posisi takik).
+     4. PUTARAN KEDUA lewat 100% — gaya cincin Activity: batang 100% tetap
+        penuh & paling terang (lapisan "tuntas" hijau utama di dalam
+        #goalFill; lebar isian tetap milik app.js); putaran kedua = pita
+        hijau LEBIH GELAP/pekat di atasnya dari kiri selebar kelebihannya
+        (126% -> 26%) dengan bayangan di ujung depannya, plus label kecil
+        "+26%" yang berakhir tepat di ujung itu. Jadi mata tetap membaca
+        "penuh + ekstra", bukan "setengah jalan". Kilau sekali saat muncul,
+        dan baris "Target tembus 15:13 · penjualan Hendri".
    Garis jalur & baris hanya untuk HARI INI (vOff === 0).
+   Awalan kelas "hxpc-" (bukan "hxp-": itu milik fx-play, dan .hxp-amt
+   miliknya dulu ikut mengubah angka di baris ini).
 
    HANYA MEMBACA. Tidak pernah menulis ke Firebase, tidak memanggil fungsi
    simpan apa pun. Tidak ada loop tanpa henti: pengatur waktu per menit
@@ -106,14 +114,8 @@
   }
 
   /* ── format ───────────────────────────────────────────────────────── */
-  function jt(n) {
-    n = Math.abs(Math.round(n));
-    if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 0 : 1).replace('.', ',').replace(/,0$/, '') + 'M';
-    if (n >= 9.95e6) return Math.round(n / 1e6) + 'jt';
-    if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',').replace(/,0$/, '') + 'jt';
-    if (n >= 1e3) return Math.round(n / 1e3) + 'rb';
-    return String(n);
-  }
+  // satu format uang untuk seluruh app (fRp lewat HX.money): 850rb · 57,34jt · 2,95M
+  function rp(n) { return 'Rp ' + HX.money(Math.abs(n)); }
   function hhmm(min) {
     min = Math.floor(min);
     return String(Math.floor(min / 60) % 24).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0');
@@ -131,37 +133,52 @@
     return n;
   }
   function build() {
-    if (els && els.fill.isConnected && els.tickW.parentNode === els.bar) return true;
+    if (els && els.fill.isConnected && els.tickW.parentNode === els.bar) {
+      if (els.done.parentNode !== els.fill) els.fill.appendChild(els.done);
+      return true;
+    }
     var fill = document.getElementById('goalFill');
     var bar = fill && fill.parentElement;
     var card = bar && bar.closest('.goal-card');
     var row = bar && bar.closest('.goal-progress-row');
     if (!card || !row) return false;
-    bar.classList.add('hxp-bar');
-    card.classList.add('hxp-card');
-    var lap = mk('span', 'hxp-lap'), sweep = mk('span', 'hxp-sweep');
+    bar.classList.add('hxpc-bar');
+    card.classList.add('hxpc-card');
+    var lap = mk('span', 'hxpc-lap'), sweep = mk('span', 'hxpc-sweep');
     lap.appendChild(sweep);
-    var tickW = mk('span', 'hxp-tickw'), tick = mk('span', 'hxp-tick');
+    var tickW = mk('span', 'hxpc-tickw'), tick = mk('span', 'hxpc-tick');
     tickW.appendChild(tick);
     var notch = {};
     var frag = document.createDocumentFragment();
     frag.appendChild(lap);
     NOTCHES.forEach(function (m) {
-      var n = mk('span', 'hxp-notch');
+      var n = mk('span', 'hxpc-notch');
       n.style.left = m + '%';
       notch[m] = n;
       frag.appendChild(n);
     });
     frag.appendChild(tickW);
-    [lap, tickW].concat(NOTCHES.map(function (m) { return notch[m]; }))
+    // label "+53%" di atas batang: pembungkus selebar putaran kedua (minimal
+    // selebar teksnya), teks rata kanan -> berakhir tepat di ujung putaran;
+    // putaran pendek (102%) -> teks mulai dari kiri batang, tidak keluar kartu
+    var tagW = mk('span', 'hxpc-tagw'), tag = mk('span', 'hxpc-tag');
+    tagW.appendChild(tag);
+    frag.appendChild(tagW);
+    [lap, tickW, tagW].concat(NOTCHES.map(function (m) { return notch[m]; }))
       .forEach(function (n) { n.setAttribute('aria-hidden', 'true'); });
     bar.appendChild(frag);
-    var line = mk('div', 'hxp-line');
-    line.innerHTML = '<span class="hxp-glyph" aria-hidden="true"></span><span class="hxp-txt"></span>';
+    // lapisan "tuntas" DI DALAM #goalFill: lewat 100% seluruh batang jadi
+    // hijau utama yang rata & terang (gradien app.js meredup ke kanan, jadi
+    // batang penuh terbaca kurang penuh). Ikut lebar & animasi masuk isian.
+    var done = mk('span', 'hxpc-done');
+    done.setAttribute('aria-hidden', 'true');
+    fill.appendChild(done);
+    var line = mk('div', 'hxpc-line');
+    line.innerHTML = '<span class="hxpc-glyph" aria-hidden="true"></span><span class="hxpc-txt"></span>';
     row.parentNode.insertBefore(line, row.nextSibling);
     els = {
-      card: card, bar: bar, fill: fill, lap: lap, sweep: sweep, tickW: tickW, tick: tick,
-      notch: notch, line: line, txt: line.lastChild, amt: null
+      card: card, bar: bar, fill: fill, done: done, lap: lap, sweep: sweep, tickW: tickW, tick: tick,
+      tagW: tagW, tag: tag, notch: notch, line: line, txt: line.lastChild, amt: null
     };
     watchFill();
     if (io) { io.disconnect(); io.observe(bar); }
@@ -172,7 +189,7 @@
   var st = {
     on: false, lapOn: false, view: null, inView: false, seen: false,
     introDone: false, hold: false, introT: 0,
-    tickP: null, lapW: -1, lineSig: null, amt: null, title: null, entAt: -1e9
+    tickP: null, lapW: -1, tag: null, lineSig: null, amt: null, title: null, entAt: -1e9
   };
 
   function setTick(p) {
@@ -184,10 +201,10 @@
   }
   // pindah posisi TANPA meluncur (garis tak terlihat / mulai intro)
   function jump(node, prop, val) {
-    node.classList.add('hxp-snap');
+    node.classList.add('hxpc-snap');
     node.style[prop] = val;
     void node.offsetWidth;
-    node.classList.remove('hxp-snap');
+    node.classList.remove('hxpc-snap');
   }
 
   // angka bergulir singkat di baris (hanya elemen milik modul ini)
@@ -197,7 +214,7 @@
     clearTimeout(roll.t);
     roll.raf = 0; roll.t = 0;
   }
-  function amtText(v) { return (st.sign || '') + 'Rp ' + jt(v); }
+  function amtText(v) { return (st.sign || '') + rp(v); }
   function setAmt(to, from) {
     var el = els.amt;
     if (!el) return;
@@ -226,16 +243,16 @@
       st.lineSig = sig;
       var html;
       st.sign = s.kind === 'up' ? '+' : '';
-      if (s.kind === 'up') html = 'Di depan jalur <b class="hxp-amt"></b>';
-      else if (s.kind === 'dn') html = 'Tertinggal <b class="hxp-amt"></b> dari jalur';
+      if (s.kind === 'up') html = 'Di depan jalur <b class="hxpc-amt"></b>';
+      else if (s.kind === 'dn') html = 'Tertinggal <b class="hxpc-amt"></b> dari jalur';
       else if (s.kind === 'even') html = 'Tepat di jalur hari normal';
       else if (s.kind === 'zero') html = 'Jam segini hari normal masih Rp 0';
-      else if (s.time) html = 'Target tembus <b class="hxp-time">' + esc(s.time) + '</b>' +
-        (s.who ? ' <span class="hxp-dot">·</span> penjualan ' + esc(s.who) : '');
+      else if (s.time) html = 'Target tembus <b class="hxpc-time">' + esc(s.time) + '</b>' +
+        (s.who ? ' <span class="hxpc-dot">·</span> penjualan ' + esc(s.who) : '');
       else html = 'Target hari ini tembus';
       els.txt.innerHTML = html;
-      els.amt = els.txt.querySelector('.hxp-amt');
-      els.line.className = 'hxp-line hxp-' + s.kind;
+      els.amt = els.txt.querySelector('.hxpc-amt');
+      els.line.className = 'hxpc-line hxpc-' + s.kind;
       st.amt = null;
     }
     if (els.amt && s.amt != null) {
@@ -279,12 +296,24 @@
     var lapW = ok && pct > 100 ? Math.min(100, pct - 100) : 0;
     lapW = Math.round(lapW * 100) / 100;
     var lapOn = lapW > 0;
-    if (lapOn !== st.lapOn) { st.lapOn = lapOn; els.lap.classList.toggle('on', lapOn); }
+    if (lapOn !== st.lapOn) {
+      st.lapOn = lapOn;
+      els.lap.classList.toggle('on', lapOn);
+      els.card.classList.toggle('hxpc-over', lapOn);
+    }
     if (lapW !== st.lapW) {
       // muncul dari keadaan mati: mulai dari 0 lalu berlari dari kiri
-      if (st.lapW <= 0 && lapOn) jump(els.lap, 'width', '0%');
-      if (lapOn || st.lapW > 0) els.lap.style.width = lapW + '%';
+      if (st.lapW <= 0 && lapOn) { jump(els.lap, 'width', '0%'); jump(els.tagW, 'width', '0%'); }
+      if (lapOn || st.lapW > 0) els.lap.style.width = els.tagW.style.width = lapW + '%';
       st.lapW = lapW;
+    }
+    // label = kelebihan yang sama dengan #goalPct (app.js membulatkan %)
+    var extra = lapOn ? Math.round(pct) - 100 : 0;
+    var tagTxt = extra >= 1 ? '+' + extra + '%' : '';
+    if (tagTxt !== st.tag) {
+      st.tag = tagTxt;
+      els.tag.textContent = tagTxt;
+      els.card.classList.toggle('hxpc-tag-on', !!tagTxt);
     }
 
     // jalur & baris: hanya hari ini
@@ -300,12 +329,18 @@
     var on = today && (!!c || hit);
     if (on !== st.on) {
       st.on = on;
-      els.card.classList.toggle('hxp-on', on);
-      els.card.classList.toggle('hxp-tick-on', on && !!c);
-    } else if (els.card.classList.contains('hxp-tick-on') !== (on && !!c)) {
-      els.card.classList.toggle('hxp-tick-on', on && !!c);
+      els.card.classList.toggle('hxpc-on', on);
+      els.card.classList.toggle('hxpc-tick-on', on && !!c);
+    } else if (els.card.classList.contains('hxpc-tick-on') !== (on && !!c)) {
+      els.card.classList.toggle('hxpc-tick-on', on && !!c);
     }
-    if (!on) return;
+    if (!on) {
+      // hari lampau: tidak ada intro yang akan melepas tahanan -> lepas
+      // sekarang, kalau tidak putaran kedua & labelnya tetap tersembunyi
+      // (mis. buka Salespeople lalu kembali saat melihat kemarin)
+      if (st.hold && ok && v !== 0) release();
+      return;
+    }
 
     // tetap di dalam ujung bulat batang (jam 00–09 jalurnya 0%)
     if (c) setTick(Math.max(0.8, Math.min(99.4, share * 100)));
@@ -321,8 +356,8 @@
     }
     if (!st.hold) renderLine(s, opt.intro && s.amt != null ? 0 : null);
     if (c) {
-      var title = 'Jalur = posisi hari normal pada jam ini (median ' + c.days + ' hari terakhir): Rp ' +
-        jt(T * share) + ' dari target Rp ' + jt(T);
+      var title = 'Jalur = posisi hari normal pada jam ini (median ' + c.days + ' hari terakhir): ' +
+        rp(T * share) + ' dari target ' + rp(T);
       if (title !== st.title) { st.title = title; els.line.title = title; }
     }
     if (!st.introDone) startIntro();
@@ -349,11 +384,11 @@
   // diparkir saat kartu sudah tampil, posisi akhirnya sempat terlihat lalu
   // melompat ke kiri (terutama di HP: kartu digulir masuk pelan-pelan).
   function snapAll(fn) {
-    var ns = [els.tickW, els.tick, els.lap, els.line];
-    ns.forEach(function (n) { n.classList.add('hxp-snap'); });
+    var ns = [els.tickW, els.tick, els.lap, els.tagW, els.line];
+    ns.forEach(function (n) { n.classList.add('hxpc-snap'); });
     fn();
     void els.card.offsetWidth;
-    ns.forEach(function (n) { n.classList.remove('hxp-snap'); });
+    ns.forEach(function (n) { n.classList.remove('hxpc-snap'); });
   }
   function arm() {
     if (!els) return;
@@ -364,7 +399,7 @@
     if (st.hold) return;
     st.hold = true;
     snapAll(function () {
-      els.card.classList.add('hxp-intro');
+      els.card.classList.add('hxpc-intro');
       els.tickW.style.transform = 'translate3d(0%,0,0)';
     });
     st.tickP = 0;
@@ -372,7 +407,7 @@
   function release() {
     if (!st.hold) return;
     st.hold = false;
-    els.card.classList.remove('hxp-intro');
+    els.card.classList.remove('hxpc-intro');
   }
   // batang benar-benar terlihat SEKARANG (di atas bar navigasi bawah HP)?
   // Catatan IntersectionObserver bisa basi: data pertama mendorong kartu ke
@@ -414,18 +449,18 @@
     var w = parseFloat(els.fill.style.width) || 0;
     NOTCHES.forEach(function (m) {
       var n = els.notch[m];
-      n.classList.remove('hxp-wait');
+      n.classList.remove('hxpc-wait');
       if (!n.classList.contains('lit') || !(w >= m)) return;
-      n.classList.add('hxp-wait');
+      n.classList.add('hxpc-wait');
       seqT.push(setTimeout(function () {
-        n.classList.remove('hxp-wait');
-        flare(n, 'hxp-flare-s');
+        n.classList.remove('hxpc-wait');
+        flare(n, 'hxpc-flare-s');
       }, FILL_DELAY + easeTime(m / w) * FILL_DUR));
     });
   }
   function watchFill() {
-    if (!window.MutationObserver || els.fill.__hxp) return;
-    els.fill.__hxp = true;
+    if (!window.MutationObserver || els.fill.__hxpc) return;
+    els.fill.__hxpc = true;
     new MutationObserver(function (recs) {
       if (!els.fill.classList.contains('lg-in')) return;
       var started = recs.some(function (r) { return !/(^|\s)lg-in(\s|$)/.test(r.oldValue || ''); });
@@ -437,11 +472,11 @@
   }
 
   function flare(n, cls) {
-    n.classList.remove('hxp-flare', 'hxp-flare-s');
+    n.classList.remove('hxpc-flare', 'hxpc-flare-s');
     void n.offsetWidth;
     n.classList.add(cls);
-    clearTimeout(n.__hxpT);
-    n.__hxpT = setTimeout(function () { n.classList.remove(cls); }, 1300);
+    clearTimeout(n.__hxpcT);
+    n.__hxpcT = setTimeout(function () { n.classList.remove(cls); }, 1300);
   }
   function sweep(delay) {
     if (reduced() || !st.lapOn) return;
@@ -450,8 +485,8 @@
     s.style.animationDelay = (delay || 0) + 'ms';
     void s.offsetWidth;
     s.classList.add('go');
-    clearTimeout(s.__hxpT);
-    s.__hxpT = setTimeout(function () { s.classList.remove('go'); }, (delay || 0) + 1500);
+    clearTimeout(s.__hxpcT);
+    s.__hxpcT = setTimeout(function () { s.classList.remove('go'); }, (delay || 0) + 1500);
   }
 
   /* ── pengatur waktu per menit (hanya saat terlihat) ───────────────── */
@@ -490,9 +525,9 @@
     if (g.pct >= 100) { sweep(450); return; }
     var n = els.notch[g.pct];
     if (!n) return;
-    n.classList.remove('hxp-wait');
+    n.classList.remove('hxpc-wait');
     n.classList.add('lit');
-    flare(n, 'hxp-flare');
+    flare(n, 'hxpc-flare');
     if (!reduced() && st.inView && dashActive()) {
       var r = els.bar.getBoundingClientRect();
       HX.emit('ripple', { x: r.left + r.width * g.pct / 100, y: r.top + r.height / 2, power: 0.4 });

@@ -143,7 +143,13 @@
     return host.getClientRects().length > 0;
   }
   function entering(host) { var pg = pageOf(host); return !!(pg && pg.classList.contains('lg-enter')); }
-  var CAN_SCALE = !!(window.CSS && CSS.supports && CSS.supports('scale', '1'));
+  // "terangkat" saat naik (kartu Top Performers): skala digabung ke transform
+  // luncuran yang sama, BUKAN properti CSS `scale` (tidak ada di iOS < 14.5 /
+  // Chrome < 104). Keyframe linear dalam progres ter-ease, jadi translate tetap
+  // d*(1-p) persis seperti luncuran biasa; skala memuncak di p = LIFT_P.
+  var LIFT_S = 1.022, LIFT_P = 0.88;
+  function liftS(p) { return p <= LIFT_P ? 1 + (LIFT_S - 1) * p / LIFT_P : 1 + (LIFT_S - 1) * (1 - p) / (1 - LIFT_P); }
+  function tf(x, y, s) { return 'translate(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px)' + (s ? ' scale(' + s.toFixed(4) + ')' : ''); }
   var CAN_ANIM = typeof Element !== 'undefined' && typeof Element.prototype.animate === 'function';
 
   /* ── keadaan ──────────────────────────────────────────────────────── */
@@ -319,11 +325,11 @@
         }
         dx = 0; dy = Math.max(12, s.bottom - n.t);
         dur = Math.round(Math.min(940, 430 + Math.sqrt(dy) * 16));
-        row.animate([
-          { transform: 'translate(0,' + dy + 'px)', opacity: 0 },
-          { transform: 'translate(0,' + (dy * 0.45).toFixed(1) + 'px)', opacity: 1, offset: 0.4 },
-          { transform: 'none', opacity: 1 }
-        ], { duration: dur, easing: EASE });
+        var upE = !!(c && b.cap);                   // masuk 6 besar sambil terangkat
+        row.animate((upE ? [0, 0.4, LIFT_P, 1] : [0, 0.4, 1]).map(function (p) {
+          var y = p <= 0.4 ? dy - 0.55 * dy * p / 0.4 : 0.45 * dy * (1 - (p - 0.4) / 0.6);
+          return { offset: p, transform: tf(0, y, upE ? liftS(p) : 0), opacity: p < 0.4 ? p / 0.4 : 1 };
+        }), { duration: dur, easing: EASE });
       } else {
         dx = o.l - n.l; dy = o.t - n.t;
         if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
@@ -331,8 +337,14 @@
         var f = j.fl[k], cont = !!(f && f.end > j.now && !c);   // lanjutan luncuran yang terpotong
         dur = cont ? Math.max(240, Math.round(f.end - j.now))   // sisa waktunya saja
           : Math.round(Math.min(940, 430 + Math.sqrt(dist) * 16));
-        row.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px)' }, { transform: 'none' }],
-          { duration: dur, easing: cont ? 'cubic-bezier(.3,.6,.25,1)' : EASE });
+        if (c && b.cap && !cont) {                  // naik: meluncur + terangkat dalam satu transform
+          row.animate([0, LIFT_P, 1].map(function (p) {
+            return { offset: p, transform: tf(dx * (1 - p), dy * (1 - p), liftS(p)) };
+          }), { duration: dur, easing: EASE });
+        } else {
+          row.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px)' }, { transform: 'none' }],
+            { duration: dur, easing: cont ? 'cubic-bezier(.3,.6,.25,1)' : EASE });
+        }
         if (cont && f.lift) {
           row.classList.add('fxr-lift');
           setTimeout(function () { row.classList.remove('fxr-lift'); }, dur + 400);
@@ -341,10 +353,7 @@
       j.fl[k] = { end: j.now + dur, lift: !!c || !!(j.fl[k] && j.fl[k].lift && j.fl[k].end > j.now) };
       if (!c) return;
       // yang naik: sedikit terangkat, di atas baris yang dilewati, meninggalkan jejak cahaya
-      row.classList.add('fxr-lift');
-      if (CAN_SCALE && b.cap) {                     // hanya kartu Top Performers (baris penuh tidak dibesarkan)
-        row.animate([{ scale: '1' }, { scale: '1.022', offset: 0.4 }, { scale: '1' }], { duration: dur, easing: 'ease-in-out' });
-      }
+      row.classList.add('fxr-lift');              // (skala terangkat: hanya kartu Top Performers, lihat di atas)
       // jejak berakhir di posisi lama; yang masuk dari luar 6 besar: di dasar daftar
       var tl = o ? dy : dy - n.h;
       if (b.trail && tl > 8 && HX.tier !== 'low') trail(row, b, tl, dur, D_gold(b, k));
@@ -672,6 +681,23 @@
     });
     mem[b.id].chip = nextChip;
   }
+  // judul .sl memberi jarak ke keterangan lewat flex gap; mesin tanpa flex gap
+  // (iOS < 14.5, Chrome < 84) -> keterangan diberi margin sendiri. Diuji sekali.
+  var flexGapOk = null;
+  function flexGap() {
+    if (flexGapOk !== null) return flexGapOk;
+    flexGapOk = true;
+    try {
+      var d = document.createElement('div');
+      d.style.cssText = 'display:flex;flex-direction:column;row-gap:1px;position:absolute;top:0;left:0;visibility:hidden;pointer-events:none';
+      d.appendChild(document.createElement('div'));
+      d.appendChild(document.createElement('div'));
+      document.body.appendChild(d);
+      flexGapOk = d.scrollHeight === 1;
+      d.parentNode.removeChild(d);
+    } catch (e) { }
+    return flexGapOk;
+  }
   function legend(host, on) {
     var tw = host && host.closest('.tw');
     var sl = tw && tw.previousElementSibling;
@@ -680,7 +706,7 @@
     if (!on) { if (lg) lg.parentNode.removeChild(lg); return; }
     if (lg) return;
     lg = document.createElement('span');
-    lg.className = 'fxr-legend';
+    lg.className = 'fxr-legend' + (flexGap() ? '' : ' fxr-nogap');
     lg.innerHTML = '<span class="fxr-chip up" aria-hidden="true">+3</span>' +
       '<span class="fxr-chip down" aria-hidden="true">' + MINUS + '3</span>' +
       '<span class="fxr-legend-t">peringkat vs kemarin \u00b7 10 besar</span>';
@@ -724,7 +750,7 @@
       try { return orig.apply(this, arguments); } finally { switching--; }
     });
   }
-  function hook() { wrapAll(); wrapMonthly(); wrapShow(); }
+  function hook() { wrapAll(); wrapMonthly(); wrapShow(); if (document.body) flexGap(); }
 
   HX.on('render', function () {
     try { post(ALL); } catch (e) { console.warn('[fx-ranks] post', e); }

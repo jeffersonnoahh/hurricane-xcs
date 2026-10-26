@@ -545,3 +545,45 @@ html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig{min-width:min(78%,560px
   .lg-enter *,.lg-sheen.go,.nav-bar .nav-tab.active{animation:none!important}
   .lg-nav-pill{transition:none}
 }
+
+/* ══ 19. BARIS AKSI MODAL DETAIL SALES (dibangun js/fx-core.js) ══════════
+   Tombol dari modul efek (kartu, wrapped, …) dalam satu baris kaca di
+   bawah kotak KPI. Margin, bukan gap (iOS < 14.5). */
+.hx-sp-actions{display:flex;flex-wrap:wrap;margin:2px -4px 14px}
+.hx-sp-act{
+  display:inline-flex;align-items:center;margin:4px;padding:9px 14px;border-radius:999px;
+  font:600 12px/1 inherit;letter-spacing:.2px;color:#f5f5f7;cursor:pointer;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.05));
+  border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(255,255,255,.09);
+  -webkit-tap-highlight-color:transparent;
+}
+.hx-sp-act svg{width:14px;height:14px;margin-right:7px;flex:0 0 auto}
+.hx-sp-act:active{transform:scale(.96)}
+
+
+/* ══ 20. PERBAIKAN DARI REVIEW MODUL EFEK (27 Okt) ══════════════════════ */
+/* skin.css `[class*="-overlay"]` ikut cocok dengan <html class="hx-overlay-open">:
+   di iOS seluruh halaman dapat backdrop-filter + latar transparan saat replay /
+   wrapped / kartu / peta bintang terbuka (blur ekstra, hitam pekat hilang). */
+html.hx-overlay-open{-webkit-backdrop-filter:none;backdrop-filter:none;background:#000!important}
+/* titik "live" berdenyut 3 kali lalu diam — tanpa ini Dashboard/Monthly tidak
+   pernah benar-benar diam (600 hitung ulang gaya per 10 detik di HP) */
+.live-dot{animation-iteration-count:3}
+html.hx-overlay-open .live-dot{animation:none}
+/* nama tim putih; garis warna tim di kiri tetap (bermakna) */
+.spg-team-name{color:#f5f5f7!important}
+/* modal detail sales: Calls & Follow Up netral (biru/oranye di luar palet) */
+#spMo .mkv.bl,#spMo .mkv.or{color:#f5f5f7!important}
+/* hari lampau: penanda & banner abu netral, bukan amber */
+.past-badge{background:rgba(255,255,255,.07)!important;color:#c7c7cc!important;border-color:rgba(255,255,255,.12)!important}
+.readonly-banner{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.10)!important;color:#c7c7cc!important}
+.readonly-banner strong{color:#f5f5f7!important}
+/* tabel tim/sales di HP: kolom Omset yang lengket tanpa sudut membulat
+   (takik di tiap garis baris) dan tanpa bayangan keras yang menyisakan satu
+   huruf kolom di belakangnya — diganti pudar lembut */
+@media(max-width:768px){
+  #vTeam td:last-child,#vSP td:last-child,#vTeam th:last-child,#vSP th:last-child{
+    border-radius:0!important;
+    box-shadow:-30px 0 22px -6px #000,-1px 0 rgba(32,216,131,.28)!important;
+  }
+}
