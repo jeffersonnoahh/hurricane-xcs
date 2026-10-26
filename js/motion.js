@@ -173,19 +173,89 @@
   // .lg-enter hanya terpasang ±2 detik setelah halaman dibuka. Di luar jendela
   // itu, render ulang dari Firebase dan grafik yang digambar ulang tiap 15
   // detik (reference-dashboard.js) TIDAK beranimasi ulang.
-  var ENTER_MS = 2000;
+  // Yang beranimasi hanya elemen bertanda .lg-in: yang ADA dan TERLIHAT di
+  // layar saat halaman dibuka (kartu di bawah layar / di balik bar navigasi
+  // HP langsung tampil diam — hemat GPU). Kalau Firebase merender ulang di
+  // tengah animasi, elemen baru melanjutkan dari titik yang sama (lanjut()),
+  // bukan berkedip hilang lalu mulai lagi.
+  var ENTER_MS = 2400;
+  var IN_SEL = '.spc,.kpi-card,.ins-kpi-card,.hday,.wl-row,.nr-item,.lbi,.mk,.warn-crit-card,' +
+               '.sp-lookup-card,.spg-team-hdr,.pi,.ref-chart-line,.ref-chart-area,.ref-chart-dot,.goal-bar-fill';
   var ENTER_ROLL = {
     'page-dashboard': ['liveOmsetBig', 'K1', 'K2', 'totalRev', 'goalPct'],
     'page-monthly': ['mOmsetBig']
   };
+  // batas bawah layar yang benar-benar terlihat (di atas bar navigasi bawah HP)
+  function fold() {
+    var lim = innerHeight, nw = document.querySelector('.nav-wrapper');
+    if (nw) {
+      var r = nw.getBoundingClientRect();
+      if (r.height && r.top > innerHeight / 2 && r.top < lim) lim = r.top;
+    }
+    return lim;
+  }
+  function onScreen(list, lim) {
+    var out = [], rs = list.map(function (n) { return n.isConnected ? n.getBoundingClientRect() : null; });
+    // tinggi/lebar 0 = di dalam tampilan yang tersembunyi (mis. tab Product)
+    for (var i = 0; i < list.length; i++) if (rs[i] && rs[i].top < lim && (rs[i].width || rs[i].height)) out.push(list[i]);
+    return out;
+  }
+  function endEnter(page) {
+    clearTimeout(page.__lgEnterT);
+    if (page.__lgMO) { page.__lgMO.disconnect(); page.__lgMO = null; }
+    page.classList.remove('lg-enter');
+    (page.__lgIn || []).forEach(function (n) { n.classList.remove('lg-in'); n.style.animationDelay = ''; });
+    page.__lgIn = [];
+  }
+  // render ulang di dalam jendela: tandai elemen pengganti dan beri delay
+  // negatif (= delay aslinya - waktu yang sudah berjalan) supaya animasinya
+  // menyambung tanpa kedip.
+  function lanjut(page) {
+    if (!window.MutationObserver) return;
+    var mo = new MutationObserver(function (recs) {
+      var add = [];
+      recs.forEach(function (r) {
+        for (var i = 0; i < r.addedNodes.length; i++) {
+          var n = r.addedNodes[i];
+          if (n.nodeType !== 1) continue;
+          if (n.matches(IN_SEL)) add.push(n);
+          var q = n.querySelectorAll(IN_SEL);
+          for (var j = 0; j < q.length; j++) add.push(q[j]);
+        }
+      });
+      if (!add.length) return;
+      var pick = onScreen(add, fold());
+      if (!pick.length) return;
+      var gone = (performance.now() - page.__lgAt) / 1000;
+      pick.forEach(function (n) { n.classList.add('lg-in'); });
+      var all = pick.slice();
+      pick.forEach(function (n) {
+        if (n.classList.contains('wl-row')) all.push.apply(all, n.querySelectorAll('.wl-spark path'));
+      });
+      var d = all.map(function (n) { return parseFloat(getComputedStyle(n).animationDelay) || 0; });
+      all.forEach(function (n, i) {
+        n.style.animationDelay = (d[i] - gone).toFixed(3) + 's';
+        page.__lgIn.push(n);
+      });
+    });
+    mo.observe(page, { childList: true, subtree: true });
+    page.__lgMO = mo;
+  }
   function enterPage(id, rollFromZero) {
     var page = document.getElementById(id);
     if (!page || REDUCED) return;
-    page.classList.remove('lg-enter');
+    endEnter(page);
     void page.offsetWidth;                       // mulai ulang animasi CSS
+    var pick = onScreen(Array.prototype.slice.call(page.querySelectorAll(IN_SEL)), fold());
+    pick.forEach(function (n) { n.classList.add('lg-in'); });
+    page.__lgIn = pick;
+    // animasi CSS mulai di frame berikutnya, bukan sekarang — di HP lambat
+    // selisihnya bisa ratusan ms. Waktu frame itu yang dipakai lanjut().
+    var at = page.__lgAt = performance.now();
+    requestAnimationFrame(function (ts) { if (page.__lgAt === at) page.__lgAt = ts; });
     page.classList.add('lg-enter');
-    clearTimeout(page.__lgEnterT);
-    page.__lgEnterT = setTimeout(function () { page.classList.remove('lg-enter'); }, ENTER_MS);
+    page.__lgEnterT = setTimeout(function () { endEnter(page); }, ENTER_MS);
+    lanjut(page);
     sheen(page);
     if (rollFromZero && !document.hidden) {
       (ENTER_ROLL[id] || []).forEach(function (eid) {
@@ -260,9 +330,15 @@
       sraf = requestAnimationFrame(function () {
         sraf = 0;
         var p = pend; if (!p) return;
-        var b = p.c.getBoundingClientRect();
-        p.c.style.setProperty('--mx', (p.x - b.left) + 'px');
-        p.c.style.setProperty('--my', (p.y - b.top) + 'px');
+        // kartu di dalam panel (mis. baris peringkat): panel luarnya juga
+        // ikut, supaya cahayanya tidak membeku di posisi lama
+        var cs = [], n = p.c;
+        while (n) { cs.push(n); n = n.parentElement ? n.parentElement.closest(SPOT) : null; }
+        var bs = cs.map(function (c) { return c.getBoundingClientRect(); });
+        cs.forEach(function (c, i) {
+          c.style.setProperty('--mx', (p.x - bs[i].left) + 'px');
+          c.style.setProperty('--my', (p.y - bs[i].top) + 'px');
+        });
       });
     }, { passive: true });
   }
@@ -371,9 +447,17 @@
     if (typeof window.showPage === 'function' && !window.showPage.__lgm) {
       var origShow = window.showPage;
       window.showPage = keepMarkers(origShow, function (p) {
+        // Halaman yang sudah terbuka (tab aktif diketuk lagi, tombol "+ Sale")
+        // tidak diputar ulang. Tombol "+ Sale" dari halaman lain membuka form
+        // di atas Dashboard — animasi di balik blur form itu juga dilewati.
+        // Microtask jalan sebelum layar digambar, jadi tidak ada kedip.
+        var pg = document.getElementById('page-' + p);
+        var was = !!(pg && pg.classList.contains('active'));
         var r = origShow.apply(this, arguments);
         navPill();
-        enterPage('page-' + p, true);
+        if (!was) Promise.resolve().then(function () {
+          if (!document.body.classList.contains('premium-form-open')) enterPage('page-' + p, true);
+        });
         if (p === 'dashboard') setTimeout(maybeCelebrate, 500);
         return r;
       });

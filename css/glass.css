@@ -439,10 +439,11 @@ html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig{min-width:min(78%,560px
 
 
 /* ══ 16. ANIMASI MASUK HALAMAN ══════════════════════════════════════════
-   .lg-enter dipasang js/motion.js selama ±2 detik setiap kali halaman
-   dibuka (dan saat data pertama masuk). Di luar jendela itu tidak ada yang
-   beranimasi ulang — render ulang Firebase dan grafik yang digambar ulang
-   tiap 15 detik tetap diam. Semua memakai fill 'backwards'/'forwards' yang
+   .lg-enter dipasang js/motion.js selama ±2,4 detik setiap kali halaman
+   dibuka (dan saat data pertama masuk), dan hanya elemen bertanda .lg-in
+   (yang terlihat di layar saat itu) yang beranimasi. Render ulang Firebase
+   di dalam jendela melanjutkan animasi dari titik yang sama (delay negatif
+   dari motion.js); di luar jendela tidak ada yang beranimasi ulang. Semua memakai fill 'backwards'/'forwards' yang
    berakhir di keadaan normal, jadi tidak ada transform yang tertinggal. */
 @keyframes lg-card-in{from{opacity:0;transform:translate3d(0,18px,0) scale(.965)}to{opacity:1;transform:none}}
 @keyframes lg-draw{to{stroke-dashoffset:0}}
@@ -451,51 +452,51 @@ html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig{min-width:min(78%,560px
 @keyframes lg-bar{from{transform:scaleX(0)}}
 
 /* kartu mengalir masuk satu per satu */
-.lg-enter .spc,.lg-enter .kpi-card,.lg-enter .ins-kpi-card,.lg-enter .hday,.lg-enter .wl-row,.lg-enter .nr-item,.lg-enter .lbi,.lg-enter .mk,.lg-enter .warn-crit-card,.lg-enter .sp-lookup-card,.lg-enter .spg-team-hdr,.lg-enter .pi{animation:lg-card-in .55s var(--lg-ease) backwards}
-.lg-enter .spc:nth-child(1),.lg-enter .kpi-card:nth-child(1),.lg-enter .ins-kpi-card:nth-child(1),.lg-enter .hday:nth-child(1),.lg-enter .wl-row:nth-child(1),.lg-enter .nr-item:nth-child(1),.lg-enter .lbi:nth-child(1),.lg-enter .mk:nth-child(1),.lg-enter .warn-crit-card:nth-child(1),.lg-enter .sp-lookup-card:nth-child(1),.lg-enter .spg-team-hdr:nth-child(1),.lg-enter .pi:nth-child(1){animation-delay:0.040s}
-.lg-enter .spc:nth-child(2),.lg-enter .kpi-card:nth-child(2),.lg-enter .ins-kpi-card:nth-child(2),.lg-enter .hday:nth-child(2),.lg-enter .wl-row:nth-child(2),.lg-enter .nr-item:nth-child(2),.lg-enter .lbi:nth-child(2),.lg-enter .mk:nth-child(2),.lg-enter .warn-crit-card:nth-child(2),.lg-enter .sp-lookup-card:nth-child(2),.lg-enter .spg-team-hdr:nth-child(2),.lg-enter .pi:nth-child(2){animation-delay:0.075s}
-.lg-enter .spc:nth-child(3),.lg-enter .kpi-card:nth-child(3),.lg-enter .ins-kpi-card:nth-child(3),.lg-enter .hday:nth-child(3),.lg-enter .wl-row:nth-child(3),.lg-enter .nr-item:nth-child(3),.lg-enter .lbi:nth-child(3),.lg-enter .mk:nth-child(3),.lg-enter .warn-crit-card:nth-child(3),.lg-enter .sp-lookup-card:nth-child(3),.lg-enter .spg-team-hdr:nth-child(3),.lg-enter .pi:nth-child(3){animation-delay:0.110s}
-.lg-enter .spc:nth-child(4),.lg-enter .kpi-card:nth-child(4),.lg-enter .ins-kpi-card:nth-child(4),.lg-enter .hday:nth-child(4),.lg-enter .wl-row:nth-child(4),.lg-enter .nr-item:nth-child(4),.lg-enter .lbi:nth-child(4),.lg-enter .mk:nth-child(4),.lg-enter .warn-crit-card:nth-child(4),.lg-enter .sp-lookup-card:nth-child(4),.lg-enter .spg-team-hdr:nth-child(4),.lg-enter .pi:nth-child(4){animation-delay:0.145s}
-.lg-enter .spc:nth-child(5),.lg-enter .kpi-card:nth-child(5),.lg-enter .ins-kpi-card:nth-child(5),.lg-enter .hday:nth-child(5),.lg-enter .wl-row:nth-child(5),.lg-enter .nr-item:nth-child(5),.lg-enter .lbi:nth-child(5),.lg-enter .mk:nth-child(5),.lg-enter .warn-crit-card:nth-child(5),.lg-enter .sp-lookup-card:nth-child(5),.lg-enter .spg-team-hdr:nth-child(5),.lg-enter .pi:nth-child(5){animation-delay:0.180s}
-.lg-enter .spc:nth-child(6),.lg-enter .kpi-card:nth-child(6),.lg-enter .ins-kpi-card:nth-child(6),.lg-enter .hday:nth-child(6),.lg-enter .wl-row:nth-child(6),.lg-enter .nr-item:nth-child(6),.lg-enter .lbi:nth-child(6),.lg-enter .mk:nth-child(6),.lg-enter .warn-crit-card:nth-child(6),.lg-enter .sp-lookup-card:nth-child(6),.lg-enter .spg-team-hdr:nth-child(6),.lg-enter .pi:nth-child(6){animation-delay:0.215s}
-.lg-enter .spc:nth-child(7),.lg-enter .kpi-card:nth-child(7),.lg-enter .ins-kpi-card:nth-child(7),.lg-enter .hday:nth-child(7),.lg-enter .wl-row:nth-child(7),.lg-enter .nr-item:nth-child(7),.lg-enter .lbi:nth-child(7),.lg-enter .mk:nth-child(7),.lg-enter .warn-crit-card:nth-child(7),.lg-enter .sp-lookup-card:nth-child(7),.lg-enter .spg-team-hdr:nth-child(7),.lg-enter .pi:nth-child(7){animation-delay:0.250s}
-.lg-enter .spc:nth-child(8),.lg-enter .kpi-card:nth-child(8),.lg-enter .ins-kpi-card:nth-child(8),.lg-enter .hday:nth-child(8),.lg-enter .wl-row:nth-child(8),.lg-enter .nr-item:nth-child(8),.lg-enter .lbi:nth-child(8),.lg-enter .mk:nth-child(8),.lg-enter .warn-crit-card:nth-child(8),.lg-enter .sp-lookup-card:nth-child(8),.lg-enter .spg-team-hdr:nth-child(8),.lg-enter .pi:nth-child(8){animation-delay:0.285s}
-.lg-enter .spc:nth-child(9),.lg-enter .kpi-card:nth-child(9),.lg-enter .ins-kpi-card:nth-child(9),.lg-enter .hday:nth-child(9),.lg-enter .wl-row:nth-child(9),.lg-enter .nr-item:nth-child(9),.lg-enter .lbi:nth-child(9),.lg-enter .mk:nth-child(9),.lg-enter .warn-crit-card:nth-child(9),.lg-enter .sp-lookup-card:nth-child(9),.lg-enter .spg-team-hdr:nth-child(9),.lg-enter .pi:nth-child(9){animation-delay:0.320s}
-.lg-enter .spc:nth-child(10),.lg-enter .kpi-card:nth-child(10),.lg-enter .ins-kpi-card:nth-child(10),.lg-enter .hday:nth-child(10),.lg-enter .wl-row:nth-child(10),.lg-enter .nr-item:nth-child(10),.lg-enter .lbi:nth-child(10),.lg-enter .mk:nth-child(10),.lg-enter .warn-crit-card:nth-child(10),.lg-enter .sp-lookup-card:nth-child(10),.lg-enter .spg-team-hdr:nth-child(10),.lg-enter .pi:nth-child(10){animation-delay:0.355s}
-.lg-enter .spc:nth-child(11),.lg-enter .kpi-card:nth-child(11),.lg-enter .ins-kpi-card:nth-child(11),.lg-enter .hday:nth-child(11),.lg-enter .wl-row:nth-child(11),.lg-enter .nr-item:nth-child(11),.lg-enter .lbi:nth-child(11),.lg-enter .mk:nth-child(11),.lg-enter .warn-crit-card:nth-child(11),.lg-enter .sp-lookup-card:nth-child(11),.lg-enter .spg-team-hdr:nth-child(11),.lg-enter .pi:nth-child(11){animation-delay:0.390s}
-.lg-enter .spc:nth-child(12),.lg-enter .kpi-card:nth-child(12),.lg-enter .ins-kpi-card:nth-child(12),.lg-enter .hday:nth-child(12),.lg-enter .wl-row:nth-child(12),.lg-enter .nr-item:nth-child(12),.lg-enter .lbi:nth-child(12),.lg-enter .mk:nth-child(12),.lg-enter .warn-crit-card:nth-child(12),.lg-enter .sp-lookup-card:nth-child(12),.lg-enter .spg-team-hdr:nth-child(12),.lg-enter .pi:nth-child(12){animation-delay:0.425s}
-.lg-enter .spc:nth-child(13),.lg-enter .kpi-card:nth-child(13),.lg-enter .ins-kpi-card:nth-child(13),.lg-enter .hday:nth-child(13),.lg-enter .wl-row:nth-child(13),.lg-enter .nr-item:nth-child(13),.lg-enter .lbi:nth-child(13),.lg-enter .mk:nth-child(13),.lg-enter .warn-crit-card:nth-child(13),.lg-enter .sp-lookup-card:nth-child(13),.lg-enter .spg-team-hdr:nth-child(13),.lg-enter .pi:nth-child(13){animation-delay:0.460s}
-.lg-enter .spc:nth-child(14),.lg-enter .kpi-card:nth-child(14),.lg-enter .ins-kpi-card:nth-child(14),.lg-enter .hday:nth-child(14),.lg-enter .wl-row:nth-child(14),.lg-enter .nr-item:nth-child(14),.lg-enter .lbi:nth-child(14),.lg-enter .mk:nth-child(14),.lg-enter .warn-crit-card:nth-child(14),.lg-enter .sp-lookup-card:nth-child(14),.lg-enter .spg-team-hdr:nth-child(14),.lg-enter .pi:nth-child(14){animation-delay:0.495s}
-.lg-enter .spc:nth-child(n+15),.lg-enter .kpi-card:nth-child(n+15),.lg-enter .ins-kpi-card:nth-child(n+15),.lg-enter .hday:nth-child(n+15),.lg-enter .wl-row:nth-child(n+15),.lg-enter .nr-item:nth-child(n+15),.lg-enter .lbi:nth-child(n+15),.lg-enter .mk:nth-child(n+15),.lg-enter .warn-crit-card:nth-child(n+15),.lg-enter .sp-lookup-card:nth-child(n+15),.lg-enter .spg-team-hdr:nth-child(n+15),.lg-enter .pi:nth-child(n+15){animation-delay:.53s}
+.lg-enter .spc.lg-in,.lg-enter .kpi-card.lg-in,.lg-enter .ins-kpi-card.lg-in,.lg-enter .hday.lg-in,.lg-enter .wl-row.lg-in,.lg-enter .nr-item.lg-in,.lg-enter .lbi.lg-in,.lg-enter .mk.lg-in,.lg-enter .warn-crit-card.lg-in,.lg-enter .sp-lookup-card.lg-in,.lg-enter .spg-team-hdr.lg-in,.lg-enter .pi.lg-in{animation:lg-card-in .55s var(--lg-ease) backwards}
+.lg-enter .spc.lg-in:nth-child(1),.lg-enter .kpi-card.lg-in:nth-child(1),.lg-enter .ins-kpi-card.lg-in:nth-child(1),.lg-enter .hday.lg-in:nth-child(1),.lg-enter .wl-row.lg-in:nth-child(1),.lg-enter .nr-item.lg-in:nth-child(1),.lg-enter .lbi.lg-in:nth-child(1),.lg-enter .mk.lg-in:nth-child(1),.lg-enter .warn-crit-card.lg-in:nth-child(1),.lg-enter .sp-lookup-card.lg-in:nth-child(1),.lg-enter .spg-team-hdr.lg-in:nth-child(1),.lg-enter .pi.lg-in:nth-child(1){animation-delay:0.040s}
+.lg-enter .spc.lg-in:nth-child(2),.lg-enter .kpi-card.lg-in:nth-child(2),.lg-enter .ins-kpi-card.lg-in:nth-child(2),.lg-enter .hday.lg-in:nth-child(2),.lg-enter .wl-row.lg-in:nth-child(2),.lg-enter .nr-item.lg-in:nth-child(2),.lg-enter .lbi.lg-in:nth-child(2),.lg-enter .mk.lg-in:nth-child(2),.lg-enter .warn-crit-card.lg-in:nth-child(2),.lg-enter .sp-lookup-card.lg-in:nth-child(2),.lg-enter .spg-team-hdr.lg-in:nth-child(2),.lg-enter .pi.lg-in:nth-child(2){animation-delay:0.075s}
+.lg-enter .spc.lg-in:nth-child(3),.lg-enter .kpi-card.lg-in:nth-child(3),.lg-enter .ins-kpi-card.lg-in:nth-child(3),.lg-enter .hday.lg-in:nth-child(3),.lg-enter .wl-row.lg-in:nth-child(3),.lg-enter .nr-item.lg-in:nth-child(3),.lg-enter .lbi.lg-in:nth-child(3),.lg-enter .mk.lg-in:nth-child(3),.lg-enter .warn-crit-card.lg-in:nth-child(3),.lg-enter .sp-lookup-card.lg-in:nth-child(3),.lg-enter .spg-team-hdr.lg-in:nth-child(3),.lg-enter .pi.lg-in:nth-child(3){animation-delay:0.110s}
+.lg-enter .spc.lg-in:nth-child(4),.lg-enter .kpi-card.lg-in:nth-child(4),.lg-enter .ins-kpi-card.lg-in:nth-child(4),.lg-enter .hday.lg-in:nth-child(4),.lg-enter .wl-row.lg-in:nth-child(4),.lg-enter .nr-item.lg-in:nth-child(4),.lg-enter .lbi.lg-in:nth-child(4),.lg-enter .mk.lg-in:nth-child(4),.lg-enter .warn-crit-card.lg-in:nth-child(4),.lg-enter .sp-lookup-card.lg-in:nth-child(4),.lg-enter .spg-team-hdr.lg-in:nth-child(4),.lg-enter .pi.lg-in:nth-child(4){animation-delay:0.145s}
+.lg-enter .spc.lg-in:nth-child(5),.lg-enter .kpi-card.lg-in:nth-child(5),.lg-enter .ins-kpi-card.lg-in:nth-child(5),.lg-enter .hday.lg-in:nth-child(5),.lg-enter .wl-row.lg-in:nth-child(5),.lg-enter .nr-item.lg-in:nth-child(5),.lg-enter .lbi.lg-in:nth-child(5),.lg-enter .mk.lg-in:nth-child(5),.lg-enter .warn-crit-card.lg-in:nth-child(5),.lg-enter .sp-lookup-card.lg-in:nth-child(5),.lg-enter .spg-team-hdr.lg-in:nth-child(5),.lg-enter .pi.lg-in:nth-child(5){animation-delay:0.180s}
+.lg-enter .spc.lg-in:nth-child(6),.lg-enter .kpi-card.lg-in:nth-child(6),.lg-enter .ins-kpi-card.lg-in:nth-child(6),.lg-enter .hday.lg-in:nth-child(6),.lg-enter .wl-row.lg-in:nth-child(6),.lg-enter .nr-item.lg-in:nth-child(6),.lg-enter .lbi.lg-in:nth-child(6),.lg-enter .mk.lg-in:nth-child(6),.lg-enter .warn-crit-card.lg-in:nth-child(6),.lg-enter .sp-lookup-card.lg-in:nth-child(6),.lg-enter .spg-team-hdr.lg-in:nth-child(6),.lg-enter .pi.lg-in:nth-child(6){animation-delay:0.215s}
+.lg-enter .spc.lg-in:nth-child(7),.lg-enter .kpi-card.lg-in:nth-child(7),.lg-enter .ins-kpi-card.lg-in:nth-child(7),.lg-enter .hday.lg-in:nth-child(7),.lg-enter .wl-row.lg-in:nth-child(7),.lg-enter .nr-item.lg-in:nth-child(7),.lg-enter .lbi.lg-in:nth-child(7),.lg-enter .mk.lg-in:nth-child(7),.lg-enter .warn-crit-card.lg-in:nth-child(7),.lg-enter .sp-lookup-card.lg-in:nth-child(7),.lg-enter .spg-team-hdr.lg-in:nth-child(7),.lg-enter .pi.lg-in:nth-child(7){animation-delay:0.250s}
+.lg-enter .spc.lg-in:nth-child(8),.lg-enter .kpi-card.lg-in:nth-child(8),.lg-enter .ins-kpi-card.lg-in:nth-child(8),.lg-enter .hday.lg-in:nth-child(8),.lg-enter .wl-row.lg-in:nth-child(8),.lg-enter .nr-item.lg-in:nth-child(8),.lg-enter .lbi.lg-in:nth-child(8),.lg-enter .mk.lg-in:nth-child(8),.lg-enter .warn-crit-card.lg-in:nth-child(8),.lg-enter .sp-lookup-card.lg-in:nth-child(8),.lg-enter .spg-team-hdr.lg-in:nth-child(8),.lg-enter .pi.lg-in:nth-child(8){animation-delay:0.285s}
+.lg-enter .spc.lg-in:nth-child(9),.lg-enter .kpi-card.lg-in:nth-child(9),.lg-enter .ins-kpi-card.lg-in:nth-child(9),.lg-enter .hday.lg-in:nth-child(9),.lg-enter .wl-row.lg-in:nth-child(9),.lg-enter .nr-item.lg-in:nth-child(9),.lg-enter .lbi.lg-in:nth-child(9),.lg-enter .mk.lg-in:nth-child(9),.lg-enter .warn-crit-card.lg-in:nth-child(9),.lg-enter .sp-lookup-card.lg-in:nth-child(9),.lg-enter .spg-team-hdr.lg-in:nth-child(9),.lg-enter .pi.lg-in:nth-child(9){animation-delay:0.320s}
+.lg-enter .spc.lg-in:nth-child(10),.lg-enter .kpi-card.lg-in:nth-child(10),.lg-enter .ins-kpi-card.lg-in:nth-child(10),.lg-enter .hday.lg-in:nth-child(10),.lg-enter .wl-row.lg-in:nth-child(10),.lg-enter .nr-item.lg-in:nth-child(10),.lg-enter .lbi.lg-in:nth-child(10),.lg-enter .mk.lg-in:nth-child(10),.lg-enter .warn-crit-card.lg-in:nth-child(10),.lg-enter .sp-lookup-card.lg-in:nth-child(10),.lg-enter .spg-team-hdr.lg-in:nth-child(10),.lg-enter .pi.lg-in:nth-child(10){animation-delay:0.355s}
+.lg-enter .spc.lg-in:nth-child(11),.lg-enter .kpi-card.lg-in:nth-child(11),.lg-enter .ins-kpi-card.lg-in:nth-child(11),.lg-enter .hday.lg-in:nth-child(11),.lg-enter .wl-row.lg-in:nth-child(11),.lg-enter .nr-item.lg-in:nth-child(11),.lg-enter .lbi.lg-in:nth-child(11),.lg-enter .mk.lg-in:nth-child(11),.lg-enter .warn-crit-card.lg-in:nth-child(11),.lg-enter .sp-lookup-card.lg-in:nth-child(11),.lg-enter .spg-team-hdr.lg-in:nth-child(11),.lg-enter .pi.lg-in:nth-child(11){animation-delay:0.390s}
+.lg-enter .spc.lg-in:nth-child(12),.lg-enter .kpi-card.lg-in:nth-child(12),.lg-enter .ins-kpi-card.lg-in:nth-child(12),.lg-enter .hday.lg-in:nth-child(12),.lg-enter .wl-row.lg-in:nth-child(12),.lg-enter .nr-item.lg-in:nth-child(12),.lg-enter .lbi.lg-in:nth-child(12),.lg-enter .mk.lg-in:nth-child(12),.lg-enter .warn-crit-card.lg-in:nth-child(12),.lg-enter .sp-lookup-card.lg-in:nth-child(12),.lg-enter .spg-team-hdr.lg-in:nth-child(12),.lg-enter .pi.lg-in:nth-child(12){animation-delay:0.425s}
+.lg-enter .spc.lg-in:nth-child(13),.lg-enter .kpi-card.lg-in:nth-child(13),.lg-enter .ins-kpi-card.lg-in:nth-child(13),.lg-enter .hday.lg-in:nth-child(13),.lg-enter .wl-row.lg-in:nth-child(13),.lg-enter .nr-item.lg-in:nth-child(13),.lg-enter .lbi.lg-in:nth-child(13),.lg-enter .mk.lg-in:nth-child(13),.lg-enter .warn-crit-card.lg-in:nth-child(13),.lg-enter .sp-lookup-card.lg-in:nth-child(13),.lg-enter .spg-team-hdr.lg-in:nth-child(13),.lg-enter .pi.lg-in:nth-child(13){animation-delay:0.460s}
+.lg-enter .spc.lg-in:nth-child(14),.lg-enter .kpi-card.lg-in:nth-child(14),.lg-enter .ins-kpi-card.lg-in:nth-child(14),.lg-enter .hday.lg-in:nth-child(14),.lg-enter .wl-row.lg-in:nth-child(14),.lg-enter .nr-item.lg-in:nth-child(14),.lg-enter .lbi.lg-in:nth-child(14),.lg-enter .mk.lg-in:nth-child(14),.lg-enter .warn-crit-card.lg-in:nth-child(14),.lg-enter .sp-lookup-card.lg-in:nth-child(14),.lg-enter .spg-team-hdr.lg-in:nth-child(14),.lg-enter .pi.lg-in:nth-child(14){animation-delay:0.495s}
+.lg-enter .spc.lg-in:nth-child(n+15),.lg-enter .kpi-card.lg-in:nth-child(n+15),.lg-enter .ins-kpi-card.lg-in:nth-child(n+15),.lg-enter .hday.lg-in:nth-child(n+15),.lg-enter .wl-row.lg-in:nth-child(n+15),.lg-enter .nr-item.lg-in:nth-child(n+15),.lg-enter .lbi.lg-in:nth-child(n+15),.lg-enter .mk.lg-in:nth-child(n+15),.lg-enter .warn-crit-card.lg-in:nth-child(n+15),.lg-enter .sp-lookup-card.lg-in:nth-child(n+15),.lg-enter .spg-team-hdr.lg-in:nth-child(n+15),.lg-enter .pi.lg-in:nth-child(n+15){animation-delay:.53s}
 
 /* garis grafik omset menggambar dirinya dari kiri ke kanan (panjang ±796) */
-.lg-enter .ref-chart-line{stroke-dasharray:1000;stroke-dashoffset:1000;animation:lg-draw 1.3s cubic-bezier(.65,0,.35,1) .2s forwards}
-.lg-enter .ref-chart-area{animation:lg-fade 1s var(--lg-ease) .55s backwards}
-.lg-enter .ref-chart-dot{transform-box:fill-box;transform-origin:center;animation:lg-dot .6s var(--lg-spring) 1.4s backwards}
+.lg-enter .ref-chart-line.lg-in{stroke-dasharray:1000;stroke-dashoffset:1000;animation:lg-draw 1.3s cubic-bezier(.65,0,.35,1) .2s forwards}
+.lg-enter .ref-chart-area.lg-in{animation:lg-fade 1s var(--lg-ease) .55s backwards}
+.lg-enter .ref-chart-dot.lg-in{transform-box:fill-box;transform-origin:center;animation:lg-dot .6s var(--lg-spring) 1.4s backwards}
 
 /* sparkline Watchlist menggambar per baris. Garis datar ("belum order")
    memakai stroke-dasharray sendiri (putus-putus) — dikecualikan supaya
    tidak berubah jadi garis utuh. */
-.lg-enter .wl-spark path[fill="none"]:not([stroke-dasharray]){stroke-dasharray:200;stroke-dashoffset:200;animation:lg-draw .9s var(--lg-ease) forwards}
-.lg-enter .wl-spark path:not([fill="none"]){animation:lg-fade .9s var(--lg-ease) backwards}
-.lg-enter .wl-row:nth-child(1) .wl-spark path{animation-delay:0.180s}
-.lg-enter .wl-row:nth-child(2) .wl-spark path{animation-delay:0.225s}
-.lg-enter .wl-row:nth-child(3) .wl-spark path{animation-delay:0.270s}
-.lg-enter .wl-row:nth-child(4) .wl-spark path{animation-delay:0.315s}
-.lg-enter .wl-row:nth-child(5) .wl-spark path{animation-delay:0.360s}
-.lg-enter .wl-row:nth-child(6) .wl-spark path{animation-delay:0.405s}
-.lg-enter .wl-row:nth-child(7) .wl-spark path{animation-delay:0.450s}
-.lg-enter .wl-row:nth-child(8) .wl-spark path{animation-delay:0.495s}
-.lg-enter .wl-row:nth-child(9) .wl-spark path{animation-delay:0.540s}
-.lg-enter .wl-row:nth-child(10) .wl-spark path{animation-delay:0.585s}
-.lg-enter .wl-row:nth-child(11) .wl-spark path{animation-delay:0.630s}
-.lg-enter .wl-row:nth-child(12) .wl-spark path{animation-delay:0.675s}
-.lg-enter .wl-row:nth-child(13) .wl-spark path{animation-delay:0.720s}
-.lg-enter .wl-row:nth-child(14) .wl-spark path{animation-delay:0.765s}
-.lg-enter .wl-row:nth-child(n+15) .wl-spark path{animation-delay:.8s}
+.lg-enter .wl-row.lg-in .wl-spark path[fill="none"]:not([stroke-dasharray]){stroke-dasharray:200;stroke-dashoffset:200;animation:lg-draw .9s var(--lg-ease) forwards}
+.lg-enter .wl-row.lg-in .wl-spark path:not([fill="none"]){animation:lg-fade .9s var(--lg-ease) backwards}
+.lg-enter .wl-row.lg-in:nth-child(1) .wl-spark path{animation-delay:0.180s}
+.lg-enter .wl-row.lg-in:nth-child(2) .wl-spark path{animation-delay:0.225s}
+.lg-enter .wl-row.lg-in:nth-child(3) .wl-spark path{animation-delay:0.270s}
+.lg-enter .wl-row.lg-in:nth-child(4) .wl-spark path{animation-delay:0.315s}
+.lg-enter .wl-row.lg-in:nth-child(5) .wl-spark path{animation-delay:0.360s}
+.lg-enter .wl-row.lg-in:nth-child(6) .wl-spark path{animation-delay:0.405s}
+.lg-enter .wl-row.lg-in:nth-child(7) .wl-spark path{animation-delay:0.450s}
+.lg-enter .wl-row.lg-in:nth-child(8) .wl-spark path{animation-delay:0.495s}
+.lg-enter .wl-row.lg-in:nth-child(9) .wl-spark path{animation-delay:0.540s}
+.lg-enter .wl-row.lg-in:nth-child(10) .wl-spark path{animation-delay:0.585s}
+.lg-enter .wl-row.lg-in:nth-child(11) .wl-spark path{animation-delay:0.630s}
+.lg-enter .wl-row.lg-in:nth-child(12) .wl-spark path{animation-delay:0.675s}
+.lg-enter .wl-row.lg-in:nth-child(13) .wl-spark path{animation-delay:0.720s}
+.lg-enter .wl-row.lg-in:nth-child(14) .wl-spark path{animation-delay:0.765s}
+.lg-enter .wl-row.lg-in:nth-child(n+15) .wl-spark path{animation-delay:.8s}
 
 /* batang target terisi */
-.lg-enter .goal-bar-fill{transform-origin:left center;animation:lg-bar 1.15s var(--lg-ease) .3s backwards}
+.lg-enter .goal-bar-fill.lg-in{transform-origin:left center;animation:lg-bar 1.15s var(--lg-ease) .3s backwards}
 
 /* kilau cahaya menyapu kaca hero satu kali (span .lg-sheen dari motion.js) */
 .omset-hero{position:relative}
@@ -542,6 +543,11 @@ html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig{min-width:min(78%,560px
     background:radial-gradient(460px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.075),transparent 62%),var(--lg-fill-strong)!important;
   }
 }
+
+/* HP: titik "live" di kartu Salespeople berdenyut tanpa henti. Di balik bar
+   navigasi bawah yang ber-blur, denyut itu memaksa blur dihitung ulang tiap
+   frame selama layar diam. Titik hijau statis tetap membawa arti yang sama. */
+@media(max-width:768px){.spc .live-dot{animation:none}}
 
 /* "Kurangi Gerak": semua animasi masuk dimatikan (motion.js juga berhenti) */
 @media (prefers-reduced-motion:reduce){
