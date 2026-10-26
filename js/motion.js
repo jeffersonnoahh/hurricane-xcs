@@ -163,7 +163,108 @@
     if (loadingDone) return;
     loadingDone = true;
     root.classList.remove('lg-loading');
+    // kartu-kartu baru saja dibuat dari data pertama -> beri animasi masuk
+    var act = document.querySelector('.page.active');
+    if (act) enterPage(act.id, false);
     setTimeout(maybeCelebrate, 900);
+  }
+
+  /* ── 5. animasi masuk halaman ─────────────────────────────────────── */
+  // .lg-enter hanya terpasang ±2 detik setelah halaman dibuka. Di luar jendela
+  // itu, render ulang dari Firebase dan grafik yang digambar ulang tiap 15
+  // detik (reference-dashboard.js) TIDAK beranimasi ulang.
+  var ENTER_MS = 2000;
+  var ENTER_ROLL = {
+    'page-dashboard': ['liveOmsetBig', 'K1', 'K2', 'totalRev', 'goalPct'],
+    'page-monthly': ['mOmsetBig']
+  };
+  function enterPage(id, rollFromZero) {
+    var page = document.getElementById(id);
+    if (!page || REDUCED) return;
+    page.classList.remove('lg-enter');
+    void page.offsetWidth;                       // mulai ulang animasi CSS
+    page.classList.add('lg-enter');
+    clearTimeout(page.__lgEnterT);
+    page.__lgEnterT = setTimeout(function () { page.classList.remove('lg-enter'); }, ENTER_MS);
+    sheen(page);
+    if (rollFromZero && !document.hidden) {
+      (ENTER_ROLL[id] || []).forEach(function (eid) {
+        var el = document.getElementById(eid);
+        if (!el || !TARGETS[eid]) return;
+        var kind = TARGETS[eid][0], to = KINDS[kind].parse(el.textContent.trim());
+        if (to === null || to <= 0) return;
+        roll(el, kind, (eid === 'liveOmsetBig' || eid === 'mOmsetBig') ? 1150 : 820, 0, to);
+      });
+    }
+  }
+  // kilau cahaya yang menyapu kaca hero satu kali
+  function sheen(page) {
+    var hero = page.querySelector('.omset-hero');
+    if (!hero) return;
+    var s = hero.querySelector(':scope > .lg-sheen');
+    if (!s) {
+      s = document.createElement('span');
+      s.className = 'lg-sheen';
+      s.setAttribute('aria-hidden', 'true');
+      hero.appendChild(s);
+    }
+    s.classList.remove('go');
+    void s.offsetWidth;
+    s.classList.add('go');
+  }
+
+  /* ── 6. kapsul kaca yang MENGALIR di antara tab (desktop) ─────────── */
+  var DESKTOP = window.matchMedia ? matchMedia('(min-width:769px)') : null;
+  function navPill() {
+    var bar = document.querySelector('.nav-bar');
+    if (!bar) return;
+    var pill = bar.querySelector(':scope > .lg-nav-pill');
+    if (!DESKTOP || !DESKTOP.matches) {
+      root.classList.remove('lg-has-pill');
+      if (pill) pill.style.opacity = '0';
+      return;
+    }
+    if (!pill) {
+      pill = document.createElement('span');
+      pill.className = 'lg-nav-pill';
+      pill.setAttribute('aria-hidden', 'true');
+      bar.insertBefore(pill, bar.firstChild);
+      pill.__first = true;
+    }
+    var a = bar.querySelector('.nav-tab.active[data-page]') || bar.querySelector('.nav-tab.active');
+    if (!a || !a.offsetWidth) { pill.style.opacity = '0'; return; }
+    var br = bar.getBoundingClientRect(), r = a.getBoundingClientRect();
+    var x = r.left - br.left + bar.scrollLeft, y = r.top - br.top + bar.scrollTop;
+    if (pill.__first) {                          // posisi pertama: muncul tanpa meluncur
+      pill.style.transition = 'none';
+      pill.__first = false;
+      requestAnimationFrame(function () { pill.style.transition = ''; });
+    }
+    pill.style.width = r.width + 'px';
+    pill.style.height = r.height + 'px';
+    pill.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    pill.style.opacity = '1';
+    root.classList.add('lg-has-pill');
+  }
+
+  /* ── 7. cahaya mengikuti kursor di atas kaca (hanya perangkat mouse) ─ */
+  if (window.matchMedia && matchMedia('(hover:hover)').matches) {
+    var SPOT = '.spc,.kpi-card,.goal-card,.omset-hero,.ins-kpi-card,.ins-panel,.wl-panel,.lbi,.act-form,' +
+               '.panel:not(.premium-entry-drawer)';
+    var pend = null, sraf = 0;
+    document.addEventListener('pointermove', function (e) {
+      var c = e.target && e.target.closest ? e.target.closest(SPOT) : null;
+      if (!c) return;
+      pend = { c: c, x: e.clientX, y: e.clientY };
+      if (sraf) return;
+      sraf = requestAnimationFrame(function () {
+        sraf = 0;
+        var p = pend; if (!p) return;
+        var b = p.c.getBoundingClientRect();
+        p.c.style.setProperty('--mx', (p.x - b.left) + 'px');
+        p.c.style.setProperty('--my', (p.y - b.top) + 'px');
+      });
+    }, { passive: true });
   }
   if (!dataReady()) {
     root.classList.add('lg-loading');
@@ -271,6 +372,8 @@
       var origShow = window.showPage;
       window.showPage = keepMarkers(origShow, function (p) {
         var r = origShow.apply(this, arguments);
+        navPill();
+        enterPage('page-' + p, true);
         if (p === 'dashboard') setTimeout(maybeCelebrate, 500);
         return r;
       });
@@ -285,9 +388,15 @@
       });
       window.showToast.__lg = true;
     }
+    navPill();
     // perayaan yang tertunda (tab di latar / kartu tidak terlihat) dicoba lagi
     if (!hook.__listening) {
       hook.__listening = true;
+      var rt = 0;
+      window.addEventListener('resize', function () {
+        clearTimeout(rt); rt = setTimeout(navPill, 120);
+      });
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(navPill);
       document.addEventListener('visibilitychange', function () {
         if (!document.hidden) setTimeout(maybeCelebrate, 400);
       });
