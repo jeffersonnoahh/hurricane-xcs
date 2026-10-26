@@ -59,7 +59,8 @@
 html{background:#000!important}
 body,.page,.container,.premium-performance-grid,.premium-overview-grid{background:transparent!important}
 body::before{
-  content:"";position:fixed;inset:-18vmax;z-index:-1;pointer-events:none;
+  content:"";position:fixed;z-index:-1;pointer-events:none;
+  top:-18vmax;right:-18vmax;bottom:-18vmax;left:-18vmax;   /* longhand: iOS <14.5 tidak kenal inset */
   /* cukup terang untuk "ditangkap" kaca, tetap gelap: titik paling terang
      masih di bawah rgb(16,60,28) — teks putih & abu tetap kontras */
   background:
@@ -68,12 +69,9 @@ body::before{
     radial-gradient(46vmax 38vmax at 76% 14%,rgba(255,212,38,.07),transparent 66%),   /* kuning logo Hurricane */
     radial-gradient(36vmax 30vmax at 28% 96%,rgba(48,209,88,.10),transparent 64%),
     radial-gradient(60vmax 50vmax at 50% 50%,rgba(255,255,255,.025),transparent 70%);
-  animation:lg-drift 52s ease-in-out infinite alternate;
-}
-@keyframes lg-drift{
-  0%  {transform:translate3d(0,0,0) scale(1)}
-  50% {transform:translate3d(-2.5vmax,1.8vmax,0) scale(1.05)}
-  100%{transform:translate3d(2vmax,-1.6vmax,0) scale(1.02)}
+  /* SENGAJA DIAM. Versi bergerak (drift 52 detik, tanpa henti) membuat dua
+     lapisan blur di atasnya (header + nav) dihitung ulang setiap frame,
+     sepanjang hari, demi gerakan ±1,6px per detik yang tidak terlihat. */
 }
 
 /* ══ 2. KACA RINGAN — kartu (tanpa blur) ════════════════════════════════ */
@@ -176,13 +174,16 @@ tbody tr:last-child{box-shadow:none!important}
 /* ══ 6. CHROME — 2 lapisan blur sungguhan (header + nav) ════════════════ */
 header{
   background:var(--lg-chrome)!important;
-  -webkit-backdrop-filter:var(--lg-blur)!important;backdrop-filter:var(--lg-blur)!important;
+  /* nilai ditulis langsung, BUKAN var(): bug WebKit — -webkit-backdrop-filter
+     dengan var() tidak menghasilkan blur di iPhone (Safari < 18 hanya kenal
+     versi -webkit-) */
+  -webkit-backdrop-filter:blur(26px) saturate(175%)!important;backdrop-filter:blur(26px) saturate(175%)!important;
   border-bottom:0!important;
   box-shadow:inset 0 -1px 0 rgba(255,255,255,.07),0 12px 30px -20px rgba(0,0,0,.9)!important;
 }
 .nav-wrapper{
   background:var(--lg-chrome)!important;
-  -webkit-backdrop-filter:var(--lg-blur)!important;backdrop-filter:var(--lg-blur)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(175%)!important;backdrop-filter:blur(26px) saturate(175%)!important;
   border:0!important;
   box-shadow:inset 0 -1px 0 rgba(255,255,255,.06)!important;
 }
@@ -331,7 +332,9 @@ input[type="checkbox"],input[type="radio"]{box-shadow:none!important;background:
 
 /* ══ 11. GERAK ══════════════════════════════════════════════════════════ */
 /* halaman masuk: sekali per pindah halaman (bukan per update data) */
-.page.active>.container>*{animation:lg-rise .4s var(--lg-ease) both}
+/* 'backwards', bukan 'both': 'both' meninggalkan transform identitas
+   permanen di setiap bagian halaman (membuat stacking context baru) */
+.page.active>.container>*{animation:lg-rise .4s var(--lg-ease) backwards}
 .page.active>.container>*:nth-child(2){animation-delay:.025s}
 .page.active>.container>*:nth-child(3){animation-delay:.05s}
 .page.active>.container>*:nth-child(4){animation-delay:.075s}
@@ -342,7 +345,7 @@ input[type="checkbox"],input[type="radio"]{box-shadow:none!important;background:
   to  {opacity:1;transform:none}
 }
 /* modal: muncul memantul */
-.mo .mbox,.mo .wa-box,.cal-overlay .cal-box{animation:lg-pop .38s var(--lg-spring) both}
+.mo .mbox,.mo .wa-box,.cal-overlay .cal-box{animation:lg-pop .38s var(--lg-spring) backwards}
 @keyframes lg-pop{
   from{opacity:0;transform:translate3d(0,18px,0) scale(.94)}
   to  {opacity:1;transform:none}
@@ -379,7 +382,7 @@ input[type="checkbox"],input[type="radio"]{box-shadow:none!important;background:
    setengah jalan. */
 .lg-rolling{position:relative!important;color:transparent!important;-webkit-text-fill-color:transparent!important}
 .lg-rolling::after{
-  content:attr(data-lg);position:absolute;inset:0;
+  content:attr(data-lg);position:absolute;top:0;right:0;bottom:0;left:0;
   color:var(--lg-c,#fff);-webkit-text-fill-color:var(--lg-c,#fff);
   text-align:inherit;white-space:nowrap;pointer-events:none;
   font-variant-numeric:tabular-nums;
@@ -388,7 +391,8 @@ input[type="checkbox"],input[type="radio"]{box-shadow:none!important;background:
 /* ══ 13. SKELETON SAAT MEMUAT (bukan "Rp 0") ════════════════════════════ */
 html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig,html.lg-loading .kpi-val,
 html.lg-loading #totalRev,html.lg-loading #goalPct,html.lg-loading .goal-main,
-html.lg-loading #premiumPace,html.lg-loading #premiumCloses,html.lg-loading #premiumTopTeam{
+html.lg-loading #premiumPace,html.lg-loading #premiumCloses,html.lg-loading #premiumTopTeam,
+html.lg-loading #K1c,html.lg-loading #K2c{
   color:transparent!important;-webkit-text-fill-color:transparent!important;
   background:linear-gradient(100deg,rgba(255,255,255,.045) 30%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.045) 70%)!important;
   background-size:240% 100%!important;border-radius:12px!important;
@@ -407,17 +411,18 @@ html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig{min-width:min(78%,560px
   22% {filter:drop-shadow(0 0 26px rgba(48,209,88,.55)) drop-shadow(0 0 2px rgba(255,212,38,.6))}
   100%{filter:drop-shadow(0 0 0 rgba(48,209,88,0))}
 }
-.lg-sparks{position:fixed;inset:0;width:100vw;height:100vh;z-index:1200;pointer-events:none}
+.lg-sparks{position:fixed;top:0;left:0;z-index:1200;pointer-events:none}   /* ukuran diatur motion.js */
 
 /* ══ 15. AKSESIBILITAS & FALLBACK ═══════════════════════════════════════ */
 @media (prefers-reduced-motion:reduce){
-  body::before{animation:none}
   .page.active>.container>*,.mo .mbox,.mo .wa-box,.cal-overlay .cal-box,
   .goal-card.lg-goal-hit,
   html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig,html.lg-loading .kpi-val,
   html.lg-loading #totalRev,html.lg-loading #goalPct{animation:none}
 }
-/* "Kurangi transparansi" (iOS/macOS): kaca jadi padat, angka tetap jelas */
+/* "Kurangi transparansi": kaca jadi padat, angka tetap jelas. Catatan: hanya
+   Chrome (118+) yang mengenal media query ini — Safari belum, dan Android
+   tidak punya pengaturan sistemnya. Jadi ini bonus, bukan jalur utama. */
 @media (prefers-reduced-transparency:reduce){
   body::before{display:none!important}
   header,.nav-wrapper,.premium-entry-drawer,.mo,.cal-overlay,.premium-form-overlay,.premium-more-overlay{

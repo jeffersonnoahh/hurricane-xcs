@@ -21,11 +21,32 @@
   'use strict';
 
   var root = document.documentElement;
-  var REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // diikuti terus: kalau "Kurangi Gerak" dinyalakan di tengah jalan, langsung berlaku
+  var mq = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  var REDUCED = !!(mq && mq.matches);
+  if (mq) {
+    var onMq = function (e) { REDUCED = e.matches; };
+    if (mq.addEventListener) mq.addEventListener('change', onMq);
+    else if (mq.addListener) mq.addListener(onMq);
+  }
 
   /* ── 4. getar ─────────────────────────────────────────────────────── */
+  // Chrome Android menolak navigator.vibrate sebelum halaman pernah disentuh.
+  function canBuzz() {
+    var ua = navigator.userActivation;
+    return !ua || ua.hasBeenActive;
+  }
   function buzz(pattern) {
-    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { }
+    try { if (navigator.vibrate && canBuzz()) navigator.vibrate(pattern); } catch (e) { }
+  }
+  // Bungkus fungsi milik skrip lain TANPA menghapus penanda mereka
+  // (watchlist.js memeriksa showPage.__wl). Tanpa ini kedua skrip saling
+  // membungkus ulang, dan Watchlist dirender dua kali tiap kali dibuka.
+  function keepMarkers(from, to) {
+    for (var k in from) {
+      if (Object.prototype.hasOwnProperty.call(from, k)) to[k] = from[k];
+    }
+    return to;
   }
 
   /* ── 1. angka bergulir ────────────────────────────────────────────── */
@@ -96,7 +117,9 @@
     s.cur = from;
     var t0 = performance.now();
     function frame(now) {
-      var t = Math.min(1, (now - t0) / dur);
+      // Stempel waktu rAF = awal frame, bisa SEBELUM t0 -> t negatif ->
+      // satu frame menampilkan angka di bawah nilai awal ("Rp -57.917.652").
+      var t = Math.max(0, Math.min(1, (now - t0) / dur));
       s.cur = from + (to - from) * easeOut(t);
       el.setAttribute('data-lg', K.fmt(s.cur));
       if (t < 1) s.raf = requestAnimationFrame(frame);
@@ -121,6 +144,10 @@
       last = to;
       if (to === null) { finish(el); return; }
       if (from === null || from === to || REDUCED || document.hidden) return;
+      // Data pertama masuk saat skeleton masih menyala. Skeleton membuat teks
+      // transparan, dan roll() menyimpan warna teks — jadi tanpa ini angka
+      // bergulir dengan warna transparan: kosong ±1 detik di setiap pembukaan.
+      if (!loadingDone && dataReady()) endLoading();
       // dari 0 (data pertama masuk) sedikit lebih lama — terasa "menghitung"
       roll(el, kind, from === 0 ? dur + 280 : dur, from, to);
     }).observe(el, { childList: true, characterData: true, subtree: true });
@@ -152,23 +179,33 @@
     var d = new Date();
     return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
   }
+  function cardVisible(card) {
+    var r = card.getBoundingClientRect();
+    var shown = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+    return r.height > 0 && shown >= r.height * 0.5;
+  }
   function maybeCelebrate() {
     if (!loadingDone) return;
+    // Target asli (config/revTarget, mis. Rp150jt) belum dimuat -> app.js masih
+    // memakai bawaan Rp70jt, jadi "100%" bisa palsu. Tunggu config dulu.
+    if (!window._cfgTeamsLoaded) return;
     var g = document.getElementById('goalPct');
     if (!g || !(parseInt(g.textContent, 10) >= 100)) return;
     try { if (typeof vOff !== 'undefined' && vOff !== 0) return; } catch (e) { }   // hanya untuk HARI INI
     var dash = document.getElementById('page-dashboard');
-    if (!dash || !dash.classList.contains('active')) return;                      // tunggu sampai terlihat
+    if (!dash || !dash.classList.contains('active')) return;
     var key = 'lg-target-' + dayKey();
-    try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); }
-    catch (e) { return; }                                                       // tanpa storage: jangan berulang
+    try { if (localStorage.getItem(key)) return; } catch (e) { return; }
     var card = document.querySelector('#page-dashboard .goal-card');
-    if (card) {
-      card.classList.add('lg-goal-hit');
-      setTimeout(function () { card.classList.remove('lg-goal-hit'); }, 2600);
-    }
+    // Jatah sekali-sehari HANYA dipakai kalau benar-benar terlihat: tab di
+    // latar, layar terkunci, atau kartu tergulir keluar -> coba lagi nanti
+    // (lihat pendengar visibilitychange & scroll di hook()).
+    if (document.hidden || !card || !cardVisible(card)) return;
+    try { localStorage.setItem(key, '1'); } catch (e) { return; }
+    card.classList.add('lg-goal-hit');
+    setTimeout(function () { card.classList.remove('lg-goal-hit'); }, 2600);
     buzz([14, 50, 14, 50, 28]);
-    if (!REDUCED && card) sparks(card);
+    if (!REDUCED) sparks(card);
   }
 
   // percikan halus warna Hurricane (hijau, kuning, putih) dari batang target
@@ -179,6 +216,9 @@
     var cv = document.createElement('canvas');
     cv.className = 'lg-sparks';
     cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    // ukuran tampilan = ukuran gambar. 100vh di CSS = viewport BESAR di HP
+    // (bilah alamat tersembunyi), jadi percikan akan meregang & bergeser.
+    cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
     document.body.appendChild(cv);
     var ctx = cv.getContext('2d');
     ctx.scale(dpr, dpr);
@@ -229,21 +269,35 @@
     }
     if (typeof window.showPage === 'function' && !window.showPage.__lgm) {
       var origShow = window.showPage;
-      window.showPage = function (p) {
+      window.showPage = keepMarkers(origShow, function (p) {
         var r = origShow.apply(this, arguments);
         if (p === 'dashboard') setTimeout(maybeCelebrate, 500);
         return r;
-      };
+      });
       window.showPage.__lgm = true;
     }
     if (typeof window.showToast === 'function' && !window.showToast.__lg) {
       var origToast = window.showToast;
-      window.showToast = function (msg, type) {
+      window.showToast = keepMarkers(origToast, function (msg, type) {
         if (type === 'success') buzz(12);
         else if (type === 'error') buzz([20, 60, 20]);
         return origToast.apply(this, arguments);
-      };
+      });
       window.showToast.__lg = true;
+    }
+    // perayaan yang tertunda (tab di latar / kartu tidak terlihat) dicoba lagi
+    if (!hook.__listening) {
+      hook.__listening = true;
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) setTimeout(maybeCelebrate, 400);
+      });
+      var lastScroll = 0;
+      window.addEventListener('scroll', function () {
+        var now = Date.now();
+        if (now - lastScroll < 400) return;
+        lastScroll = now;
+        maybeCelebrate();
+      }, { passive: true });
     }
   }
 
