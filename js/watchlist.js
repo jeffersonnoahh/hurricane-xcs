@@ -28,12 +28,19 @@
     var a = Array.isArray(day) ? day : Object.values(day);
     return a.filter(function (x) { return x && typeof x === 'object'; });
   }
+  /* Format uang singkat yang SAMA dengan app.js fRp: 850rb · 189,73jt ·
+     5jt · 2,95M (M = miliar). Dulu di sini juta dibulatkan (57jt) sedangkan
+     tile lain menulis juta sebagai 'M' — sekarang satu format di semua layar. */
   function jt(n) {
+    n = Math.round(+n || 0);
     if (!n) return '0';
-    if (n >= 1e9) return (n / 1e9).toFixed(2).replace('.', ',') + 'M';
-    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',') + 'jt';
-    if (n >= 1e3) return Math.round(n / 1e3) + 'rb';
-    return String(Math.round(n));
+    if (typeof window.fRp === 'function') return window.fRp(n);
+    var a = Math.abs(n), sg = n < 0 ? '-' : '';
+    var dec = function (c) { var w = Math.floor(c / 100), f = c % 100; return f ? w + ',' + (f < 10 ? '0' : '') + f : String(w); };
+    if (a >= 999995000) return sg + dec(Math.round(a / 1e7)) + 'M';
+    if (a >= 999500) return sg + dec(Math.round(a / 1e4)) + 'jt';
+    if (a >= 1000) return sg + Math.round(a / 1e3) + 'rb';
+    return String(n);
   }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -184,7 +191,7 @@
         right = '<div class="wl-chg bad">BELUM ORDER</div>';
         sub = '<div class="wl-sub bad">bulan ini</div>';
       }
-      return '<div class="wl-row">' +
+      return '<div class="wl-row" data-k="' + esc(r.sp + '|' + r.team) + '">' +
         '<div class="wl-id"><div class="wl-name">' + esc(r.sp) + '</div>' +
         '<div class="wl-team">' + esc(r.team) + '</div></div>' +
         '<div class="wl-chart">' + spark(r.series, color, flat) + '</div>' +

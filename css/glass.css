@@ -6,8 +6,8 @@
 
    ATURAN YANG WAJIB DIJAGA (masing-masing pernah/hampir jadi bug):
 
-   1. Kaca butuh cahaya di belakangnya. Latar asli hitam polos -> blur tidak
-      terlihat. Jadi ada satu lapisan cahaya ambient di body::before.
+   1. Latar HITAM PEKAT (keputusan pemilik, 26 Okt 2026). Kaca dibentuk
+      oleh isi putih tipis + kilau tepi, bukan oleh cahaya di belakangnya.
 
    2. backdrop-filter MAHAL di HP Android tim. Maksimal 2 lapisan blur saat
       diam (header + nav) dan 1 lagi saat modal terbuka. JANGAN di kartu yang
@@ -58,21 +58,12 @@
 /* ══ 1. LATAR AMBIENT — yang membuat kaca terlihat ══════════════════════ */
 html{background:#000!important}
 body,.page,.container,.premium-performance-grid,.premium-overview-grid{background:transparent!important}
-body::before{
-  content:"";position:fixed;z-index:-1;pointer-events:none;
-  top:-18vmax;right:-18vmax;bottom:-18vmax;left:-18vmax;   /* longhand: iOS <14.5 tidak kenal inset */
-  /* cukup terang untuk "ditangkap" kaca, tetap gelap: titik paling terang
-     masih di bawah rgb(16,60,28) — teks putih & abu tetap kontras */
-  background:
-    radial-gradient(44vmax 36vmax at 14% 8%,rgba(48,209,88,.26),transparent 62%),
-    radial-gradient(40vmax 34vmax at 92% 84%,rgba(255,69,58,.14),transparent 64%),
-    radial-gradient(46vmax 38vmax at 76% 14%,rgba(255,212,38,.07),transparent 66%),   /* kuning logo Hurricane */
-    radial-gradient(36vmax 30vmax at 28% 96%,rgba(48,209,88,.10),transparent 64%),
-    radial-gradient(60vmax 50vmax at 50% 50%,rgba(255,255,255,.025),transparent 70%);
-  /* SENGAJA DIAM. Versi bergerak (drift 52 detik, tanpa henti) membuat dua
-     lapisan blur di atasnya (header + nav) dihitung ulang setiap frame,
-     sepanjang hari, demi gerakan ±1,6px per detik yang tidak terlihat. */
-}
+/* LATAR HITAM PEKAT (permintaan Jeff, 26 Okt 2026): tanpa cahaya ambient dan
+   tanpa wallpaper bergerak. Kaca tetap terbaca lewat isi putih tipis, kilau
+   tepi atas, dan header/nav yang mem-blur isi halaman yang digulir di
+   bawahnya. Lapisan ambient lama (hijau kiri-atas, merah kanan-bawah,
+   kuning logo) disimpan di riwayat git bila ingin dikembalikan. */
+body::before{content:none!important}
 
 /* ══ 2. KACA RINGAN — kartu (tanpa blur) ════════════════════════════════ */
 .goal-card,.kpi-card,.panel,.premium-status-strip,.tw,

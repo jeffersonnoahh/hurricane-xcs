@@ -1,0 +1,265 @@
+/* ══════════════════════════════════════════════════════════════════════
+   FX LIVE — momen live (lihat js/fx-live.js).
+   Kapsul "Closing masuk" + banner target 100%.
+
+   - TANPA backdrop-filter: kaca padat (isi gelap + tepi cahaya). Anggaran
+     blur HP sudah habis di header + nav.
+   - z-index 850: di atas header (110) & nav bawah (400), DI BAWAH overlay
+     laci/modal (900+), modal .mo (999), kalender (1100), percikan (1200)
+     dan toast (9999). Jadi kapsul tidak pernah menutupi modal / laci input
+     / toast. Posisinya di BAWAH header (dihitung js), jadi ketukan ke header
+     tidak pernah terhalang.
+   - Semua gerak dijalankan lewat Web Animations di js (transform/opacity).
+     Tidak ada animation/transition !important di sini.
+   ══════════════════════════════════════════════════════════════════════ */
+:root{
+  --hxl-g:#30d158;
+  --hxl-g2:#5cf08a;
+  --hxl-txt:#f5f5f7;
+  --hxl-dim:rgba(235,235,245,.62);
+  --hxl-faint:rgba(235,235,245,.40);
+  /* isi kapsul: gradasi VERTIKAL saja — tiga potongan (2 tutup + tengah)
+     harus menyambung tanpa jahitan */
+  --hxl-fill:linear-gradient(180deg,#26282d 0%,#17181b 50%,#0e0f11 100%);
+}
+
+/* ── kapsul ──────────────────────────────────────────────────────────── */
+.hxl-island{
+  position:fixed;left:50%;top:74px;z-index:850;
+  width:var(--w,360px);height:var(--h,62px);margin-left:calc(var(--w,360px) / -2);
+  pointer-events:none;outline:none;
+  font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;
+  contain:layout style;
+}
+.hxl-island.is-live{pointer-events:auto;cursor:pointer}
+
+/* bentuk: 2 lingkaran (tutup) + 1 persegi (tengah). Dari titik ke kapsul
+   hanya dengan transform: grup diskala seragam, tutup bergeser, tengah
+   scaleX — bentuknya tetap kapsul sempurna di setiap frame. */
+.hxl-shape{position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:50% 0}
+.hxl-cap,.hxl-mid{position:absolute;top:0;height:var(--h);background:var(--hxl-fill)}
+.hxl-cap{
+  left:50%;width:var(--h);margin-left:calc(var(--h) / -2);border-radius:50%;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.075),inset 0 1px 0 rgba(255,255,255,.20);
+}
+/* tengah DI ATAS tutup: menutup setengah dalam lingkaran, jadi tepi cahaya
+   tutup hanya terlihat di sisi luar. Garis atas tengah = gabungan 2 garis
+   tutup (.075 + .20 ≈ .26) supaya sambungannya tidak terlihat. */
+.hxl-mid{
+  left:50%;width:calc(var(--w) - var(--h) + 2px);margin-left:calc((var(--w) - var(--h) + 2px) / -2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26),inset 0 -1px 0 rgba(255,255,255,.075);
+}
+.hxl-glass{
+  position:absolute;top:0;right:0;bottom:0;left:0;border-radius:999px;opacity:0;pointer-events:none;
+  background:radial-gradient(120% 150% at 50% -45%,rgba(255,255,255,.10),rgba(255,255,255,0) 58%);
+  box-shadow:inset 0 -16px 26px -20px rgba(48,209,88,.42),
+             0 22px 44px -18px rgba(0,0,0,.95),0 6px 14px -6px rgba(0,0,0,.6);
+}
+.hxl-bloom{
+  position:absolute;left:-16%;right:-16%;top:-70%;bottom:-70%;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(48,209,88,.42),rgba(48,209,88,.12) 55%,rgba(48,209,88,0));
+}
+/* titik hijau tempat kapsul lahir dan kembali */
+.hxl-seed{
+  position:absolute;left:50%;top:1px;width:10px;height:10px;margin-left:-5px;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(circle at 40% 35%,#c9ffd9 0,#5cf08a 45%,#30d158 100%);
+  box-shadow:0 0 0 3px rgba(48,209,88,.16),0 0 14px 2px rgba(48,209,88,.55);
+}
+.hxl-k-ch .hxl-seed{background:#9fa3aa;box-shadow:0 0 0 3px rgba(255,255,255,.08),0 0 10px rgba(255,255,255,.25)}
+
+/* isi */
+.hxl-body{
+  position:absolute;top:0;right:0;bottom:0;left:0;border-radius:999px;overflow:hidden;opacity:0;
+  display:flex;align-items:center;gap:11px;padding:0 20px 0 12px;box-sizing:border-box;
+  color:var(--hxl-txt);
+}
+.hxl-chip{
+  position:relative;flex:0 0 auto;width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.04));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),inset 0 1px 0 rgba(255,255,255,.22);
+  font:700 12px/1 'Space Mono',ui-monospace,Menlo,monospace;letter-spacing:.02em;color:#ececf0;
+}
+.hxl-chip svg{display:block}
+.hxl-badge{
+  position:absolute;top:-4px;right:-5px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;
+  border-radius:999px;background:var(--hxl-g);color:#03140a;
+  font:700 10px/17px 'Space Grotesk',system-ui,sans-serif;text-align:center;
+  box-shadow:0 0 0 2px #15161a;opacity:0;transform:scale(.3);
+}
+.hxl-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
+.hxl-l1{display:flex;align-items:center;gap:7px;min-width:0;line-height:1.15}
+.hxl-name{font-size:15px;font-weight:600;letter-spacing:-.005em;color:var(--hxl-txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hxl-rank{
+  flex:0 0 auto;font:700 9px/1 'Space Mono',ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 6px 3px;border-radius:6px;color:var(--hxl-g2);
+  background:rgba(48,209,88,.12);box-shadow:inset 0 0 0 1px rgba(48,209,88,.32);
+}
+.hxl-rank:empty{display:none}
+/* #1 hari ini: satu-satunya tempat kuning logo dipakai */
+.hxl-rank.is-top{color:#ffd426;background:rgba(255,212,38,.10);box-shadow:inset 0 0 0 1px rgba(255,212,38,.42)}
+.hxl-l2wrap{position:relative;height:15px;overflow:hidden}
+.hxl-l2{
+  display:block;font-size:11.5px;font-weight:500;letter-spacing:.01em;line-height:15px;color:var(--hxl-dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.hxl-l2.is-old{position:absolute;top:0;left:0;right:0}
+.hxl-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.hxl-amt{font-size:15.5px;font-weight:700;letter-spacing:-.01em;color:var(--hxl-g);font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap}
+.hxl-sub{font:400 9.5px/1 'Space Mono',ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--hxl-faint);white-space:nowrap}
+.hxl-prog{
+  position:absolute;left:calc(var(--h) / 2);right:calc(var(--h) / 2);bottom:0;height:1px;opacity:0;transform-origin:0 50%;pointer-events:none;
+  background:linear-gradient(90deg,rgba(48,209,88,0),rgba(92,240,138,.75) 18%,rgba(92,240,138,.75) 82%,rgba(48,209,88,0));
+}
+.hxl-sweep{
+  position:absolute;top:-10%;bottom:-10%;left:0;width:38%;pointer-events:none;
+  background:linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(190,255,210,.07) 35%,rgba(225,255,235,.22) 50%,rgba(190,255,210,.07) 65%,rgba(255,255,255,0) 100%);
+  transform:translateX(-140%) skewX(-16deg);
+}
+
+/* closing besar (>= Rp10jt): tepi hijau terang + cahaya. BUKAN kuning. */
+.hxl-island.is-big .hxl-cap{box-shadow:inset 0 0 0 1px rgba(48,209,88,.48),inset 0 1px 0 rgba(190,255,210,.34)}
+.hxl-island.is-big .hxl-mid{box-shadow:inset 0 1px 0 rgba(160,255,190,.62),inset 0 -1px 0 rgba(48,209,88,.48)}
+.hxl-island.is-big .hxl-glass{
+  box-shadow:inset 0 -18px 30px -16px rgba(48,209,88,.62),
+             0 0 30px -6px rgba(48,209,88,.42),
+             0 22px 44px -18px rgba(0,0,0,.95),0 6px 14px -6px rgba(0,0,0,.6);
+}
+.hxl-island.is-big .hxl-amt{color:var(--hxl-g2)}
+/* cahaya lewat filter di LUAR kolom odometer yang ter-clip — text-shadow di
+   dalam kolom terpotong jadi kotak-kotak */
+.hxl-island.is-big .hxl-side{filter:drop-shadow(0 0 10px rgba(48,209,88,.5))}
+.hxl-island.is-big .hxl-chip{box-shadow:inset 0 0 0 1px rgba(92,240,138,.75),inset 0 1px 0 rgba(255,255,255,.25),0 0 16px -3px rgba(48,209,88,.7)}
+
+/* channel (Tokopedia, Shopee, Live TikTok…): lebih kecil dan lebih tenang */
+.hxl-k-ch .hxl-body{padding:0 17px 0 8px;gap:10px}
+.hxl-tag{
+  flex:0 0 auto;font:700 9.5px/1 'Space Mono',ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(235,235,245,.8);padding:7px 10px 6px;border-radius:999px;
+  background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);white-space:nowrap;
+}
+.hxl-k-ch .hxl-main{gap:0}
+.hxl-k-ch .hxl-l2{font-size:12px;color:var(--hxl-dim)}
+.hxl-k-ch .hxl-amt{font-size:13.5px;color:rgba(48,209,88,.9)}
+.hxl-k-ch .hxl-glass{box-shadow:0 16px 34px -16px rgba(0,0,0,.95),0 4px 10px -4px rgba(0,0,0,.6)}
+
+/* cincin target (kapsul 25/50/75%) */
+.hxl-ring{position:relative;width:38px;height:38px;flex:0 0 auto}
+.hxl-ring svg{position:absolute;top:0;left:0;width:38px;height:38px;transform:rotate(-90deg)}
+.hxl-ring circle{fill:none;stroke-width:3}
+.hxl-ring .trk{stroke:rgba(255,255,255,.12)}
+.hxl-ring .arc{stroke:var(--hxl-g);stroke-linecap:round}
+.hxl-ring b{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;
+  font:700 10.5px/1 'Space Mono',ui-monospace,Menlo,monospace;color:#fff;letter-spacing:-.02em}
+
+/* untuk mengukur lebar kapsul channel */
+.hxl-measure{visibility:hidden;left:0;top:-300px;margin-left:0;width:auto}
+.hxl-measure .hxl-body{position:relative;display:inline-flex;opacity:1;height:var(--h);width:auto}
+.hxl-measure .hxl-main{flex:0 0 auto}
+
+/* ── odometer: tiap digit = kolom 0–9 yang digeser (transform) ───────── */
+.hxl-odo{display:inline-flex;align-items:flex-start;height:1.2em;line-height:1.2em;overflow:hidden;white-space:nowrap;vertical-align:top}
+.hxl-odo>span{display:block;height:1.2em;white-space:pre}
+.hxl-dg{position:relative;overflow:hidden}
+.hxl-dgs{display:block}
+.hxl-dgs>i{display:block;height:1.2em;font-style:normal;text-align:center}
+.hxl-odo.is-rolling .hxl-dg{
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 13%,#000 87%,transparent 100%);
+          mask-image:linear-gradient(180deg,transparent 0,#000 13%,#000 87%,transparent 100%);
+}
+
+/* ── banner TARGET HARIAN TEMBUS ─────────────────────────────────────── */
+.hxl-banner{
+  position:fixed;z-index:850;top:74px;left:10px;right:10px;border-radius:26px;outline:none;
+  color:var(--hxl-txt);font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;
+  transform-origin:50% 0;
+}
+.hxl-bn-bg{
+  position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit;
+  background:
+    radial-gradient(90% 130% at 16% 0%,rgba(48,209,88,.20),rgba(48,209,88,0) 62%),
+    linear-gradient(165deg,#1d2420 0%,#121614 46%,#0a0c0b 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(48,209,88,.30),
+             inset 0 -40px 60px -42px rgba(48,209,88,.40),
+             0 40px 80px -30px rgba(0,0,0,.95),0 8px 24px -6px rgba(0,0,0,.6);
+}
+.hxl-bn-rim{
+  position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit;opacity:0;pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(92,240,138,.75),inset 0 1px 0 rgba(220,255,230,.55),0 0 46px -8px rgba(48,209,88,.55);
+}
+.hxl-bn-fx{position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit;overflow:hidden;pointer-events:none}
+.hxl-bn-grid{
+  position:absolute;top:0;right:0;bottom:0;left:0;opacity:.75;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:22px 22px;background-position:-1px -1px;
+  -webkit-mask-image:radial-gradient(70% 95% at 22% 50%,#000,transparent 78%);
+          mask-image:radial-gradient(70% 95% at 22% 50%,#000,transparent 78%);
+}
+.hxl-bn-bloom{
+  position:absolute;left:var(--bx,30%);top:var(--by,50%);width:340px;height:340px;margin:-170px 0 0 -170px;border-radius:50%;opacity:0;
+  background:radial-gradient(closest-side,rgba(48,209,88,.55),rgba(48,209,88,.16) 52%,rgba(48,209,88,0));
+}
+.hxl-bn-ring{
+  position:absolute;left:var(--bx,30%);top:var(--by,50%);width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;opacity:0;
+  box-shadow:0 0 0 1px rgba(92,240,138,.75),0 0 22px rgba(48,209,88,.32),inset 0 0 18px rgba(48,209,88,.22);
+}
+.hxl-bn-sweep{
+  position:absolute;top:-25%;bottom:-25%;left:0;width:30%;
+  background:linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(200,255,215,.05) 35%,rgba(225,255,235,.17) 50%,rgba(200,255,215,.05) 65%,rgba(255,255,255,0) 100%);
+  transform:translateX(-160%) skewX(-18deg);
+}
+.hxl-bn-edge{
+  position:absolute;top:0;left:0;width:42%;height:1px;opacity:0;
+  background:linear-gradient(90deg,rgba(190,255,210,0),rgba(210,255,225,.95),rgba(190,255,210,0));
+  transform:translateX(-110%);
+}
+.hxl-bn-in{position:relative;padding:16px 20px 16px}
+.hxl-bn-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hxl-bn-kick{display:inline-flex;align-items:center;gap:9px;font:700 10px/1 'Space Mono',ui-monospace,Menlo,monospace;letter-spacing:.24em;color:var(--hxl-g2);white-space:nowrap}
+.hxl-bn-dot{width:7px;height:7px;border-radius:50%;background:var(--hxl-g2);box-shadow:0 0 0 3px rgba(48,209,88,.16),0 0 10px 1px rgba(48,209,88,.8)}
+.hxl-bn-clock{font:400 9.5px/1 'Space Mono',ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--hxl-faint);white-space:nowrap}
+.hxl-bn-row{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-top:8px}
+.hxl-bn-pct{display:flex;align-items:flex-start;font-weight:700;font-size:70px;line-height:1;letter-spacing:-.05em;color:#fff;font-variant-numeric:tabular-nums}
+.hxl-bn-num{display:block}
+.hxl-bn-sign{font-size:.46em;margin:.3em 0 0 .06em;letter-spacing:0;color:var(--hxl-g2)}
+.hxl-bn-pct.is-hit{filter:drop-shadow(0 0 22px rgba(48,209,88,.5)) drop-shadow(0 0 1px rgba(220,255,230,.45))}
+.hxl-bn-facts{text-align:right;min-width:0;padding-bottom:12px}
+.hxl-bn-rev{font-size:17px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hxl-bn-of{margin-top:5px;font-size:11.5px;color:var(--hxl-dim);font-variant-numeric:tabular-nums}
+.hxl-bn-bar{position:relative;height:4px;margin-top:10px;border-radius:99px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 1px rgba(0,0,0,.5)}
+.hxl-bn-fill{
+  position:absolute;top:0;bottom:0;left:0;width:100%;border-radius:inherit;transform-origin:0 50%;
+  background:linear-gradient(90deg,#1c8f3f 0%,#30d158 62%,#8dffb2 100%);
+  box-shadow:0 0 12px rgba(48,209,88,.45);
+}
+.hxl-bn-head{
+  position:absolute;top:50%;left:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;
+  background:radial-gradient(circle,#effff3 0,#7dffa6 32%,rgba(48,209,88,.35) 55%,rgba(48,209,88,0) 72%);
+}
+.hxl-bn-by{margin-top:12px;font-size:12.5px;line-height:1.35;color:var(--hxl-dim)}
+.hxl-bn-by b{color:var(--hxl-txt);font-weight:600}
+.hxl-bn-by em{font-style:normal;color:var(--hxl-g);font-weight:600;font-variant-numeric:tabular-nums}
+@media(min-width:769px){
+  .hxl-banner{border-radius:30px}
+  .hxl-bn-in{padding:20px 28px 20px}
+  .hxl-bn-pct{font-size:96px}
+  .hxl-bn-rev{font-size:22px}
+  .hxl-bn-of{font-size:12.5px}
+  .hxl-bn-by{font-size:13.5px}
+}
+@media(max-width:360px){
+  .hxl-bn-pct{font-size:58px}
+  .hxl-bn-rev{font-size:15px}
+}
+
+/* pembaca layar */
+.hxl-sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* "Kurangi transparansi": kaca jadi padat penuh (sudah tanpa blur) */
+@media (prefers-reduced-transparency:reduce){
+  .hxl-glass,.hxl-bloom,.hxl-bn-grid,.hxl-bn-bloom{display:none}
+  .hxl-cap,.hxl-mid{background:#1c1c1e}
+  .hxl-bn-bg{background:#1c1c1e}
+}
