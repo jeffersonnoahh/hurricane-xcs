@@ -1,0 +1,172 @@
+/* ══════════════════════════════════════════════════════════════════════
+   FX RANKS — peringkat yang bergerak (lihat js/fx-ranks.js).
+   Tanpa backdrop-filter. Animasi hanya transform/opacity, sekali jalan,
+   tidak ada loop tanpa henti. Tidak ada !important pada animation/transition.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --fxr-green:#30d158;
+  --fxr-green-rgb:48,209,88;
+  --fxr-gold:#ffd426;
+  --fxr-gold-rgb:255,212,38;
+  --fxr-red:#ff453a;
+  --fxr-ease:cubic-bezier(.22,1,.36,1);
+}
+
+/* wadah untuk baris "hantu" yang terdorong keluar dari 6 besar */
+#lb{position:relative}
+.fxr-ghost{position:absolute!important;margin:0!important;pointer-events:none!important;z-index:1}
+
+/* baris yang sedang menyala / naik */
+.fxr-lit{position:relative}
+.fxr-lift{position:relative;z-index:3}
+/* yang naik menutupi baris yang dilewatinya (baris tabel/watchlist aslinya
+   transparan -> tanpa ini dua teks bertumpuk saat berpapasan) */
+tbody tr.fxr-lift,.tw tbody tr.fxr-lift{background-color:#090e0b!important}
+.wl-row.fxr-lift{background-color:#090e0b!important}
+.lbi.fxr-lift{
+  background-color:rgba(16,21,18,.97)!important;
+  box-shadow:inset 0 1px 0 0 rgba(255,255,255,.24),inset 0 0 0 1px rgba(var(--fxr-green-rgb),.30),0 18px 34px -14px rgba(0,0,0,.95)!important;
+}
+.fxr-gold.lbi.fxr-lift{box-shadow:inset 0 1px 0 0 rgba(255,255,255,.24),inset 0 0 0 1px rgba(var(--fxr-gold-rgb),.32),0 18px 34px -14px rgba(0,0,0,.95)!important}
+
+/* ── cahaya tepi (span di dalam baris; di tabel: di sel pertama, tapi
+   ukurannya mengikuti <tr> yang position:relative) ─────────────────── */
+.fxr-glow{
+  position:absolute;left:0;top:0;width:100%;height:100%;z-index:4;
+  pointer-events:none;border-radius:inherit;overflow:hidden;
+  background:linear-gradient(90deg,rgba(var(--fxr-green-rgb),.24) 0%,rgba(var(--fxr-green-rgb),.085) 32%,rgba(var(--fxr-green-rgb),0) 68%);
+  box-shadow:inset 2px 0 0 rgba(var(--fxr-green-rgb),.95),inset 0 0 0 1px rgba(var(--fxr-green-rgb),.14);
+  mix-blend-mode:screen;mix-blend-mode:plus-lighter;
+  opacity:0;
+  animation:fxr-glow 3.3s var(--fxr-ease) forwards;
+}
+.fxr-glow::after{
+  content:"";position:absolute;top:0;bottom:0;left:0;width:38%;
+  background:linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.10) 50%,rgba(255,255,255,0) 100%);
+  transform:translateX(-120%);
+  animation:fxr-sweep 1.15s cubic-bezier(.45,0,.2,1) .28s forwards;
+}
+.fxr-gold .fxr-glow{
+  background:linear-gradient(90deg,rgba(var(--fxr-gold-rgb),.22) 0%,rgba(var(--fxr-gold-rgb),.075) 32%,rgba(var(--fxr-gold-rgb),0) 68%);
+  box-shadow:inset 2px 0 0 rgba(var(--fxr-gold-rgb),.95),inset 0 0 0 1px rgba(var(--fxr-gold-rgb),.16);
+}
+/* sel tabel: sudut tidak membulat; kartu (.lbi .spc) mewarisi radius */
+tr .fxr-glow{border-radius:0}
+@keyframes fxr-glow{
+  0%  {opacity:0}
+  8%  {opacity:1}
+  50% {opacity:.8}
+  100%{opacity:0}
+}
+@keyframes fxr-sweep{
+  from{transform:translateX(-120%)}
+  to  {transform:translateX(330%)}
+}
+
+/* ── jejak cahaya dari posisi lama (tumbuh bersama luncuran, lalu pudar) ─ */
+.fxr-trail{
+  position:absolute;left:0;top:100%;width:2px;z-index:5;
+  pointer-events:none;border-radius:2px;transform-origin:50% 0;
+  background:linear-gradient(180deg,rgba(var(--fxr-green-rgb),.95) 0%,rgba(var(--fxr-green-rgb),.35) 45%,rgba(var(--fxr-green-rgb),0) 100%);
+  box-shadow:0 0 12px 1px rgba(var(--fxr-green-rgb),.42);
+  transform:scaleY(0);
+}
+.lbi > .fxr-trail,.wl-row > .fxr-trail{left:-1px}
+.fxr-trail-gold{
+  background:linear-gradient(180deg,rgba(var(--fxr-gold-rgb),.95) 0%,rgba(var(--fxr-gold-rgb),.32) 45%,rgba(var(--fxr-gold-rgb),0) 100%);
+  box-shadow:0 0 12px 1px rgba(var(--fxr-gold-rgb),.38);
+}
+
+/* ── label "naik 2" tepat setelah nama. position:absolute (left/top dari
+   JS) supaya tidak menggeser tata letak tabel/kartu sama sekali. ─────── */
+.fxr-tag{
+  position:absolute;z-index:6;pointer-events:none;
+  display:inline-flex;align-items:center;
+  margin:0;height:17px;padding:0 7px 0 6px;border-radius:999px;
+  font:700 9.5px/1 'Space Grotesk',-apple-system,system-ui,sans-serif;
+  letter-spacing:.02em;font-variant-numeric:tabular-nums;text-transform:none;white-space:nowrap;
+  color:var(--fxr-green);
+  /* hampir padat: tetap terbaca walau menimpa teks di sebelahnya */
+  background:linear-gradient(180deg,#123a1f,#0b2414);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(var(--fxr-green-rgb),.42),0 6px 16px -8px rgba(var(--fxr-green-rgb),.75);
+  opacity:0;transform-origin:0 50%;
+  animation:fxr-tag 3.3s var(--fxr-ease) .16s forwards;
+}
+.fxr-tag::before{
+  /* jarak ke teks pakai margin, BUKAN flex gap (iOS < 14.5 / Chrome < 84) */
+  content:"";width:0;height:0;flex:none;margin-right:4px;
+  border-left:3.5px solid transparent;border-right:3.5px solid transparent;
+  border-bottom:4.5px solid currentColor;
+}
+.fxr-gold .fxr-tag{
+  color:var(--fxr-gold);
+  background:linear-gradient(180deg,#3a3210,#231e08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(var(--fxr-gold-rgb),.38),0 6px 16px -8px rgba(var(--fxr-gold-rgb),.7);
+}
+@keyframes fxr-tag{
+  0%  {opacity:0;transform:translateY(4px) scale(.8)}
+  7%  {opacity:1;transform:translateY(0) scale(1.07)}
+  12% {opacity:1;transform:none}
+  82% {opacity:1;transform:none}
+  100%{opacity:0;transform:translateY(-3px)}
+}
+
+/* ── angka bergulir: teks asli disembunyikan, nilai antara dari data-fxr ─ */
+.fxr-roll.fxr-roll{position:relative;color:transparent;-webkit-text-fill-color:transparent!important;text-shadow:none}
+.fxr-roll::after{
+  content:attr(data-fxr);position:absolute;top:0;right:0;bottom:0;left:0;
+  color:var(--fxr-c,#fff);-webkit-text-fill-color:var(--fxr-c,#fff);
+  text-align:inherit;white-space:nowrap;pointer-events:none;
+  font-variant-numeric:tabular-nums;
+}
+.lbs.fxr-roll::after,.rc.fxr-roll::after,.wl-total.fxr-roll::after{text-align:right}
+td > .rc.fxr-roll::after{text-align:center}
+.lbr.fxr-roll::after{text-align:center}
+
+/* ── chip gerak peringkat bulan ini (Monthly Recap) ────────────────── */
+.fxr-chip{
+  display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+  min-width:26px;height:18px;padding:0 6px;margin-left:8px;border-radius:6px;
+  font:700 10.5px/1 'Space Grotesk',-apple-system,system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;letter-spacing:.01em;font-style:normal;white-space:nowrap;
+  color:#8e8e93;background:rgba(255,255,255,.05);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.fxr-chip.up{
+  color:var(--fxr-green);background:rgba(var(--fxr-green-rgb),.12);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 0 1px rgba(var(--fxr-green-rgb),.32);
+}
+.fxr-chip.down{
+  color:var(--fxr-red);background:rgba(255,69,58,.11);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,69,58,.30);
+}
+.fxr-chip.fxr-in{animation:fxr-chip-in .5s var(--fxr-ease) backwards}
+.fxr-chip.fxr-pop{animation:fxr-chip-pop .6s cubic-bezier(.34,1.45,.64,1)}
+@keyframes fxr-chip-in{from{opacity:0;transform:translateX(-6px)}}
+@keyframes fxr-chip-pop{0%{transform:scale(.7);opacity:.3}60%{transform:scale(1.12);opacity:1}100%{transform:none}}
+
+/* keterangan kecil di judul "Salesperson Ranking This Month" */
+.fxr-legend{
+  order:2;display:inline-flex;align-items:center;flex:none;
+  font:500 10px/1 'Space Mono',monospace;letter-spacing:.02em;text-transform:none;color:#8e8e93;
+}
+/* judul .sl berjarak lewat flex gap; tanpa dukungan itu (lihat flexGap() di JS) */
+.fxr-legend.fxr-nogap{margin-left:10px}
+/* jarak antar-chip & ke teks pakai margin, BUKAN flex gap (iOS < 14.5) */
+.fxr-legend .fxr-chip{margin:0 6px 0 0;height:16px;min-width:22px;font-size:9.5px;padding:0 5px}
+@media (max-width:420px){
+  .fxr-legend .fxr-chip.down{display:none}
+  .fxr-legend{font-size:9px}
+}
+
+/* ── Kurangi Gerak: tidak ada yang bergerak; label & cahaya cukup muncul
+   lalu hilang (dilepas oleh JS setelah ±3 detik). premium.css memaksa
+   animation-duration .01ms, jadi animasi "pudar" pun diganti tampilan diam. */
+@media (prefers-reduced-motion:reduce){
+  .fxr-tag{animation:none;opacity:1;transform:none}
+  .fxr-glow{animation:none;opacity:.65}
+  .fxr-glow::after{display:none}
+  .fxr-trail{display:none}
+  .fxr-chip.fxr-in,.fxr-chip.fxr-pop{animation:none}
+}

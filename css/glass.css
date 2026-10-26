@@ -1,0 +1,589 @@
+/* ══════════════════════════════════════════════════════════════════════
+   LIQUID GLASS — gaya Apple Liquid Glass (iOS 26). CAT ULANG SAJA.
+   Dimuat PALING AKHIR. Tidak ada HTML/JS yang diubah; semua tombol, fitur,
+   dan tata letak tetap. Hapus satu baris <link> ini = kembali ke tampilan
+   sebelumnya.
+
+   ATURAN YANG WAJIB DIJAGA (masing-masing pernah/hampir jadi bug):
+
+   1. Latar HITAM PEKAT (keputusan pemilik, 26 Okt 2026). Kaca dibentuk
+      oleh isi putih tipis + kilau tepi, bukan oleh cahaya di belakangnya.
+
+   2. backdrop-filter MAHAL di HP Android tim. Maksimal 2 lapisan blur saat
+      diam (header + nav) dan 1 lagi saat modal terbuka. JANGAN di kartu yang
+      berulang (34 kartu Salespeople, 30 kotak riwayat, ±73 baris tabel),
+      JANGAN di elemen di dalam lapisan yang sudah blur (blur bersarang
+      hanya mengaburkan latar overlay yang datar — biaya tanpa hasil), dan
+      JANGAN di body/.page/.container: 10 elemen position:fixed (modal,
+      kalender, laci input) adalah anak langsung body dan ikut "terkurung".
+
+   3. JANGAN timpa background/border di elemen yang warnanya BERMAKNA:
+      - app.js menulis warna inline: garis warna tim (border-left) di
+        .spg-team-hdr dan .sp-lookup-card, tombol kuning/merah Edit/Hapus
+        di Admin, tombol merah "Hapus" di dialog konfirmasi. Deklarasi
+        !important di stylesheet MENGALAHKAN style inline — jadi tombol
+        hanya dikaca bila TIDAK punya background/border inline.
+      - kelas status: hari terpilih/hari ini/ada data di riwayat, produk
+        yang terjual, sales sudah/belum lapor, mode harga Normal/Custom.
+        Semuanya dikembalikan di bagian 3 sebagai tepi kaca berwarna.
+
+   4. JANGAN !important pada transition/animation. premium.css punya
+      pengaman "Kurangi Gerak" (*{transition-duration:.01ms!important});
+      transition !important di sini akan mengalahkannya.
+
+   5. Animasi masuk dipasang di wrapper statis tiap halaman, BUKAN di kartu
+      yang dibangun ulang app.js — kalau tidak, setiap penjualan masuk
+      membuat seluruh layar beranimasi ulang.
+
+   6. Jangan sentuh: width/min-width/overflow .tw & .premium-performance-*
+      (perbaikan geser tabel di HP), z-index overlay kalender (1100), kolom
+      Omset yang sticky di tabel HP (harus tetap padat), ::after di
+      .kpi-card (titik warna) dan .tw (petunjuk "Swipe table").
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --lg-fill:linear-gradient(165deg,rgba(255,255,255,.085) 0%,rgba(255,255,255,.028) 46%,rgba(255,255,255,.045) 100%);
+  --lg-fill-strong:linear-gradient(165deg,rgba(255,255,255,.12) 0%,rgba(255,255,255,.04) 48%,rgba(255,255,255,.06) 100%);
+  --lg-hi:inset 0 1px 0 0 rgba(255,255,255,.22);                /* kilau tepi atas */
+  --lg-hair:inset 0 0 0 1px rgba(255,255,255,.075);             /* garis rambut */
+  --lg-glow:inset 0 -14px 24px -18px rgba(255,255,255,.10);     /* cahaya tembus bawah */
+  --lg-depth:0 22px 44px -24px rgba(0,0,0,.9),0 3px 10px -2px rgba(0,0,0,.45);
+  --lg-depth-sm:0 10px 22px -16px rgba(0,0,0,.9);
+  --lg-blur:blur(26px) saturate(175%);
+  --lg-chrome:rgba(14,15,18,.52);
+  --lg-ease:cubic-bezier(.22,1,.36,1);       /* keluar lembut */
+  --lg-spring:cubic-bezier(.34,1.45,.64,1);  /* sedikit memantul */
+}
+
+/* ══ 1. LATAR AMBIENT — yang membuat kaca terlihat ══════════════════════ */
+html{background:#000!important}
+body,.page,.container,.premium-performance-grid,.premium-overview-grid{background:transparent!important}
+/* LATAR HITAM PEKAT (permintaan Jeff, 26 Okt 2026): tanpa cahaya ambient dan
+   tanpa wallpaper bergerak. Kaca tetap terbaca lewat isi putih tipis, kilau
+   tepi atas, dan header/nav yang mem-blur isi halaman yang digulir di
+   bawahnya. Lapisan ambient lama (hijau kiri-atas, merah kanan-bawah,
+   kuning logo) disimpan di riwayat git bila ingin dikembalikan. */
+body::before{content:none!important}
+
+/* ══ 2. KACA RINGAN — kartu (tanpa blur) ════════════════════════════════ */
+.goal-card,.kpi-card,.panel,.premium-status-strip,.tw,
+.ins-kpi-card,.ins-panel,.act-form,.act-log,.nr-panel,
+.warn-section,.warn-thresh-card,.sp-lookup-box,
+.ms-search-card,.omset-section,.omset-total-card,.wl-panel,.spc{
+  background:var(--lg-fill)!important;
+  border:0!important;
+  box-shadow:var(--lg-hi),var(--lg-hair),var(--lg-glow),var(--lg-depth)!important;
+  border-radius:22px!important;
+}
+.spc{contain:paint}   /* batasi repaint per kartu; .spc memang sudah overflow:hidden */
+.hday,.pi,.mk,.mpr,.lbi,.warn-thresh-item,
+.nr-item:not(.done):not(.missing){
+  background:var(--lg-fill)!important;
+  border:0!important;
+  box-shadow:var(--lg-hi),var(--lg-hair),var(--lg-depth-sm)!important;
+  border-radius:16px!important;
+}
+.spc-bar{border-radius:22px 22px 0 0!important;opacity:.55}
+
+/* reference-dashboard.css & professional.css memaksa baris Watchlist dan 4
+   bagian strip status jadi #000 lewat LONGHAND (background-color +
+   background-image) — keduanya harus ditimpa, kalau tidak kacanya tertutup. */
+.wl-head,.wl-row,.wl-foot{background-color:transparent!important;background-image:none!important}
+.wl-row{box-shadow:inset 0 -1px 0 rgba(255,255,255,.05)!important;border-bottom:0!important}
+.wl-row:last-child{box-shadow:none!important}
+@media (hover:hover){.wl-row:hover{background-color:rgba(255,255,255,.04)!important}}
+.premium-status-strip>div{background-color:transparent!important;background-image:none!important;border:0!important}
+@media(min-width:769px){
+  .premium-status-strip>div+div{box-shadow:inset 1px 0 0 rgba(255,255,255,.07)!important}
+}
+@media(max-width:768px){
+  /* di HP strip ini jadi deretan kartu yang digeser — kaca per kartu */
+  .premium-status-strip{background:transparent!important;box-shadow:none!important}
+  .premium-status-strip>div{
+    background:var(--lg-fill)!important;border-radius:18px!important;
+    box-shadow:var(--lg-hi),var(--lg-hair),var(--lg-depth-sm)!important;
+  }
+}
+
+/* elemen dengan GARIS WARNA TIM inline (border-left) — sisi kiri dibiarkan */
+.spg-team-hdr,.sp-lookup-card{
+  background:var(--lg-fill)!important;
+  border-top:0!important;border-right:0!important;border-bottom:0!important;
+  box-shadow:var(--lg-hi),var(--lg-depth-sm)!important;
+  border-radius:16px!important;
+}
+
+/* ══ 3. STATUS — dikembalikan sebagai tepi kaca berwarna ════════════════ */
+.hday.has-data{
+  background:linear-gradient(165deg,rgba(48,209,88,.10),rgba(48,209,88,.03))!important;
+  box-shadow:var(--lg-hi),inset 0 0 0 1px rgba(48,209,88,.28),var(--lg-depth-sm)!important;
+}
+.hday.today-day{
+  box-shadow:var(--lg-hi),inset 0 0 0 1px rgba(59,157,255,.70),var(--lg-depth-sm)!important;
+}
+.hday.active-day{
+  background:linear-gradient(165deg,rgba(48,209,88,.24),rgba(48,209,88,.07))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.30),inset 0 0 0 1.5px rgba(48,209,88,.85),
+             0 10px 24px -10px rgba(48,209,88,.45)!important;
+}
+.pi.hs{
+  background:linear-gradient(165deg,rgba(48,209,88,.14),rgba(48,209,88,.04))!important;
+  box-shadow:var(--lg-hi),inset 0 0 0 1px rgba(48,209,88,.40),var(--lg-depth-sm)!important;
+}
+.nr-item.done,.nr-item.missing{border-radius:16px!important}
+.nr-item.done{box-shadow:var(--lg-hi),inset 0 0 0 1px rgba(48,209,88,.32)!important}
+.nr-item.missing{box-shadow:var(--lg-hi),inset 0 0 0 1px rgba(255,69,58,.50)!important}
+/* kartu peringatan: tetap MERAH — kaca tidak boleh melemahkan alarm */
+.warn-crit-card,#page-warning .warn-summary-card{
+  background:linear-gradient(165deg,rgba(255,69,58,.12),rgba(255,69,58,.03))!important;
+  border:0!important;border-radius:18px!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,69,58,.45),var(--lg-depth-sm)!important;
+}
+
+/* ══ 4. HERO — kaca paling tebal (tanpa blur: latar ambient sudah lembut) ═ */
+.omset-hero{
+  background:var(--lg-fill-strong)!important;
+  border:0!important;border-radius:28px!important;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,.30),
+    inset 0 0 0 1px rgba(255,255,255,.09),
+    inset 0 -30px 50px -40px rgba(48,209,88,.28),
+    0 40px 80px -40px rgba(0,0,0,.95),0 6px 18px -4px rgba(0,0,0,.5)!important;
+}
+
+/* ══ 5. TABEL — baris transparan di atas kaca ══════════════════════════
+   (kolom Omset sticky di HP tetap padat lewat aturan professional.css yang
+   spesifisitasnya lebih tinggi — sengaja tidak disentuh) */
+.tw table,.tw thead,.tw tbody,.tw tr,.tw td,.tw th,
+table,thead,tbody,tr,td,th{background:transparent!important}
+.tw thead tr,thead tr{box-shadow:inset 0 -1px 0 rgba(255,255,255,.08)!important;border:0!important}
+.tw tbody tr,tbody tr{border:0!important;box-shadow:inset 0 -1px 0 rgba(255,255,255,.045)!important;
+  transition:background-color .25s var(--lg-ease)}
+tbody tr:last-child{box-shadow:none!important}
+@media (hover:hover){tbody tr:hover{background:rgba(255,255,255,.045)!important}}
+
+/* ══ 6. CHROME — 2 lapisan blur sungguhan (header + nav) ════════════════ */
+header{
+  background:var(--lg-chrome)!important;
+  /* nilai ditulis langsung, BUKAN var(): bug WebKit — -webkit-backdrop-filter
+     dengan var() tidak menghasilkan blur di iPhone (Safari < 18 hanya kenal
+     versi -webkit-) */
+  -webkit-backdrop-filter:blur(26px) saturate(175%)!important;backdrop-filter:blur(26px) saturate(175%)!important;
+  border-bottom:0!important;
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.07),0 12px 30px -20px rgba(0,0,0,.9)!important;
+}
+.nav-wrapper{
+  background:var(--lg-chrome)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(175%)!important;backdrop-filter:blur(26px) saturate(175%)!important;
+  border:0!important;
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.06)!important;
+}
+/* .nav-bar ada DI DALAM .nav-wrapper yang sudah blur -> blur bersarang dibuang */
+.nav-bar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:transparent!important}
+/* tab navigasi: kapsul kaca untuk yang aktif, bukan garis bawah.
+   reference-dashboard.css menggambar garis hijau lewat .nav-tab.active[data-page]
+   (spesifisitas 0,3,0) — dikalahkan di sini supaya tidak ada dua penanda aktif. */
+.nav-bar .nav-tab[data-page],.nav-bar .nav-tab[data-page]:hover,.nav-bar .nav-tab.active[data-page]{
+  border-bottom-color:transparent!important;
+}
+.nav-bar .nav-tab{
+  border-radius:999px!important;border-bottom-color:transparent!important;
+  transition:color .3s var(--lg-ease),background-color .3s var(--lg-ease),box-shadow .3s var(--lg-ease),transform .45s var(--lg-spring);
+}
+.nav-bar .nav-tab.active{
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.06))!important;
+  color:#fff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 0 0 1px rgba(255,255,255,.10),0 8px 20px -12px rgba(0,0,0,.9)!important;
+}
+@media(min-width:769px){
+  /* tinggi nav HARUS tetap 66px: #leaderboardPanel sticky di top:148px
+     (= header 82 + nav 66). 5+6+44+6+5 = 66. */
+  .nav-bar{gap:4px!important;padding:5px 10px!important}
+  /* jarak teks yang pernah diminta tetap terjaga — sekarang di dalam kapsul */
+  .nav-bar .nav-tab{min-height:44px!important;margin:6px 0!important;padding:0 18px!important;
+    display:inline-flex!important;align-items:center!important}
+}
+@media(max-width:768px){
+  /* di HP .nav-bar 76px & align-items:end -> kapsul aktif menempel ke tepi
+     bawah layar (Android tidak punya safe-area). Beri ruang mengambang. */
+  .nav-bar{padding-bottom:8px!important}
+  .nav-bar .nav-tab{border-radius:18px!important}
+  .nav-bar .nav-tab.active{
+    background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,.05))!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.30),inset 0 0 0 1px rgba(255,255,255,.10),0 10px 22px -12px rgba(0,0,0,.95)!important;
+  }
+}
+
+/* ══ 7. SEGMENTED CONTROL (tab kecil, periode, pilih hari) ══════════════ */
+.tab-row,.ins-period-tabs,.day-switcher{
+  background:rgba(255,255,255,.05)!important;
+  border:0!important;border-radius:999px!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 1px 2px rgba(0,0,0,.45)!important;
+}
+.tab,.ins-period-btn{
+  border-radius:999px!important;
+  transition:color .3s var(--lg-ease),background-color .3s var(--lg-ease),box-shadow .3s var(--lg-ease),transform .45s var(--lg-spring);
+}
+.tab.active,.ins-period-btn.active{
+  background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.07))!important;
+  color:#fff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.34),inset 0 0 0 1px rgba(255,255,255,.10),0 6px 16px -10px rgba(0,0,0,.9)!important;
+}
+
+/* ══ 8. TOMBOL ══════════════════════════════════════════════════════════
+   Hanya tombol TANPA warna inline yang dikaca. Tombol Edit/Hapus (kuning/
+   merah), tombol konfirmasi bahaya, dan kilatan hijau "tersimpan" ditulis
+   inline oleh app.js dan harus tetap terlihat seperti itu. */
+.premium-head-ghost,
+.btn:not([style*="background"]):not([style*="border"]):not(.bg-gold):not(.bg-wa):not(.primary):not(.btn-primary){
+  background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.04))!important;
+  border:0!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),inset 0 0 0 1px rgba(255,255,255,.08),0 8px 18px -12px rgba(0,0,0,.9)!important;
+}
+.btn,.premium-head-ghost{border-radius:14px!important}
+/* tombol utama tetap hijau — kaca berwarna */
+.premium-quick-add,.btn.bg-gold:not([style*="background"]),.premium-add-fab{
+  background:linear-gradient(180deg,#46e06d 0%,#30d158 55%,#26b84b 100%)!important;
+  border:0!important;color:#03140a!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(0,60,20,.35),
+             0 10px 26px -10px rgba(48,209,88,.55),0 2px 6px rgba(0,0,0,.4)!important;
+}
+.premium-quick-add{border-radius:14px!important}
+.premium-add-fab{border-radius:999px!important}
+/* mode harga Normal/Custom: yang aktif HARUS jelas terlihat */
+.price-toggle-btn{border-radius:12px!important}
+.price-toggle-btn.active-normal,.price-toggle-btn.active-custom{
+  background:linear-gradient(180deg,rgba(48,209,88,.24),rgba(48,209,88,.08))!important;
+  color:#30d158!important;border-color:transparent!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(48,209,88,.60)!important;
+}
+
+/* ══ 9. KOLOM INPUT ═════════════════════════════════════════════════════ */
+input,select,textarea,.sp-lookup-input,.omset-input,.warn-thresh-input,.ms-sp-select{
+  background:rgba(255,255,255,.055)!important;
+  border:0!important;border-radius:12px!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),inset 0 1px 3px rgba(0,0,0,.5)!important;
+  transition:box-shadow .3s var(--lg-ease),background-color .3s var(--lg-ease);
+}
+input:focus,select:focus,textarea:focus,.sp-lookup-input:focus,.omset-input:focus{
+  background:rgba(255,255,255,.08)!important;outline:none!important;
+  box-shadow:inset 0 0 0 1px rgba(48,209,88,.55),0 0 0 4px rgba(48,209,88,.14)!important;
+}
+.sp-lookup-input-wrap,.omset-input-wrap{background:transparent!important;border:0!important;box-shadow:none!important}
+input[type="checkbox"],input[type="radio"]{box-shadow:none!important;background:initial!important}
+
+/* ══ 10. MODAL & LACI ═══════════════════════════════════════════════════
+   Blur ada di OVERLAY (lapisan ke-3, hanya saat terbuka). Kotak modalnya
+   sendiri tanpa blur — dia di dalam overlay yang sudah blur. */
+.mo,.cal-overlay,.premium-form-overlay,.premium-more-overlay{
+  background:rgba(0,0,0,.42)!important;
+  -webkit-backdrop-filter:blur(16px) saturate(140%)!important;backdrop-filter:blur(16px) saturate(140%)!important;
+}
+/* Overlay laci & menu "More" tidak di-display:none saat tertutup — hanya
+   opacity:0. Jadi blur-nya tetap ada di layar penuh walau tak terlihat.
+   Blur hanya dipasang saat benar-benar terbuka. */
+.premium-form-overlay,.premium-more-overlay{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.premium-form-open .premium-form-overlay,.premium-more-open .premium-more-overlay{
+  -webkit-backdrop-filter:blur(16px) saturate(140%)!important;backdrop-filter:blur(16px) saturate(140%)!important;
+}
+.mbox,.wa-box,.cal-box,.premium-more-sheet{
+  background:linear-gradient(165deg,rgba(44,46,52,.86),rgba(22,23,27,.92))!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  border:0!important;border-radius:28px!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26),inset 0 0 0 1px rgba(255,255,255,.09),
+             0 50px 100px -30px rgba(0,0,0,.95)!important;
+}
+.premium-entry-drawer{
+  border:0!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(255,255,255,.08),
+             0 -30px 80px -30px rgba(0,0,0,.9)!important;
+}
+/* desktop: laci samping kaca sungguhan — blur HANYA saat terbuka (saat
+   tertutup laci digeser ke luar layar, tapi tetap dirender) */
+@media(min-width:769px){
+  .premium-entry-drawer{
+    background:linear-gradient(165deg,rgba(40,42,48,.90),rgba(20,21,25,.94))!important;
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+    border-radius:28px 0 0 28px!important;
+  }
+  .premium-form-open .premium-entry-drawer{
+    background:linear-gradient(165deg,rgba(40,42,48,.72),rgba(20,21,25,.80))!important;
+    -webkit-backdrop-filter:blur(30px) saturate(170%)!important;backdrop-filter:blur(30px) saturate(170%)!important;
+  }
+}
+/* HP: laci layar penuh yang bergerak = kombinasi termahal -> padat, tanpa blur */
+@media(max-width:768px){
+  .premium-entry-drawer{
+    background:linear-gradient(180deg,#1b1d22 0%,#101114 100%)!important;
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+    border-radius:28px 28px 0 0!important;
+  }
+  .mbox,.wa-box{border-radius:28px 28px 0 0!important}
+}
+
+/* ══ 11. GERAK ══════════════════════════════════════════════════════════ */
+/* halaman masuk: sekali per pindah halaman (bukan per update data) */
+/* 'backwards', bukan 'both': 'both' meninggalkan transform identitas
+   permanen di setiap bagian halaman (membuat stacking context baru) */
+.page.active>.container>*{animation:lg-rise .4s var(--lg-ease) backwards}
+.page.active>.container>*:nth-child(2){animation-delay:.025s}
+.page.active>.container>*:nth-child(3){animation-delay:.05s}
+.page.active>.container>*:nth-child(4){animation-delay:.075s}
+.page.active>.container>*:nth-child(5){animation-delay:.1s}
+.page.active>.container>*:nth-child(n+6){animation-delay:.12s}
+@keyframes lg-rise{
+  from{opacity:0;transform:translate3d(0,10px,0) scale(.99)}
+  to  {opacity:1;transform:none}
+}
+/* modal: muncul memantul */
+.mo .mbox,.mo .wa-box,.cal-overlay .cal-box{animation:lg-pop .38s var(--lg-spring) backwards}
+@keyframes lg-pop{
+  from{opacity:0;transform:translate3d(0,18px,0) scale(.94)}
+  to  {opacity:1;transform:none}
+}
+/* tekan: mengecil sedikit lalu memantul balik (sekitar 0,2 detik) */
+.btn,.premium-quick-add,.premium-head-ghost,.premium-add-fab,.tab,.ins-period-btn,
+.nav-tab,.spc,.lbi,.hday,.sp-lookup-card,.pi,.price-toggle-btn{
+  transition:transform .3s var(--lg-spring),box-shadow .3s var(--lg-ease),background-color .3s var(--lg-ease),color .3s var(--lg-ease);
+}
+.btn:active,.premium-quick-add:active,.premium-head-ghost:active,
+.tab:active,.ins-period-btn:active,.nav-tab:active,.spc:active,.lbi:active,.hday:active,
+.sp-lookup-card:active,.pi:active,.price-toggle-btn:active{
+  transform:scale(.965);transition-duration:.12s;
+}
+.premium-add-fab:active{transform:translateX(-50%) scale(.94);transition-duration:.12s}   /* FAB sudah ber-translateX(-50%) */
+/* hover (hanya perangkat dengan mouse): kartu terangkat, tepi lebih terang */
+@media (hover:hover){
+  /* .panel juga cocok dengan laci input (#saleEntryPanel) — dikecualikan,
+     kalau tidak laci yang terbuka ikut terangkat 3px setiap disorot mouse */
+  .spc:hover,.lbi:hover,.sp-lookup-card:hover,.kpi-card:hover,.panel:not(.premium-entry-drawer):hover{
+    transform:translate3d(0,-3px,0);
+  }
+  .spc:hover,.kpi-card:hover,.panel:not(.premium-entry-drawer):hover{
+    box-shadow:inset 0 1px 0 0 rgba(255,255,255,.30),inset 0 0 0 1px rgba(255,255,255,.12),
+               inset 0 -14px 24px -18px rgba(255,255,255,.14),0 30px 50px -26px rgba(0,0,0,.95)!important;
+  }
+  .kpi-card,.panel:not(.premium-entry-drawer){transition:transform .3s var(--lg-spring),box-shadow .3s var(--lg-ease)}
+}
+
+/* ══ 12. ANGKA BERGULIR (dipakai js/motion.js) ══════════════════════════
+   Teks asli disembunyikan sesaat; nilai antara digambar dari data-lg.
+   Teks asli tetap berisi nilai FINAL, jadi skrip lain yang membacanya
+   (premium-ui.js, reference-dashboard.js) tidak pernah melihat angka
+   setengah jalan. */
+.lg-rolling{position:relative!important;color:transparent!important;-webkit-text-fill-color:transparent!important}
+.lg-rolling::after{
+  content:attr(data-lg);position:absolute;top:0;right:0;bottom:0;left:0;
+  color:var(--lg-c,#fff);-webkit-text-fill-color:var(--lg-c,#fff);
+  text-align:inherit;white-space:nowrap;pointer-events:none;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ══ 13. SKELETON SAAT MEMUAT (bukan "Rp 0") ════════════════════════════ */
+html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig,html.lg-loading .kpi-val,
+html.lg-loading #totalRev,html.lg-loading #goalPct,html.lg-loading .goal-main,
+html.lg-loading #premiumPace,html.lg-loading #premiumCloses,html.lg-loading #premiumTopTeam,
+html.lg-loading #K1c,html.lg-loading #K2c{
+  color:transparent!important;-webkit-text-fill-color:transparent!important;
+  background:linear-gradient(100deg,rgba(255,255,255,.045) 30%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.045) 70%)!important;
+  background-size:240% 100%!important;border-radius:12px!important;
+  width:fit-content;min-width:3.4em;
+  animation:lg-shimmer 1.35s ease-in-out infinite;
+}
+html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig{min-width:min(78%,560px)}
+@keyframes lg-shimmer{from{background-position:130% 0}to{background-position:-130% 0}}
+
+/* ══ 14. PERAYAAN TARGET HARIAN (sekali sehari) ═════════════════════════
+   Lewat filter, bukan box-shadow: box-shadow kartu memakai !important dan
+   animasi CSS tidak bisa menimpa deklarasi !important. */
+.goal-card.lg-goal-hit{animation:lg-goal-glow 2.4s var(--lg-ease)}
+@keyframes lg-goal-glow{
+  0%  {filter:drop-shadow(0 0 0 rgba(48,209,88,0))}
+  22% {filter:drop-shadow(0 0 26px rgba(48,209,88,.55)) drop-shadow(0 0 2px rgba(255,212,38,.6))}
+  100%{filter:drop-shadow(0 0 0 rgba(48,209,88,0))}
+}
+.lg-sparks{position:fixed;top:0;left:0;z-index:1200;pointer-events:none}   /* ukuran diatur motion.js */
+
+/* ══ 15. AKSESIBILITAS & FALLBACK ═══════════════════════════════════════ */
+@media (prefers-reduced-motion:reduce){
+  .page.active>.container>*,.mo .mbox,.mo .wa-box,.cal-overlay .cal-box,
+  .goal-card.lg-goal-hit,
+  html.lg-loading #liveOmsetBig,html.lg-loading #mOmsetBig,html.lg-loading .kpi-val,
+  html.lg-loading #totalRev,html.lg-loading #goalPct{animation:none}
+}
+/* "Kurangi transparansi": kaca jadi padat, angka tetap jelas. Catatan: hanya
+   Chrome (118+) yang mengenal media query ini — Safari belum, dan Android
+   tidak punya pengaturan sistemnya. Jadi ini bonus, bukan jalur utama. */
+@media (prefers-reduced-transparency:reduce){
+  body::before{display:none!important}
+  header,.nav-wrapper,.premium-entry-drawer,.mo,.cal-overlay,.premium-form-overlay,.premium-more-overlay{
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  header,.nav-wrapper{background:#111214!important}
+  .goal-card,.kpi-card,.panel,.premium-status-strip,.tw,.spc,.hday,.pi,.mk,.mpr,.lbi,.omset-hero,
+  .mbox,.wa-box,.cal-box,.premium-entry-drawer{background:#1c1c1e!important}
+}
+/* browser tanpa backdrop-filter: lapisan chrome dibuat padat */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  header,.nav-wrapper{background:rgba(14,15,18,.96)!important}
+  .premium-entry-drawer{background:#1c1d21!important}
+}
+
+
+/* ══ 16. ANIMASI MASUK HALAMAN ══════════════════════════════════════════
+   .lg-enter dipasang js/motion.js selama ±2,4 detik setiap kali halaman
+   dibuka (dan saat data pertama masuk), dan hanya elemen bertanda .lg-in
+   (yang terlihat di layar saat itu) yang beranimasi. Render ulang Firebase
+   di dalam jendela melanjutkan animasi dari titik yang sama (delay negatif
+   dari motion.js); di luar jendela tidak ada yang beranimasi ulang. Semua memakai fill 'backwards'/'forwards' yang
+   berakhir di keadaan normal, jadi tidak ada transform yang tertinggal. */
+@keyframes lg-card-in{from{opacity:0;transform:translate3d(0,18px,0) scale(.965)}to{opacity:1;transform:none}}
+@keyframes lg-draw{to{stroke-dashoffset:0}}
+@keyframes lg-fade{from{opacity:0}}
+@keyframes lg-dot{0%{opacity:0;transform:scale(0)}70%{opacity:1;transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes lg-bar{from{transform:scaleX(0)}}
+
+/* kartu mengalir masuk satu per satu */
+.lg-enter .spc.lg-in,.lg-enter .kpi-card.lg-in,.lg-enter .ins-kpi-card.lg-in,.lg-enter .hday.lg-in,.lg-enter .wl-row.lg-in,.lg-enter .nr-item.lg-in,.lg-enter .lbi.lg-in,.lg-enter .mk.lg-in,.lg-enter .warn-crit-card.lg-in,.lg-enter .sp-lookup-card.lg-in,.lg-enter .spg-team-hdr.lg-in,.lg-enter .pi.lg-in{animation:lg-card-in .55s var(--lg-ease) backwards}
+.lg-enter .spc.lg-in:nth-child(1),.lg-enter .kpi-card.lg-in:nth-child(1),.lg-enter .ins-kpi-card.lg-in:nth-child(1),.lg-enter .hday.lg-in:nth-child(1),.lg-enter .wl-row.lg-in:nth-child(1),.lg-enter .nr-item.lg-in:nth-child(1),.lg-enter .lbi.lg-in:nth-child(1),.lg-enter .mk.lg-in:nth-child(1),.lg-enter .warn-crit-card.lg-in:nth-child(1),.lg-enter .sp-lookup-card.lg-in:nth-child(1),.lg-enter .spg-team-hdr.lg-in:nth-child(1),.lg-enter .pi.lg-in:nth-child(1){animation-delay:0.040s}
+.lg-enter .spc.lg-in:nth-child(2),.lg-enter .kpi-card.lg-in:nth-child(2),.lg-enter .ins-kpi-card.lg-in:nth-child(2),.lg-enter .hday.lg-in:nth-child(2),.lg-enter .wl-row.lg-in:nth-child(2),.lg-enter .nr-item.lg-in:nth-child(2),.lg-enter .lbi.lg-in:nth-child(2),.lg-enter .mk.lg-in:nth-child(2),.lg-enter .warn-crit-card.lg-in:nth-child(2),.lg-enter .sp-lookup-card.lg-in:nth-child(2),.lg-enter .spg-team-hdr.lg-in:nth-child(2),.lg-enter .pi.lg-in:nth-child(2){animation-delay:0.075s}
+.lg-enter .spc.lg-in:nth-child(3),.lg-enter .kpi-card.lg-in:nth-child(3),.lg-enter .ins-kpi-card.lg-in:nth-child(3),.lg-enter .hday.lg-in:nth-child(3),.lg-enter .wl-row.lg-in:nth-child(3),.lg-enter .nr-item.lg-in:nth-child(3),.lg-enter .lbi.lg-in:nth-child(3),.lg-enter .mk.lg-in:nth-child(3),.lg-enter .warn-crit-card.lg-in:nth-child(3),.lg-enter .sp-lookup-card.lg-in:nth-child(3),.lg-enter .spg-team-hdr.lg-in:nth-child(3),.lg-enter .pi.lg-in:nth-child(3){animation-delay:0.110s}
+.lg-enter .spc.lg-in:nth-child(4),.lg-enter .kpi-card.lg-in:nth-child(4),.lg-enter .ins-kpi-card.lg-in:nth-child(4),.lg-enter .hday.lg-in:nth-child(4),.lg-enter .wl-row.lg-in:nth-child(4),.lg-enter .nr-item.lg-in:nth-child(4),.lg-enter .lbi.lg-in:nth-child(4),.lg-enter .mk.lg-in:nth-child(4),.lg-enter .warn-crit-card.lg-in:nth-child(4),.lg-enter .sp-lookup-card.lg-in:nth-child(4),.lg-enter .spg-team-hdr.lg-in:nth-child(4),.lg-enter .pi.lg-in:nth-child(4){animation-delay:0.145s}
+.lg-enter .spc.lg-in:nth-child(5),.lg-enter .kpi-card.lg-in:nth-child(5),.lg-enter .ins-kpi-card.lg-in:nth-child(5),.lg-enter .hday.lg-in:nth-child(5),.lg-enter .wl-row.lg-in:nth-child(5),.lg-enter .nr-item.lg-in:nth-child(5),.lg-enter .lbi.lg-in:nth-child(5),.lg-enter .mk.lg-in:nth-child(5),.lg-enter .warn-crit-card.lg-in:nth-child(5),.lg-enter .sp-lookup-card.lg-in:nth-child(5),.lg-enter .spg-team-hdr.lg-in:nth-child(5),.lg-enter .pi.lg-in:nth-child(5){animation-delay:0.180s}
+.lg-enter .spc.lg-in:nth-child(6),.lg-enter .kpi-card.lg-in:nth-child(6),.lg-enter .ins-kpi-card.lg-in:nth-child(6),.lg-enter .hday.lg-in:nth-child(6),.lg-enter .wl-row.lg-in:nth-child(6),.lg-enter .nr-item.lg-in:nth-child(6),.lg-enter .lbi.lg-in:nth-child(6),.lg-enter .mk.lg-in:nth-child(6),.lg-enter .warn-crit-card.lg-in:nth-child(6),.lg-enter .sp-lookup-card.lg-in:nth-child(6),.lg-enter .spg-team-hdr.lg-in:nth-child(6),.lg-enter .pi.lg-in:nth-child(6){animation-delay:0.215s}
+.lg-enter .spc.lg-in:nth-child(7),.lg-enter .kpi-card.lg-in:nth-child(7),.lg-enter .ins-kpi-card.lg-in:nth-child(7),.lg-enter .hday.lg-in:nth-child(7),.lg-enter .wl-row.lg-in:nth-child(7),.lg-enter .nr-item.lg-in:nth-child(7),.lg-enter .lbi.lg-in:nth-child(7),.lg-enter .mk.lg-in:nth-child(7),.lg-enter .warn-crit-card.lg-in:nth-child(7),.lg-enter .sp-lookup-card.lg-in:nth-child(7),.lg-enter .spg-team-hdr.lg-in:nth-child(7),.lg-enter .pi.lg-in:nth-child(7){animation-delay:0.250s}
+.lg-enter .spc.lg-in:nth-child(8),.lg-enter .kpi-card.lg-in:nth-child(8),.lg-enter .ins-kpi-card.lg-in:nth-child(8),.lg-enter .hday.lg-in:nth-child(8),.lg-enter .wl-row.lg-in:nth-child(8),.lg-enter .nr-item.lg-in:nth-child(8),.lg-enter .lbi.lg-in:nth-child(8),.lg-enter .mk.lg-in:nth-child(8),.lg-enter .warn-crit-card.lg-in:nth-child(8),.lg-enter .sp-lookup-card.lg-in:nth-child(8),.lg-enter .spg-team-hdr.lg-in:nth-child(8),.lg-enter .pi.lg-in:nth-child(8){animation-delay:0.285s}
+.lg-enter .spc.lg-in:nth-child(9),.lg-enter .kpi-card.lg-in:nth-child(9),.lg-enter .ins-kpi-card.lg-in:nth-child(9),.lg-enter .hday.lg-in:nth-child(9),.lg-enter .wl-row.lg-in:nth-child(9),.lg-enter .nr-item.lg-in:nth-child(9),.lg-enter .lbi.lg-in:nth-child(9),.lg-enter .mk.lg-in:nth-child(9),.lg-enter .warn-crit-card.lg-in:nth-child(9),.lg-enter .sp-lookup-card.lg-in:nth-child(9),.lg-enter .spg-team-hdr.lg-in:nth-child(9),.lg-enter .pi.lg-in:nth-child(9){animation-delay:0.320s}
+.lg-enter .spc.lg-in:nth-child(10),.lg-enter .kpi-card.lg-in:nth-child(10),.lg-enter .ins-kpi-card.lg-in:nth-child(10),.lg-enter .hday.lg-in:nth-child(10),.lg-enter .wl-row.lg-in:nth-child(10),.lg-enter .nr-item.lg-in:nth-child(10),.lg-enter .lbi.lg-in:nth-child(10),.lg-enter .mk.lg-in:nth-child(10),.lg-enter .warn-crit-card.lg-in:nth-child(10),.lg-enter .sp-lookup-card.lg-in:nth-child(10),.lg-enter .spg-team-hdr.lg-in:nth-child(10),.lg-enter .pi.lg-in:nth-child(10){animation-delay:0.355s}
+.lg-enter .spc.lg-in:nth-child(11),.lg-enter .kpi-card.lg-in:nth-child(11),.lg-enter .ins-kpi-card.lg-in:nth-child(11),.lg-enter .hday.lg-in:nth-child(11),.lg-enter .wl-row.lg-in:nth-child(11),.lg-enter .nr-item.lg-in:nth-child(11),.lg-enter .lbi.lg-in:nth-child(11),.lg-enter .mk.lg-in:nth-child(11),.lg-enter .warn-crit-card.lg-in:nth-child(11),.lg-enter .sp-lookup-card.lg-in:nth-child(11),.lg-enter .spg-team-hdr.lg-in:nth-child(11),.lg-enter .pi.lg-in:nth-child(11){animation-delay:0.390s}
+.lg-enter .spc.lg-in:nth-child(12),.lg-enter .kpi-card.lg-in:nth-child(12),.lg-enter .ins-kpi-card.lg-in:nth-child(12),.lg-enter .hday.lg-in:nth-child(12),.lg-enter .wl-row.lg-in:nth-child(12),.lg-enter .nr-item.lg-in:nth-child(12),.lg-enter .lbi.lg-in:nth-child(12),.lg-enter .mk.lg-in:nth-child(12),.lg-enter .warn-crit-card.lg-in:nth-child(12),.lg-enter .sp-lookup-card.lg-in:nth-child(12),.lg-enter .spg-team-hdr.lg-in:nth-child(12),.lg-enter .pi.lg-in:nth-child(12){animation-delay:0.425s}
+.lg-enter .spc.lg-in:nth-child(13),.lg-enter .kpi-card.lg-in:nth-child(13),.lg-enter .ins-kpi-card.lg-in:nth-child(13),.lg-enter .hday.lg-in:nth-child(13),.lg-enter .wl-row.lg-in:nth-child(13),.lg-enter .nr-item.lg-in:nth-child(13),.lg-enter .lbi.lg-in:nth-child(13),.lg-enter .mk.lg-in:nth-child(13),.lg-enter .warn-crit-card.lg-in:nth-child(13),.lg-enter .sp-lookup-card.lg-in:nth-child(13),.lg-enter .spg-team-hdr.lg-in:nth-child(13),.lg-enter .pi.lg-in:nth-child(13){animation-delay:0.460s}
+.lg-enter .spc.lg-in:nth-child(14),.lg-enter .kpi-card.lg-in:nth-child(14),.lg-enter .ins-kpi-card.lg-in:nth-child(14),.lg-enter .hday.lg-in:nth-child(14),.lg-enter .wl-row.lg-in:nth-child(14),.lg-enter .nr-item.lg-in:nth-child(14),.lg-enter .lbi.lg-in:nth-child(14),.lg-enter .mk.lg-in:nth-child(14),.lg-enter .warn-crit-card.lg-in:nth-child(14),.lg-enter .sp-lookup-card.lg-in:nth-child(14),.lg-enter .spg-team-hdr.lg-in:nth-child(14),.lg-enter .pi.lg-in:nth-child(14){animation-delay:0.495s}
+.lg-enter .spc.lg-in:nth-child(n+15),.lg-enter .kpi-card.lg-in:nth-child(n+15),.lg-enter .ins-kpi-card.lg-in:nth-child(n+15),.lg-enter .hday.lg-in:nth-child(n+15),.lg-enter .wl-row.lg-in:nth-child(n+15),.lg-enter .nr-item.lg-in:nth-child(n+15),.lg-enter .lbi.lg-in:nth-child(n+15),.lg-enter .mk.lg-in:nth-child(n+15),.lg-enter .warn-crit-card.lg-in:nth-child(n+15),.lg-enter .sp-lookup-card.lg-in:nth-child(n+15),.lg-enter .spg-team-hdr.lg-in:nth-child(n+15),.lg-enter .pi.lg-in:nth-child(n+15){animation-delay:.53s}
+
+/* garis grafik omset menggambar dirinya dari kiri ke kanan (panjang ±796) */
+.lg-enter .ref-chart-line.lg-in{stroke-dasharray:1000;stroke-dashoffset:1000;animation:lg-draw 1.3s cubic-bezier(.65,0,.35,1) .2s forwards}
+.lg-enter .ref-chart-area.lg-in{animation:lg-fade 1s var(--lg-ease) .55s backwards}
+.lg-enter .ref-chart-dot.lg-in{transform-box:fill-box;transform-origin:center;animation:lg-dot .6s var(--lg-spring) 1.4s backwards}
+
+/* sparkline Watchlist menggambar per baris. Garis datar ("belum order")
+   memakai stroke-dasharray sendiri (putus-putus) — dikecualikan supaya
+   tidak berubah jadi garis utuh. */
+.lg-enter .wl-row.lg-in .wl-spark path[fill="none"]:not([stroke-dasharray]){stroke-dasharray:200;stroke-dashoffset:200;animation:lg-draw .9s var(--lg-ease) forwards}
+.lg-enter .wl-row.lg-in .wl-spark path:not([fill="none"]){animation:lg-fade .9s var(--lg-ease) backwards}
+.lg-enter .wl-row.lg-in:nth-child(1) .wl-spark path{animation-delay:0.180s}
+.lg-enter .wl-row.lg-in:nth-child(2) .wl-spark path{animation-delay:0.225s}
+.lg-enter .wl-row.lg-in:nth-child(3) .wl-spark path{animation-delay:0.270s}
+.lg-enter .wl-row.lg-in:nth-child(4) .wl-spark path{animation-delay:0.315s}
+.lg-enter .wl-row.lg-in:nth-child(5) .wl-spark path{animation-delay:0.360s}
+.lg-enter .wl-row.lg-in:nth-child(6) .wl-spark path{animation-delay:0.405s}
+.lg-enter .wl-row.lg-in:nth-child(7) .wl-spark path{animation-delay:0.450s}
+.lg-enter .wl-row.lg-in:nth-child(8) .wl-spark path{animation-delay:0.495s}
+.lg-enter .wl-row.lg-in:nth-child(9) .wl-spark path{animation-delay:0.540s}
+.lg-enter .wl-row.lg-in:nth-child(10) .wl-spark path{animation-delay:0.585s}
+.lg-enter .wl-row.lg-in:nth-child(11) .wl-spark path{animation-delay:0.630s}
+.lg-enter .wl-row.lg-in:nth-child(12) .wl-spark path{animation-delay:0.675s}
+.lg-enter .wl-row.lg-in:nth-child(13) .wl-spark path{animation-delay:0.720s}
+.lg-enter .wl-row.lg-in:nth-child(14) .wl-spark path{animation-delay:0.765s}
+.lg-enter .wl-row.lg-in:nth-child(n+15) .wl-spark path{animation-delay:.8s}
+
+/* batang target terisi */
+.lg-enter .goal-bar-fill.lg-in{transform-origin:left center;animation:lg-bar 1.15s var(--lg-ease) .3s backwards}
+
+/* kilau cahaya menyapu kaca hero satu kali (span .lg-sheen dari motion.js) */
+.omset-hero{position:relative}
+.lg-sheen{
+  position:absolute;top:0;bottom:0;left:0;width:55%;z-index:2;pointer-events:none;opacity:0;
+  background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.035) 35%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.035) 65%,rgba(255,255,255,0) 100%);
+  transform:translateX(-110%);
+}
+.lg-sheen.go{animation:lg-sheen 1.6s cubic-bezier(.45,0,.2,1) .3s backwards}
+@keyframes lg-sheen{0%{opacity:1;transform:translateX(-110%)}100%{opacity:1;transform:translateX(280%)}}
+
+/* ══ 17. KAPSUL KACA YANG MENGALIR DI ANTARA TAB (desktop) ═════════════
+   Satu kapsul (span .lg-nav-pill dari motion.js) meluncur ke tab yang
+   dipilih dengan pegas. Kapsul statis di tab aktif disembunyikan supaya
+   tidak ada dua. */
+.lg-nav-pill{display:none}
+@media(min-width:769px){
+  .lg-nav-pill{
+    display:block;position:absolute;left:0;top:0;z-index:0;pointer-events:none;border-radius:999px;
+    background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.06));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.34),inset 0 0 0 1px rgba(255,255,255,.11),0 10px 24px -12px rgba(0,0,0,.95);
+    transition:transform .6s cubic-bezier(.3,1.35,.5,1),width .6s cubic-bezier(.3,1.35,.5,1),height .3s var(--lg-ease),opacity .25s;
+  }
+  .lg-has-pill .nav-bar .nav-tab{position:relative;z-index:1}
+  .lg-has-pill .nav-bar .nav-tab.active,.lg-has-pill .nav-bar .nav-tab.active[data-page]{
+    background:transparent!important;box-shadow:none!important;
+  }
+}
+/* HP: kapsul aktif di bar bawah "meletup" masuk saat pindah tab */
+@media(max-width:768px){
+  .nav-bar .nav-tab.active{animation:lg-pill-pop .45s var(--lg-spring)}
+}
+@keyframes lg-pill-pop{from{transform:scale(.82);opacity:.5}}
+
+/* ══ 18. CAHAYA MENGIKUTI KURSOR DI ATAS KACA (perangkat mouse) ════════
+   --mx/--my diisi js/motion.js. Kotak riwayat (.hday) sengaja tidak, karena
+   latarnya membawa status (hari terpilih / hari ini). */
+@media (hover:hover){
+  .spc:hover,.kpi-card:hover,.goal-card:hover,.ins-kpi-card:hover,.ins-panel:hover,.wl-panel:hover,
+  .lbi:hover,.act-form:hover,.panel:not(.premium-entry-drawer):hover{
+    background:radial-gradient(300px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.09),transparent 62%),var(--lg-fill)!important;
+  }
+  .omset-hero:hover{
+    background:radial-gradient(460px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.075),transparent 62%),var(--lg-fill-strong)!important;
+  }
+}
+
+/* HP: titik "live" di kartu Salespeople berdenyut tanpa henti. Di balik bar
+   navigasi bawah yang ber-blur, denyut itu memaksa blur dihitung ulang tiap
+   frame selama layar diam. Titik hijau statis tetap membawa arti yang sama. */
+@media(max-width:768px){.spc .live-dot{animation:none}}
+
+/* "Kurangi Gerak": semua animasi masuk dimatikan (motion.js juga berhenti) */
+@media (prefers-reduced-motion:reduce){
+  .lg-enter *,.lg-sheen.go,.nav-bar .nav-tab.active{animation:none!important}
+  .lg-nav-pill{transition:none}
+}
+
+/* ══ 19. BARIS AKSI MODAL DETAIL SALES (dibangun js/fx-core.js) ══════════
+   Tombol dari modul efek (kartu, wrapped, …) dalam satu baris kaca di
+   bawah kotak KPI. Margin, bukan gap (iOS < 14.5). */
+.hx-sp-actions{display:flex;flex-wrap:wrap;margin:2px -4px 14px}
+.hx-sp-act{
+  display:inline-flex;align-items:center;margin:4px;padding:9px 14px;border-radius:999px;
+  font:600 12px/1 inherit;letter-spacing:.2px;color:#f5f5f7;cursor:pointer;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.05));
+  border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(255,255,255,.09);
+  -webkit-tap-highlight-color:transparent;
+}
+.hx-sp-act svg{width:14px;height:14px;margin-right:7px;flex:0 0 auto}
+.hx-sp-act:active{transform:scale(.96)}
+
+
+/* ══ 20. PERBAIKAN DARI REVIEW MODUL EFEK (27 Okt) ══════════════════════ */
+/* skin.css `[class*="-overlay"]` ikut cocok dengan <html class="hx-overlay-open">:
+   di iOS seluruh halaman dapat backdrop-filter + latar transparan saat replay /
+   wrapped / kartu / peta bintang terbuka (blur ekstra, hitam pekat hilang). */
+html.hx-overlay-open{-webkit-backdrop-filter:none;backdrop-filter:none;background:#000!important}
+/* titik "live" berdenyut 3 kali lalu diam — tanpa ini Dashboard/Monthly tidak
+   pernah benar-benar diam (600 hitung ulang gaya per 10 detik di HP) */
+.live-dot{animation-iteration-count:3}
+html.hx-overlay-open .live-dot{animation:none}
+/* nama tim putih; garis warna tim di kiri tetap (bermakna) */
+.spg-team-name{color:#f5f5f7!important}
+/* modal detail sales: Calls & Follow Up netral (biru/oranye di luar palet) */
+#spMo .mkv.bl,#spMo .mkv.or{color:#f5f5f7!important}
+/* hari lampau: penanda & banner abu netral, bukan amber */
+.past-badge{background:rgba(255,255,255,.07)!important;color:#c7c7cc!important;border-color:rgba(255,255,255,.12)!important}
+.readonly-banner{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.10)!important;color:#c7c7cc!important}
+.readonly-banner strong{color:#f5f5f7!important}
+/* tabel tim/sales di HP: kolom Omset yang lengket tanpa sudut membulat
+   (takik di tiap garis baris) dan tanpa bayangan keras yang menyisakan satu
+   huruf kolom di belakangnya — diganti pudar lembut */
+@media(max-width:768px){
+  #vTeam td:last-child,#vSP td:last-child,#vTeam th:last-child,#vSP th:last-child{
+    border-radius:0!important;
+    box-shadow:-30px 0 22px -6px #000,-1px 0 rgba(32,216,131,.28)!important;
+  }
+}

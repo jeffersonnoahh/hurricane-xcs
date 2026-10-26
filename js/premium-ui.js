@@ -126,7 +126,8 @@
     if (legacyBottomGrid && legacyBottomGrid.children.length === 0) legacyBottomGrid.remove();
 
     function openEntry() {
-      if (d.getElementById('dayLabel')?.textContent.trim() !== 'TODAY' && typeof w.jumpToToday === 'function') {
+      const dayEl = d.getElementById('dayLabel');
+      if ((!dayEl || dayEl.textContent.trim() !== 'TODAY') && typeof w.jumpToToday === 'function') {
         w.jumpToToday();
       }
       tabsByPage.get('dashboard').click();
@@ -139,7 +140,7 @@
 
     pageHead.querySelector('.premium-quick-add').addEventListener('click', openEntry);
     pageHead.querySelectorAll('[data-go]').forEach((button) => {
-      button.addEventListener('click', () => tabsByPage.get(button.dataset.go)?.click());
+      button.addEventListener('click', () => { const t = tabsByPage.get(button.dataset.go); if (t) t.click(); });
     });
     closeEntry.addEventListener('click', closeEntryForm);
     formOverlay.addEventListener('click', closeEntryForm);
@@ -212,7 +213,8 @@
       button.dataset.page = page;
       button.innerHTML = '<i>' + moreIcons[page] + '</i><span>' + labelParts(originalLabels.get(page)).text + '</span>';
       button.addEventListener('click', () => {
-        tabsByPage.get(page)?.click();
+        const t = tabsByPage.get(page);
+        if (t) t.click();
         closeMore();
       });
       moreButtons.push(button);
@@ -234,10 +236,12 @@
     moreSheet.querySelector('.premium-sheet-title button').addEventListener('click', closeMore);
 
     function syncPremium() {
-      const pct = d.getElementById('goalPct')?.textContent || '0%';
-      const closes = d.getElementById('K1')?.textContent || '0';
-      const day = d.getElementById('dayLabel')?.textContent.trim() || 'TODAY';
-      const revenue = d.getElementById('K2')?.textContent.trim() || '0';
+      const pct = (d.getElementById('goalPct') || {}).textContent || '0%';
+      const closes = (d.getElementById('K1') || {}).textContent || '0';
+      const dayEl = d.getElementById('dayLabel');
+      const day = (dayEl ? dayEl.textContent.trim() : '') || 'TODAY';
+      const k2El = d.getElementById('K2');
+      const revenue = (k2El ? k2El.textContent.trim() : '') || '0';
       const firstTeam = d.querySelector('#tTeam tr .tn');
 
       d.getElementById('premiumPace').textContent = pct;
@@ -246,9 +250,10 @@
       d.getElementById('premiumHeading').textContent = day === 'TODAY' ? 'Today’s performance' : day + ' performance';
       d.getElementById('premiumTopTeam').textContent = (revenue === '0' || revenue === 'Rp 0')
         ? 'No sales yet'
-        : (firstTeam?.textContent?.trim() || '—');
+        : ((firstTeam && firstTeam.textContent ? firstTeam.textContent.trim() : '') || '—');
 
-      const activePage = originalTabs.find((tab) => tab.classList.contains('active'))?.dataset.page;
+      const activeTab = originalTabs.find((tab) => tab.classList.contains('active'));
+      const activePage = activeTab ? activeTab.dataset.page : undefined;
       more.classList.toggle('active', morePages.includes(activePage));
       moreButtons.forEach((button) => button.classList.toggle('active', button.dataset.page === activePage));
     }
@@ -302,7 +307,7 @@
     const monthly = d.querySelector('#page-monthly .container');
     const monthlyHero = d.getElementById('monthlyOmsetHero');
     const monthlyControlRow = d.getElementById('monthlyControlRow');
-    const monthControl = monthlyControlRow?.querySelector('.day-switcher');
+    const monthControl = monthlyControlRow ? monthlyControlRow.querySelector('.day-switcher') : null;
 
     if (monthly && monthlyHero && monthlyControlRow && monthControl) {
       monthlyHero.classList.add('premium-monthly-hero');

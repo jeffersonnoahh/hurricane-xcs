@@ -15,7 +15,7 @@ header{min-height:82px!important;padding:12px max(30px,calc((100vw - 1580px)/2))
 .ref-chart{height:187px;margin-top:12px;position:relative}.ref-chart svg{display:block;width:100%;height:100%;overflow:visible}.ref-chart-grid{stroke:#1a2123;stroke-width:1;stroke-dasharray:3 4}.ref-chart-line{fill:none;stroke:var(--ref-green);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(32,216,131,.16))}.ref-chart-area{fill:url(#refRevenueGradient)}.ref-chart-dot{fill:#eafff5;stroke:var(--ref-green);stroke-width:2;filter:drop-shadow(0 0 6px rgba(32,216,131,.9))}.ref-chart-label{fill:#7b8388;font:10px 'Space Mono',monospace}.ref-hero-foot{margin-top:7px;font:10px 'Space Mono',monospace;letter-spacing:1.4px;color:#8a9296;text-transform:uppercase}
 .premium-overview-grid .goal-card{padding:26px 29px!important;border-radius:8px!important;min-height:245px!important}.goal-icon{display:none!important}.goal-title{font-size:10px!important;letter-spacing:2px!important;color:#8e969a!important;margin-bottom:15px!important}.goal-main{font-size:18px!important;font-weight:500!important;margin-bottom:22px!important}.goal-bar{height:10px!important;border-radius:20px!important;background:#202629!important}.goal-bar-fill{background:linear-gradient(90deg,#20d883,#149c62)!important;box-shadow:none!important}.goal-pct{color:var(--ref-green)!important;font-size:13px!important}.premium-overview-grid .goal-stats{padding-top:21px!important;margin-top:24px!important;border-color:#182023!important}.goal-val{font-size:28px!important;font-weight:500!important;color:var(--ref-green)!important}.goal-lbl{font-size:8px!important;color:#8a9296!important}.premium-overview-grid .kpi-strip{gap:13px!important}.premium-overview-grid .kpi-card{min-height:146px!important;padding:22px 24px!important;border-radius:8px!important}.kpi-card:before{display:none!important}.kpi-card:hover{border-color:var(--ref-border-strong)!important}.premium-overview-grid .kpi-lbl{font-size:9px!important;letter-spacing:1.5px!important}.premium-overview-grid .kpi-val{font-size:32px!important;font-weight:500!important;margin-top:15px!important}.premium-overview-grid .kpi-ch{font-size:10px!important;color:#8c9498!important}
 .premium-status-strip{grid-template-columns:repeat(4,1fr)!important;gap:0!important;border-radius:8px!important;margin:0 0 17px!important;overflow:hidden!important}.premium-status-strip>div{padding:16px 23px!important;background:transparent!important;border:0!important;border-right:1px solid var(--ref-border)!important;border-radius:0!important}.premium-status-strip>div:last-child{border-right:0!important}.premium-status-strip span{font-size:8px!important;letter-spacing:1.5px!important;color:#81898e!important}.premium-status-strip strong{font-size:19px!important;font-weight:500!important;color:#f0f3f2!important;margin:7px 0 2px!important}.premium-status-strip>div:first-child strong,.premium-status-strip>div:nth-child(3) strong{color:var(--ref-green)!important}
-#historyHeading{margin-top:0!important;margin-bottom:10px!important;color:#969da1!important}.sl{font-size:9px!important;letter-spacing:2.6px!important}.sl:after{background:#182023!important}.history-strip{gap:7px!important;padding:0 0 15px!important;margin-bottom:12px!important}.hday{flex:0 0 84px!important;min-height:104px!important;border-radius:5px!important;padding:10px 7px!important}.hday.has-data{background:#070b0a!important;border-color:#172822!important}.hday.active-day{background:#06110c!important;border-color:var(--ref-green)!important}.hd-date{font-size:8px!important}.hd-day{font-size:10px!important;color:#d4d8da!important;margin:4px 0 7px!important}.hd-dot{display:none!important}.hd-rev{font-size:8px!important;color:var(--ref-green)!important}.ref-history-bars{height:31px;display:flex;align-items:flex-end;justify-content:center;gap:2px;margin-top:7px}.ref-history-bars i{display:block;width:3px;background:rgba(32,216,131,.65);min-height:2px}
+#historyHeading{margin-top:0!important;margin-bottom:10px!important;color:#969da1!important}.sl{font-size:9px!important;letter-spacing:2.6px!important}.sl:after{background:#182023!important}.history-strip{gap:7px!important;padding:0 0 15px!important;margin-bottom:12px!important}.hday{flex:0 0 84px!important;min-height:104px!important;border-radius:5px!important;padding:10px 7px!important}.hday.has-data{background:#070b0a!important;border-color:#172822!important}.hday.active-day{background:#06110c!important;border-color:var(--ref-green)!important}.hd-date{font-size:8px!important}.hd-day{font-size:10px!important;color:#d4d8da!important;margin:4px 0 7px!important}.hd-dot{display:none!important}.hd-rev{font-size:8px!important;color:var(--ref-green)!important}.ref-history-bars{height:31px;display:flex;align-items:flex-end;justify-content:center;margin-top:7px}.ref-history-bars i{display:block;width:3px;margin:0 1px;background:rgba(32,216,131,.65);min-height:2px}
 .tab-row{width:max-content!important;margin:0 0 19px!important;border-radius:5px!important;background:#050708!important;padding:0!important;overflow:hidden!important}.tab{min-width:112px!important;justify-content:center!important;border-radius:0!important;min-height:40px!important;padding:8px 21px!important;font-size:11px!important;border-right:1px solid var(--ref-border)!important}.tab:last-child{border-right:0!important}.tab.active{background:linear-gradient(180deg,#0e7048,#075334)!important;color:#fff!important;box-shadow:none!important}.premium-performance-grid{grid-template-columns:minmax(0,1fr) 350px!important;gap:18px!important}.tw,.panel{border-radius:7px!important}.premium-leaderboard-panel{top:148px!important}
 @media(max-width:1050px){.premium-overview-grid{grid-template-columns:1fr!important}.premium-today-column{grid-template-columns:1.25fr 1fr!important;grid-template-rows:auto!important}.premium-overview-grid .goal-card{min-height:180px!important}.omset-hero{min-height:390px!important}}
 @media(max-width:768px){header{min-height:64px!important;padding:9px 13px!important}.brand-logo{width:40px!important;height:40px!important}.brand-name{font-size:14px!important}.brand-sub{display:none!important}.nav-wrapper{top:auto!important}.container{padding:18px 12px 100px!important}.premium-page-head h1{font-size:24px!important}.premium-page-head p{font-size:10px!important}.premium-kicker{font-size:8px!important}.premium-overview-grid{display:block!important}.premium-today-column{display:grid!important;grid-template-columns:1fr!important}.omset-hero{min-height:340px!important;padding:23px 17px 18px!important;margin-bottom:12px!important}.omset-hero-val{font-size:clamp(35px,10vw,50px)!important;white-space:normal!important}.ref-chart{height:150px;margin-top:10px}.ref-chart-label{font-size:8px}.ref-hero-foot{font-size:8px}.premium-overview-grid .goal-card{display:block!important;min-height:0!important;padding:19px!important}.premium-overview-grid .goal-stats{text-align:left!important}.premium-overview-grid .kpi-strip{grid-template-columns:1fr 1fr!important}.premium-overview-grid .kpi-card{min-height:112px!important;padding:16px!important}.premium-overview-grid .kpi-val{font-size:25px!important}.premium-status-strip{display:flex!important;gap:8px!important;background:transparent!important;border:0!important;margin:0 -12px 18px!important;padding:0 12px!important}.premium-status-strip>div{flex:0 0 150px!important;border:1px solid var(--ref-border)!important;border-radius:6px!important;padding:13px!important}.hday{flex-basis:76px!important;min-height:99px!important}.tab-row{width:100%!important}.tab{min-width:0!important;padding:8px 5px!important}.premium-performance-grid{grid-template-columns:1fr!important}.premium-nav-label{display:none!important}.premium-mobile-label{display:block!important}.nav-bar>.nav-tab[data-premium-index]{display:none!important}.nav-bar>.nav-tab[data-page="dashboard"],.nav-bar>.nav-tab[data-page="activity"],.nav-bar>.nav-tab[data-page="monthly"],.nav-bar>.premium-more-tab{display:flex!important;width:100%;height:59px;flex-direction:column;align-items:center;justify-content:center;padding:6px 3px!important}.nav-bar>.nav-tab[data-page="dashboard"]{grid-column:1}.nav-bar>.nav-tab[data-page="activity"]{grid-column:2}.nav-bar>.nav-tab[data-page="monthly"]{grid-column:4}.nav-bar>.premium-more-tab{grid-column:5}}
@@ -81,3 +81,191 @@ tbody tr:hover,.ar:hover,.wl-row:hover,.nav-tab:hover,.day-btn:hover,
 #page-monthly #mActiveDays,#page-monthly #mAvgRev,#page-monthly #mBestDay{font-family:'Space Grotesk',sans-serif!important;font-size:25px!important;font-weight:500!important;color:var(--ref-green)!important}
 #page-monthly .sp-lookup-input{background:#000!important}
 @media(max-width:900px){#page-monthly #mKpiStrip{grid-template-columns:repeat(2,minmax(0,1fr))!important}#page-monthly #monthlySummary{grid-template-columns:1fr!important}#page-monthly #monthlySummary>div{border-right:0!important;border-bottom:1px solid var(--ref-border)!important}#page-monthly #monthlySummary>div:last-child{border-bottom:0!important}}
+
+/* ══ GRAFIK HERO v2 — balapan rekor, kepala komet, denyut penjualan ══════
+   js/reference-dashboard.js menggambar SVG dalam satuan piksel (mengisi
+   .ref-chart penuh). Kelas .ref-chart-line/-area/-dot TETAP — dipakai
+   motion.js + glass.css bagian 16 untuk animasi masuk. Animasi masuk di
+   sini menumpang .lg-enter (+ .lg-in di garis/area) dari motion.js, jadi
+   ikut berhenti otomatis saat "Kurangi Gerak". Tanpa backdrop-filter. */
+/* pan-y = gulir tegak milik browser; pinch-zoom = cubit-zoom tetap bisa dimulai di grafik.
+   Deklarasi pertama = cadangan untuk mesin yang tidak mengenal kata pinch-zoom. */
+.ref-chart{-webkit-tap-highlight-color:transparent;touch-action:pan-y;touch-action:pan-y pinch-zoom;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ref-chart svg{width:100%;height:100%}
+@media (hover:hover){.ref-chart{cursor:crosshair}}
+.ref-chart-base{stroke-dasharray:none}
+.ref-chart-label{font-size:10px;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.ref-chart.is-compact .ref-chart-label{font-size:8.5px;letter-spacing:.04em}
+.ref-chart-ylabel{transition:opacity .16s ease}
+.ref-chart.sx-ylab .ref-chart-ylabel{opacity:.14}
+#page-monthly .premium-monthly-hero .ref-chart.is-compact .ref-chart-label{font-size:8.5px!important}
+.ref-chart-line{stroke-width:2.4;filter:drop-shadow(0 0 7px rgba(48,209,88,.32))}
+.ref-chart.is-compact .ref-chart-line{stroke-width:2.1}
+.ref-chart-dot{fill:#f4fff7;stroke:#30d158;stroke-width:2;transform-box:fill-box;transform-origin:center;filter:drop-shadow(0 0 6px rgba(48,209,88,.95))}
+.ref-chart:not(.is-live) .ref-chart-dot{filter:none}
+/* volume harian */
+.ref-chart-vols rect{fill:rgba(255,255,255,.075);transform-box:fill-box;transform-origin:50% 100%}
+.ref-chart-vols rect.is-today{fill:rgba(48,209,88,.55)}
+/* hantu: bulan rekor (atau bulan lalu) pada hari yang sama */
+.ref-chart-ghost{fill:none;stroke:rgba(232,242,236,.36);stroke-width:1.3;stroke-dasharray:3 4;stroke-linecap:round}
+.ref-chart.is-compact .ref-chart-ghost{stroke:rgba(232,242,236,.27);stroke-width:1;stroke-dasharray:2 3}
+.ref-chart-ghost-end{fill:#0b0d0c;stroke:rgba(232,242,236,.55);stroke-width:1.2}
+.ref-chart.is-compact .ref-chart-ghost-end{stroke:rgba(232,242,236,.42)}
+/* kepala komet */
+.ref-chart-now{stroke-width:1;stroke-dasharray:1.5 3}
+.ref-chart-tail{fill:none;stroke-width:3.2;stroke-linecap:round}
+.ref-chart.is-compact .ref-chart-tail{stroke-width:2.8}
+.ref-chart-glow{transform-box:fill-box;transform-origin:center;pointer-events:none}
+.ref-chart-ring{fill:none;stroke:#8dffad;stroke-width:1.3;opacity:0;transform-box:fill-box;transform-origin:center;pointer-events:none}
+.ref-chart-runner{fill:none;stroke:#f1fff5;stroke-width:3;stroke-linecap:round;opacity:0;pointer-events:none;filter:drop-shadow(0 0 5px rgba(140,255,180,.95))}
+.ref-chart-sweep{opacity:0}
+/* rekor bulanan baru */
+.ref-chart-record-mark{fill:#ffd426;stroke:#0b0a04;stroke-width:1.5;transform-box:fill-box;transform-origin:center;filter:drop-shadow(0 0 5px rgba(255,212,38,.7))}
+.ref-chart-record-stem{stroke:rgba(255,212,38,.55);stroke-width:1;stroke-dasharray:2 2;transform-box:fill-box;transform-origin:50% 0}
+/* lapisan label HTML (teks tajam; tanpa blur) */
+.ref-chart-ov{position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none}
+.ref-chart-tag{position:absolute;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(232,242,236,.5);white-space:nowrap;line-height:1;transition:opacity .16s ease}
+.ref-chart-tag.is-record{color:rgba(232,242,236,.64)}
+.ref-chart.is-compact .ref-chart-tag{font-size:7.5px;letter-spacing:.12em}
+.ref-chart-badge{position:absolute;display:inline-flex;align-items:center;height:20px;padding:0 10px 0 8px;border-radius:999px;white-space:nowrap;overflow:hidden;transition:opacity .16s ease;
+  background:linear-gradient(180deg,rgba(255,212,38,.17),rgba(255,212,38,.06)),#0b0a05;
+  box-shadow:inset 0 0 0 1px rgba(255,212,38,.42),inset 0 1px 0 rgba(255,255,255,.14),0 8px 20px -8px rgba(255,212,38,.45)}
+.ref-chart-badge i{flex:0 0 auto;width:6px;height:6px;margin-right:7px;border-radius:50%;background:#ffd426;box-shadow:0 0 8px rgba(255,212,38,.9)}
+.ref-chart-badge b{font-size:9px;font-weight:700;letter-spacing:.16em;color:#ffd426;line-height:1}
+.ref-chart-badge em{font-style:normal;font-size:9px;font-weight:500;letter-spacing:.03em;color:rgba(255,236,170,.66);margin-left:7px;padding-left:8px;border-left:1px solid rgba(255,212,38,.25);line-height:1;font-variant-numeric:tabular-nums}
+.ref-chart.is-compact .ref-chart-badge{height:17px;padding:0 8px 0 6px}
+.ref-chart.is-compact .ref-chart-badge i{margin-right:5px}
+.ref-chart.is-compact .ref-chart-badge b{font-size:7.5px;letter-spacing:.13em}
+.ref-chart-badge::after{content:'';position:absolute;top:0;bottom:0;left:0;width:40%;opacity:0;transform:translateX(-120%);
+  background:linear-gradient(100deg,rgba(255,240,180,0),rgba(255,240,180,.38),rgba(255,240,180,0))}
+.ref-chart-float{position:absolute;height:20px;display:inline-flex;align-items:center;padding:0 9px;border-radius:999px;white-space:nowrap;
+  font-size:11px;font-weight:700;letter-spacing:.02em;color:#d2ffe0;font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,rgba(48,209,88,.26),rgba(48,209,88,.10)),#06100a;
+  box-shadow:inset 0 0 0 1px rgba(48,209,88,.52),inset 0 1px 0 rgba(255,255,255,.16),0 8px 22px -8px rgba(48,209,88,.65)}
+.ref-chart.is-compact .ref-chart-float{height:17px;font-size:9.5px;padding:0 7px}
+.ref-chart.is-scrub .ref-chart-badge,.ref-chart.is-scrub .ref-chart-tag,
+.ref-chart.is-glide .ref-chart-badge,.ref-chart.is-glide .ref-chart-tag{opacity:0}
+.ref-chart.is-scrub .ref-chart-float,.ref-chart.is-glide .ref-chart-float{visibility:hidden}
+
+/* animasi masuk halaman (menumpang .lg-enter/.lg-in dari motion.js) */
+@keyframes ref-fade{from{opacity:0}}
+@keyframes ref-rise{from{transform:scaleY(0)}}
+@keyframes ref-pop{0%{opacity:0;transform:scale(0)}60%{opacity:1;transform:scale(1.5)}100%{opacity:1;transform:scale(1)}}
+@keyframes ref-badge-in{0%{opacity:0;transform:translate3d(10px,0,0);clip-path:inset(0 0 0 100% round 999px)}100%{opacity:1;transform:none;clip-path:inset(0 0 0 0 round 999px)}}
+@keyframes ref-badge-sheen{0%{opacity:1;transform:translateX(-120%)}100%{opacity:1;transform:translateX(330%)}}
+.lg-enter .ref-chart-area.lg-in~.ref-chart-ghost,
+.lg-enter .ref-chart-area.lg-in~.ref-chart-ghost-end{animation:ref-fade .9s var(--lg-ease,ease) .05s backwards}
+.lg-enter .ref-chart-area.lg-in~.ref-chart-vols rect{animation:ref-rise .7s var(--lg-ease,ease) backwards;animation-delay:calc(.3s + var(--i,0) * 22ms)}
+.lg-enter .ref-chart-area.lg-in~.ref-chart-now,
+.lg-enter .ref-chart-line.lg-in~.ref-chart-tail,
+.lg-enter .ref-chart-line.lg-in~.ref-chart-glow{animation:ref-fade .8s var(--lg-ease,ease) 1.3s backwards}
+.lg-enter .ref-chart-line.lg-in~.ref-chart-record .ref-chart-record-mark{animation:ref-pop .6s var(--lg-spring,ease) 1.5s backwards}
+.lg-enter .ref-chart-line.lg-in~.ref-chart-record .ref-chart-record-stem{animation:ref-rise .45s var(--lg-ease,ease) 1.62s backwards}
+.lg-enter .ref-chart:has(.ref-chart-area.lg-in) .ref-chart-tag{animation:ref-fade .9s var(--lg-ease,ease) .45s backwards}
+.lg-enter .ref-chart:has(.ref-chart-line.lg-in) .ref-chart-badge{animation:ref-badge-in .75s var(--lg-ease,ease) 1.7s backwards}
+.lg-enter .ref-chart:has(.ref-chart-line.lg-in) .ref-chart-badge::after{animation:ref-badge-sheen 1.1s ease 2.35s backwards}
+/* rekor pecah saat halaman sedang terbuka (kelas dari JS, sekali) */
+.ref-chart.ref-rec-new .ref-chart-record-mark{animation:ref-pop .6s var(--lg-spring,ease) .9s backwards}
+.ref-chart.ref-rec-new .ref-chart-record-stem{animation:ref-rise .45s var(--lg-ease,ease) 1.02s backwards}
+.ref-chart.ref-rec-new .ref-chart-badge{animation:ref-badge-in .75s var(--lg-ease,ease) 1.1s backwards}
+.ref-chart.ref-rec-new .ref-chart-badge::after{animation:ref-badge-sheen 1.1s ease 1.75s backwards}
+.ref-chart.ref-rec-quick .ref-chart-record-mark{animation:ref-pop .5s var(--lg-spring,ease) .1s backwards}
+.ref-chart.ref-rec-quick .ref-chart-record-stem{animation:ref-rise .35s var(--lg-ease,ease) .2s backwards}
+.ref-chart.ref-rec-quick .ref-chart-badge{animation:ref-badge-in .6s var(--lg-ease,ease) .25s backwards}
+.ref-chart.ref-rec-quick .ref-chart-badge::after{animation:ref-badge-sheen 1s ease .8s backwards}
+@media (prefers-reduced-motion:reduce){
+  .lg-enter .ref-chart-area.lg-in~.ref-chart-ghost,.lg-enter .ref-chart-area.lg-in~.ref-chart-ghost-end,
+  .lg-enter .ref-chart-area.lg-in~.ref-chart-vols rect,.lg-enter .ref-chart-area.lg-in~.ref-chart-now,
+  .lg-enter .ref-chart-line.lg-in~.ref-chart-tail,.lg-enter .ref-chart-line.lg-in~.ref-chart-glow,
+  .lg-enter .ref-chart-line.lg-in~.ref-chart-record .ref-chart-record-mark,
+  .lg-enter .ref-chart-line.lg-in~.ref-chart-record .ref-chart-record-stem,
+  .ref-chart.ref-rec-new .ref-chart-record-mark,.ref-chart.ref-rec-new .ref-chart-record-stem,
+  .ref-chart.ref-rec-new .ref-chart-badge,.ref-chart.ref-rec-new .ref-chart-badge::after,
+  .ref-chart.ref-rec-quick .ref-chart-record-mark,.ref-chart.ref-rec-quick .ref-chart-record-stem,
+  .ref-chart.ref-rec-quick .ref-chart-badge,.ref-chart.ref-rec-quick .ref-chart-badge::after{animation:none}
+}
+/* :has() hanya hiasan masuk (iOS < 15.4 / Chrome < 105 melewatinya: label langsung tampil).
+   Aturan Kurangi Gerak-nya dipisah supaya selektor yang tidak dikenal tidak
+   menggugurkan aturan di atas. */
+@media (prefers-reduced-motion:reduce){
+  .lg-enter .ref-chart:has(.ref-chart-area.lg-in) .ref-chart-tag,
+  .lg-enter .ref-chart:has(.ref-chart-line.lg-in) .ref-chart-badge,
+  .lg-enter .ref-chart:has(.ref-chart-line.lg-in) .ref-chart-badge::after{animation:none}
+}
+
+/* ══ SCRUB — geser jari / arahkan mouse di grafik omset ════════════════
+   Lapisan HTML di atas SVG (js/reference-dashboard.js). Selama scrub yang
+   berubah hanya transform & opacity (kompositor) — SVG tidak digambar
+   ulang. Tanpa backdrop-filter: kaca padat dengan tepi cahaya.
+   .is-scrub = sedang memilih hari · .is-glide = meluncur pulang ke hari ini */
+.ref-scrub{position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none}
+.ref-scrub-clip{position:absolute;top:0;bottom:0;left:0;right:-16px;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent)}
+.ref-scrub-shade,.ref-scrub-pool,.ref-scrub-bar,.ref-scrub-x,.ref-scrub-gdot,.ref-scrub-dot,.ref-scrub-lab{
+  position:absolute;left:0;top:0;opacity:0;pointer-events:none;
+  transition:opacity .18s ease,transform .11s cubic-bezier(.22,.9,.32,1)}
+.ref-chart.is-scrub .ref-scrub-shade,.ref-chart.is-scrub .ref-scrub-pool,.ref-chart.is-scrub .ref-scrub-bar,.ref-chart.is-scrub .ref-scrub-x,
+.ref-chart.is-scrub .ref-scrub-gdot,.ref-chart.is-scrub .ref-scrub-dot,.ref-chart.is-scrub .ref-scrub-lab,
+.ref-chart.is-glide .ref-scrub-shade,.ref-chart.is-glide .ref-scrub-x,.ref-chart.is-glide .ref-scrub-dot{opacity:1;will-change:transform}
+/* luncuran pulang digerakkan per frame oleh JS: tanpa transisi transform */
+.ref-chart.is-glide .ref-scrub-shade,.ref-chart.is-glide .ref-scrub-x,.ref-chart.is-glide .ref-scrub-dot,
+.ref-chart.ref-sx-jump .ref-scrub-shade,.ref-chart.ref-sx-jump .ref-scrub-pool,.ref-chart.ref-sx-jump .ref-scrub-bar,.ref-chart.ref-sx-jump .ref-scrub-x,
+.ref-chart.ref-sx-jump .ref-scrub-gdot,.ref-chart.ref-sx-jump .ref-scrub-dot,.ref-chart.ref-sx-jump .ref-scrub-lab{transition:opacity .18s ease}
+.ref-chart.is-glide .ref-scrub-lab,.ref-chart.is-glide .ref-scrub-pool,.ref-chart.is-glide .ref-scrub-bar,.ref-chart.is-glide .ref-scrub-gdot{transition:opacity .14s ease}
+
+/* bagian sesudah hari terpilih meredup (tepi kiri lembut, atas/bawah memudar) */
+.ref-scrub-shade{background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.5) 18px);
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 16px,#000 calc(100% - 10px),transparent);
+  mask-image:linear-gradient(180deg,transparent,#000 16px,#000 calc(100% - 10px),transparent)}
+/* garis bidik kaca: inti 1px terang yang memudar ke bawah + pita cahaya tipis */
+.ref-scrub-x{width:1px;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.34) 42%,rgba(255,255,255,.05))}
+.ref-scrub-x::before{content:'';position:absolute;top:0;bottom:0;left:-5px;width:11px;
+  background:linear-gradient(90deg,rgba(190,255,210,0),rgba(190,255,210,.08) 50%,rgba(190,255,210,0));
+  -webkit-mask-image:linear-gradient(180deg,#000,rgba(0,0,0,.15));mask-image:linear-gradient(180deg,#000,rgba(0,0,0,.15))}
+/* titik yang menempel di garis omset */
+.ref-scrub-dot{left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;box-sizing:border-box;
+  background:#f6fff8;border:2.5px solid #30d158;
+  box-shadow:0 0 0 4px rgba(48,209,88,.16),0 0 14px 1px rgba(48,209,88,.62)}
+.ref-chart.is-compact .ref-scrub-dot{left:-5.5px;top:-5.5px;width:11px;height:11px;border-width:2.25px}
+.ref-scrub-gdot{left:-3.5px;top:-3.5px;width:7px;height:7px;border-radius:50%;box-sizing:border-box;
+  background:#0b0d0c;border:1.4px solid rgba(232,242,236,.72)}
+/* batang omset hari terpilih menyala */
+.ref-scrub-bar{transform-origin:50% 100%;border-radius:1.5px 1.5px 0 0;
+  background:linear-gradient(180deg,#d2ffde,#30d158 32%,rgba(48,209,88,.82))}
+/* genangan cahaya di kaki garis bidik — batang hari itu "menyala" juga di hari omzet kecil */
+.ref-scrub-pool{left:-11px;width:22px;background:radial-gradient(50% 100% at 50% 100%,rgba(48,209,88,.34),rgba(48,209,88,.08) 60%,rgba(48,209,88,0))}
+/* label kecil di jalur atas: tanggal · omzet hari itu · total s.d. hari itu */
+.ref-scrub-lab{display:flex;align-items:center;height:22px;top:2px;padding:0 10px;border-radius:999px;white-space:nowrap;
+  font-size:12px;font-weight:600;line-height:1;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.01em;
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.035) 62%),rgba(11,13,12,.96);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),inset 0 0 0 1px rgba(255,255,255,.085),inset 0 -1px 0 rgba(0,0,0,.45),
+    0 0 0 .5px rgba(0,0,0,.7),0 10px 22px -10px rgba(0,0,0,.95)}
+.ref-scrub-lab .d{display:flex;align-items:center;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#a3ada8}
+.ref-scrub-lab .d .now{display:block;width:5px;height:5px;margin-right:5px;border-radius:50%;background:#30d158;box-shadow:0 0 6px rgba(48,209,88,.9)}
+.ref-scrub-lab .sep{display:block;flex:0 0 auto;width:1px;height:10px;margin:0 8px;background:rgba(255,255,255,.14)}
+.ref-scrub-lab .a{color:#5fe08a;font-weight:700}
+.ref-scrub-lab .a.z{color:#7d8681}
+.ref-scrub-lab .t{color:#fff;font-weight:700}
+.ref-scrub-lab .t em{font-style:normal;font-weight:600;font-size:.84em;letter-spacing:.02em;color:#8e9893}
+.ref-scrub-lab .g{color:#9aa49f;font-weight:600}
+.ref-scrub-lab .g b{font-weight:700}
+.ref-scrub-lab .up{color:#30d158}.ref-scrub-lab .dn{color:#ff453a}
+.ref-chart.is-compact .ref-scrub-lab{height:18px;top:1px;padding:0 8px;font-size:10px}
+.ref-chart.is-compact .ref-scrub-lab .d{font-size:8px;letter-spacing:.1em}
+.ref-chart.is-compact .ref-scrub-lab .d .now{width:4px;height:4px;margin-right:4px}
+.ref-chart.is-compact .ref-scrub-lab .sep{height:8px;margin:0 6px}
+
+/* angka hero besar selama scrub: lapisan di atas teks asli */
+.ref-big-ov{position:absolute;z-index:2;margin:0;pointer-events:none;-webkit-user-select:none;user-select:none;white-space:nowrap;
+  background:none;border-style:solid;border-color:transparent;box-shadow:none}
+.ref-big-hide{color:transparent!important;-webkit-text-fill-color:transparent!important}
+.ref-big-hide::after{visibility:hidden}
+.omset-hero.ref-big-on .hx-odo,.omset-hero.ref-big-on .hx-odo-dl{visibility:hidden}
+.omset-hero [data-ref-cut]{display:none!important}
+#homeOmsetHero .omset-hero-sub,#monthlyOmsetHero .omset-hero-sub{transition:opacity .22s ease}
+.omset-hero.ref-big-on .omset-hero-sub{opacity:.3}
+
+@media (prefers-reduced-motion:reduce){
+  .ref-scrub-shade,.ref-scrub-pool,.ref-scrub-bar,.ref-scrub-x,.ref-scrub-gdot,.ref-scrub-dot,.ref-scrub-lab{transition:opacity .12s linear}
+}

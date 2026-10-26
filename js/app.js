@@ -173,11 +173,122 @@ function gA(){return allActs[gvk()]||[];}
 function fShort(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function fDay(d){return d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase();}
 function fFull(n){return'Rp '+n.toLocaleString('id-ID');}
-function fRp(n){if(n>=1000000)return(n/1000000).toFixed(n%1000000===0?0:2)+'M';if(n>=1000)return(n/1000).toFixed(0)+'k';return n.toString();}
+// ══ FORMAT UANG SINGKAT (satu format untuk semua tile / tabel / grafik) ══
+//   850rb · 189,73jt · 5jt · 2,95M (M = MILIAR) · di bawah 1.000 apa adanya.
+// Dulu juta ditulis 'M' ('189.73M') padahal watchlist memakai 'M' untuk
+// miliar — huruf yang sama untuk nilai yang bedanya 1000x. Sekarang seragam,
+// dan bentuk lengkap tetap fFull ('Rp 5.775.000'). Dibulatkan dengan bilangan
+// bulat, bukan toFixed (5.775.000 → 5,78jt; toFixed memberi 5,77). Batas
+// satuan ikut pembulatan: 999.600 → 1jt, bukan '1000rb'.
+// js/motion.js (KINDS.short / KINDS.rp) membaca format ini — ubah bersama.
+function _fDec(c){const w=Math.floor(c/100),f=c%100;return f?w+','+String(f).padStart(2,'0'):String(w);}
+function fRp(n){
+  n=+n||0;
+  const a=Math.abs(n),sg=n<0?'-':'';
+  if(a>=999995000)return sg+_fDec(Math.round(a/1e7))+'M';
+  if(a>=999500)return sg+_fDec(Math.round(a/1e4))+'jt';
+  if(a>=1000)return sg+Math.round(a/1e3)+'rb';
+  return String(n);
+}
 function rc(r){return r>=10?'great':r>=7?'good':'low';}
-function mc(i){return['#f5c518','#aaa','#cd7f32'][i]||'#555';}
-function md(i){return['','',''][i]||(i+1);}
-function rcl(i){return['r1','r2','r3'][i]||'rX';}
+// ══ NOMOR PERINGKAT ══ '01' '02' '03' … (angka tabular). Medali emoji sudah
+// lama dibuang dan tidak ada gantinya — #1-#3 tampil kosong di beberapa
+// tempat. #1 kuning logo, #2 putih, #3 abu terang, sisanya abu (tanpa
+// perunggu). Warna lewat kelas hx-rk* (gaya dasar di _hxCoreCss) supaya
+// css/fx-*.css bebas menimpanya.
+function md(i){return String(i+1).padStart(2,'0');}
+function mc(i){return['#ffd426','#f5f5f7','#c7c7cc'][i]||'#8e8e93';}
+// has===false (baris tanpa omzet, mis. jam 03:00 belum ada order): angka tetap
+// '01', tapi abu biasa — Rp 0 bukan juara, jadi tidak dapat kuning/putih podium.
+function rcl(i,has){return 'hx-rk '+(has===false?'hx-rkX':(['hx-rk1','hx-rk2','hx-rk3'][i]||'hx-rkX'));}
+
+// ══ MONOGRAM TIM ══
+// config/teams/*/e berisi emoji (singa, api, salib, …). Emoji TIDAK PERNAH
+// dirender lagi; gantinya chip monogram satu warna di samping nama tim.
+// Hanya tampilan: TM[..].e sengaja tidak diubah, karena saveTeamsToFirebase
+// menulis roster utuh — mengosongkannya di memori bisa ikut terkirim.
+const _TEAM_MONO={'Christ A':'CA','Christ B':'CB','Livia':'LV','Valen':'VL','Agung':'AG','Ivan':'IV','Stanley':'ST','REI':'RE'};
+function teamMono(t){
+  t=String(t==null?'':t).trim();
+  if(_TEAM_MONO[t])return _TEAM_MONO[t];
+  // tim baru: huruf depan dua kata pertama, atau dua huruf pertama
+  const keep=ch=>/[0-9]/.test(ch)||ch.toLowerCase()!==ch.toUpperCase();
+  const w=t.split(/\s+/).map(x=>Array.from(x).filter(keep)).filter(a=>a.length);
+  if(!w.length)return '';
+  return (w.length>1?w[0][0]+w[1][0]:w[0].slice(0,2).join('')).toUpperCase();
+}
+// chip kecil sebaris teks ("[CA] Team Christ A")
+function teamChip(t){const m=teamMono(t);return m?'<span class="hx-mono" aria-hidden="true">'+_htmlEsc(m)+'</span>':'';}
+// kotak avatar tim di tabel; garis kiri tipis = warna tim (tetap bermakna)
+function _safeColor(c){c=String(c==null?'':c).trim();return /^#[0-9a-f]{3,8}$/i.test(c)?c:'';}
+function teamTav(t,tc){
+  const c=_safeColor(tc&&tc.c);
+  return '<div class="tav hx-tmono"'+(c?' style="--tc:'+c+'"':'')+' aria-hidden="true">'+_htmlEsc(teamMono(t))+'</div>';
+}
+
+// ══ KAPAN ORDER TERAKHIR (Top Performers) ══
+// Hanya ts yang jatuh di tanggal itu sendiri: record yang ditambahkan admin
+// untuk tanggal lampau membawa ts saat diketik, bukan saat ordernya.
+function _lastSaleTs(entries,sp,team,dayKey){
+  let t=0;
+  (entries||[]).forEach(e=>{
+    if(e&&e.sp===sp&&e.team===team&&+e.ts>t&&dk(new Date(+e.ts))===dayKey)t=+e.ts;
+  });
+  return t;
+}
+function _hhmm(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function _agoTxt(ts,live){
+  if(!ts)return '—';
+  if(!live)return 'terakhir '+_hhmm(ts);
+  const m=(Date.now()-ts)/60000;
+  if(m<2)return 'baru saja';
+  if(m<60)return Math.floor(m)+' mnt lalu';
+  return 'terakhir '+_hhmm(ts);
+}
+// "baru saja" / "12 mnt lalu" ikut menua tanpa menunggu data baru: SATU timer
+// ke perubahan teks berikutnya saja (tidak ada loop; berhenti sendiri begitu
+// semua label sudah "terakhir HH:MM").
+let _agoT=0;
+function _agoRefresh(){
+  clearTimeout(_agoT);_agoT=0;
+  const els=document.querySelectorAll('#lb [data-ago]');
+  if(!els.length)return;
+  const now=Date.now();let next=Infinity;
+  els.forEach(n=>{
+    const ts=+n.getAttribute('data-ago'),txt=_agoTxt(ts,true);
+    if(n.textContent!==txt)n.textContent=txt;
+    const age=now-ts;
+    if(age<2*60000)next=Math.min(next,2*60000-age);
+    else if(age<60*60000)next=Math.min(next,60000-(age%60000));
+  });
+  if(next<Infinity)_agoT=setTimeout(_agoRefresh,next+250);
+}
+
+// ══ GAYA DASAR untuk markup di atas ══ Disisipkan PALING AWAL di <head>,
+// jadi semua stylesheet lain (termasuk css/fx-*.css) menang bila ingin
+// menimpanya. Hanya warna / huruf — tanpa animasi.
+(function _hxCoreCss(){
+  try{
+    if(document.getElementById('hx-core-css'))return;
+    const mono="'Space Mono',ui-monospace,SFMono-Regular,Menlo,monospace";
+    const st=document.createElement('style');
+    st.id='hx-core-css';
+    st.textContent=[
+      '.rnk.hx-rk,.lbr.hx-rk,.ins-lb-rank.hx-rk,.med.hx-rk{font-family:'+mono+';font-weight:700;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;letter-spacing:.02em}',
+      '.hx-rk.hx-rk1{color:#ffd426;text-shadow:0 0 14px rgba(255,212,38,.28)}',
+      '.hx-rk.hx-rk2{color:#f5f5f7;text-shadow:none}',
+      '.hx-rk.hx-rk3{color:#c7c7cc;text-shadow:none}',
+      '.hx-rk.hx-rkX{color:#8e8e93;text-shadow:none}',
+      '.hx-mono{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:2.7em;height:1.75em;padding:0 .5em;margin-right:.6em;border-radius:.5em;'+
+        'font-family:'+mono+';font-size:.74em;font-size:max(9px,.74em);font-weight:700;font-style:normal;line-height:1;letter-spacing:.06em;text-transform:uppercase;'+
+        'color:#e5e5ea;background:rgba(255,255,255,.075);box-shadow:inset 0 0 0 1px rgba(255,255,255,.13),inset 0 1px 0 rgba(255,255,255,.10);text-shadow:none;vertical-align:middle;position:relative;top:-.08em}',
+      '.tav.hx-tmono{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.035));color:#f2f2f7;font-family:'+mono+';font-size:11px;font-weight:700;letter-spacing:.04em;text-shadow:none;'+
+        'box-shadow:inset 0 0 0 1px rgba(255,255,255,.11),inset 0 1px 0 rgba(255,255,255,.16),inset 2px 0 0 var(--tc,transparent)}'
+    ].join('\n');
+    const h=document.head||document.getElementsByTagName('head')[0];
+    if(h)h.insertBefore(st,h.firstChild);
+  }catch(e){}
+})();
 
 // ══ CALENDAR PICKER — iOS STYLE ══
 let calYear=new Date().getFullYear();
@@ -620,8 +731,8 @@ function setPriceMode(mode){
 }
 
 function updateCustomPreview(){
-  const custom=parseFloat(document.getElementById('inCustom')?.value)||0;
-  const units=parseInt(document.getElementById('inUnits')?.value)||1;
+  const custom=parseFloat((document.getElementById('inCustom')||{}).value)||0;
+  const units=parseInt((document.getElementById('inUnits')||{}).value)||1;
   const preview=document.getElementById('customPreview');
   if(preview)preview.textContent=custom>0?'Total: '+fFull(custom*units):'';
 }
@@ -648,7 +759,7 @@ function addEntry(){
     if(currentPriceMode==='normal'){
       price=P[prod]||0;
     } else {
-      price=parseFloat(document.getElementById('inCustom')?.value)||0;
+      price=parseFloat((document.getElementById('inCustom')||{}).value)||0;
       if(!price){showToast('Masukkan custom price!','error');return;}
     }
 
@@ -768,10 +879,10 @@ function addActivity(){
 
     // Robust number parsing — strip whitespace and commas
     const parseNum=v=>{const n=parseInt(String(v||'').replace(/[^0-9-]/g,''));return isNaN(n)?0:n;};
-    const chats=parseNum(chatsEl?.value);
+    const chats=parseNum((chatsEl||{}).value);
     const calls=parseNum(callsEl.value);
     const fups=parseNum(fupsEl.value);
-    const notes=(notesEl?.value||'').trim();
+    const notes=((notesEl||{}).value||'').trim();
 
     if(!chats&&!calls&&!fups){
       showToast('Enter at least one: chats, calls, or follow ups','error');return;
@@ -1039,8 +1150,12 @@ function renderAll(){
   document.getElementById('K2c').textContent=fFull(T.revenue);
 
   // Goal
-  const pct=Math.min(100,Math.round(T.revenue/TR*100));
-  document.getElementById('goalFill').style.width=pct+'%';
+  // % ASLI di teks (Rp189,7jt dari target Rp150jt = 126%, bukan 100%);
+  // hanya lebar batangnya yang mentok di 100%.
+  // Belum tembus target tidak pernah tampil 100% (99,6% → 99%): event 'goal'
+  // 100% di fx-core baru menyala saat omzet benar-benar >= target.
+  const pct=TR>0?(T.revenue<TR?Math.min(99,Math.round(T.revenue/TR*100)):Math.round(T.revenue/TR*100)):0;
+  document.getElementById('goalFill').style.width=Math.min(100,pct)+'%';
   document.getElementById('goalPct').textContent=pct+'%';
   document.getElementById('totalRev').textContent=fFull(T.revenue);
 
@@ -1061,9 +1176,9 @@ function renderAll(){
     ?'<tr class="erow"><td colspan="6">No data yet — log entries below </td></tr>'
     :teams.map((t,i)=>{
       const tc=TM[t.n]||{c:'#888',bg:'#111',e:'',m:[]};
-      return`<tr>
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
-        <td><div class="tcell"><div class="tav" style="background:${tc.bg};color:${tc.c}">${tc.e}</div><div class="tn">${t.n}</div></div></td>
+      return`<tr data-k="team:${_htmlEsc(t.n)}">
+        <td><span class="rnk ${rcl(i,t.revenue>0)}">${md(i)}</span></td>
+        <td><div class="tcell">${teamTav(t.n,tc)}<div class="tn">${t.n}</div></div></td>
         <td><span style="font-size:9px;color:#6060a0;font-family:'DM Mono',monospace">${tc.m.join(' · ')}</span></td>
         <td><span class="nb">${t.chats}</span></td>
         <td><span class="nb">${t.closes}</span></td>
@@ -1078,8 +1193,8 @@ function renderAll(){
     :sps.map((s,i)=>{
       const tc=TM[s.team]||{c:'#888'};
       const isEmpty=s.chats===0&&s.closes===0&&s.calls===0&&s.fups===0;
-      return`<tr onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')" style="${isEmpty?'opacity:0.5':''}">
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
+      return`<tr data-k="${_htmlEsc(s.sp+'|'+s.team)}" onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')" style="${isEmpty?'opacity:0.5':''}">
+        <td><span class="rnk ${rcl(i,s.revenue>0)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.closes}</span></td>
@@ -1115,21 +1230,39 @@ function renderAll(){
   }).join('');}
 
   // LEADERBOARD
+  // "N chats · X% rate" hanya kalau laporan aktivitas hari itu sudah ada.
+  // Aktivitas baru dilaporkan BESOKNYA, jadi sepanjang hari ini isinya selalu
+  // "0 chats · 0.0% rate". Tanpa laporan → kapan order terakhirnya hari itu:
+  // "baru saja" / "12 mnt lalu" / "terakhir 09:41".
   const top6=aggSP(entries,acts).slice(0,6);
+  const _actK=new Set(acts.filter(a=>a&&typeof a==='object').map(a=>a.sp+'|'+a.team));
+  const _dayK=gvk(),_live=isT();
   document.getElementById('lb').innerHTML=top6.length===0
     ?'<div style="color:#333350;font-size:11px;font-family:\'DM Mono\',monospace;">Log entries to see rankings.</div>'
-    :top6.map((s,i)=>`
-      <div class="lbi" onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')">
-        <div class="lbr" style="color:${mc(i)}">${md(i)}</div>
+    :top6.map((s,i)=>{
+      const k=s.sp+'|'+s.team;
+      let sub,right;
+      if(_actK.has(k)||s.chats>0){
+        sub=`Team ${s.team} · ${s.closes}x · ${s.chats} chats`;
+        right=`<div class="lbr2">${(_isLeader(s.sp)&&!s.chats)?'— rate':s.rate.toFixed(1)+'% rate'}</div>`;
+      }else{
+        const ts=_lastSaleTs(entries,s.sp,s.team,_dayK);
+        sub=`Team ${s.team} · ${s.closes}x`;
+        right=`<div class="lbr2"${ts&&_live?' data-ago="'+ts+'"':''}>${_agoTxt(ts,_live)}</div>`;
+      }
+      return`
+      <div class="lbi" data-k="${_htmlEsc(k)}" onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')">
+        <div class="lbr ${rcl(i,s.revenue>0)}">${md(i)}</div>
         <div class="lbin">
           <div class="lbn">${s.sp}</div>
-          <div class="lbt">Team ${s.team} · ${s.closes}x · ${s.chats} chats</div>
+          <div class="lbt">${sub}</div>
         </div>
         <div>
           <div class="lbs">${fFull(s.revenue)}</div>
-          <div class="lbr2">${(_isLeader(s.sp)&&!s.chats)?'— rate':s.rate.toFixed(1)+'% rate'}</div>
+          ${right}
         </div>
-      </div>`).join('');
+      </div>`;}).join('');
+  _agoRefresh();
 
   // ACTIVITY LOG
   renderActLog(acts);
@@ -1208,7 +1341,7 @@ function renderActLog(acts){
         fups:entries.reduce((s,a)=>s+(a.fups||0),0),
       };
       const teamHeader=`<div class="alog-team-hdr" style="border-left:3px solid ${tc.c}">
-        <div class="alog-team-name" style="color:${tc.c}">${tc.e} ${team}</div>
+        <div class="alog-team-name" style="color:${tc.c}">${teamChip(team)}${team}</div>
         <div class="alog-team-tot">
           <span style="color:#f5c518">${teamTotals.chats}c</span> ·
           <span style="color:#448aff">${teamTotals.calls} calls</span> ·
@@ -1275,7 +1408,7 @@ function renderSPGrid(entries,acts){
     });
 
     const teamHeader=`<div class="spg-team-hdr" style="border-left:4px solid ${tc.c}">
-      <div class="spg-team-name" style="color:${tc.c}">${tc.e} Team ${tn}</div>
+      <div class="spg-team-name" style="color:${tc.c}">${teamChip(tn)}Team ${tn}</div>
       <div class="spg-team-stats">
         <span style="color:#f5c518">${avg(teamTotals.moChats)}/hari</span>
         <span style="color:#448aff">${avg(teamTotals.moCalls)}/hari</span>
@@ -1287,11 +1420,11 @@ function renderSPGrid(entries,acts){
 
     const cards=tc.m.map(sp=>{
       const s=spMap[sp+'|'+tn]||{chats:0,closes:0,revenue:0,calls:0,fups:0};
-      return`<div class="spc" onclick="openSPMonth('${_js(sp)}','${_js(tn)}')">
+      return`<div class="spc" data-k="${_htmlEsc(sp+'|'+tn)}" onclick="openSPMonth('${_js(sp)}','${_js(tn)}')">
         <div class="spc-bar" style="background:${tc.c}"></div>
         <div class="spc-av" style="background:${tc.bg};color:${tc.c}">${sp[0].toUpperCase()}</div>
         <div class="spc-name">${sp}</div>
-        <div class="spc-team">Team ${tn} ${tc.e}</div>
+        <div class="spc-team">${teamChip(tn)}Team ${tn}</div>
         ${(()=>{
           const ma=moAct[sp+'|'+tn]||{chats:0,calls:0,fups:0};
           // channel marketplace tidak wajib lapor call/FU → tampilkan "—", bukan 0.0
@@ -1352,7 +1485,7 @@ function _spModalPaint(sp,team,d,reopen){
   av.textContent=String(sp||'?')[0].toUpperCase();
   av.style.background=tc.bg;av.style.color=tc.c;
   document.getElementById('mName').textContent=sp;
-  document.getElementById('mTeam').textContent='Team '+team+' '+tc.e+' · '+d.period;
+  document.getElementById('mTeam').innerHTML=teamChip(team)+_htmlEsc('Team '+team+' · '+d.period);
 
   // channel marketplace tidak wajib lapor chat/call/FU → tampilkan "—", bukan 0 palsu
   const excl=(typeof _isActExcluded==='function')&&_isActExcluded(sp);
@@ -1453,21 +1586,27 @@ function buildWA(){
   const T=tots(entries,acts);
   const vd=od(vOff);
   const ds=vd.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const rate=T.chats>0?(T.closes/T.chats*100).toFixed(1):0;
-  const cp=Math.round(T.chats/TC*100);
+  // Chat sekarang dilaporkan lewat activities (bukan di record order), jadi
+  // dijumlah dari keduanya — sama seperti baris TEAM RANKING di bawah. Target
+  // chat dari config (TC), bukan angka 160 lama.
+  const chats=(+T.chats||0)+acts.reduce((s,a)=>s+((a&&+a.chats)||0),0);
+  const rate=chats>0?(T.closes/chats*100).toFixed(1):0;
+  // di bawah target tidak pernah tampil 100% (241/242 dibulatkan jadi 100%)
+  const cp=TC>0?(chats<TC?Math.min(99,Math.round(chats/TC*100)):Math.round(chats/TC*100)):0;
   let txt='*HURRICANE XCS — DAILY REPORT*\n━━━━━━━━━━━━━━━━━━━━━━\n';
   txt+=`${ds}\n\n*SUMMARY*\n`;
-  txt+=`Chats : ${T.chats}/160 (${cp}%)\nCloses : ${T.closes} units\nCalls : ${T.calls}\nFollow Up : ${T.fups}\nClose Rate : ${rate}%\nRevenue : ${fFull(T.revenue)}\n\n`;
+  txt+=`Chats : ${chats}/${TC} (${cp}%)\nCloses : ${T.closes} units\nCalls : ${T.calls}\nFollow Up : ${T.fups}\nClose Rate : ${rate}%\nRevenue : ${fFull(T.revenue)}\n\n`;
   txt+='*TEAM RANKING*\n';
   const teams=aggTeams(entries,acts).filter(t=>t.chats>0||t.closes>0||t.calls>0);
   if(!teams.length)txt+='No data.\n';
-  else teams.forEach((t,i)=>{txt+=`${['','','','4','5','6','7'][i]||''} *${t.n}* — ${t.chats}c · ${t.calls} calls · ${t.closes}x · ${fFull(t.revenue)}\n`;});
+  else teams.forEach((t,i)=>{txt+=`${i+1}. *${t.n}* — ${t.chats}c · ${t.calls} calls · ${t.closes}x · ${fFull(t.revenue)}\n`;});
   txt+='\n*TOP 5 SALESPEOPLE*\n';
-  const sps=aggSP(entries,acts).slice(0,5);
+  // seller tanpa order/aktivitas sama sekali tidak dicetak sebagai 'Top 5'
+  const sps=aggSP(entries,acts).filter(s=>s.closes>0||s.revenue>0||s.chats>0||s.calls>0).slice(0,5);
   if(!sps.length)txt+='No data.\n';
-  else sps.forEach((s,i)=>{txt+=`${['','','','4','5'][i]} ${s.sp} (${s.team}) — ${s.closes}x · ${fFull(s.revenue)}\n`;});
+  else sps.forEach((s,i)=>{txt+=`${i+1}. ${s.sp} (${s.team}) — ${s.closes}x · ${fFull(s.revenue)}\n`;});
   txt+='\n━━━━━━━━━━━━━━━━━━━━━━\n';
-  txt+=cp>=100?'TARGET REACHED! Great work team!':'Keep pushing — '+(160-T.chats)+' chats to go!';
+  txt+=chats>=TC?'TARGET REACHED! Great work team!':'Keep pushing — '+(TC-chats)+' chat'+(TC-chats===1?'':'s')+' to go!';
   txt+='\n_Hurricane XCS Performance System_';
   return txt;
 }
@@ -1596,9 +1735,9 @@ function renderMonthly(){
     :sortedTeams.map((t,i)=>{
       const tc=TM[t.n]||{c:'#888',bg:'#111',e:''};
       const barW=Math.round(t.revenue/maxTeamRev*100);
-      return`<tr>
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
-        <td><div class="tcell"><div class="tav" style="background:${tc.bg};color:${tc.c}">${tc.e}</div><div class="tn">${t.n}</div></div></td>
+      return`<tr data-k="team:${_htmlEsc(t.n)}">
+        <td><span class="rnk ${rcl(i,t.revenue>0)}">${md(i)}</span></td>
+        <td><div class="tcell">${teamTav(t.n,tc)}<div class="tn">${t.n}</div></div></td>
         <td><span class="nb">${t.chats}</span></td>
         <td><span class="nb">${t.calls}</span></td>
         <td><span class="nb">${t.fups}</span></td>
@@ -1645,7 +1784,7 @@ function renderMonthly(){
     if(_isHiddenSP(v.sp,v.team,v.revenue))delete spTotals[k];
   });
   window._monthSpTotals=spTotals;
-  window._monthLabel=document.getElementById('monthLabel')?.textContent||'';
+  window._monthLabel=(document.getElementById('monthLabel')||{}).textContent||'';
   renderSpLookup();
 
   // SP table
@@ -1654,8 +1793,8 @@ function renderMonthly(){
     ?'<tr class="erow"><td colspan="7">No data for this month</td></tr>'
     :sortedSPs.map((s,i)=>{
       const tc=TM[s.team]||{c:'#888'};
-      return`<tr onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
-        <td><span class="rnk ${rcl(i)}">${md(i)}</span></td>
+      return`<tr data-k="${_htmlEsc(s.sp+'|'+s.team)}" onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
+        <td><span class="rnk ${rcl(i,s.revenue>0)}">${md(i)}</span></td>
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.calls}</span></td>
@@ -1727,7 +1866,7 @@ function renderSpLookup(){
         <div class="sp-lookup-av" style="background:${tc.bg};color:${tc.c}">${s.sp[0].toUpperCase()}</div>
         <div>
           <div class="sp-lookup-name">${s.sp}</div>
-          <div class="sp-lookup-team" style="color:${tc.c}">${tc.e} Team ${s.team}</div>
+          <div class="sp-lookup-team" style="color:${tc.c}">${teamChip(s.team)}Team ${s.team}</div>
         </div>
         <div class="sp-lookup-rev">
           <div class="sp-lookup-rev-val">${fFull(s.revenue||0)}</div>
@@ -1888,7 +2027,7 @@ Gunakan data nyata di atas. Jangan terlalu panjang, maksimal 250 kata.`;
       })
     });
     const json=await res.json();
-    const text=json.content?.[0]?.text||'Gagal generate briefing.';
+    const text=(json.content&&json.content[0]&&json.content[0].text)||'Gagal generate briefing.';
 
     // Format the text nicely
     const formatted=text
@@ -2158,9 +2297,8 @@ function renderInsights(){
   }
   const renderLB=(arr,emptyMsg,color)=>{
     if(!arr.length)return `<div class="ins-lb-empty">${emptyMsg}</div>`;
-    const medals=['','','','4','5'];
     return arr.map((s,i)=>`<div class="ins-lb-row">
-      <div class="ins-lb-rank">${medals[i]||(i+1)}</div>
+      <div class="ins-lb-rank ${rcl(i)}">${md(i)}</div>
       <div><div class="ins-lb-name">${s.sp}</div><div class="ins-lb-team">${s.team}</div></div>
       <div><div class="ins-lb-stat" style="color:${color}">${s.count}×</div><div class="ins-lb-substat">${fRp(s.revenue)}</div></div>
     </div>`).join('');
@@ -2185,9 +2323,9 @@ function renderInsights(){
   document.getElementById('insTeamBody').innerHTML=teamRows.length===0?'<tr><td colspan="8" style="text-align:center;color:#404065;padding:20px;">No data in this period</td></tr>':teamRows.map((t,i)=>{
     const tc=TM[t.team]||{c:'#888',e:''};
     const avgTicket=t.orders>0?Math.round(t.totalRev/t.orders):0;
-    return `<tr>
-      <td><span class="med">${['','',''][i]||(i+1)}</span></td>
-      <td><div class="tcell"><div class="tav" style="background:${tc.bg||'#161624'};color:${tc.c}">${tc.e||''}</div><div class="tn">${t.team}</div></div></td>
+    return `<tr data-k="team:${_htmlEsc(t.team)}">
+      <td><span class="med ${rcl(i)}">${md(i)}</span></td>
+      <td><div class="tcell">${teamTav(t.team,tc)}<div class="tn">${t.team}</div></div></td>
       <td><span class="nb">${t.orders}</span></td>
       <td><span style="color:#ff6b1a;font-weight:700">${pct(t.upsell,t.orders)}%</span></td>
       <td><span style="color:#7c4dff;font-weight:700">${pct(t.cross,t.orders)}%</span></td>
@@ -2210,7 +2348,7 @@ function renderInsights(){
   const renderProds=(arr,emptyMsg,color)=>{
     if(!arr.length)return `<div class="ins-lb-empty">${emptyMsg}</div>`;
     return arr.map((p,i)=>`<div class="ins-lb-row">
-      <div class="ins-lb-rank">${i+1}</div>
+      <div class="ins-lb-rank ${rcl(i)}">${md(i)}</div>
       <div><div class="ins-lb-name">${p.prod}</div></div>
       <div><div class="ins-lb-stat" style="color:${color}">${p.count}×</div><div class="ins-lb-substat">${fRp(p.revenue)}</div></div>
     </div>`).join('');
@@ -2442,7 +2580,7 @@ function renderWarning(){
       <div class="av" style="background:${tc.bg};color:${tc.c}">${x.sp[0]}</div>
       <div>
         <div class="warn-crit-name">${x.sp}</div>
-        <div class="warn-crit-team">Team ${x.team} ${tc.e} · last log ${x.lastDateLbl}</div>
+        <div class="warn-crit-team">${teamChip(x.team)}Team ${x.team} · last log ${x.lastDateLbl}</div>
         <div class="warn-crit-issues">${x.issues.map(i=>`<span class="warn-crit-issue">${issueLbl(i.type)}</span>`).join('')}</div>
       </div>
       <div>
@@ -2479,7 +2617,7 @@ function renderWarning(){
     document.getElementById('warnCritical').innerHTML=grouped.map(g=>{
       const bg=g.tc.bg||'#161624';
       const header=`<div class="warn-team-hdr" style="border:1px solid ${g.tc.c}40;background:linear-gradient(135deg,${bg},transparent);">
-        <div class="warn-team-name" style="color:${g.tc.c}"><span style="font-size:18px">${g.tc.e}</span> Team ${g.team}</div>
+        <div class="warn-team-name" style="color:${g.tc.c}">${teamChip(g.team)}Team ${g.team}</div>
         <div class="warn-team-tot">${g.items.length} flagged</div>
       </div>`;
       const cards=g.items.sort((a,b)=>b.issues.length-a.issues.length).map(renderCriticalCard).join('');
@@ -2516,7 +2654,7 @@ function renderWarning(){
     if(arr.length===0)return renderEmpty;
     const grouped=groupByTeam(arr);
     return grouped.map(g=>{
-      const header=`<div class="warn-team-subhdr" style="color:${g.tc.c}">${g.tc.e} ${g.team}</div>`;
+      const header=`<div class="warn-team-subhdr" style="color:${g.tc.c}">${teamChip(g.team)}${g.team}</div>`;
       const rows=g.items.sort(sortFn).map(s=>renderRow(s,issueType)).join('');
       return header+rows;
     }).join('');
@@ -2604,7 +2742,7 @@ function recalcOmset(){
   let total=0;
   OMSET_FIELDS.forEach(f=>{
     const el=document.getElementById('o_'+f);
-    total+=parseFloat(el?.value||0)||0;
+    total+=parseFloat((el&&el.value)||0)||0;
   });
   const fmt=fFull(total);
   const el1=document.getElementById('omsetTotal');
@@ -2612,18 +2750,18 @@ function recalcOmset(){
   const el3=document.getElementById('omsetTotalSub');
   if(el1)el1.textContent=fmt;
   if(el2)el2.textContent=fmt;
-  if(el3)el3.textContent=total>0?`${OMSET_FIELDS.filter(f=>parseFloat(document.getElementById('o_'+f)?.value||0)>0).length} channel diisi`:'Isi form di atas untuk melihat total';
+  if(el3)el3.textContent=total>0?`${OMSET_FIELDS.filter(f=>parseFloat((document.getElementById('o_'+f)||{}).value||0)>0).length} channel diisi`:'Isi form di atas untuk melihat total';
 }
 
 function saveOmset(){
   const key=getOmsetKey();
   const data={};
   OMSET_FIELDS.forEach(f=>{
-    const v=parseFloat(document.getElementById('o_'+f)?.value||0)||0;
+    const v=parseFloat((document.getElementById('o_'+f)||{}).value||0)||0;
     if(v>0)data[f]=v;
   });
   data.savedAt=Date.now();
-  data.total=OMSET_FIELDS.reduce((a,f)=>a+(parseFloat(document.getElementById('o_'+f)?.value||0)||0),0);
+  data.total=OMSET_FIELDS.reduce((a,f)=>a+(parseFloat((document.getElementById('o_'+f)||{}).value||0)||0),0);
 
   if(window.db){
     window.db.ref('omset/'+key).set(data).then(()=>{
@@ -3092,7 +3230,7 @@ function saveTargets(){
     if(window.db){
       // update() — NEVER set(): a whole-node set() here once wiped config/teams + config/products
       window.db.ref('config').update(cfg).then(()=>{
-        showToast('Targets saved! Chat: '+chatTarget+' · Rp '+(revTarget/1000000).toFixed(1)+'M','success');
+        showToast('Targets saved! Chat: '+chatTarget+' · Rp '+fRp(revTarget),'success');
         renderAll();
       }).catch(err=>{
         showToast('Local only: '+err.message,'error');
@@ -3179,7 +3317,7 @@ function renderAdminTeams(){
   list.innerHTML=Object.entries(TM).map(([teamName,tc])=>`
     <div style="background:#0e0e1a;border:1px solid #252540;border-radius:10px;padding:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <div style="width:34px;height:34px;border-radius:8px;background:${tc.bg};color:${tc.c};display:flex;align-items:center;justify-content:center;font-size:16px;">${tc.e}</div>
+        ${teamTav(teamName,tc)}
         <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;color:white;">${_htmlEsc(teamName)}</div>
         <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;">${tc.m.length} members</span>
       </div>
@@ -3635,7 +3773,7 @@ function populateMsSPSelect(){
   Object.entries(TM).forEach(([team,tc])=>{
     if(!tc.m||!tc.m.length)return;
     const grp=document.createElement('optgroup');
-    grp.label=tc.e+' Team '+team;
+    grp.label='Team '+team;
     tc.m.forEach(sp=>{
       const opt=document.createElement('option');
       opt.value=sp+'|'+team;
@@ -3712,7 +3850,7 @@ function renderMySales(){
         <div class="ms-avatar" style="background:${tc.bg};color:${tc.c};border:2px solid ${tc.c}40;">${sp[0].toUpperCase()}</div>
         <div>
           <div class="ms-name">${sp}</div>
-          <div class="ms-team" style="color:${tc.c}">${tc.e} Team ${team}</div>
+          <div class="ms-team" style="color:${tc.c}">${teamChip(team)}Team ${team}</div>
         </div>
       </div>
       <div class="ms-kpi-row">
@@ -3833,7 +3971,7 @@ function adminAddUpdateSP(){
   if(!teamSel||!spSel)return;
   const team=teamSel.value;
   const prev=spSel.value;
-  spSel.innerHTML=(TM[team]?.m||[]).map(sp=>`<option>${sp}</option>`).join('');
+  spSel.innerHTML=((TM[team]&&TM[team].m)||[]).map(sp=>`<option>${sp}</option>`).join('');
   // Pilihan dijaga. Tanpa ini, perubahan roster live (mis. team dipecah) yang
   // memindahkan team di form Quick Add Sale juga mereset nama sales ke anggota
   // pertama team, dan penjualan tercatat atas nama team lead.

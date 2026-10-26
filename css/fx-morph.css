@@ -1,0 +1,73 @@
+/* ══ FX MORPH — lembar detail sales (#spMo) ═════════════════════════════
+   Aktif hanya bila js/fx-morph.js berjalan (html.hx-morph; browser tanpa
+   Web Animations tetap memakai tampilan lama dari glass.css).
+
+   - Redup + blur overlay dipindah dari #spMo ke .hx-mo-scrim (anak
+     pertama #spMo) supaya bisa memudar sendiri, terpisah dari lembarnya.
+     Tetap SATU lapisan blur 16px yang hanya ada saat modal terbuka.
+     Tanpa z-index negatif (Safari tidak menggambar backdrop-filter di
+     lapisan negatif): urutan gambar = urutan DOM, jadi .mbox diberi
+     position:relative supaya tetap di atas scrim & hantu.
+   - .hx-mo-ghost = "permukaan" kaca sementara yang bergerak dari kartu ke
+     lembar (dan kembali). Tampilannya disalin dari .mbox oleh JS; selama
+     itu latar .mbox dibuat transparan (.hx-mo-ghosting) dan isinya muncul
+     di atas hantu. Tanpa backdrop-filter.
+   - HP: garis pegangan kecil di atas lembar (tarik ke bawah untuk tutup);
+     berubah hijau saat lepas = tutup.
+   ══════════════════════════════════════════════════════════════════════ */
+html.hx-morph #spMo{
+  background:transparent!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+html.hx-morph #spMo>.hx-mo-scrim{
+  position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none;
+  background:rgba(0,0,0,.42);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+}
+/* animasi lg-pop dari glass.css diganti JS (morph / naik / pudar) */
+html.hx-morph #spMo .mbox{position:relative;animation:none;overscroll-behavior-y:contain}
+html.hx-morph #spMo>.hx-mo-ghost{
+  position:absolute;pointer-events:none;
+  -webkit-transform-origin:0 0;transform-origin:0 0;
+  will-change:transform,opacity;overflow:hidden;
+}
+/* kilau sekali lewat saat lembar mengembang (hijau cair sangat tipis) */
+html.hx-morph #spMo>.hx-mo-ghost>.hx-mo-sheen{
+  position:absolute;top:0;left:0;width:55%;height:100%;pointer-events:none;
+  background:linear-gradient(90deg,rgba(255,255,255,0) 18%,rgba(255,255,255,.075) 45%,rgba(160,255,190,.06) 54%,rgba(255,255,255,0) 82%);
+}
+/* selama hantu tampil, dia yang jadi permukaan lembar */
+html.hx-morph #spMo.hx-mo-ghosting .mbox{
+  background:transparent!important;box-shadow:none!important;
+  scrollbar-color:transparent transparent;
+}
+html.hx-morph #spMo.hx-mo-ghosting .mbox::-webkit-scrollbar-thumb{background:transparent}
+/* sedang menutup: ketukan tembus ke halaman (boleh langsung buka kartu lain) */
+html.hx-morph #spMo.hx-mo-closing{pointer-events:none}
+/* sedang ditarik: jangan memilih teks */
+html.hx-morph #spMo.hx-mo-drag .mbox{-webkit-user-select:none;user-select:none}
+
+/* HP: pegangan tarik. Ikut ter-scroll bersama isi (lembar adalah wadah
+   scroll), dan hanya muncul di tata letak lembar bawah (≤768px). */
+@media (max-width:768px){
+  html.hx-morph #spMo .mbox::before{
+    content:'';display:block;width:38px;height:5px;border-radius:3px;
+    margin:-9px auto 13px;background:rgba(255,255,255,.22);
+    transition:background-color .18s ease,box-shadow .18s ease,opacity .26s ease;
+  }
+  /* ikut isi lembar: tak tampil selama hantu bergerak, lalu memudar masuk */
+  html.hx-morph #spMo.hx-mo-ghosting .mbox::before{opacity:0;transition:none}
+  html.hx-morph #spMo.hx-mo-armed .mbox::before{
+    background:#30d158;box-shadow:0 0 12px rgba(48,209,88,.55);
+  }
+}
+
+/* "Kurangi transparansi" (Chrome) & browser tanpa backdrop-filter: padat */
+@media (prefers-reduced-transparency:reduce){
+  html.hx-morph #spMo>.hx-mo-scrim{
+    -webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(0,0,0,.66);
+  }
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  html.hx-morph #spMo>.hx-mo-scrim{background:rgba(0,0,0,.72)}
+}

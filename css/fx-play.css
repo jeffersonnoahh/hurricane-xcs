@@ -1,0 +1,181 @@
+/* ══════════════════════════════════════════════════════════════════════
+   FX PLAY — tiga mainan sentuh (lihat js/fx-play.js).
+     1. tahan angka hero → omset terbelah per tim   (.hxp-split)
+     2. geser Dashboard → pindah hari               (.hxp-day = chip tujuan)
+     3. tekan kartu kaca → kartu miring + kilau     (.hxp-glare)
+
+   - TANPA backdrop-filter. Anggaran blur HP sudah habis di header + nav;
+     semua lapisan di sini kaca PADAT (isi gelap + tepi cahaya).
+   - z-index: tirai 388 < garis isi-tahan 389 < panel belah 390 < nav bawah 400 <
+     kapsul live 850 < modal .mo 999 < toast 9999. Chip hari 380. Panel
+     diletakkan js di antara header dan nav, jadi tidak pernah menutupi keduanya.
+   - Tidak ada animation/transition !important (pengaman Kurangi Gerak di
+     premium.css harus tetap menang). Gerak dijalankan js lewat transform/
+     opacity (Web Animations) — tidak ada loop tanpa akhir.
+   - Tidak memakai: inset, gap flex, :has(), aspect-ratio, translate/rotate/
+     scale sebagai properti terpisah (iOS 14 / Chrome 80).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── permukaan gestur ─────────────────────────────────────────────────
+   Geser mendatar di Dashboard & di atas kartu kaca = milik kita; browser
+   hanya boleh menggulir TEGAK dan zoom cubit. Elemen yang memang digeser
+   mendatar (riwayat 30 hari, tabel .tw) adalah kontainer gulir sendiri,
+   jadi geser mendatarnya tetap jalan (touch-action dihitung sampai
+   kontainer gulir terdekat). Saat halaman di-zoom cubit (js memasang
+   html.hxp-zoomed) semuanya kembali normal: pengguna yang memperbesar layar
+   harus bisa menggeser tampilan ke kiri/kanan. */
+html:not(.hxp-zoomed) #page-dashboard>#dashboardContainer{touch-action:pan-y pinch-zoom}
+html:not(.hxp-zoomed) .spc,html:not(.hxp-zoomed) .kpi-card,html:not(.hxp-zoomed) .goal-card,
+html:not(.hxp-zoomed) .ins-kpi-card,html:not(.hxp-zoomed) .omset-hero{touch-action:pan-y pinch-zoom}
+
+/* angka hero = permukaan "tahan": tanpa menu iOS / seleksi teks */
+#liveOmsetBig{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+/* kartu yang sedang ditekan (dipasang/dilepas js selama gestur saja) */
+.hxp-nosel,.hxp-nosel *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* ══ 1. OMSET TERBELAH PER TIM ═════════════════════════════════════════ */
+/* tirai: halaman di antara header & nav bawah meredup selama panel terbuka
+   (warna padat, TANPA blur). top dipasang js = tepi bawah header, jadi
+   header tetap terang; nav bawah (z 400) ada di atasnya. */
+.hxp-scrim{
+  position:fixed;z-index:388;left:0;right:0;top:0;bottom:0;pointer-events:none;
+  background:rgba(0,0,0,.8);opacity:0;
+}
+/* garis "mengisi" di bawah angka selama ditahan */
+.hxp-charge{
+  position:fixed;z-index:389;height:2px;border-radius:2px;pointer-events:none;
+  background:linear-gradient(90deg,rgba(48,209,88,0) 0%,rgba(48,209,88,.85) 38%,#7df29c 100%);
+  box-shadow:0 0 10px rgba(48,209,88,.55);
+  transform-origin:0 50%;transform:scaleX(0);opacity:0;
+}
+
+.hxp-split{
+  position:fixed;z-index:390;left:0;top:0;pointer-events:none;
+  border-radius:28px;color:#f5f5f7;
+  background:linear-gradient(165deg,#212328 0%,#15161a 44%,#0c0d0f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.26),
+    inset 0 0 0 1px rgba(255,255,255,.085),
+    inset 0 -48px 70px -56px rgba(48,209,88,.34),
+    0 0 0 6px rgba(0,0,0,.7),0 0 34px 12px rgba(0,0,0,.72),
+    0 44px 90px -34px rgba(0,0,0,.96),0 10px 26px -8px rgba(0,0,0,.72);
+  font-variant-numeric:tabular-nums;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  contain:layout style;
+}
+/* kilau tipis di tepi atas kaca */
+.hxp-split:before{
+  content:'';position:absolute;top:0;left:12%;right:12%;height:1px;border-radius:1px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0));
+  opacity:.55;
+}
+.hxp-head{position:absolute;left:0;right:0;top:0}
+.hxp-kick{position:relative;height:14px;overflow:hidden}
+.hxp-kick-a,.hxp-kick-b,.hxp-kick-h{
+  position:absolute;top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:10px;line-height:14px;font-weight:700;
+  transition:opacity .18s ease-out;
+}
+.hxp-kick-a{left:0;right:118px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(235,235,245,.56)}
+.hxp-kick-h{right:0;max-width:116px;letter-spacing:.3px;color:rgba(235,235,245,.34);font-weight:600}
+.hxp-kick-b{left:0;right:0;opacity:0;font-size:11px;letter-spacing:.1px;color:#f5f5f7;font-weight:600}
+.hxp-kick-b b{color:#30d158;font-weight:700}
+.hxp-kick-b .hxp-k-team{color:#fff;font-weight:700}
+/* peringkat bulanan sales teratas (HX.monthAgg) — abu, kuning hanya #1 */
+.hxp-kick-b .hxp-k-rk{color:rgba(235,235,245,.56);font-weight:600}
+.hxp-kick-b .hxp-k-rk.is-1{color:#ffd426}
+.hxp-split.has-hot .hxp-kick-a,.hxp-split.has-hot .hxp-kick-h{opacity:0}
+.hxp-split.has-hot .hxp-kick-b{opacity:1}
+.hxp-totw{position:absolute;left:0;white-space:nowrap}
+.hxp-total{
+  display:inline-block;white-space:nowrap;color:#fff;font-weight:800;line-height:1.1;
+  transform-origin:0 50%;font-variant-numeric:tabular-nums;
+}
+.hxp-body{position:absolute;left:0;right:0;top:0;bottom:0}
+.hxp-stack{position:absolute;height:6px;border-radius:3px;transform-origin:0 50%;
+  background:rgba(255,255,255,.05)}
+.hxp-seg{position:absolute;top:0;bottom:0;border-radius:3px;background:#30d158}
+.hxp-seg.is-top{background:#ffd426}
+.hxp-rows{position:absolute}
+.hxp-lens{
+  position:absolute;left:-10px;right:-10px;top:0;border-radius:12px;opacity:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.03));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,255,255,.06);
+  transition:transform .26s cubic-bezier(.3,1.3,.5,1),opacity .16s ease-out;
+}
+.hxp-split.has-hot .hxp-lens{opacity:1}
+.hxp-row{position:relative;transition:opacity .18s ease-out}
+.hxp-split.has-hot .hxp-row{opacity:.4}
+.hxp-split.has-hot .hxp-row.is-hot{opacity:1}
+.hxp-l1{display:flex;align-items:center;height:22px;padding-top:1px}
+.hxp-chip{
+  flex:0 0 auto;box-sizing:border-box;min-width:25px;height:18px;padding:0 5px;margin-right:9px;
+  border-radius:6px;text-align:center;font-size:9px;line-height:18px;font-weight:800;letter-spacing:.6px;
+  color:rgba(235,235,245,.80);background:rgba(255,255,255,.075);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.hxp-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:13px;line-height:18px;font-weight:600;color:#f5f5f7;letter-spacing:-.1px}
+.hxp-amt{flex:0 0 auto;margin-left:8px;font-size:13px;line-height:18px;font-weight:700;color:#fff;letter-spacing:-.2px}
+.hxp-pct{flex:0 0 auto;width:47px;text-align:right;font-size:11px;line-height:18px;font-weight:600;color:rgba(235,235,245,.50)}
+.hxp-track{position:absolute;left:0;right:0;height:3px;border-radius:2px;background:rgba(255,255,255,.07)}
+.hxp-fill{
+  position:absolute;left:0;top:0;bottom:0;border-radius:2px;
+  background:linear-gradient(90deg,rgba(48,209,88,.55),#30d158 70%,#5ef08b);
+  box-shadow:0 0 9px rgba(48,209,88,.45);
+}
+.hxp-row.is-top .hxp-chip{color:#ffd426;background:rgba(255,212,38,.12);box-shadow:inset 0 0 0 1px rgba(255,212,38,.32)}
+.hxp-row.is-top .hxp-pct{color:#ffd426}
+.hxp-row.is-top .hxp-fill{background:linear-gradient(90deg,rgba(255,212,38,.55),#ffd426 70%,#ffe57a);box-shadow:0 0 9px rgba(255,212,38,.38)}
+.hxp-row.is-neg .hxp-amt{color:#ff453a}
+.hxp-row.is-rest .hxp-chip{letter-spacing:0}
+/* layar lebar & cukup tinggi (js memasang .is-desk) */
+.hxp-split.is-desk .hxp-kick-a,.hxp-split.is-desk .hxp-kick-h{font-size:10.5px}
+.hxp-split.is-desk .hxp-chip{min-width:28px;height:20px;line-height:20px;font-size:9.5px;margin-right:11px}
+.hxp-split.is-desk .hxp-name,.hxp-split.is-desk .hxp-amt{font-size:14px;line-height:20px}
+.hxp-split.is-desk .hxp-pct{width:54px;font-size:12px;line-height:20px}
+.hxp-split.is-desk .hxp-track{height:4px}
+
+/* ══ 2. CHIP HARI TUJUAN (saat menggeser Dashboard) ════════════════════ */
+.hxp-day{
+  position:fixed;z-index:380;left:0;top:0;pointer-events:none;
+  display:flex;align-items:center;box-sizing:border-box;height:52px;padding:0 18px 0 9px;border-radius:999px;
+  background:linear-gradient(180deg,#26282d 0%,#17181b 55%,#101113 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1px rgba(255,255,255,.08),
+             0 20px 44px -18px rgba(0,0,0,.96),0 4px 12px -4px rgba(0,0,0,.6);
+  opacity:0;white-space:nowrap;
+  transition:box-shadow .22s ease-out;
+}
+.hxp-day.is-r{flex-direction:row-reverse;padding:0 9px 0 18px}
+.hxp-day svg{display:block;width:34px;height:34px;flex:0 0 auto}
+.hxp-day .t{fill:none;stroke:rgba(255,255,255,.11);stroke-width:2}
+.hxp-day .p{fill:none;stroke:#30d158;stroke-width:2;stroke-linecap:round}
+.hxp-day .c{fill:none;stroke:rgba(235,235,245,.78);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s ease-out}
+.hxp-day-tx{display:block;margin-left:10px}
+.hxp-day.is-r .hxp-day-tx{margin-left:0;margin-right:10px;text-align:right}
+.hxp-day-d{display:block;font-size:9.5px;line-height:13px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:rgba(235,235,245,.55)}
+.hxp-day-v{display:block;font-size:15px;line-height:19px;font-weight:800;letter-spacing:-.2px;color:#fff;font-variant-numeric:tabular-nums}
+.hxp-day.is-armed{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26),inset 0 0 0 1px rgba(48,209,88,.55),
+             0 0 0 4px rgba(48,209,88,.09),0 20px 44px -18px rgba(0,0,0,.96);
+}
+.hxp-day.is-armed .c{stroke:#30d158}
+
+/* ══ 3. KARTU KACA MIRING — kilau cahaya mengikuti jari ═══════════════ */
+.hxp-glare{
+  position:absolute;top:0;right:0;bottom:0;left:0;z-index:6;border-radius:inherit;overflow:hidden;
+  pointer-events:none;opacity:0;transition:opacity .28s ease-out;
+}
+.hxp-glare.on{opacity:1}
+.hxp-glare:after{
+  content:'';position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 0 0 1px rgba(255,255,255,.07);
+}
+.hxp-glare i{
+  position:absolute;left:0;top:0;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,255,255,.24) 0%,rgba(255,255,255,.10) 38%,rgba(255,255,255,.03) 68%,rgba(255,255,255,0) 100%);
+}
+
+@media (prefers-reduced-motion:reduce){
+  .hxp-lens,.hxp-row,.hxp-kick-a,.hxp-kick-b,.hxp-kick-h,.hxp-glare,.hxp-day,.hxp-day .c{transition:none}
+}
