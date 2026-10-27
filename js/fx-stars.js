@@ -318,7 +318,8 @@
     S.ring = null;
     if (!n) return;
     cs.forEach(function (c) { clusterGeom(c); });
-    if (n === 1) { cs[0].cx = 0; cs[0].cy = 0; return; }
+    // satu rasi saja (Maria/Calvin: satu tim 'Sales'): di bawah angka pusat, bukan menimpanya
+    if (n === 1) { cs[0].cx = 0; cs[0].cy = cs[0].R + 46; return; }
     var aw = vw - 32, ah = vh - S.topH - S.footH;
     var k = clamp(ah / aw * 0.92, 0.5, 1.75), gap = 30;
     var need = 0; cs.forEach(function (c) { need += 2 * c.R + gap; });
