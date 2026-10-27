@@ -239,7 +239,9 @@
     if ((m = RE_OLD.exec(text))) c.push(+m[1] * OLD_U[m[2]], OLD_U[m[2]] * (m[1].indexOf('.') < 0 ? 1 : .1));
     if ((m = RE_NEW.exec(text))) c.push(+(m[1] + '.' + (m[2] || '0')) * NEW_U[m[3]], NEW_U[m[3]] * (m[2] ? Math.pow(10, -m[2].length) : 1));
     var d = c.length ? heroData(id) : null;
-    for (var i = 0; i < c.length; i += 2) if (d !== null && Math.abs(d - c[i]) <= c[i + 1] * .51 + 1) return d;
+    // rupiah utuh, sama dengan bentuk lengkap: record berkoma (revenue 1.375) tidak
+    // boleh jadi selisih palsu '−Rp 0' antara hero Dashboard dan Monthly
+    for (var i = 0; i < c.length; i += 2) if (d !== null && Math.abs(d - c[i]) <= c[i + 1] * .51 + 1) return Math.round(d);
     return null;
   }
   function oldCompact(n) {

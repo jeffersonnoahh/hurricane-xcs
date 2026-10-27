@@ -118,6 +118,16 @@
   HX.todayRevenue = function () {
     return todayEntries().reduce(function (s, e) { return s + (+e.revenue || 0); }, 0);
   };
+  // nama dashboard dari header (.brand-name): 'Hurricane XCS' / 'Maria Team' /
+  // 'Calvin Team' — modul memakai ini, jadi file fx-* sama persis di 3 repo
+  Object.defineProperty(HX, 'brand', { get: function () {
+    var el = document.querySelector('.brand-name');
+    var t = el && String(el.textContent || '').replace(/\s+/g, ' ').trim();
+    return t || 'Hurricane XCS';
+  }, configurable: true });
+  Object.defineProperty(HX, 'brandShort', { get: function () {
+    return HX.brand.replace(/\s+XCS$/i, '');
+  }, configurable: true });
   HX.target = function () { try { return TR; } catch (e) { return 0; } };
   HX.money = function (n) { try { if (typeof fRp === 'function') return fRp(Math.round(n)); } catch (e) { } return String(Math.round(n)); };
   HX.moneyFull = function (n) { try { if (typeof fFull === 'function') return fFull(Math.round(n)); } catch (e) { } return 'Rp ' + Math.round(n).toLocaleString('id-ID'); };
@@ -279,12 +289,27 @@
     lastPct = pct;
   }
 
+  // Tanpa sp: sales #1 bulan ini di dashboard INI (tiap dashboard punya
+  // roster sendiri — tidak ada nama tetap); belum ada penjualan -> anggota
+  // roster pertama yang bukan team lead / channel. Tanpa team: tim roster.
+  function simDefault() {
+    try {
+      var n = new Date(), s = HX.monthAgg(n.getFullYear(), n.getMonth()).sellers[0];
+      if (s) return { sp: s.sp, team: s.team || '' };
+      for (var t in TM) {
+        var mm = (TM[t] && TM[t].m) || [];
+        for (var i = 0; i < mm.length; i++) if (!HX.isLeader(mm[i]) && !HX.isChannel(mm[i])) return { sp: mm[i], team: t };
+      }
+    } catch (e) { }
+    return { sp: 'Sales', team: '' };
+  }
   HX._simulateSale = function (o) {
     o = o || {};
+    var d = o.sp ? { sp: o.sp, team: rosterTeamOf(o.sp) || '' } : simDefault();
     var s = {
-      sp: o.sp || 'Hendri', team: o.team || 'Ivan', prod: o.prod || 'TWIN TURBO',
+      sp: d.sp, team: o.team || d.team, prod: o.prod || 'TWIN TURBO',
       units: o.units || 1, revenue: o.revenue != null ? o.revenue : 5775000,
-      ts: o.ts || Date.now(), own: !!o.own, channel: HX.isChannel(o.sp || 'Hendri'), sim: true
+      ts: o.ts || Date.now(), own: !!o.own, channel: HX.isChannel(d.sp), sim: true
     };
     HX.emit('sale', s); HX.emit('sales', [s]);
     return s;

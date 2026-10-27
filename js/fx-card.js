@@ -53,6 +53,10 @@
    ══════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  // nama dashboard (Hurricane XCS / Maria Team / Calvin Team) — dari fx-core
+  function BRAND() { return (window.HX && HX.brand) || 'Hurricane XCS'; }
+  function BRAND_S() { return (window.HX && HX.brandShort) || 'Hurricane'; }
+
   var HX = window.HX;
   if (!HX || HX.__card) return;
   HX.__card = true;
@@ -312,7 +316,7 @@
     });
 
     // teks mikro melingkar (seperti uang kertas)
-    var txt = 'HURRICANE XCS · KARTU SALES · ' + m.sp.toUpperCase() + ' · ';
+    var txt = BRAND().toUpperCase() + ' · KARTU SALES · ' + m.sp.toUpperCase() + ' · ';
     var fs = Math.max(4, k * 0.3);
     ctx.font = '700 ' + fs + 'px ' + MO;
     ctx.fillStyle = 'rgba(255,255,255,0.20)';
@@ -356,7 +360,7 @@
     var prod = m.best ? m.best.prod : '—';
     return '' +
       '<div class="hxc-plate"></div>' +
-      '<div class="hxc-a hxc-top"><span class="hxc-brand">HURRICANE XCS</span><span class="hxc-ed">' + esc(m.monthShort) + '</span></div>' +
+      '<div class="hxc-a hxc-top"><span class="hxc-brand">' + esc(BRAND().toUpperCase()) + '</span><span class="hxc-ed">' + esc(m.monthShort) + '</span></div>' +
       '<div class="hxc-win">' +
         '<canvas class="hxc-art" aria-hidden="true"></canvas>' +
         '<div class="hxc-a hxc-rkl"><span>' + esc(rankLabel(m)) + '</span></div>' +
@@ -953,7 +957,7 @@
     // baris atas
     ctx.font = '700 ' + (0.6 * u) + 'px ' + MO;
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
-    spaced(ctx, 'HURRICANE XCS', 1.3 * u, 1.86 * u, 0.13 * u, 'left');
+    spaced(ctx, BRAND().toUpperCase(), 1.3 * u, 1.86 * u, 0.13 * u, 'left');
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     spaced(ctx, m.monthShort, W - 1.3 * u, 1.86 * u, 0.08 * u, 'right');
 

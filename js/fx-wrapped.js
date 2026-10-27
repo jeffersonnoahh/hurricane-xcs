@@ -42,6 +42,10 @@
    ══════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
+  // nama dashboard (Hurricane XCS / Maria Team / Calvin Team) — dari fx-core
+  function BRAND() { return (window.HX && HX.brand) || 'Hurricane XCS'; }
+  function BRAND_S() { return (window.HX && HX.brandShort) || 'Hurricane'; }
+
   var HX = window.HX;
   if (!HX || HX.wrapped) return;
   var D = document, R = D.documentElement, W = window;
@@ -298,7 +302,7 @@
 
   function statsCompany(y, m) {
     var S = base(y, m), A = S.A;
-    S.kind = 'company'; S.title = 'Hurricane XCS';
+    S.kind = 'company'; S.title = BRAND();
     S.o = summarize(S, S.L);
     S.o.r = A.total; S.o.u = A.closes;            // = monthRev bulan itu
     S.ranked = A.sellers.map(sv); S.field = A.nSellers;
@@ -410,8 +414,8 @@
   }
   function recordsSeller(S) {
     var L = [], o = S.o, have = {};
-    if (S.rank === 1) L.push({ i: 'medal', g: 'juara', t: 'Sales #1 Hurricane', s: 'Omset tertinggi dari ' + S.field + ' sales', gold: 1 });
-    else if (S.rank && S.rank <= 5) L.push({ i: 'medal', t: 'Masuk 5 besar Hurricane', s: 'Peringkat ' + S.rank + ' dari ' + S.field + ' sales' });
+    if (S.rank === 1) L.push({ i: 'medal', g: 'juara', t: 'Sales #1 ' + BRAND_S(), s: 'Omset tertinggi dari ' + S.field + ' sales', gold: 1 });
+    else if (S.rank && S.rank <= 5) L.push({ i: 'medal', t: 'Masuk 5 besar ' + BRAND_S(), s: 'Peringkat ' + S.rank + ' dari ' + S.field + ' sales' });
     if (S.teamRank === 1 && S.teamField > 1) L.push({ i: 'medal', g: 'juara', t: 'Nomor 1 di Team ' + noEmoji(S.team), s: 'Di atas ' + (S.teamField - 1) + ' rekan satu tim' });
     if (S.rec.isRecord) L.push({ i: 'star', g: 'rekor', t: 'Bulan terbaikmu sejauh ini', s: 'Melewati ' + mkLabel(S.rec.prev.at, S.y) + ' (' + short(S.rec.prev.v) + ')' });
     if (S.pBestDay.v > 0 && o.best && o.best.r > S.pBestDay.v) { have.bestDay = 1; L.push({ i: 'cal', t: 'Hari terbaik sepanjang masa', s: short(o.best.r) + ' pada ' + o.best.d + ' ' + BLN[S.m] }); }
@@ -684,7 +688,7 @@
     if (S.kind === 'seller') {
       who = g.u + ' unit \u00b7 Team ' + noEmoji(g.team || S.team);
       pct = S.pctBig || 0;
-      foot = pct >= 0.995 ? 'Penjualan terbesar Hurricane bulan ini' : 'Lebih besar dari ' + Math.round(pct * 100) + '% penjualan Hurricane bulan ini';
+      foot = pct >= 0.995 ? 'Penjualan terbesar ' + BRAND_S() + ' bulan ini' : 'Lebih besar dari ' + Math.round(pct * 100) + '% penjualan ' + BRAND_S() + ' bulan ini';
     } else {
       who = cap(g.sp) + ' \u00b7 ' + (S.kind === 'company' ? 'Team ' + noEmoji(g.team) + ' \u00b7 ' : '') + g.u + ' unit';
       var x = S.avgSale > 0 ? g.r / S.avgSale : 1;
@@ -719,7 +723,7 @@
     var rows = S.o.prods.slice(0, S.kind === 'company' ? 5 : 4).map(function (x, i) {
       return { no: pad(i + 1), name: x.name, sub: x.u + ' unit', val: short(x.r), r: x.r, cls: i === 0 ? 'hi' : '' };
     });
-    var who = S.kind === 'seller' ? 'omsetmu' : S.kind === 'team' ? 'omset tim' : 'omset Hurricane';
+    var who = S.kind === 'seller' ? 'omsetmu' : S.kind === 'team' ? 'omset tim' : 'omset ' + BRAND_S();
     return {
       id: 'product', dur: 5600,
       html: function () {
@@ -806,8 +810,8 @@
 
   SL.vs = function (S) {
     var P = S.prev, rec = S.rec, d = P.delta, head, big, cls = '';
-    var who = S.kind === 'seller' ? 'mu' : S.kind === 'team' ? ' Team ' + noEmoji(S.team) : ' Hurricane';
-    if (rec.isRecord) head = S.kind === 'company' ? 'Rekor baru Hurricane' : 'Bulan terbaik' + who + ' sejauh ini';
+    var who = S.kind === 'seller' ? 'mu' : S.kind === 'team' ? ' Team ' + noEmoji(S.team) : ' ' + BRAND_S();
+    if (rec.isRecord) head = S.kind === 'company' ? 'Rekor baru ' + BRAND_S() : 'Bulan terbaik' + who + ' sejauh ini';
     else if (rec.first) head = S.kind === 'seller' ? 'Bulan pertamamu tercatat' : 'Bulan pertama tercatat';
     else if (d === null) head = 'Kembali mencetak omset';
     else if (rec.rankAll === 2 && rec.months >= 3) head = 'Bulan terbaik ke-2' + (S.kind === 'seller' ? 'mu' : '');
@@ -1007,7 +1011,7 @@
       id: 'topteam', dur: 6000,
       html: function () {
         return kick('Tim terbaik') + maskH('Team ' + noEmoji(t.name), 'hxw-name' + (t.name.length > 8 ? ' long' : '')) + money(t.r) +
-          '<p class="hxw-p" data-x="p">' + Math.round(t.r / (S.o.r || 1) * 100) + '% omset Hurricane' + (t.top ? ' \u00b7 MVP ' + esc(cap(t.top.sp)) : '') + '</p>' +
+          '<p class="hxw-p" data-x="p">' + Math.round(t.r / (S.o.r || 1) * 100) + '% omset ' + BRAND_S() + (t.top ? ' \u00b7 MVP ' + esc(cap(t.top.sp)) : '') + '</p>' +
           '<div class="hxw-viz hxw-tp" data-x="viz">' + rankHTML(rows, 'rank') + (S.teams.length > 5 ? '<div class="hxw-more">dan ' + (S.teams.length - 5) + ' tim lainnya</div>' : '') + '</div>';
       },
       play: function (el, fx) {
@@ -1157,7 +1161,7 @@
       '<div class="hxw-card" data-x="card">' +
         '<div class="hxw-slides" data-x="slides" aria-live="polite"></div>' +
         '<div class="hxw-top" data-x="top"><div class="hxw-segs" data-x="segs"></div>' +
-          '<div class="hxw-bar"><span class="hxw-brand"><i></i>HURRICANE XCS</span><span class="hxw-tag" data-x="tag"></span>' +
+          '<div class="hxw-bar"><span class="hxw-brand"><i></i>' + esc(BRAND().toUpperCase()) + '</span><span class="hxw-tag" data-x="tag"></span>' +
           '<button type="button" class="hxw-x" data-act="close" aria-label="Tutup">' + IC.x + '</button></div></div>' +
         '<div class="hxw-hint" data-x="hint"></div>' +
         '<div class="hxw-coach" data-x="coach" data-act="coach"></div>' +
@@ -1364,7 +1368,7 @@
     el.className = 'hxw-slide hxw-chooser';
     el.innerHTML = kick('Wrapped ' + BULAN[m] + ' ' + y) + maskH('Pilih cerita', 'hxw-h') +
       '<div class="hxw-chs" data-x="list">' +
-      '<button type="button" class="hxw-opt main" data-act="company"><span class="ring">' + IC.ring + '</span><span class="tx"><b>Hurricane XCS</b><small>Seluruh tim \u00b7 ' + S.field + ' sales \u00b7 ' + S.teams.length + ' tim</small></span><span class="vl">' + esc(short(S.o.r)) + '</span></button>' +
+      '<button type="button" class="hxw-opt main" data-act="company"><span class="ring">' + IC.ring + '</span><span class="tx"><b>' + esc(BRAND()) + '</b><small>Seluruh tim \u00b7 ' + S.field + ' sales \u00b7 ' + S.teams.length + ' tim</small></span><span class="vl">' + esc(short(S.o.r)) + '</span></button>' +
       '<div class="hxw-chl">Per tim</div>' +
       S.teams.map(function (t, i) {
         return '<button type="button" class="hxw-opt" data-act="team" data-team="' + esc(t.name) + '">' + chip(t.name) + '<span class="tx"><b>Team ' + esc(noEmoji(t.name)) + '</b><small>' + (i === 0 ? '<span class="gold">#1</span> \u00b7 ' : '#' + (i + 1) + ' \u00b7 ') + t.people + ' sales</small></span>' +
@@ -1427,7 +1431,7 @@
     g.textBaseline = 'alphabetic';
     // kepala
     g.fillStyle = GR; rr(g, X0, 118, 24, 24, 7); g.fill();
-    track(g, 'HURRICANE XCS', X0 + 42, 140, 6, '700 28px ' + FM, TX, 'left');
+    track(g, BRAND().toUpperCase(), X0 + 42, 140, 6, '700 28px ' + FM, TX, 'left');
     track(g, 'WRAPPED', X1, 140, 6, '700 28px ' + FM, DIM, 'right');
     var hl = g.createLinearGradient(X0, 0, X1, 0);
     hl.addColorStop(0, 'rgba(255,255,255,.16)'); hl.addColorStop(1, 'rgba(255,255,255,.03)');
@@ -1495,13 +1499,13 @@
       if (t.s) { var sf = fit(g, t.s, tw2 - 56, 25, 500, FG, 18); g.font = '500 ' + sf.s + 'px ' + FG; g.fillStyle = DIM; g.fillText(sf.t, tx + 28, ty + 126); }
     }
     // kaki
-    track(g, 'HURRICANE XCS \u00b7 PERFORMANCE', X0, 1856, 4, '700 22px ' + FM, FAINT, 'left');
+    track(g, BRAND().toUpperCase() + ' \u00b7 PERFORMANCE', X0, 1856, 4, '700 22px ' + FM, FAINT, 'left');
     var dt = now();
     track(g, ('DIBUAT ' + dt.getDate() + ' ' + BLN[dt.getMonth()] + ' ' + dt.getFullYear()).toUpperCase(), X1, 1856, 4, '700 22px ' + FM, FAINT, 'right');
     return c;
   }
   function fileName(S) {
-    var who = S.kind === 'seller' ? S.sp : S.kind === 'team' ? 'team-' + S.team : 'hurricane';
+    var who = S.kind === 'seller' ? S.sp : S.kind === 'team' ? 'team-' + S.team : BRAND_S();
     return ('wrapped-' + who + '-' + S.mk).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-') + '.png';
   }
   function toBlob(c) {
@@ -1894,7 +1898,7 @@
       inv.setAttribute('role', 'button');
       inv.setAttribute('tabindex', '0');
       inv.setAttribute('aria-label', 'Wrapped ' + BULAN[c.m] + ' sudah siap');
-      inv.innerHTML = '<span class="ic">' + IC.ring + '</span><span class="tx"><b>Wrapped ' + BULAN[c.m] + ' sudah siap</b><small>Cerita bulan lalu Hurricane XCS</small></span>' +
+      inv.innerHTML = '<span class="ic">' + IC.ring + '</span><span class="tx"><b>Wrapped ' + BULAN[c.m] + ' sudah siap</b><small>Cerita bulan lalu ' + esc(BRAND()) + '</small></span>' +
         '<button type="button" class="x" aria-label="Tutup">' + IC.x + '</button><i class="tmr"></i>';
       var hdr = D.querySelector('header');
       var top = hdr ? Math.max(8, Math.round(hdr.getBoundingClientRect().bottom) + 10) : 12;

@@ -25,7 +25,14 @@
     return v ? v + '/' : '';
   }
 
+  /* window.onload app.js (yang memasang window.DATA_NS) terdaftar SEBELUM
+     file ini, jadi listener 'load' di bawah berjalan sesudahnya. Sebelum
+     'load', load() tidak membaca apa pun — dulu DOMContentLoaded (dan timer
+     1500 ms di jaringan lambat) membaca catatan root milik Hurricane. */
+  var ready = document.readyState === 'complete';
+
   function load() {
+    if (!ready) return;
     fetch(DB + '/' + ns() + 'config/spNotes.json')
       .then(function (r) { return r.json(); })
       .then(function (d) { NOTES = d || {}; apply(); })
@@ -105,8 +112,8 @@
     apply();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load);
-  else load();
+  if (ready) load();
+  else window.addEventListener('load', function () { ready = true; load(); });
   setTimeout(hook, 900);
   setTimeout(load, 1500);
   window.reloadSpNotes = load;
