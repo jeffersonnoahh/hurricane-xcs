@@ -152,6 +152,7 @@
       salespeople: 'People',
       mysales: 'My Sales',
       monthly: 'Recap',
+      yearly: 'Yearly',
       insights: 'Insights',
       warning: 'Warning',
       admin: 'Admin'
@@ -202,8 +203,8 @@
     ].join('');
     d.body.append(moreOverlay, moreSheet);
 
-    const morePages = ['watchlist', 'salespeople', 'mysales', 'insights', 'warning', 'admin'];
-    const moreIcons = {watchlist: '', salespeople: '', mysales: '', insights: '', warning: '', admin: ''};
+    const morePages = ['watchlist', 'salespeople', 'mysales', 'yearly', 'insights', 'warning', 'admin'];
+    const moreIcons = {watchlist: '', salespeople: '', mysales: '', yearly: '', insights: '', warning: '', admin: ''};
     const moreButtons = [];
     const moreGrid = moreSheet.querySelector('.premium-more-grid');
 

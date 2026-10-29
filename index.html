@@ -9,31 +9,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<link rel="icon" type="image/png" href="img/favicon.png?v=20261027-fx3">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png?v=20261027-fx3">
-<link rel="stylesheet" href="css/style.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/premium.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/skin.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/reference-dashboard.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/professional.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/glass.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-live.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-pace.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-ranks.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-play.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-replay.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-morph.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-badges.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-card.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-wrapped.css?v=20261027-fx3">
-<link rel="stylesheet" href="css/fx-stars.css?v=20261027-fx3">
+<link rel="icon" type="image/png" href="img/favicon.png?v=20261029-yr1">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png?v=20261029-yr1">
+<link rel="stylesheet" href="css/style.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/premium.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/skin.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/reference-dashboard.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/professional.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/glass.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-live.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-pace.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-ranks.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-play.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-replay.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-morph.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-badges.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-card.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-wrapped.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-stars.css?v=20261029-yr1">
+<link rel="stylesheet" href="css/fx-year.css?v=20261029-yr1">
 </head>
 
 <body>
 
 <header>
   <div class="brand">
-    <div class="brand-logo"><img src="img/logo.png?v=20261027-fx3" alt="Hurricane XCS"></div>
+    <div class="brand-logo"><img src="img/logo.png?v=20261029-yr1" alt="Hurricane XCS"></div>
     <div>
       <div class="brand-name">Hurricane XCS</div>
       <div class="brand-sub">PERFORMANCE DASHBOARD</div>
@@ -103,6 +104,7 @@
   <div class="nav-tab" data-page="salespeople" onclick="showPage('salespeople',this)">Salespeople</div>
   <div class="nav-tab" data-page="mysales" onclick="showPage('mysales',this)" style="color:#a78bfa">My Sales</div>
   <div class="nav-tab" data-page="monthly" onclick="showPage('monthly',this)">Monthly Recap</div>
+  <div class="nav-tab" data-page="yearly" onclick="showPage('yearly',this)">Yearly Recap</div>
   <div class="nav-tab" data-page="insights" onclick="showPage('insights',this)" style="color:#00e676">Sales Insights</div>
   <div class="nav-tab" data-page="warning" onclick="showPage('warning',this)" style="color:#ff3b5c">Warning</div>
   <div class="nav-tab" data-page="admin" onclick="showPage('admin',this)" style="color:#7c4dff">Admin</div>
@@ -412,6 +414,13 @@
     <div style="font-family:'Space Mono',monospace;font-size:11px;color:#6060a0;line-height:1.7;">Select your name above to see your logged<br>sales, products, and total omset</div>
   </div>
 
+</div>
+</div>
+
+<!-- ═══ YEARLY RECAP (js/fx-year.js) ═══ -->
+<div class="page" id="page-yearly">
+<div class="container">
+  <div id="hxYear"></div>
 </div>
 </div>
 
@@ -1149,22 +1158,23 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20261027-fx3"></script>
-<script src="js/watchlist.js?v=20261027-fx3"></script>
-<script src="js/sp-notes.js?v=20261027-fx3"></script>
-<script src="js/premium-ui.js?v=20261027-fx3"></script>
-<script src="js/reference-dashboard.js?v=20261027-fx3"></script>
-<script src="js/motion.js?v=20261027-fx3"></script>
-<script src="js/fx-core.js?v=20261027-fx3"></script>
-<script src="js/fx-live.js?v=20261027-fx3"></script>
-<script src="js/fx-pace.js?v=20261027-fx3"></script>
-<script src="js/fx-ranks.js?v=20261027-fx3"></script>
-<script src="js/fx-play.js?v=20261027-fx3"></script>
-<script src="js/fx-replay.js?v=20261027-fx3"></script>
-<script src="js/fx-morph.js?v=20261027-fx3"></script>
-<script src="js/fx-badges.js?v=20261027-fx3"></script>
-<script src="js/fx-card.js?v=20261027-fx3"></script>
-<script src="js/fx-wrapped.js?v=20261027-fx3"></script>
-<script src="js/fx-stars.js?v=20261027-fx3"></script>
+<script src="js/app.js?v=20261029-yr1"></script>
+<script src="js/watchlist.js?v=20261029-yr1"></script>
+<script src="js/sp-notes.js?v=20261029-yr1"></script>
+<script src="js/premium-ui.js?v=20261029-yr1"></script>
+<script src="js/reference-dashboard.js?v=20261029-yr1"></script>
+<script src="js/motion.js?v=20261029-yr1"></script>
+<script src="js/fx-core.js?v=20261029-yr1"></script>
+<script src="js/fx-live.js?v=20261029-yr1"></script>
+<script src="js/fx-pace.js?v=20261029-yr1"></script>
+<script src="js/fx-ranks.js?v=20261029-yr1"></script>
+<script src="js/fx-play.js?v=20261029-yr1"></script>
+<script src="js/fx-replay.js?v=20261029-yr1"></script>
+<script src="js/fx-morph.js?v=20261029-yr1"></script>
+<script src="js/fx-badges.js?v=20261029-yr1"></script>
+<script src="js/fx-card.js?v=20261029-yr1"></script>
+<script src="js/fx-wrapped.js?v=20261029-yr1"></script>
+<script src="js/fx-stars.js?v=20261029-yr1"></script>
+<script src="js/fx-year.js?v=20261029-yr1"></script>
 </body>
 </html>
