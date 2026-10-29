@@ -963,7 +963,8 @@
     hof: safe(openHof), moon: safe(function () { fireMoon(true); }), cockpit: safe(function () { if (!cock) buildCockpit(); })
   };
   // muat ulang / tab dibuang saat Hall of Fame terbuka: buang entri riwayat {hxe} yang basi
-  try { if (history.state && history.state.hxe) history.replaceState(null, ''); } catch (e) { }
+  // (replaceState saja tidak cukup: entri ekstranya tetap ada dan Back pertama "mati" — mundur satu langkah)
+  try { if (history.state && history.state.hxe) { popSkip++; history.back(); } } catch (e) { }
   var booted = false;
   function boot() {
     if (booted) return; booted = true;
