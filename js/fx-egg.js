@@ -139,7 +139,7 @@
 
   /* bagian halaman yang terlihat (anak langsung container) — untuk puting beliung */
   function sections(max) {
-    var st = stage(), vh = W.innerHeight, out = [];
+    var st = stage(), vh = W.innerHeight, out = [], tall = false;
     if (st.root.matches && st.root.matches('.mbox')) return cards(max);
     var kids = st.anim.children;
     for (var i = 0; i < kids.length && out.length < max; i++) {
@@ -147,9 +147,17 @@
       if (!c.getClientRects().length) continue;
       var r = c.getBoundingClientRect();
       if (r.height < 8 || r.bottom < 0 || r.top > vh) continue;
+      if (r.height > vh * 1.5) { tall = true; continue; }   // terlalu tinggi untuk satu lapisan GPU: pakai kartu di dalamnya
       out.push(c);
     }
-    return out.length >= 2 ? out : cards(max);
+    if (tall) {
+      cards(max).forEach(function (c) {
+        if (out.length >= max || c.getBoundingClientRect().height > vh * 1.5) return;
+        for (var j = 0; j < out.length; j++) if (out[j].contains(c) || c.contains(out[j])) return;
+        out.push(c);
+      });
+    }
+    return out.length >= 2 ? out : cards(max).filter(function (c) { return c.getBoundingClientRect().height <= vh * 1.5; });
   }
 
   /* lapisan layar penuh sekali pakai */
@@ -826,7 +834,7 @@
   }, { passive: true });
 
   /* ═══ 9. MALAM — bulan terbit + cap burung hantu ═══════════════════ */
-  var MOON_KEY = 'hx-egg-moon', moonL = null;
+  var MOON_KEY = 'hx-egg-moon', moonL = null, moonShown = null;
   function nightId() {
     // jam WIB, sama dengan cap burung hantu (HP di WITA/WIT tetap konsisten)
     var w = new Date(Date.now() + 7 * 3600e3), h = w.getUTCHours();
@@ -836,9 +844,9 @@
   }
   function fireMoon(force) {
     var id = nightId();
-    if (!force && (!id || store(MOON_KEY) === id)) return;
+    if (!force && (!id || store(MOON_KEY) === id || moonShown === id)) return;
     if (running || hofEl || cock || moonL || blocked(false)) return;
-    if (id) store(MOON_KEY, id);
+    if (id) { store(MOON_KEY, id); moonShown = id; }
     var L = moonL = layer('hxe-night');      // suasana saja: tidak mengunci efek lain
     var stars = '';
     for (var i = 0; i < 10; i++) stars += '<i class="hxe-star" style="right:' + (8 + Math.random() * 150).toFixed(0) + 'px;top:' + (-14 + Math.random() * 100).toFixed(0) + 'px;animation-delay:' + (Math.random() * 1.6).toFixed(2) + 's"></i>';
@@ -873,8 +881,8 @@
     for (var ri = 0; ri < rows.length; ri++) {
       var e = es[es.length - 1 - ri], row = rows[ri];
       if (!e || !nightTs(e.ts) || row.querySelector('.hxe-owl')) continue;
-      var nm = row.querySelector('.en');
-      if (nm && nm.nextSibling) row.insertBefore(owl(e.ts, false), nm.nextSibling); else row.appendChild(owl(e.ts, false));
+      var del = row.querySelector('.ed');
+      if (del) row.insertBefore(owl(e.ts, false), del); else row.appendChild(owl(e.ts, false));
     }
   }
   function stampMySales() {
@@ -954,6 +962,8 @@
     sbf: safe(fireSbf), xcs: safe(fireXcs), xcsr: safe(fireXcsr), hurricane: safe(fireHurricane), gaspol: safe(fireGaspol),
     hof: safe(openHof), moon: safe(function () { fireMoon(true); }), cockpit: safe(function () { if (!cock) buildCockpit(); })
   };
+  // muat ulang / tab dibuang saat Hall of Fame terbuka: buang entri riwayat {hxe} yang basi
+  try { if (history.state && history.state.hxe) history.replaceState(null, ''); } catch (e) { }
   var booted = false;
   function boot() {
     if (booted) return; booted = true;

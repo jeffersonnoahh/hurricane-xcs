@@ -114,8 +114,8 @@ html.hxe-flick #liveOmsetBig,html.hxe-flick [class*="kpi-val"],html.hxe-flick .w
 .hxe-rev i{display:block;height:100%;width:30%;background:linear-gradient(90deg,#ff9f0a,#ff453a);box-shadow:0 0 12px #ff453a;
   animation:hxeRev 1s ease-in-out 10}
 @keyframes hxeRev{0%{width:30%}35%{width:96%}55%{width:72%}80%{width:99%}100%{width:30%}}
-.hxe-turbo-chip{position:absolute;right:calc(env(safe-area-inset-right,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 10px);background-color:#1c1c1e;
-  display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(255,69,58,.16);
+.hxe-turbo-chip{position:absolute;right:calc(env(safe-area-inset-right,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 10px);
+  display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:linear-gradient(rgba(255,69,58,.18),rgba(255,69,58,.18)),#1c1c1e;
   border:1px solid rgba(255,69,58,.55);color:#ff453a;font-size:11px;font-weight:800;letter-spacing:.1em;font-variant-numeric:tabular-nums}
 .hxe-turbo-chip span{color:#fff;min-width:14px;text-align:right}
 .hxe-gas{position:absolute;left:0;right:0;top:44%;text-align:center;font-size:clamp(40px,15vw,110px);font-weight:900;font-style:italic;
@@ -130,7 +130,7 @@ html.hxe-turbo #liveOmsetBig{text-shadow:0 0 22px rgba(255,159,10,.55);transitio
 
 /* ── 8. Hall of Fame ───────────────────────────────────────────────── */
 .hxe-hof{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10050;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  background:rgba(0,0,0,.9);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);opacity:0;transition:opacity .35s ease}
+  background:rgba(0,0,0,.95);opacity:0;transition:opacity .35s ease}
 .hxe-hof.on{opacity:1}
 .hof-in{position:relative;max-width:880px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 28px) 16px calc(env(safe-area-inset-bottom,0px) + 36px)}
 .hof-x{position:absolute;z-index:2;right:12px;top:calc(env(safe-area-inset-top,0px) + 14px);width:34px;height:34px;min-height:0;border-radius:50%;
@@ -185,7 +185,7 @@ html.hxe-turbo #liveOmsetBig{text-shadow:0 0 22px rgba(255,159,10,.55);transitio
 .hxe-night.still .hxe-moon{animation:none;transform:none;opacity:1}
 .hxe-night.still .hxe-star{animation:none;opacity:.6}
 
-.hxe-owl{display:inline-flex;align-items:center;gap:3px;color:#c7b8ff;vertical-align:middle;margin:0 4px;line-height:1}
+.hxe-owl{display:inline-flex;align-items:center;gap:3px;color:#c7b8ff;vertical-align:middle;margin:0 4px;line-height:1;flex-shrink:0}
 .hxe-owl svg{display:block}
 .hxe-owl em{font-style:normal;font-size:10px;font-weight:700;color:#c7b8ff;font-variant-numeric:tabular-nums}
 .ms-sale-meta .hxe-owl{padding:2px 7px;border-radius:999px;border:1px solid rgba(199,184,255,.3);background:rgba(199,184,255,.08);margin:0}
