@@ -1287,3 +1287,14 @@ body.world-mode{--accent:#a78bfa;--accent-2:#7c3aed;--accent-ink:#1a0938;--accen
 .wd-rt b{min-width:0}
 .wd-ring{transform-style:flat}
 .world-card .wdc-top>div{flex:1;min-width:0}
+/* real 3D earth */
+.earth{display:block;width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 34% 30%,#9ec5ff 0,#2f6fd6 30%,#0d2a66 65%,#040b1f 90%);opacity:.85;transition:opacity .6s}
+.earth.on{opacity:1;background:#040b1f}
+.wd-globe{width:190px;height:190px;margin:18px auto 12px}
+.wd-earth{position:absolute;inset:20px;width:150px;height:150px;animation:wFloat 6s ease-in-out infinite}
+.wd-atm{position:absolute;inset:20px;border-radius:50%;box-shadow:0 0 34px 6px rgba(96,165,250,.55),0 0 90px 24px rgba(167,139,250,.38),inset 0 0 18px 2px rgba(147,197,253,.35);animation:wFloat 6s ease-in-out infinite;pointer-events:none}
+@keyframes wFloat{50%{transform:translateY(-5px)}}
+.wd-ring{inset:6px;opacity:.55}
+.wd-ring.r2{inset:-6px}
+.wdc-globe{background:#040b1f;box-shadow:0 0 22px rgba(147,197,253,.55),0 0 40px rgba(240,171,252,.35)}
+.wdc-globe .earth{position:absolute;inset:0}
