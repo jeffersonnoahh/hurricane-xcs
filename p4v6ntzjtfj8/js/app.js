@@ -2623,6 +2623,64 @@
       (grams ? '<div class="card gs-mine"><div><small>Your gold</small><b>' + grams.toLocaleString('id-ID', { maximumFractionDigits: 3 }) + ' g</b></div><div style="text-align:right"><small>Worth now</small><b>' + money(Math.round(grams * g)) + '</b></div></div>' : '<p class="muted small" style="text-align:center">Tip: give a gold wallet a holding (Edit wallet → grams) and Apex values it with this live price.</p>') +
       '<p class="muted small" style="text-align:center;margin-top:10px">International spot price (PAX Gold, 1 token = 1 troy oz) converted to grams. Antam and Pegadaian prices are usually a bit higher. Updated ' + (age < 60 ? age + 's' : Math.round(age / 60) + ' min') + ' ago.</p>');
   }
+  // ---------- Live IHSG bar (Jakarta Composite, via our Cloudflare function /p4v6ntzjtfj8/mkt) ----------
+  var IHSG = null;
+  try { IHSG = JSON.parse(localStorage.getItem('apex_ihsg') || 'null'); } catch (e) {}
+  function lineSpark(pts, w, h, col, base) {
+    if (!pts || pts.length < 2) return '';
+    var vals = pts.map(function (p) { return p[1]; }), mn = Math.min.apply(null, vals.concat(base != null ? [base] : [])), mx = Math.max.apply(null, vals.concat(base != null ? [base] : [])), rg = mx - mn || 1;
+    var y = function (v) { return (h - 2 - (v - mn) / rg * (h - 4)).toFixed(1); };
+    var d = vals.map(function (v, i) { return (i ? 'L' : 'M') + (i / (vals.length - 1) * w).toFixed(1) + ' ' + y(v); }).join(' '), id = 'ls' + Math.random().toString(36).slice(2, 7);
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"><defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + col + '" stop-opacity=".3"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></linearGradient></defs>' +
+      (base != null ? '<line x1="0" x2="' + w + '" y1="' + y(base) + '" y2="' + y(base) + '" stroke="currentColor" stroke-opacity=".25" stroke-dasharray="2 3" stroke-width="1"/>' : '') +
+      '<path d="' + d + ' L' + w + ' ' + h + ' L0 ' + h + 'Z" fill="url(#' + id + ')"/><path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+  function ihsgChg() { return IHSG && IHSG.prevClose ? { d: IHSG.price - IHSG.prevClose, pc: (IHSG.price - IHSG.prevClose) / IHSG.prevClose * 100 } : { d: 0, pc: 0 }; }
+  function fmtIdx(v) { return (+v).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function renderIhsg(flash) {
+    var el = $('ihsgBar'); if (!el) return;
+    if (!IHSG) { el.innerHTML = '<span class="ib-ic">' + sprite('stocks') + '</span><div class="gb-main"><b>IHSG</b><small>Loading live index…</small></div>'; return; }
+    var c = ihsgChg(), up = c.d >= 0, col = up ? '#22c55e' : '#ef4444', open = IHSG.state === 'open';
+    el.innerHTML = '<span class="ib-ic">' + sprite('stocks') + '</span>' +
+      '<div class="gb-main"><b>IHSG ' + (open ? '<i class="live"></i>' : '') + '</b><small>' + (open ? 'Jakarta · live' : 'Market closed') + '</small></div>' +
+      '<div class="gb-spark">' + lineSpark((IHSG.day && IHSG.day.length > 1 ? IHSG.day : IHSG.week || []).filter(function (_, i, a) { return a.length < 50 || i % 2 === 0 || i === a.length - 1; }), 80, 28, col, IHSG.prevClose) + '</div>' +
+      '<div class="gb-right"><b class="gb-price' + (flash ? ' fl-' + flash : '') + '">' + fmtIdx(IHSG.price) + '</b><span class="gb-chg ' + (up ? 'up' : 'dn') + '">' + (up ? '▲ ' : '▼ ') + Math.abs(c.pc).toFixed(2) + '%</span></div>';
+  }
+  var ihsgT = 0;
+  function fetchIhsg() {
+    clearTimeout(ihsgT);
+    // every minute while the market is open, every 10 minutes otherwise
+    ihsgT = setTimeout(fetchIhsg, IHSG && IHSG.state === 'open' ? 60e3 : 600e3);
+    if (document.hidden) return;
+    fetch('mkt?s=%5EJKSE').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
+      if (!j || !j.price) return;
+      var prev = IHSG && IHSG.price; j.ts = Date.now(); IHSG = j;
+      try { localStorage.setItem('apex_ihsg', JSON.stringify(IHSG)); } catch (e) {}
+      renderIhsg(prev && prev !== j.price ? (j.price > prev ? 'up' : 'dn') : '');
+      clearTimeout(ihsgT); ihsgT = setTimeout(fetchIhsg, j.state === 'open' ? 60e3 : 600e3);
+    }).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && (!IHSG || Date.now() - (IHSG.ts || 0) > 50e3)) fetchIhsg(); });
+  function ihsgSheet() {
+    if (!IHSG) { fetchIhsg(); toast('Getting the live IHSG…'); return; }
+    var c = ihsgChg(), up = c.d >= 0, col = up ? '#22c55e' : '#ef4444', open = IHSG.state === 'open';
+    var wk = IHSG.week || [], wpc = wk.length ? (IHSG.price - wk[0][1]) / wk[0][1] * 100 : null;
+    var t = IHSG.time ? new Date(IHSG.time * 1000) : null;
+    var st = { tab: 'day' };
+    function chart() { var pts = st.tab === 'day' ? IHSG.day : wk; return pts && pts.length > 1 ? lineSpark(pts, 320, 120, col, st.tab === 'day' ? IHSG.prevClose : null) : '<div class="muted small" style="text-align:center;padding:40px 0">No chart data yet.</div>'; }
+    openSheet('<h3>IHSG</h3>' +
+      '<div class="gs-hero"><span class="gs-ic">' + sprite('stocks') + '</span><div class="gs-price">' + fmtIdx(IHSG.price) + '</div>' +
+      '<div class="gs-chg ' + (up ? 'up' : 'dn') + '">' + (up ? '▲ +' : '▼ −') + fmtIdx(Math.abs(c.d)) + ' (' + (up ? '+' : '−') + Math.abs(c.pc).toFixed(2) + '%) today' + (wpc != null ? ' · ' + (wpc >= 0 ? '▲ ' : '▼ ') + Math.abs(wpc).toFixed(2) + '% 5 days' : '') + '</div>' +
+      '<div class="ib-state ' + (open ? 'open' : '') + '">' + (open ? '● Market open' : 'Market closed') + (t ? ' · ' + t.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) + ' WIB' : '') + '</div></div>' +
+      '<div class="ib-tabs"><button type="button" data-t="day" class="on">Today</button><button type="button" data-t="week">5 days</button></div>' +
+      '<div class="gs-chart ib-chart" style="color:var(--muted)">' + chart() + '</div>' +
+      '<div class="dd-stats" style="margin-top:4px"><div><small>Open</small><b>' + (IHSG.open ? fmtIdx(IHSG.open) : '–') + '</b></div><div><small>High</small><b>' + (IHSG.high ? fmtIdx(IHSG.high) : '–') + '</b></div><div><small>Low</small><b>' + (IHSG.low ? fmtIdx(IHSG.low) : '–') + '</b></div></div>' +
+      '<div class="dd-stats" style="margin-top:0;border-top:0"><div><small>Previous close</small><b>' + (IHSG.prevClose ? fmtIdx(IHSG.prevClose) : '–') + '</b></div><div><small>Trading hours</small><b>09:00–16:00</b></div><div><small>Updates</small><b>' + (open ? 'Every min' : 'Paused') + '</b></div></div>' +
+      '<p class="muted small" style="text-align:center;margin-top:10px">Jakarta Composite Index (^JKSE). Data from Yahoo Finance, can lag the exchange by a few minutes.</p>',
+      function (r) {
+        r.querySelector('.ib-tabs').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; st.tab = b.dataset.t; this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); r.querySelector('.ib-chart').innerHTML = chart(); haptic(); };
+      });
+  }
   // ---------- cloud backup & sync (encrypted) ----------
   var FB = 'https://hurricane-scorecard-default-rtdb.firebaseio.com/apex/';
   function b64(buf) { var s = '', a = new Uint8Array(buf); for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
@@ -3097,7 +3155,7 @@
   }
   load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
-  hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; registerSW(); setTimeout(onboarding, 1300);
+  hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; renderIhsg(); fetchIhsg(); $('ihsgBar').onclick = function () { haptic(); ihsgSheet(); }; registerSW(); setTimeout(onboarding, 1300);
   // iOS 26 Home Screen apps: the viewport stops above the home bar, so the bottom inset must not be added twice
   function vpCheck() {
     var sa = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);

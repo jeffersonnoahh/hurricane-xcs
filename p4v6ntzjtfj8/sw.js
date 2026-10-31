@@ -5,6 +5,7 @@ self.addEventListener('activate', function (e) { e.waitUntil(caches.keys().then(
 self.addEventListener('fetch', function (e) {
   var req = e.request, url = new URL(req.url);
   if (req.method !== 'GET') return;
+  if (/\/mkt$/.test(url.pathname)) return; // live market data: never serve from cache
   if (/firebaseio\.com|coingecko\.com|script\.google|googleusercontent|tessdata|jsdelivr/.test(url.host + url.pathname) && !/cloudfront/.test(url.host)) return;
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(function (r) { var c = r.clone(); caches.open(CACHE).then(function (ca) { ca.put('./index.html', c); }); return r; }).catch(function () { return caches.match('./index.html'); }));

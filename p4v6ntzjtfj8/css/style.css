@@ -1493,3 +1493,16 @@ body.sheet-open .view.active{scale:1!important}
 .hv-grid small{display:block;font-size:10.5px;color:var(--muted)}
 .hv-grid b{display:block;font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dw-card.is-cost .dw-big::after{content:" invested";font-size:12px;font-weight:600;opacity:.75;letter-spacing:0}
+
+/* ===== Live IHSG bar ===== */
+.gold-bar+.ihsg-bar{margin-top:-4px}
+.ihsg-bar{background:linear-gradient(100deg,rgba(56,189,248,.1),rgba(56,189,248,.02) 55%,transparent)!important}
+.ihsg-bar::before{background:linear-gradient(180deg,#7dd3fc,#2563eb)!important}
+.ib-ic{width:34px;height:34px;flex:none;filter:drop-shadow(0 4px 8px rgba(37,99,235,.35))}
+.ib-ic .sp{width:100%;height:100%}
+.ib-state{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:600;color:var(--muted);padding:4px 10px;border-radius:999px;background:var(--surface2)}
+.ib-state.open{color:#22c55e;background:rgba(34,197,94,.12)}
+.ib-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:12px;background:var(--surface2);margin-bottom:8px}
+.ib-tabs button{padding:7px 0;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted)}
+.ib-tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.ib-chart svg{height:120px}
