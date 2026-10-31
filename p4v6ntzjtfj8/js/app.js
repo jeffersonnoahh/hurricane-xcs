@@ -369,10 +369,7 @@
     }).join('');
     renderSpark();
     renderCashflow(); renderDonut();
-    var ws = S.wallets.slice().sort(function (a, b) { return balance(b.id) - balance(a.id); }).slice(0, 3);
-    $('hWallets').innerHTML = ws.map(function (w) {
-      return '<button class="w-row" data-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + plTag(w) + '</span><span class="amt">' + money(balance(w.id)) + '</span></button>';
-    }).join('');
+    renderStack();
 
     var now = new Date(), m = ym(now), mt = txIn(m, 'all');
     var io = inOut(mt.filter(isFlow), 'all');
@@ -485,6 +482,85 @@
     var pc = first ? Math.abs(diff / first * 100) : 0;
     chip.innerHTML = (up ? '▲ ' : '▼ ') + money(Math.abs(diff), { rp: true }) + ' · ' + pc.toFixed(pc < 10 ? 1 : 0) + '% · ' + lbl;
     document.querySelectorAll('#hRange button').forEach(function (b) { b.classList.toggle('on', +b.dataset.r === n); });
+  }
+
+  // ---------- wallet card stack (tap to fan out, hold to drag) ----------
+  var stackOpen = false, CARD_H = 92, GAP = 10;
+  var GCARD = { cash: ['#2563eb', '#1e3a8a'], savings: ['#b8893b', '#5c3d0e'], invest: ['#7c3aed', '#3b0764'] };
+  function renderStack() {
+    var ws = S.wallets.filter(included);
+    $('hWallets').innerHTML = '<div class="wstack' + (stackOpen ? ' open' : '') + '">' + ws.map(function (w, i) {
+      var g = GCARD[groupOf(w)] || ['#059669', '#064e3b'], u = typeof unpaidIn === 'function' ? unpaidIn(w.id) : 0;
+      return '<div class="wcard" data-wallet="' + esc(w.id) + '" data-id="' + esc(w.id) + '" style="--a:' + g[0] + ';--b:' + g[1] + ';--i:' + i + '">' +
+        '<div class="wc-top"><span class="wc-ic">' + (spKey(w) ? sprite(spKey(w)) : esc(w.icon)) + '</span><span class="wc-name">' + esc(w.name) + '</span><span class="wc-grp">' + (GROUPS[groupOf(w)] || {}).name + '</span></div>' +
+        '<div class="wc-bot"><span class="wc-amt">' + money(balance(w.id)) + '</span>' + (plTag(w) || (u ? '<span class="wc-sub">' + money(u, { rp: false }) + ' not received</span>' : '')) + '</div><i class="wc-shine"></i></div>';
+    }).join('') + '<button class="ws-close" type="button">Close</button><div class="ws-hint">' + ws.length + ' wallets · tap to open</div></div>';
+    layoutStack();
+    var st = $('hWallets').querySelector('.wstack');
+    makeSortable(st, '.wcard', null, function (ids) { reorderWallets(ids); }, function () { return stackOpen; });
+  }
+  function layoutStack() {
+    var st = $('hWallets') && $('hWallets').querySelector('.wstack'); if (!st) return;
+    var cs = [].slice.call(st.querySelectorAll('.wcard')), n = cs.length;
+    st.classList.toggle('open', stackOpen);
+    cs.forEach(function (c, i) {
+      if (stackOpen) { c.style.transform = 'translateY(' + (i * (CARD_H + GAP)) + 'px)'; c.style.opacity = 1; c.style.zIndex = n - i; c.style.transitionDelay = (i * 35) + 'ms'; }
+      else { var k = Math.min(i, 3); c.style.transform = 'translateY(' + (k * 12) + 'px) scale(' + (1 - k * .05) + ')'; c.style.opacity = i > 2 ? 0 : 1 - k * .12; c.style.zIndex = n - i; c.style.transitionDelay = ((n - i) * 18) + 'ms'; }
+    });
+    st.style.height = (stackOpen ? n * (CARD_H + GAP) + 40 : CARD_H + 24 + 26) + 'px';
+  }
+  function reorderWallets(ids) {
+    var by = {}; S.wallets.forEach(function (w) { by[w.id] = w; });
+    var moved = ids.map(function (id) { return by[id]; }).filter(Boolean);
+    var rest = S.wallets.filter(function (w) { return ids.indexOf(w.id) === -1; });
+    S.wallets = moved.concat(rest); save(); renderAll(); toast('Order saved');
+  }
+  // Generic drag-to-reorder. handleSel: drag from a handle; null: press and hold the item.
+  function makeSortable(box, itemSel, handleSel, onDrop, enabled) {
+    if (!box) return;
+    var drag = null, holdT = null;
+    function items() { return [].slice.call(box.querySelectorAll(itemSel)); }
+    function start(item, y) {
+      var list = items(), rects = list.map(function (el) { return el.getBoundingClientRect(); });
+      drag = { item: item, list: list, rects: rects, from: list.indexOf(item), to: list.indexOf(item), y0: y, base: item.style.transform || '' };
+      item.classList.add('dragging'); box.classList.add('sorting'); haptic();
+    }
+    function move(y) {
+      var d = drag, dy = y - d.y0, r0 = d.rects[d.from], mid = r0.top + r0.height / 2 + dy, to = d.from;
+      d.rects.forEach(function (r, i) { if (i < d.from && mid < r.top + r.height / 2) to = Math.min(to, i); if (i > d.from && mid > r.top + r.height / 2) to = Math.max(to, i); });
+      d.to = to;
+      d.item.style.transform = d.base + ' translateY(' + dy + 'px) scale(1.03)';
+      d.list.forEach(function (el, i) {
+        if (el === d.item) return; var sh = 0, h = r0.height + (d.rects[1] ? Math.max(0, d.rects[1].top - d.rects[0].bottom) : 8);
+        if (d.from < to && i > d.from && i <= to) sh = -h; if (d.from > to && i >= to && i < d.from) sh = h;
+        el.style.translate = '0 ' + sh + 'px';
+      });
+    }
+    function end() {
+      var d = drag; drag = null; if (!d) return;
+      d.item.classList.remove('dragging'); box.classList.remove('sorting');
+      d.list.forEach(function (el) { el.style.translate = ''; }); d.item.style.transform = d.base;
+      if (d.to !== d.from) { var ids = d.list.map(function (el) { return el.dataset.id; }); ids.splice(d.to, 0, ids.splice(d.from, 1)[0]); box.dataset.dragged = '1'; onDrop(ids); }
+    }
+    box.addEventListener('touchstart', function (e) {
+      if (enabled && !enabled()) return;
+      var item = e.target.closest(itemSel); if (!item || !box.contains(item)) return;
+      var y = e.touches[0].clientY;
+      if (handleSel) { if (!e.target.closest(handleSel)) return; start(item, y); return; }
+      clearTimeout(holdT); holdT = setTimeout(function () { start(item, y); }, 380);
+    }, { passive: true });
+    box.addEventListener('touchmove', function (e) { if (drag) { e.preventDefault(); move(e.touches[0].clientY); } else clearTimeout(holdT); }, { passive: false });
+    box.addEventListener('touchend', function () { clearTimeout(holdT); end(); });
+    box.addEventListener('touchcancel', function () { clearTimeout(holdT); end(); });
+    // mouse (desktop)
+    box.addEventListener('mousedown', function (e) {
+      if (enabled && !enabled()) return; var item = e.target.closest(itemSel); if (!item) return;
+      if (handleSel && !e.target.closest(handleSel)) return;
+      var y = e.clientY; holdT = setTimeout(function () { start(item, y); }, handleSel ? 0 : 380);
+      function mm(ev) { if (drag) move(ev.clientY); }
+      function mu() { clearTimeout(holdT); document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); end(); }
+      document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu);
+    });
   }
 
   function renderCashflow(still) {
@@ -632,8 +708,9 @@
     }).join('');
 
     $('walletList').innerHTML = S.wallets.map(function (w) {
-      return '<button class="w-row" data-edit-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(balance(w.id)) + (w.excluded ? ' · not in total' : '') + '</span>' + plTag(w) + '</span><span class="muted">›</span></button>';
+      return '<button class="w-row" data-id="' + esc(w.id) + '" data-edit-wallet="' + esc(w.id) + '"><span class="drag" aria-label="Drag">≡</span>' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(balance(w.id)) + (w.excluded ? ' · not in total' : '') + '</span>' + plTag(w) + '</span><span class="muted">›</span></button>';
     }).join('');
+    if (!$('walletList').dataset.sortable) { $('walletList').dataset.sortable = 1; makeSortable($('walletList'), '.w-row', '.drag', function (ids) { reorderWallets(ids); }); }
     document.querySelectorAll('#catSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === catTab); });
     $('catSeg').style.setProperty('--x', ['expense', 'income', 'debt'].indexOf(catTab) * 100 + '%');
     $('catList').innerHTML = catTree(catTab).map(function (c) {
@@ -1528,7 +1605,12 @@
     $('cfChart').onclick = function (e) { var b = e.target.closest('.cf-bar'); if (!b) return; cfSel = +b.dataset.i; haptic(); renderCashflow(true); };
     $('themeSeg').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; S.settings.theme = b.dataset.t; haptic(); save(); applyTheme(); renderCashflow(true); };
     $('walletPill').onclick = walletPicker;
-    $('hWallets').onclick = function (e) { var b = e.target.closest('[data-wallet]'); if (b) { walletSel = b.dataset.wallet; renderTx(); show('v-tx'); } };
+    $('hWallets').addEventListener('click', function (e) {
+      var st = $('hWallets').querySelector('.wstack'); if (!st || st.dataset.dragged) { if (st) delete st.dataset.dragged; return; }
+      if (e.target.closest('.ws-close')) { stackOpen = false; layoutStack(); haptic(); return; }
+      if (!stackOpen) { stackOpen = true; layoutStack(); haptic(); return; }
+      var c = e.target.closest('[data-wallet]'); if (c) { walletSel = c.dataset.wallet; renderTx(); show('v-tx'); }
+    });
     $('seeReports').onclick = function () { cur = new Date(); cur.setDate(1); renderAll(); show('v-report'); };
     $('periodReport').onclick = function () { show('v-report'); };
     $('repBack').onclick = function () { show(repFrom === 'v-report' ? 'v-home' : repFrom, true); };
@@ -2085,7 +2167,7 @@
   }
   function homeSheet() {
     var L = homeLayout();
-    function rows() { return L.map(function (x, i) { return '<div class="hl-row" data-i="' + i + '"><label class="grow"><input type="checkbox" class="switch" ' + (x.on ? 'checked' : '') + '> ' + SEC_NAMES[x.k] + '</label><button class="x" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button class="x" data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + '>↓</button></div>'; }).join(''); }
+    function rows() { return L.map(function (x, i) { return '<div class="hl-row" data-i="' + i + '" data-id="' + x.k + '"><span class="drag">≡</span><label class="grow"><input type="checkbox" class="switch" ' + (x.on ? 'checked' : '') + '> ' + SEC_NAMES[x.k] + '</label><button class="x" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button class="x" data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + '>↓</button></div>'; }).join(''); }
     openSheet('<h3>Customize Home</h3><p class="muted small" style="text-align:center">Turn sections on or off and change their order.</p><div class="card list-card hl" id="hlList">' + rows() + '</div><button class="btn primary block" id="hlDone">Done</button><button class="btn block" id="hlReset">Reset to default</button>',
       function (r) {
         var list = r.querySelector('#hlList');
@@ -2094,6 +2176,7 @@
           if (u) { var i = +u.dataset.up; L.splice(i - 1, 0, L.splice(i, 1)[0]); } else if (d) { var j = +d.dataset.dn; L.splice(j + 1, 0, L.splice(j, 1)[0]); } else return;
           haptic(); list.innerHTML = rows(); S.settings.home = L; save(); applyHome();
         });
+        makeSortable(list, '.hl-row', '.drag', function (ids) { L = ids.map(function (k) { return L.filter(function (x) { return x.k === k; })[0]; }); list.innerHTML = rows(); S.settings.home = L; save(); applyHome(); haptic(); });
         list.addEventListener('change', function (e) { var row = e.target.closest('.hl-row'); if (!row) return; L[+row.dataset.i].on = e.target.checked; S.settings.home = L; save(); applyHome(); });
         r.querySelector('#hlDone').onclick = closeSheet;
         r.querySelector('#hlReset').onclick = function () { delete S.settings.home; save(); applyHome(); closeSheet(); toast('Home reset'); };
