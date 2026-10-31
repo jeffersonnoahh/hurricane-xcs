@@ -1,4 +1,4 @@
-# MONETA (formerly Arus Money)
+# Apex (formerly MONETA / Arus Money)
 
 A personal money tracker (wallets, categories, budgets, reports) that **adds your BCA transactions automatically from BCA's notification emails**.
 

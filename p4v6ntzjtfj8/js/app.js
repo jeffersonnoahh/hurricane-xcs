@@ -759,7 +759,7 @@
     $('topTitle').textContent = TITLES[id] || ''; onScroll();
   }
   var budFrom = 'v-account';
-  var TITLES = { 'v-home': 'MONETA', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
+  var TITLES = { 'v-home': 'Apex', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
   function onScroll() { $('topbar').classList.toggle('show', window.scrollY > 70); }
 
   // ---------- extra motion ----------

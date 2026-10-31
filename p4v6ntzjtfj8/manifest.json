@@ -1,6 +1,6 @@
 {
-  "name": "MONETA",
-  "short_name": "MONETA",
+  "name": "Apex",
+  "short_name": "Apex",
   "description": "Private wealth and money tracker",
   "start_url": "./index.html",
   "scope": "./",
