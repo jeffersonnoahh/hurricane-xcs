@@ -69,7 +69,7 @@
       tx: [], budgets: {},
       rules: DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }),
       settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', bcaAccounts: null, lastSync: 0, startFrom: 0, hide: false, theme: 'dark' },
-      seen: {}, review: [], debts: []
+      seen: {}, review: [], debts: [], goals: [], recurring: []
     };
   }
 
@@ -315,7 +315,7 @@
   // ---------- render ----------
   function renderAll() {
     applyTheme(); renderEye();
-    renderHome(); renderTx(); renderBudgets(); renderReport(); renderAccount(); renderDebts();
+    renderHome(); renderTx(); renderBudgets(); renderReport(); renderAccount(); renderDebts(); renderFeatures();
   }
 
   var EYE_OPEN = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -1440,7 +1440,266 @@
   }
 
   document.documentElement.style.setProperty('--sheet', 'url("' + SHEET + '")');
-  load(); useGenerated(); save(); importFromHash(); bind(); renderAll();
+  // =================== FEATURES: insights, goals, bills, calendar, search, lock, CSV ===================
+  function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5); }
+  function addPeriod(d, f) { var x = new Date(d + 'T00:00:00'); if (f === 'weekly') x.setDate(x.getDate() + 7); else if (f === 'yearly') x.setFullYear(x.getFullYear() + 1); else x.setMonth(x.getMonth() + 1); return ymd(x); }
+  function monthlyOf(r) { return r.freq === 'weekly' ? r.amount * 52 / 12 : r.freq === 'yearly' ? r.amount / 12 : r.amount; }
+
+  // ---- recurring: post everything that is due ----
+  function postRecurring() {
+    var t = today(), n = 0;
+    (S.recurring || []).forEach(function (r) {
+      var guard = 0;
+      while (r.active !== false && r.next && r.next <= t && guard++ < 60) {
+        addTx({ type: r.type, cat: r.cat, amount: r.amount, wallet: r.wallet, date: r.next, merchant: r.name, note: 'Recurring', recId: r.id });
+        r.next = addPeriod(r.next, r.freq); n++;
+      }
+    });
+    if (n) { save(); setTimeout(function () { toast(n + ' recurring payment' + (n > 1 ? 's' : '') + ' added'); }, 900); }
+  }
+
+  // ---- insights ----
+  function renderInsights() {
+    var now = new Date(), m = ym(now), day = now.getDate(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    var lm = ym(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    var cur = {}, prev = {}, spent = 0, lastFull = 0, biggest = null;
+    S.tx.forEach(function (t) {
+      if (t.type !== 'expense' || !touches(t, 'all')) return;
+      var mk = t.date.slice(0, 7), d = +t.date.slice(8, 10);
+      if (mk === m) { cur[t.cat] = (cur[t.cat] || 0) + t.amount; spent += t.amount; if (!biggest || t.amount > biggest.amount) biggest = t; }
+      if (mk === lm) { lastFull += t.amount; if (d <= day) prev[t.cat] = (prev[t.cat] || 0) + t.amount; }
+    });
+    var cards = [];
+    var moves = Object.keys(cur).map(function (k) { return { k: k, c: cur[k], p: prev[k] || 0 }; }).filter(function (x) { return x.p > 0; })
+      .sort(function (a, b) { return Math.abs(b.c - b.p) - Math.abs(a.c - a.p); });
+    if (moves[0]) { var mv = moves[0], pc = Math.round((mv.c - mv.p) / mv.p * 100), upm = pc > 0;
+      cards.push({ sp: spKey(cat(mv.k)) || 'stocks', tone: upm ? 'neg' : 'pos', title: cat(mv.k).name + ' ' + (upm ? 'up ' : 'down ') + Math.abs(pc) + '%', body: 'vs the same days last month', bar: Math.min(100, mv.c / Math.max(mv.c, mv.p) * 100), bar2: Math.min(100, mv.p / Math.max(mv.c, mv.p) * 100) }); }
+    if (spent) { var proj = spent / day * dim;
+      cards.push({ sp: 'ajaib_essa', tone: lastFull && proj > lastFull ? 'neg' : 'pos', title: 'On track for ' + money(proj, { rp: true }), body: lastFull ? (proj > lastFull ? 'More than' : 'Less than') + ' last month (' + money(lastFull, { rp: false }) + ')' : 'Month-end spending forecast', bar: Math.min(100, day / dim * 100) }); }
+    if (biggest) cards.push({ sp: spKey(cat(biggest.cat)) || 'other_out', tone: '', title: 'Biggest: ' + money(biggest.amount, { rp: true }), body: (biggest.merchant || cat(biggest.cat).name) + ' · ' + fmtDate(biggest.date) });
+    var subs = (S.recurring || []).filter(function (r) { return r.active !== false && r.type === 'expense'; });
+    if (subs.length) { var mt = subs.reduce(function (a, r) { return a + monthlyOf(r); }, 0);
+      cards.push({ sp: 'streaming', tone: '', title: money(mt, { rp: true }) + ' / month', body: subs.length + ' bill' + (subs.length > 1 ? 's' : '') + ' & subscriptions · ' + money(mt * 12, { rp: false }) + ' a year' }); }
+    var od = S.debts.filter(function (d) { return d.dir === 'in' && dStatus(d) === 'overdue'; });
+    if (od.length) cards.push({ sp: 'debt_collection', tone: 'neg', title: od.length + ' overdue · ' + money(od.reduce(function (a, d) { return a + dRemain(d); }, 0), { rp: true }), body: 'People owe you past the due date', go: 'v-debts' });
+    if (!cards.length) cards.push({ sp: 'investment', tone: '', title: 'Insights appear here', body: 'Add a few transactions and Apex starts spotting patterns for you.' });
+    $('hInsights').innerHTML = cards.map(function (c, i) {
+      return '<div class="ins-card ' + c.tone + '" style="--i:' + i + '"' + (c.go ? ' data-go="' + c.go + '"' : '') + '><div class="ins-top">' + sprite(c.sp, 'ins-ic') + '</div><b>' + c.title + '</b><span>' + esc(c.body) + '</span>' +
+        (c.bar != null ? '<div class="ins-bars"><i style="--w:' + c.bar.toFixed(1) + '%"></i>' + (c.bar2 != null ? '<i class="ghost" style="--w:' + c.bar2.toFixed(1) + '%"></i>' : '') + '</div>' : '') + '</div>';
+    }).join('');
+  }
+
+  // ---- goals ----
+  function goalSaved(g) { return (g.history || []).reduce(function (a, h) { return a + h.amount; }, 0); }
+  function ringSvg(pct, col, size) {
+    var r = 26, C = 2 * Math.PI * r;
+    return '<svg class="g-ring" viewBox="0 0 64 64" width="' + size + '" height="' + size + '"><circle cx="32" cy="32" r="' + r + '" class="g-track"/><circle cx="32" cy="32" r="' + r + '" class="g-fill" stroke="' + col + '" stroke-dasharray="' + C.toFixed(2) + '" style="--off:' + (C * (1 - Math.min(1, pct))).toFixed(2) + ';--c:' + C.toFixed(2) + '"/></svg>';
+  }
+  var GCOL = ['#34d399', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#2dd4bf'];
+  function renderGoals() {
+    var gs = S.goals || [];
+    $('hGoals').innerHTML = gs.map(function (g, i) {
+      var sv = goalSaved(g), pct = g.target ? sv / g.target : 0, col = GCOL[i % GCOL.length], left = g.due ? daysBetween(today(), g.due) : null;
+      return '<button class="goal" data-goal="' + esc(g.id) + '" style="--i:' + i + '"><div class="g-vis">' + ringSvg(pct, col, 64) + '<span class="g-ic">' + sprite(g.sp || 'g_savings') + '</span></div>' +
+        '<b>' + esc(g.name) + '</b><span class="g-amt">' + money(sv, { rp: false }) + '</span><span class="g-sub">' + Math.round(pct * 100) + '% of ' + money(g.target, { rp: false }) + (left != null ? ' · ' + (left >= 0 ? left + 'd left' : 'past due') : '') + '</span></button>';
+    }).join('') + '<button class="goal add" id="goalAdd2"><div class="g-vis"><span class="g-plus">＋</span></div><b>New goal</b><span class="g-sub">Save for something</span></button>';
+  }
+  function goalSheet(g) {
+    var isNew = !g; g = g || { id: uid(), name: '', target: 0, due: '', sp: 'g_savings', history: [] };
+    var st = { sp: g.sp };
+    openSheet('<h3>' + (isNew ? 'New goal' : 'Edit goal') + '</h3>' + '<span class="ic preview i3d">' + sprite(st.sp) + '</span>' +
+      '<label class="fld">Name<input id="gName" value="' + esc(g.name) + '" placeholder="e.g. Wedding fund"></label>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="gTarget" inputmode="numeric" placeholder="Target" value="' + (g.target ? g.target.toLocaleString('id-ID') : '') + '"></div>' +
+      '<label class="fld">Target date (optional)<input id="gDue" type="date" value="' + esc(g.due || '') + '"></label>' +
+      '<div class="fld">Icon' + picker(null, st.sp) + '</div>' +
+      '<button class="btn primary block" id="gSave">Save goal</button>' + (isNew ? '' : '<button class="btn danger block" id="gDel">Delete goal</button>'),
+      function (r) {
+        fmtInput(r.querySelector('#gTarget')); bindSpPicker(r, st);
+        r.querySelector('#gSave').onclick = function () {
+          var n = r.querySelector('#gName').value.trim(), t = parseNum(r.querySelector('#gTarget').value);
+          if (!n) { toast('Name your goal'); return; } if (!t) { toast('Set a target amount'); return; }
+          g.name = n; g.target = t; g.due = r.querySelector('#gDue').value; g.sp = st.sp;
+          if (isNew) (S.goals = S.goals || []).push(g); save(); closeSheet(); renderGoals(); toast('Goal saved ✓');
+        };
+        var d = r.querySelector('#gDel'); if (d) d.onclick = function () { if (!confirm('Delete this goal?')) return; S.goals = S.goals.filter(function (x) { return x !== g; }); save(); closeSheet(); renderGoals(); };
+      });
+  }
+  function goalDetail(g) {
+    var sv = goalSaved(g), pct = g.target ? sv / g.target : 0, i = S.goals.indexOf(g), col = GCOL[i % GCOL.length];
+    var left = g.due ? daysBetween(today(), g.due) : null, need = Math.max(0, g.target - sv);
+    var perMonth = left && left > 0 ? need / Math.max(1, left / 30.4) : 0;
+    openSheet('<div class="gd-hero"><div class="g-vis big">' + ringSvg(pct, col, 132) + '<span class="g-ic">' + sprite(g.sp || 'g_savings') + '</span></div>' +
+      '<div class="gd-pct">' + Math.round(pct * 100) + '%</div><h3 style="margin:0">' + esc(g.name) + '</h3>' +
+      '<div class="muted small">' + money(sv) + ' of ' + money(g.target) + '</div></div>' +
+      '<div class="dd-stats"><div><small>Still needed</small><b>' + money(need, { rp: false }) + '</b></div><div><small>Days left</small><b>' + (left == null ? '–' : Math.max(0, left)) + '</b></div><div><small>Per month</small><b>' + (perMonth ? money(perMonth, { rp: false }) : '–') + '</b></div></div>' +
+      '<div class="amt-wrap" style="margin-top:16px"><span>Rp</span><input class="amt-input" id="gAdd" inputmode="numeric" placeholder="Add money"></div>' +
+      '<div class="quick-amts"><button type="button" data-a="100000">+100rb</button><button type="button" data-a="500000">+500rb</button><button type="button" data-a="1000000">+1jt</button>' + (need ? '<button type="button" data-a="' + need + '">Finish</button>' : '') + '</div>' +
+      '<div class="two"><button class="btn primary" id="gIn">Add to goal</button><button class="btn" id="gOut">Withdraw</button></div>' +
+      ((g.history || []).length ? '<div class="sheet-sec">History</div><div class="timeline">' + g.history.slice().reverse().slice(0, 12).map(function (h) { return '<div class="tl"><div><b class="' + (h.amount > 0 ? 'pos' : 'neg') + '">' + (h.amount > 0 ? '+ ' : '− ') + money(Math.abs(h.amount)) + '</b><small>' + fmtDate(h.date) + '</small></div></div>'; }).join('') + '</div>' : '') +
+      '<button class="btn block" id="gEdit">Edit goal</button>',
+      function (r) {
+        var a = r.querySelector('#gAdd'); fmtInput(a);
+        requestAnimationFrame(function () { requestAnimationFrame(function () { r.querySelectorAll('.g-fill').forEach(function (c) { c.classList.add('go'); }); }); });
+        r.querySelector('.quick-amts').onclick = function (e) { var b = e.target.closest('button'); if (b) { a.value = (+b.dataset.a).toLocaleString('id-ID'); haptic(); } };
+        function move(sign) {
+          var v = parseNum(a.value); if (!v) { toast('Enter an amount'); return; }
+          var before = goalSaved(g); (g.history = g.history || []).push({ amount: sign * v, date: today() }); save();
+          var done = before < g.target && goalSaved(g) >= g.target;
+          closeSheet(); renderGoals(); renderInsights();
+          if (done) { toast('Goal reached! 🎉'); confetti(); } else toast(sign > 0 ? 'Added to ' + g.name : 'Withdrawn');
+        }
+        r.querySelector('#gIn').onclick = function () { move(1); };
+        r.querySelector('#gOut').onclick = function () { move(-1); };
+        r.querySelector('#gEdit').onclick = function () { goalSheet(g); };
+      });
+  }
+  function confetti() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || !document.body.animate) return;
+    var cols = ['#34d399', '#fbbf24', '#60a5fa', '#f472b6', '#a78bfa', '#fff'];
+    for (var k = 0; k < 70; k++) (function (k) {
+      var p = document.createElement('i'); p.className = 'confetti'; p.style.background = cols[k % cols.length];
+      p.style.left = (50 + (Math.random() - .5) * 20) + 'vw'; p.style.top = '40vh'; document.body.appendChild(p);
+      var a = Math.random() * Math.PI * 2, v = 200 + Math.random() * 300;
+      p.animate([{ transform: 'translate(0,0) rotate(0)', opacity: 1 }, { transform: 'translate(' + Math.cos(a) * v + 'px,' + (Math.sin(a) * v - 120) + 'px) rotate(' + (Math.random() * 720) + 'deg)', opacity: 1, offset: .6 }, { transform: 'translate(' + Math.cos(a) * v * 1.2 + 'px,' + (Math.sin(a) * v + 380) + 'px) rotate(' + (Math.random() * 1080) + 'deg)', opacity: 0 }],
+        { duration: 1600 + Math.random() * 900, easing: 'cubic-bezier(.2,.7,.3,1)', delay: k * 6 }).onfinish = function () { p.remove(); };
+    })(k);
+  }
+
+  // ---- bills & subscriptions ----
+  function renderBills() {
+    var rs = (S.recurring || []).filter(function (r) { return r.active !== false; }).sort(function (a, b) { return a.next.localeCompare(b.next); });
+    $('billHead').hidden = $('hBills').hidden = false;
+    $('hBills').innerHTML = rs.length ? rs.slice(0, 4).map(function (r, i) {
+      var dl = daysBetween(today(), r.next), pct = Math.max(0, Math.min(1, 1 - dl / (r.freq === 'weekly' ? 7 : r.freq === 'yearly' ? 365 : 30)));
+      return '<button class="w-row bill" data-rec="' + esc(r.id) + '" style="--i:' + i + '">' + icon(cat(r.cat), 'sm') + '<span class="grow">' + esc(r.name) + '<span class="sub">' + (dl <= 0 ? 'Due today' : dl === 1 ? 'Tomorrow' : 'In ' + dl + ' days') + ' · ' + r.freq + '</span><span class="bill-bar"><i style="--w:' + (pct * 100).toFixed(1) + '%"></i></span></span><span class="amt ' + (r.type === 'income' ? 'pos' : '') + '">' + money(r.amount, { rp: false }) + '</span></button>';
+    }).join('') : '<button class="w-row" id="billEmpty"><span class="ic sm i3d">' + sprite('streaming') + '</span><span class="grow">Add your bills & subscriptions<span class="sub">Netflix, PLN, Indihome, salary… they add themselves</span></span><span class="muted">＋</span></button>';
+  }
+  function recSheet(r) {
+    var isNew = !r; r = r || { id: uid(), name: '', type: 'expense', amount: 0, cat: 'streaming', wallet: S.settings.bcaWallet || (S.wallets[0] || {}).id, freq: 'monthly', next: today(), active: true };
+    var catOpts = function (ty, sel) { return catTree(ty).map(function (c) { return '<option value="' + esc(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' + (c.parent ? '— ' : '') + esc(c.name) + '</option>'; }).join(''); };
+    openSheet('<h3>' + (isNew ? 'New recurring' : 'Edit recurring') + '</h3>' +
+      '<div class="seg" id="rType" style="display:grid;grid-template-columns:1fr 1fr;--x:' + (r.type === 'income' ? '100%' : '0%') + '"><button data-t="expense" class="' + (r.type === 'expense' ? 'on' : '') + '">Bill / expense</button><button data-t="income" class="' + (r.type === 'income' ? 'on' : '') + '">Income</button><i class="seg-ind" style="transform:translateX(var(--x))"></i></div>' +
+      '<label class="fld">Name<input id="rName" value="' + esc(r.name) + '" placeholder="e.g. Netflix"></label>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="rAmt" inputmode="numeric" placeholder="0" value="' + (r.amount ? r.amount.toLocaleString('id-ID') : '') + '"></div>' +
+      '<div class="two"><label class="fld">Repeats<select id="rFreq"><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label><label class="fld">Next date<input id="rNext" type="date" value="' + esc(r.next) + '"></label></div>' +
+      '<label class="fld">Category<select id="rCat">' + catOpts(r.type, r.cat) + '</select></label>' +
+      '<label class="fld">Wallet<select id="rWallet">' + walletOpts(r.wallet) + '</select></label>' +
+      '<label class="set-row plain"><span class="grow">Active</span><input type="checkbox" class="switch" id="rActive"' + (r.active !== false ? ' checked' : '') + '></label>' +
+      '<p class="muted small">On the due date Apex adds the transaction for you and moves to the next date.</p>' +
+      '<button class="btn primary block" id="rSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="rDel">Delete</button>'),
+      function (el) {
+        fmtInput(el.querySelector('#rAmt')); el.querySelector('#rFreq').value = r.freq; var ty = r.type;
+        el.querySelector('#rType').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; ty = b.dataset.t; this.style.setProperty('--x', ty === 'income' ? '100%' : '0%'); this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); el.querySelector('#rCat').innerHTML = catOpts(ty, ty === 'income' ? 'salary' : 'streaming'); haptic(); };
+        el.querySelector('#rSave').onclick = function () {
+          var n = el.querySelector('#rName').value.trim(), a = parseNum(el.querySelector('#rAmt').value);
+          if (!n) { toast('Name it'); return; } if (!a) { toast('Enter the amount'); return; }
+          Object.assign(r, { name: n, type: ty, amount: a, freq: el.querySelector('#rFreq').value, next: el.querySelector('#rNext').value || today(), cat: el.querySelector('#rCat').value, wallet: el.querySelector('#rWallet').value, active: el.querySelector('#rActive').checked });
+          if (isNew) (S.recurring = S.recurring || []).push(r);
+          postRecurring(); save(); closeSheet(); renderAll(); toast('Saved ✓');
+        };
+        var d = el.querySelector('#rDel'); if (d) d.onclick = function () { if (!confirm('Delete this recurring item? Past transactions stay.')) return; S.recurring = S.recurring.filter(function (x) { return x !== r; }); save(); closeSheet(); renderAll(); };
+      });
+  }
+  function recList() {
+    var rs = (S.recurring || []).slice().sort(function (a, b) { return a.next.localeCompare(b.next); });
+    var mt = rs.filter(function (r) { return r.active !== false && r.type === 'expense'; }).reduce(function (a, r) { return a + monthlyOf(r); }, 0);
+    openSheet('<div class="sheet-top"><span style="width:36px"></span><h3>Bills & subscriptions</h3><button class="icon-btn" id="recNew" aria-label="Add">＋</button></div>' +
+      '<div class="card" style="text-align:center"><div class="eyebrow">Fixed costs per month</div><div class="mid-money">' + money(mt) + '</div><div class="muted small">' + money(mt * 12, { rp: false }) + ' per year</div></div>' +
+      '<div class="card list-card">' + (rs.length ? rs.map(function (r) { return '<button class="w-row" data-rec="' + esc(r.id) + '">' + icon(cat(r.cat), 'sm') + '<span class="grow">' + esc(r.name) + '<span class="sub">' + r.freq + ' · next ' + fmtDate(r.next) + (r.active === false ? ' · paused' : '') + '</span></span><span class="amt ' + (r.type === 'income' ? 'pos' : '') + '">' + money(r.amount, { rp: false }) + '</span></button>'; }).join('') : '<p class="muted small pad" style="padding-bottom:14px">Nothing yet. Tap ＋ to add Netflix, PLN, rent or your salary.</p>') + '</div>',
+      function (el) { el.querySelector('#recNew').onclick = function () { recSheet(); }; el.addEventListener('click', function (e) { var b = e.target.closest('[data-rec]'); if (b) recSheet(S.recurring.filter(function (x) { return x.id === b.dataset.rec; })[0]); }); });
+  }
+
+  // ---- activity: search + calendar ----
+  var txMode = 'list';
+  function renderTxExtras() {
+    var q = ($('txQ').value || '').trim().toLowerCase();
+    $('txMode').style.setProperty('--x', txMode === 'cal' ? '100%' : '0%');
+    document.querySelectorAll('#txMode button').forEach(function (b) { b.classList.toggle('on', b.dataset.m === txMode); });
+    if (q) {
+      var num = parseNum(q), res = S.tx.filter(function (t) {
+        var c = t.type === 'transfer' ? 'transfer' : cat(t.cat).name;
+        return ((t.merchant || '') + ' ' + (t.note || '') + ' ' + c + ' ' + wallet(t.wallet).name).toLowerCase().indexOf(q) !== -1 || (num && String(t.amount).indexOf(String(num)) !== -1);
+      }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); }).slice(0, 80);
+      $('txCal').hidden = true;
+      $('txList').innerHTML = '<div class="muted small" style="margin:0 4px 8px">' + res.length + ' result' + (res.length === 1 ? '' : 's') + '</div>' + (res.length ? '<div class="card list-card stagger">' + res.map(function (t, i) { return txRow(t, i, true); }).join('') + '</div>' : '');
+      return;
+    }
+    $('txCal').hidden = txMode !== 'cal';
+    if (txMode !== 'cal') return;
+    var y = cur.getFullYear(), mo = cur.getMonth(), dim = new Date(y, mo + 1, 0).getDate(), first = (new Date(y, mo, 1).getDay() + 6) % 7, sums = {}, max = 0;
+    S.tx.forEach(function (t) { if (t.type === 'expense' && t.date.slice(0, 7) === ym(cur) && touches(t, walletSel)) { sums[t.date] = (sums[t.date] || 0) + t.amount; } });
+    Object.keys(sums).forEach(function (k) { max = Math.max(max, sums[k]); });
+    var cells = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (d) { return '<span class="cal-h">' + d + '</span>'; }).join('');
+    for (var b = 0; b < first; b++) cells += '<span></span>';
+    for (var d = 1; d <= dim; d++) {
+      var key = y + '-' + pad(mo + 1) + '-' + pad(d), v = sums[key] || 0, lv = v ? Math.max(.14, v / max) : 0;
+      cells += '<button class="cal-d' + (key === today() ? ' today' : '') + (v ? ' has' : '') + '" data-day="' + key + '" style="--a:' + lv.toFixed(2) + ';--i:' + d + '"><b>' + d + '</b>' + (v ? '<small>' + (S.settings.hide ? '•••' : short(v)) + '</small>' : '') + '</button>';
+    }
+    var tot = Object.keys(sums).reduce(function (a, k) { return a + sums[k]; }, 0), days = Object.keys(sums).length;
+    $('txCal').innerHTML = '<div class="card cal"><div class="cal-top"><div><div class="eyebrow">Spent in ' + MONTHS[mo] + '</div><div class="mid-money">' + money(tot) + '</div></div><div class="cal-key"><span>less</span><i style="--a:.15"></i><i style="--a:.45"></i><i style="--a:.75"></i><i style="--a:1"></i><span>more</span></div></div>' +
+      '<div class="cal-grid">' + cells + '</div><div class="muted small" style="margin-top:10px">' + days + ' spending day' + (days === 1 ? '' : 's') + ' · ' + (dim - days) + ' no-spend day' + (dim - days === 1 ? '' : 's') + '</div></div>';
+  }
+  function daySheet(day) {
+    var list = S.tx.filter(function (t) { return t.date === day && touches(t, walletSel); });
+    openSheet('<h3>' + fmtDate(day) + '</h3>' + (list.length ? '<div class="card list-card stagger">' + list.map(function (t, i) { return txRow(t, i, false); }).join('') + '</div>' : '<div class="empty">No transactions on this day 🎉</div>'),
+      function (el) { el.addEventListener('click', function (e) { var r = e.target.closest('.tx'); if (r) { var t = S.tx.filter(function (x) { return x.id === r.dataset.id; })[0]; if (t) txSheet(t); } }); });
+  }
+
+  // ---- app lock ----
+  function sha(s) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('apex:' + s)).then(function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
+  var lockState = null;
+  function showLock(mode, done) {
+    lockState = { mode: mode, entry: '', first: null, done: done };
+    $('lockLogo').src = (document.querySelector('link[rel=apple-touch-icon]') || {}).href || '';
+    $('lockTitle').textContent = mode === 'unlock' ? 'Enter passcode' : 'Create a 4-digit passcode';
+    $('lockCancel').hidden = mode === 'unlock';
+    paintDots(); var L = $('lock'); L.hidden = false; void L.offsetWidth; L.classList.add('show');
+  }
+  function hideLock() { var L = $('lock'); L.classList.remove('show'); L.classList.add('out'); setTimeout(function () { L.hidden = true; L.classList.remove('out'); }, 450); lockState = null; }
+  function paintDots() { var n = lockState ? lockState.entry.length : 0; document.querySelectorAll('#lockDots i').forEach(function (d, i) { d.classList.toggle('on', i < n); }); }
+  function shakeLock(msg) { var d = $('lockDots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (e) {} if (msg) $('lockTitle').textContent = msg; setTimeout(paintDots, 350); }
+  function lockKey(k) {
+    var st = lockState; if (!st || st.busy) return;
+    if (k === 'del') st.entry = st.entry.slice(0, -1); else if (st.entry.length < 4) st.entry += k;
+    paintDots(); haptic();
+    if (st.entry.length < 4) return;
+    var e = st.entry; st.entry = '';
+    if (st.mode === 'unlock') { st.busy = true; sha(e).then(function (h) { st.busy = false; if (h === S.settings.pinHash) hideLock(); else shakeLock('Wrong passcode'); }); return; }
+    if (!st.first) { st.first = e; $('lockTitle').textContent = 'Enter it again'; setTimeout(paintDots, 150); return; }
+    if (st.first === e) { sha(e).then(function (h) { S.settings.pinHash = h; save(); hideLock(); toast('App lock on 🔒'); renderAccount(); if (st.done) st.done(true); }); return; }
+    st.first = null; shakeLock('Didn\u2019t match. Try again'); setTimeout(function () { if (lockState) $('lockTitle').textContent = 'Create a 4-digit passcode'; }, 900);
+  }
+  var hiddenAt = 0;
+  function bindFeatures() {
+    $('keypad').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) lockKey(b.dataset.k || b.textContent); });
+    $('lockCancel').onclick = function () { hideLock(); renderAccount(); };
+    $('lockToggle').onchange = function () {
+      if (this.checked) showLock('set'); else if (confirm('Turn off app lock?')) { delete S.settings.pinHash; save(); toast('App lock off'); } else this.checked = true;
+    };
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) hiddenAt = Date.now();
+      else if (S.settings.pinHash && hiddenAt && Date.now() - hiddenAt > 60000 && !lockState) showLock('unlock');
+    });
+    $('goalAdd').onclick = function () { goalSheet(); };
+    $('hGoals').addEventListener('click', function (e) { if (e.target.closest('#goalAdd2')) { goalSheet(); return; } var g = e.target.closest('[data-goal]'); if (g) goalDetail(S.goals.filter(function (x) { return x.id === g.dataset.goal; })[0]); });
+    $('billManage').onclick = recList; $('recBtn').onclick = recList;
+    $('hBills').addEventListener('click', function (e) { if (e.target.closest('#billEmpty')) { recSheet(); return; } var b = e.target.closest('[data-rec]'); if (b) recSheet(S.recurring.filter(function (x) { return x.id === b.dataset.rec; })[0]); });
+    $('txQ').addEventListener('input', function () { if (!this.value) renderTx(); renderTxExtras(); });
+    $('txMode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; txMode = b.dataset.m; haptic(); renderTxExtras(); };
+    $('txCal').addEventListener('click', function (e) { var d = e.target.closest('[data-day]'); if (d) { haptic(); daySheet(d.dataset.day); } });
+    $('csvBtn').onclick = function () {
+      var rows = [['Date', 'Time', 'Type', 'Category', 'Wallet', 'To wallet', 'Amount', 'Merchant', 'Note']].concat(S.tx.slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).map(function (t) {
+        return [t.date, t.time || '', t.type, t.type === 'transfer' ? '' : cat(t.cat).name, wallet(t.wallet).name, t.toWallet ? wallet(t.toWallet).name : '', (t.type === 'income' || flowIn(t) ? '' : '-') + t.amount, t.merchant || '', t.note || ''];
+      }));
+      var csv = rows.map(function (r) { return r.map(function (c) { c = String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n');
+      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' })); a.download = 'apex-transactions-' + today() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+      toast('CSV exported ✓');
+    };
+  }
+  function renderFeatures() { renderInsights(); renderGoals(); renderBills(); renderTxExtras(); var lt = $('lockToggle'); if (lt) lt.checked = !!S.settings.pinHash; }
+
+  load(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); renderAll();
+  if (S.settings.pinHash) showLock('unlock');
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
   if (S.settings.autoSync) sync(false);
