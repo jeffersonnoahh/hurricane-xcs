@@ -1440,7 +1440,7 @@
   }
 
   document.documentElement.style.setProperty('--sheet', 'url("' + SHEET + '")');
-  // =================== FEATURES: insights, goals, bills, calendar, search, lock, CSV ===================
+  // =================== FEATURES: insights, goals, bills, calendar, search, CSV ===================
   function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5); }
   function addPeriod(d, f) { var x = new Date(d + 'T00:00:00'); if (f === 'weekly') x.setDate(x.getDate() + 7); else if (f === 'yearly') x.setFullYear(x.getFullYear() + 1); else x.setMonth(x.getMonth() + 1); return ymd(x); }
   function monthlyOf(r) { return r.freq === 'weekly' ? r.amount * 52 / 12 : r.freq === 'yearly' ? r.amount / 12 : r.amount; }
@@ -1645,41 +1645,7 @@
       function (el) { el.addEventListener('click', function (e) { var r = e.target.closest('.tx'); if (r) { var t = S.tx.filter(function (x) { return x.id === r.dataset.id; })[0]; if (t) txSheet(t); } }); });
   }
 
-  // ---- app lock ----
-  function sha(s) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('apex:' + s)).then(function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
-  var lockState = null;
-  function showLock(mode, done) {
-    lockState = { mode: mode, entry: '', first: null, done: done };
-    $('lockLogo').src = (document.querySelector('link[rel=apple-touch-icon]') || {}).href || '';
-    $('lockTitle').textContent = mode === 'unlock' ? 'Enter passcode' : 'Create a 4-digit passcode';
-    $('lockCancel').hidden = mode === 'unlock';
-    paintDots(); var L = $('lock'); L.hidden = false; void L.offsetWidth; L.classList.add('show');
-  }
-  function hideLock() { var L = $('lock'); L.classList.remove('show'); L.classList.add('out'); setTimeout(function () { L.hidden = true; L.classList.remove('out'); }, 450); lockState = null; }
-  function paintDots() { var n = lockState ? lockState.entry.length : 0; document.querySelectorAll('#lockDots i').forEach(function (d, i) { d.classList.toggle('on', i < n); }); }
-  function shakeLock(msg) { var d = $('lockDots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (e) {} if (msg) $('lockTitle').textContent = msg; setTimeout(paintDots, 350); }
-  function lockKey(k) {
-    var st = lockState; if (!st || st.busy) return;
-    if (k === 'del') st.entry = st.entry.slice(0, -1); else if (st.entry.length < 4) st.entry += k;
-    paintDots(); haptic();
-    if (st.entry.length < 4) return;
-    var e = st.entry; st.entry = '';
-    if (st.mode === 'unlock') { st.busy = true; sha(e).then(function (h) { st.busy = false; if (h === S.settings.pinHash) hideLock(); else shakeLock('Wrong passcode'); }); return; }
-    if (!st.first) { st.first = e; $('lockTitle').textContent = 'Enter it again'; setTimeout(paintDots, 150); return; }
-    if (st.first === e) { sha(e).then(function (h) { S.settings.pinHash = h; save(); hideLock(); toast('App lock on 🔒'); renderAccount(); if (st.done) st.done(true); }); return; }
-    st.first = null; shakeLock('Didn\u2019t match. Try again'); setTimeout(function () { if (lockState) $('lockTitle').textContent = 'Create a 4-digit passcode'; }, 900);
-  }
-  var hiddenAt = 0;
   function bindFeatures() {
-    $('keypad').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) lockKey(b.dataset.k || b.textContent); });
-    $('lockCancel').onclick = function () { hideLock(); renderAccount(); };
-    $('lockToggle').onchange = function () {
-      if (this.checked) showLock('set'); else if (confirm('Turn off app lock?')) { delete S.settings.pinHash; save(); toast('App lock off'); } else this.checked = true;
-    };
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) hiddenAt = Date.now();
-      else if (S.settings.pinHash && hiddenAt && Date.now() - hiddenAt > 60000 && !lockState) showLock('unlock');
-    });
     $('goalAdd').onclick = function () { goalSheet(); };
     $('hGoals').addEventListener('click', function (e) { if (e.target.closest('#goalAdd2')) { goalSheet(); return; } var g = e.target.closest('[data-goal]'); if (g) goalDetail(S.goals.filter(function (x) { return x.id === g.dataset.goal; })[0]); });
     $('billManage').onclick = recList; $('recBtn').onclick = recList;
@@ -1696,10 +1662,10 @@
       toast('CSV exported ✓');
     };
   }
-  function renderFeatures() { renderInsights(); renderGoals(); renderBills(); renderTxExtras(); var lt = $('lockToggle'); if (lt) lt.checked = !!S.settings.pinHash; }
+  function renderFeatures() { renderInsights(); renderGoals(); renderBills(); renderTxExtras(); }
 
   load(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); renderAll();
-  if (S.settings.pinHash) showLock('unlock');
+  if (S.settings.pinHash) { delete S.settings.pinHash; save(); }
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
   if (S.settings.autoSync) sync(false);

@@ -824,23 +824,3 @@ body.sheet-open .fab{scale:0;transition:scale .35s var(--spring)}
 .cal-d:active{transform:scale(.9)}
 @keyframes calIn{from{opacity:0;transform:scale(.6)}}
 
-/* app lock */
-.applock{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% 0%,rgba(16,185,129,.28),transparent 60%),#050607;opacity:0;transition:opacity .35s}
-:root[data-theme="light"] .applock{background:radial-gradient(120% 80% at 50% 0%,rgba(16,185,129,.18),transparent 60%),#f5f3ee}
-.applock.show{opacity:1}
-.applock.out{opacity:0;transform:scale(1.08);filter:blur(10px);transition:opacity .4s,transform .45s var(--ease),filter .45s}
-.lock-in{display:flex;flex-direction:column;align-items:center;gap:14px;transform:translateY(10px);transition:transform .5s var(--spring)}
-.applock.show .lock-in{transform:none}
-.lock-logo{width:76px;height:76px;border-radius:20px;box-shadow:0 18px 40px -16px rgba(16,185,129,.7);animation:lockFloat 3.5s ease-in-out infinite}
-@keyframes lockFloat{50%{transform:translateY(-5px)}}
-.lock-title{font-size:17px;font-weight:600;margin-top:6px}
-.lock-dots{display:flex;gap:16px;margin:6px 0 18px}
-.lock-dots i{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--ink2);transition:background .15s,transform .25s var(--spring)}
-.lock-dots i.on{background:var(--ink);border-color:var(--ink);transform:scale(1.15)}
-.lock-dots.shake{animation:shake .4s}
-@keyframes shake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
-.keypad{display:grid;grid-template-columns:repeat(3,74px);gap:16px 24px}
-.keypad button{width:74px;height:74px;border-radius:50%;font-size:28px;font-weight:400;color:var(--ink);background:linear-gradient(160deg,var(--glass-2),var(--glass));-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:inset 0 0 0 .5px var(--line2)}
-.keypad button:active{background:var(--glass-hi);transform:scale(.92)}
-.keypad button[data-k]{background:none;box-shadow:none;font-size:22px}
-.lock-cancel{margin-top:10px;color:var(--accent);font-size:15px}
