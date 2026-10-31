@@ -802,13 +802,21 @@
 
   // ---------- Shared holding panel: Invested vs Live value (gold etc.), or an inline setup form ----------
   function isGoldish(w) { return !!(w && ((w.holding && w.holding.asset === 'gold') || /gold|emas|antam/i.test(w.name) || /gold/.test(spKey(w) || ''))); }
+  function isUsdish(w) { return !!(w && ((w.holding && w.holding.asset === 'usd') || /\busd\b|dollar|dolar/i.test(w.name) || spKey(w) === 'usd')); }
+  // Holdings you track by "money invested + average": gold (per gram) and USD (per $1).
+  var INV = {
+    gold: { noun: 'gold', avgLabel: 'Average / gram', avgPh: '1.950.000', invPh: '50.000.000', unit: '/ g', qty: function (q) { return fmtG(q); }, fetch: function () { if (typeof fetchGold === 'function') fetchGold(); } },
+    usd: { noun: 'dollars', avgLabel: 'Average rate (Rp per $1)', avgPh: '16.200', invPh: '16.200.000', unit: '/ $1', qty: function (q) { return '$' + (+q).toLocaleString('id-ID', { maximumFractionDigits: 2 }); }, fetch: function () { if (typeof fetchFx === 'function') fetchFx(); } }
+  };
+  function invAssetOf(w) { return w && w.holding && INV[w.holding.asset] ? w.holding.asset : isGoldish(w) ? 'gold' : isUsdish(w) ? 'usd' : null; }
   function hasHolding(w) { return !!(w && w.holding && w.holding.asset && +w.holding.qty); }
   function wViewOf(w) { return ((S.settings.wView || {})[w.id]) || 'live'; }
   function holdHtml(w) {
     if (!hasHolding(w)) {
-      if (!isGoldish(w)) return '';
-      return '<div class="hv hv-setup"><div class="hv-st"><b>Track this gold live</b><small>Enter what you put in and your average price. Apex shows what it’s worth now with the live gold price.</small></div>' +
-        '<div class="two"><label class="fld">Money invested<input class="hvInv" inputmode="numeric" placeholder="50.000.000"></label><label class="fld">Average / gram<input class="hvAvg" inputmode="numeric" placeholder="1.950.000"></label></div>' +
+      var ia = invAssetOf(w); if (!ia) return '';
+      var cf = INV[ia];
+      return '<div class="hv hv-setup" data-asset="' + ia + '"><div class="hv-st"><b>Track these ' + cf.noun + ' live</b><small>Enter what you put in and your average ' + (ia === 'usd' ? 'rate' : 'price') + '. Apex shows what it’s worth now with the live ' + (ia === 'usd' ? 'USD/IDR rate' : 'gold price') + '. Net worth keeps counting the money you put in.</small></div>' +
+        '<div class="two"><label class="fld">Money invested<input class="hvInv" inputmode="numeric" placeholder="' + cf.invPh + '"></label><label class="fld">' + cf.avgLabel + '<input class="hvAvg" inputmode="numeric" placeholder="' + cf.avgPh + '"></label></div>' +
         '<div class="hv-prev"></div><button type="button" class="btn primary block hvSave">Start tracking</button></div>';
     }
     var h = w.holding, p = PRICES[h.asset], v = p ? h.qty * p : null, inv = +h.cost || 0, d = v != null && inv ? v - inv : null, live = wViewOf(w) === 'live', u = ASSETS[h.asset].unit;
@@ -816,7 +824,7 @@
     return '<div class="hv"><div class="hv-seg"><button type="button" data-v="cost" class="' + (live ? '' : 'on') + '">Invested</button><button type="button" data-v="live" class="' + (live ? 'on' : '') + '"><i class="live"></i>Live value</button></div>' +
       '<div class="hv-big"><small>' + (live ? 'Worth now' : 'Money you put in') + '</small><b>' + (live ? (v != null ? money(Math.round(v)) : 'Fetching…') : money(inv)) + '</b>' +
       (d != null ? '<span class="hv-pl ' + (d >= 0 ? 'up' : 'dn') + '">' + (d >= 0 ? '▲ +' : '▼ −') + money(Math.abs(Math.round(d)), { rp: false }) + ' · ' + (d >= 0 ? '+' : '−') + Math.abs(d / inv * 100).toFixed(2) + '%</span>' : '') + '</div>' +
-      '<div class="hv-grid"><div><small>You own</small><b>' + (h.asset === 'gold' ? fmtG(h.qty) : (+h.qty).toLocaleString('id-ID', { maximumFractionDigits: 6 }) + ' ' + u) + '</b></div><div><small>Your average</small><b>' + (avg ? money(Math.round(avg), { rp: false }) : '–') + '</b></div><div><small>Live price</small><b>' + (p ? money(Math.round(p), { rp: false }) : '–') + '</b></div><div><small>Invested</small><b>' + money(inv, { rp: false }) + '</b></div></div>' +
+      '<div class="hv-grid"><div><small>You own</small><b>' + (INV[h.asset] ? INV[h.asset].qty(h.qty) : (+h.qty).toLocaleString('id-ID', { maximumFractionDigits: 6 }) + ' ' + u) + '</b></div><div><small>Your average</small><b>' + (avg ? money(Math.round(avg), { rp: false }) : '–') + '</b></div><div><small>Live ' + (h.asset === 'usd' ? 'rate' : 'price') + '</small><b>' + (p ? money(Math.round(p), { rp: false }) : '–') + '</b></div><div><small>Invested</small><b>' + money(inv, { rp: false }) + '</b></div></div>' +
       '<button type="button" class="hv-edit">Change invested / average</button></div>';
   }
   // Wire a container that holds holdHtml(w). onChange re-renders the host view.
@@ -827,17 +835,18 @@
     var inv = box.querySelector('.hvInv'), avg = box.querySelector('.hvAvg'), prev = box.querySelector('.hv-prev'), sv = box.querySelector('.hvSave');
     if (!inv) return;
     fmtInput(inv); fmtInput(avg);
-    if (!PRICES.gold && typeof fetchGold === 'function') fetchGold();
+    var ia = box.querySelector('[data-asset]').dataset.asset, cf = INV[ia];
+    if (!PRICES[ia]) cf.fetch();
     function pv() {
-      var a = parseNum(inv.value), b = parseNum(avg.value), g = a && b ? a / b : 0, p = PRICES.gold;
-      prev.innerHTML = !g ? '' : (p ? '<div class="gl-row"><span>You own</span><b>' + fmtG(g) + '</b></div><div class="gl-row big"><span>Worth now</span><b>' + money(Math.round(g * p)) + '</b></div><div class="gl-row"><span>Profit / loss</span><b class="' + (g * p >= a ? 'pos' : 'neg') + '">' + (g * p >= a ? '+' : '−') + money(Math.abs(Math.round(g * p - a)), { rp: false }) + ' (' + (g * p >= a ? '+' : '−') + Math.abs((g * p - a) / a * 100).toFixed(2) + '%)</b></div>' : fmtG(g) + ' · fetching live price…');
+      var a = parseNum(inv.value), b = parseNum(avg.value), g = a && b ? a / b : 0, p = PRICES[ia];
+      prev.innerHTML = !g ? '' : (p ? '<div class="gl-row"><span>You own</span><b>' + cf.qty(g) + '</b></div><div class="gl-row big"><span>Worth now</span><b>' + money(Math.round(g * p)) + '</b></div><div class="gl-row"><span>Profit / loss</span><b class="' + (g * p >= a ? 'pos' : 'neg') + '">' + (g * p >= a ? '+' : '−') + money(Math.abs(Math.round(g * p - a)), { rp: false }) + ' (' + (g * p >= a ? '+' : '−') + Math.abs((g * p - a) / a * 100).toFixed(2) + '%)</b></div>' : cf.qty(g) + ' · fetching live price…');
     }
     [inv, avg].forEach(function (x) { x.addEventListener('input', pv); x.addEventListener('click', function (e) { e.stopPropagation(); }); });
     sv.onclick = function (e) {
       e.stopPropagation();
       var a = parseNum(inv.value), b = parseNum(avg.value); if (!a || !b) { toast('Enter money invested and average price'); return; }
-      w.holding = { asset: 'gold', qty: a / b, cost: a, avg: b }; S.settings.wView = S.settings.wView || {}; S.settings.wView[w.id] = 'live';
-      haptic(); save(); renderAll(); onChange(); toast('Gold is now tracked live ✓');
+      w.holding = { asset: ia, qty: a / b, cost: a, avg: b }; S.settings.wView = S.settings.wView || {}; S.settings.wView[w.id] = 'live';
+      haptic(); save(); renderAll(); onChange(); toast((ia === 'usd' ? 'Dollars' : 'Gold') + ' now tracked live ✓');
     };
   }
   function renderTx() {
@@ -2239,20 +2248,22 @@
       '<label class="fld">Current balance<input id="wBal" inputmode="numeric" value="' + (curBal ? Math.abs(curBal).toLocaleString('id-ID') : '') + '" placeholder="0"></label>' +
       '<label class="fld">Group<select id="wGroup">' + Object.keys(GROUPS).map(function (g) { return '<option value="' + g + '"' + (groupOf(w) === g ? ' selected' : '') + '>' + GROUPS[g].icon + ' ' + GROUPS[g].name + '</option>'; }).join('') + '</select></label>' +
       '<div class="live-box"><label class="fld">Track live price<select id="wAsset"><option value="">No, I set the balance myself</option>' + Object.keys(ASSETS).map(function (k) { return '<option value="' + k + '"' + (w.holding && w.holding.asset === k ? ' selected' : '') + '>' + ASSETS[k].name + '</option>'; }).join('') + '</select></label>' +
-      '<div class="two" id="wLiveF"><label class="fld">Quantity<input id="wQty" inputmode="decimal" value="' + (w.holding ? esc(w.holding.qty) : '') + '" placeholder="e.g. 25.5"></label><label class="fld">Total paid (Rp)<input id="wCost" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="for profit/loss"></label></div><div class="two" id="wGoldF"><label class="fld">Money invested (Rp)<input id="wInv" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="e.g. 50.000.000"></label><label class="fld">Average price / gram<input id="wAvg" inputmode="numeric" value="' + (w.holding && w.holding.cost && +w.holding.qty ? Math.round(w.holding.avg || w.holding.cost / w.holding.qty).toLocaleString('id-ID') : '') + '" placeholder="e.g. 1.950.000"></label></div><div class="gl-prev" id="wLiveV"></div></div>' +
+      '<div class="two" id="wLiveF"><label class="fld">Quantity<input id="wQty" inputmode="decimal" value="' + (w.holding ? esc(w.holding.qty) : '') + '" placeholder="e.g. 25.5"></label><label class="fld">Total paid (Rp)<input id="wCost" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="for profit/loss"></label></div><div class="two" id="wGoldF"><label class="fld">Money invested (Rp)<input id="wInv" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="e.g. 50.000.000"></label><label class="fld"><span id="wAvgL">Average price / gram</span><input id="wAvg" inputmode="numeric" value="' + (w.holding && w.holding.cost && +w.holding.qty ? Math.round(w.holding.avg || w.holding.cost / w.holding.qty).toLocaleString('id-ID') : '') + '" placeholder="e.g. 1.950.000"></label></div><div class="gl-prev" id="wLiveV"></div></div>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
         fmtInput(r.querySelector('#wBal')); fmtInput(r.querySelector('#wCost'));
         fmtInput(r.querySelector('#wInv')); fmtInput(r.querySelector('#wAvg'));
         function liveUi() {
-          var a = r.querySelector('#wAsset').value, gold = a === 'gold', q = parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, out = '';
+          var a = r.querySelector('#wAsset').value, gold = !!INV[a], q = parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, out = '';
           r.querySelector('#wLiveF').hidden = !a || gold; r.querySelector('#wGoldF').hidden = !gold; r.querySelector('#wBal').closest('label').hidden = !!a;
           if (gold) {
-            var inv = parseNum(r.querySelector('#wInv').value), avg = parseNum(r.querySelector('#wAvg').value), g = inv && avg ? inv / avg : 0, p = PRICES.gold;
-            if (!g) out = '<span class="muted">Enter how much you put in and your average price per gram.</span>';
-            else if (!p) out = fmtG(g) + ' of gold · fetching live price…';
-            else { var v = g * p, d = v - inv, pc = d / inv * 100; out = '<div class="gl-row"><span>You own</span><b>' + fmtG(g) + '</b></div><div class="gl-row"><span>Live price</span><b>' + money(Math.round(p)) + ' / g</b></div><div class="gl-row big"><span>Worth now</span><b>' + money(Math.round(v)) + '</b></div><div class="gl-row"><span>Profit / loss</span><b class="' + (d >= 0 ? 'pos' : 'neg') + '">' + (d >= 0 ? '+' : '−') + money(Math.abs(Math.round(d)), { rp: false }) + ' (' + (d >= 0 ? '+' : '−') + Math.abs(pc).toFixed(2) + '%)</b></div>'; }
+            var cf = INV[a]; r.querySelector('#wAvgL').textContent = cf.avgLabel; r.querySelector('#wAvg').placeholder = 'e.g. ' + cf.avgPh;
+            var inv = parseNum(r.querySelector('#wInv').value), avg = parseNum(r.querySelector('#wAvg').value), g = inv && avg ? inv / avg : 0, p = PRICES[a];
+            if (!p) cf.fetch();
+            if (!g) out = '<span class="muted">Enter how much you put in and your average ' + (a === 'usd' ? 'rate' : 'price per gram') + '.</span>';
+            else if (!p) out = cf.qty(g) + ' · fetching live price…';
+            else { var v = g * p, d = v - inv, pc = d / inv * 100; out = '<div class="gl-row"><span>You own</span><b>' + cf.qty(g) + '</b></div><div class="gl-row"><span>Live ' + (a === 'usd' ? 'rate' : 'price') + '</span><b>' + money(Math.round(p)) + ' ' + cf.unit + '</b></div><div class="gl-row big"><span>Worth now</span><b>' + money(Math.round(v)) + '</b></div><div class="gl-row"><span>Profit / loss</span><b class="' + (d >= 0 ? 'pos' : 'neg') + '">' + (d >= 0 ? '+' : '−') + money(Math.abs(Math.round(d)), { rp: false }) + ' (' + (d >= 0 ? '+' : '−') + Math.abs(pc).toFixed(2) + '%)</b></div>'; }
           } else if (a) out = PRICES[a] ? 'Now worth ' + money(q * PRICES[a]) + ' · 1 ' + ASSETS[a].unit + ' = ' + money(PRICES[a]) : 'Fetching live price…';
           r.querySelector('#wLiveV').innerHTML = out;
         }
@@ -2264,7 +2275,7 @@
           w.name = n; if (wst.sp) { w.sp = wst.sp; delete w.custom; }
           w.excluded = !r.querySelector('#wInc').checked;
           var wa = r.querySelector('#wAsset').value;
-          if (wa === 'gold') { var inv = parseNum(r.querySelector('#wInv').value), avg = parseNum(r.querySelector('#wAvg').value); if (!inv || !avg) { toast('Enter money invested and average price'); return; } w.holding = { asset: 'gold', qty: inv / avg, cost: inv, avg: avg }; }
+          if (INV[wa]) { var inv = parseNum(r.querySelector('#wInv').value), avg = parseNum(r.querySelector('#wAvg').value); if (!inv || !avg) { toast('Enter money invested and average ' + (wa === 'usd' ? 'rate' : 'price')); return; } w.holding = { asset: wa, qty: inv / avg, cost: inv, avg: avg }; }
           else if (wa) w.holding = { asset: wa, qty: parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, cost: parseNum(r.querySelector('#wCost').value) }; else delete w.holding;
           w.group = r.querySelector('#wGroup').value;
           if (isNew) S.wallets.push(w);
@@ -2808,8 +2819,8 @@
   var ASSETS = { gold: { name: 'Gold (gram)', unit: 'g' }, btc: { name: 'Bitcoin', unit: 'BTC' }, eth: { name: 'Ethereum', unit: 'ETH' }, usd: { name: 'US Dollar', unit: 'USD' } };
   var PRICES = (function () { try { return JSON.parse(localStorage.getItem('apex_prices')) || {}; } catch (e) { return {}; } })();
   function fmtG(g) { return (+g).toLocaleString('id-ID', { maximumFractionDigits: g < 10 ? 3 : 2 }) + ' g'; }
-  // What a holding counts for in balances and net worth. Gold counts at the money invested (not the live price); other assets use the live price.
-  function bookValue(w) { var h = w && w.holding; if (h && h.asset === 'gold' && +h.qty && +h.cost) return +h.cost; return liveValue(w); }
+  // What a holding counts for in balances and net worth. Gold and USD count at the money invested (not the live price); other assets use the live price.
+  function bookValue(w) { var h = w && w.holding; if (h && INV[h.asset] && +h.qty && +h.cost) return +h.cost; return liveValue(w); }
   function liveValue(w) { var h = w && w.holding; if (!h || !h.asset || !(+h.qty)) return null; var p = PRICES[h.asset]; return p ? +h.qty * p : null; }
   function fetchPrices(force) {
     if (!force && PRICES.ts && Date.now() - PRICES.ts < 5 * 60e3) return Promise.resolve();
