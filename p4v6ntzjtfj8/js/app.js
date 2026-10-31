@@ -1443,6 +1443,7 @@
       S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now();
       save(); renderAll(); toast('Fresh start. Waiting for your next BCA transaction.');
     };
+    var rb = $('restoreZero'); if (rb) { rb.hidden = !localStorage.getItem('apex_backup_before_zero'); rb.onclick = function () { if (!confirm('Bring back the balances and transactions from before the reset to 0?')) return; var old = JSON.parse(localStorage.getItem('apex_backup_before_zero')); old.zeroVer = 1; localStorage.setItem(KEY, JSON.stringify(old)); load(); renderAll(); toast('Old data restored'); }; }
     $('exportBtn').onclick = function () {
       var blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arus-backup-' + ymd(new Date()) + '.json';
@@ -1965,7 +1966,17 @@
     document.addEventListener('visibilitychange', function () { if (!document.hidden) { fetchPrices(); var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) toast('Synced from cloud ☁️'); }).catch(function () {}); } });
   }
 
-  load(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  // One-time reset requested by the owner: net worth starts at 0 and they enter everything themselves.
+  function zeroStart() {
+    if (S.zeroVer === 1) return;
+    try { localStorage.setItem('apex_backup_before_zero', JSON.stringify(S)); } catch (e) {}
+    S.wallets.forEach(function (w) { w.initial = 0; delete w.holding; });
+    S.tx = []; S.debts = []; S.seen = {}; S.review = [];
+    (S.goals || []).forEach(function (g) { g.history = []; });
+    S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now();
+    S.zeroVer = 1;
+  }
+  load(); zeroStart(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
