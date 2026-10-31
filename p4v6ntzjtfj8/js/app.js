@@ -562,17 +562,10 @@
       info.innerHTML = holdPanel(w) + '<div class="dw-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
         '<div class="dw-acts"><button type="button" data-a="add"><span>＋</span>Add</button><button type="button" data-a="move"><span>⇄</span>Transfer</button><button type="button" data-a="hist"><span>☰</span>History</button><button type="button" data-a="edit"><span>✎</span>Edit</button></div>' +
         '<div class="dw-sec">Recent</div><div class="dw-list">' + (tx.length ? tx.slice(0, 4).map(function (t, k) { return txRow(t, k, true); }).join('') : '<div class="dw-empty">No transactions in this wallet yet.</div>') + '</div>';
+      bindHold(info, w, function () { paintInfo(i); applyView(i); });
     }
-    function wView(w) { return ((S.settings.wView || {})[w.id]) || 'live'; }
-    function holdPanel(w) {
-      var h = w.holding; if (!h || !h.asset || !(+h.qty)) return '';
-      var p = PRICES[h.asset], v = p ? h.qty * p : null, inv = +h.cost || 0, d = v != null && inv ? v - inv : null, live = wView(w) === 'live', u = ASSETS[h.asset].unit;
-      var avg = h.avg || (inv && h.qty ? inv / h.qty : 0);
-      return '<div class="hv"><div class="hv-seg"><button type="button" data-v="cost" class="' + (live ? '' : 'on') + '">Invested</button><button type="button" data-v="live" class="' + (live ? 'on' : '') + '"><i class="live"></i>Live value</button></div>' +
-        '<div class="hv-big"><small>' + (live ? 'Worth now' : 'Money you put in') + '</small><b>' + (live ? (v != null ? money(Math.round(v)) : 'Fetching…') : money(inv)) + '</b>' +
-        (d != null ? '<span class="hv-pl ' + (d >= 0 ? 'up' : 'dn') + '">' + (d >= 0 ? '▲ +' : '▼ −') + money(Math.abs(Math.round(d)), { rp: false }) + ' · ' + (d >= 0 ? '+' : '−') + Math.abs(d / inv * 100).toFixed(2) + '%</span>' : '') + '</div>' +
-        '<div class="hv-grid"><div><small>You own</small><b>' + (h.asset === 'gold' ? fmtG(h.qty) : (+h.qty).toLocaleString('id-ID', { maximumFractionDigits: 6 }) + ' ' + u) + '</b></div><div><small>Your average</small><b>' + (avg ? money(Math.round(avg), { rp: false }) : '–') + '</b></div><div><small>Live price</small><b>' + (p ? money(Math.round(p), { rp: false }) : '–') + '</b></div><div><small>Invested</small><b>' + money(inv, { rp: false }) + '</b></div></div></div>';
-    }
+    function wView(w) { return wViewOf(w); }
+    function holdPanel(w) { return holdHtml(w); }
     function applyView(i) {
       var w = ws[i], h = w.holding, c = cards[i]; if (!c) return;
       var amt = h && h.asset && wView(w) === 'cost' ? (+h.cost || 0) : balance(w.id);
@@ -628,8 +621,6 @@
       var c = e.target.closest('.dw-card');
       if (c) { var i = +c.dataset.i; return pick(sel >= 0 && i !== sel ? -1 : i); }
       var t = e.target.closest('.tx'); if (t) { var tt = S.tx.filter(function (x) { return x.id === t.dataset.id; })[0]; if (tt) { close(); setTimeout(function () { txSheet(tt); }, 220); } return; }
-      var vb = e.target.closest('[data-v]');
-      if (vb && sel >= 0) { var ww = ws[sel]; S.settings.wView = S.settings.wView || {}; S.settings.wView[ww.id] = vb.dataset.v; save(); haptic(); paintInfo(sel); applyView(sel); return; }
       var b = e.target.closest('[data-a]');
       if (b && sel >= 0) {
         var w = ws[sel]; haptic();
@@ -809,13 +800,55 @@
     tip.style.top = Math.max(-tip.offsetHeight + 4, barTop - tip.offsetHeight - 14) + 'px';
   }
 
+  // ---------- Shared holding panel: Invested vs Live value (gold etc.), or an inline setup form ----------
+  function isGoldish(w) { return !!(w && ((w.holding && w.holding.asset === 'gold') || /gold|emas|antam/i.test(w.name) || /gold/.test(spKey(w) || ''))); }
+  function hasHolding(w) { return !!(w && w.holding && w.holding.asset && +w.holding.qty); }
+  function wViewOf(w) { return ((S.settings.wView || {})[w.id]) || 'live'; }
+  function holdHtml(w) {
+    if (!hasHolding(w)) {
+      if (!isGoldish(w)) return '';
+      return '<div class="hv hv-setup"><div class="hv-st"><b>Track this gold live</b><small>Enter what you put in and your average price. Apex shows what it’s worth now with the live gold price.</small></div>' +
+        '<div class="two"><label class="fld">Money invested<input class="hvInv" inputmode="numeric" placeholder="50.000.000"></label><label class="fld">Average / gram<input class="hvAvg" inputmode="numeric" placeholder="1.950.000"></label></div>' +
+        '<div class="hv-prev"></div><button type="button" class="btn primary block hvSave">Start tracking</button></div>';
+    }
+    var h = w.holding, p = PRICES[h.asset], v = p ? h.qty * p : null, inv = +h.cost || 0, d = v != null && inv ? v - inv : null, live = wViewOf(w) === 'live', u = ASSETS[h.asset].unit;
+    var avg = h.avg || (inv && h.qty ? inv / h.qty : 0);
+    return '<div class="hv"><div class="hv-seg"><button type="button" data-v="cost" class="' + (live ? '' : 'on') + '">Invested</button><button type="button" data-v="live" class="' + (live ? 'on' : '') + '"><i class="live"></i>Live value</button></div>' +
+      '<div class="hv-big"><small>' + (live ? 'Worth now' : 'Money you put in') + '</small><b>' + (live ? (v != null ? money(Math.round(v)) : 'Fetching…') : money(inv)) + '</b>' +
+      (d != null ? '<span class="hv-pl ' + (d >= 0 ? 'up' : 'dn') + '">' + (d >= 0 ? '▲ +' : '▼ −') + money(Math.abs(Math.round(d)), { rp: false }) + ' · ' + (d >= 0 ? '+' : '−') + Math.abs(d / inv * 100).toFixed(2) + '%</span>' : '') + '</div>' +
+      '<div class="hv-grid"><div><small>You own</small><b>' + (h.asset === 'gold' ? fmtG(h.qty) : (+h.qty).toLocaleString('id-ID', { maximumFractionDigits: 6 }) + ' ' + u) + '</b></div><div><small>Your average</small><b>' + (avg ? money(Math.round(avg), { rp: false }) : '–') + '</b></div><div><small>Live price</small><b>' + (p ? money(Math.round(p), { rp: false }) : '–') + '</b></div><div><small>Invested</small><b>' + money(inv, { rp: false }) + '</b></div></div>' +
+      '<button type="button" class="hv-edit">Change invested / average</button></div>';
+  }
+  // Wire a container that holds holdHtml(w). onChange re-renders the host view.
+  function bindHold(box, w, onChange) {
+    if (!box) return;
+    box.querySelectorAll('[data-v]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); S.settings.wView = S.settings.wView || {}; S.settings.wView[w.id] = b.dataset.v; save(); haptic(); onChange(); }; });
+    var ed = box.querySelector('.hv-edit'); if (ed) ed.onclick = function (e) { e.stopPropagation(); walletSheet(w); };
+    var inv = box.querySelector('.hvInv'), avg = box.querySelector('.hvAvg'), prev = box.querySelector('.hv-prev'), sv = box.querySelector('.hvSave');
+    if (!inv) return;
+    fmtInput(inv); fmtInput(avg);
+    if (!PRICES.gold && typeof fetchGold === 'function') fetchGold();
+    function pv() {
+      var a = parseNum(inv.value), b = parseNum(avg.value), g = a && b ? a / b : 0, p = PRICES.gold;
+      prev.innerHTML = !g ? '' : (p ? '<div class="gl-row"><span>You own</span><b>' + fmtG(g) + '</b></div><div class="gl-row big"><span>Worth now</span><b>' + money(Math.round(g * p)) + '</b></div><div class="gl-row"><span>Profit / loss</span><b class="' + (g * p >= a ? 'pos' : 'neg') + '">' + (g * p >= a ? '+' : '−') + money(Math.abs(Math.round(g * p - a)), { rp: false }) + ' (' + (g * p >= a ? '+' : '−') + Math.abs((g * p - a) / a * 100).toFixed(2) + '%)</b></div>' : fmtG(g) + ' · fetching live price…');
+    }
+    [inv, avg].forEach(function (x) { x.addEventListener('input', pv); x.addEventListener('click', function (e) { e.stopPropagation(); }); });
+    sv.onclick = function (e) {
+      e.stopPropagation();
+      var a = parseNum(inv.value), b = parseNum(avg.value); if (!a || !b) { toast('Enter money invested and average price'); return; }
+      w.holding = { asset: 'gold', qty: a / b, cost: a, avg: b }; S.settings.wView = S.settings.wView || {}; S.settings.wView[w.id] = 'live';
+      haptic(); save(); renderAll(); onChange(); toast('Gold is now tracked live ✓');
+    };
+  }
   function renderTx() {
     var w = walletSel;
     if (w !== 'all' && !S.wallets.some(function (x) { return x.id === w; })) w = walletSel = 'all';
     var wo = w === 'all' ? { id: 'all', name: 'Total', icon: '🌐', color: '#2fb5c9' } : wallet(w);
     $('pillIc').outerHTML = icon(wo, 'sm').replace('<span ', '<span id="pillIc" ');
     $('pillName').textContent = wo.name;
-    setMoney($('txBal'), balance(w));
+    var hw = w === 'all' ? null : wallet(w), hb = $('txHold');
+    setMoney($('txBal'), hw && hasHolding(hw) && wViewOf(hw) === 'cost' ? (+hw.holding.cost || 0) : balance(w));
+    if (hb) { var hh = hw ? holdHtml(hw) : ''; hb.innerHTML = hh; hb.hidden = !hh; if (hh) bindHold(hb, hw, renderTx); }
     $('monthLabel').textContent = MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
     var mKey = ym(cur), open = balance(w, mKey + '-01'), end = balance(w, nextMonthStart(cur));
     $('pOpen').innerHTML = money(open);
