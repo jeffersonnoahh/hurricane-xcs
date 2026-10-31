@@ -68,7 +68,7 @@
       cats: DEFAULT_CATS.map(mkCat), catVer: CAT_VER,
       tx: [], budgets: {},
       rules: DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }),
-      settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', bcaAccounts: null, lastSync: 0, startFrom: 0, hide: false, theme: 'dark' },
+      settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', bcaAccounts: null, autoOwed: { reserve_transfer: 'Dad', komisi_in: 'Dad' }, lastSync: 0, startFrom: 0, hide: false, theme: 'dark' },
       seen: {}, review: [], debts: [], goals: [], recurring: []
     };
   }
@@ -352,7 +352,7 @@
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
     $('hGreet').textContent = hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night';
-    renderUpcoming(); renderRealBtn();
+    renderUpcoming(); renderRealBtn(); renderKomisi();
     var mStart = ym(new Date()) + '-01', open0 = balance('all', mStart), chg = total - open0;
     var chip = $('hChip');
     if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '▲ ' : '▼ ') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% this month'; }
@@ -832,6 +832,39 @@
       }).join('') : '<p class="muted small pad" style="padding-bottom:12px">Nobody owes you money right now.</p>') + '</div>',
       function (r) { r.addEventListener('click', function (e) { var b = e.target.closest('[data-owe]'); if (b) debtDetail(debtById(b.dataset.owe)); }); });
   }
+  // ---------- Komisi Noah: commission per month ----------
+  function komisiCats() { return Object.keys(S.settings.autoOwed || {}); }
+  function komisiRecs() { var cs = komisiCats(); return S.debts.filter(function (d) { return d.earned && cs.indexOf(d.incomeCat) !== -1 && d.closed !== 'cancelled'; }); }
+  function komisiByMonth() {
+    var by = {};
+    komisiRecs().forEach(function (d) { var k = d.created.slice(0, 7); var m = by[k] = by[k] || { k: k, earned: 0, paid: 0, recs: [] }; m.earned += d.amount; m.paid += Math.min(d.amount, dPaid(d)); m.recs.push(d); });
+    return Object.keys(by).sort().reverse().map(function (k) { return by[k]; });
+  }
+  function monthName(k) { var d = new Date(k + '-01T00:00:00'); return MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+  function renderKomisi() {
+    var el = $('hKomisi'); if (!el) return;
+    var ms = komisiByMonth(), cur = ms.filter(function (m) { return m.k === ym(new Date()); })[0] || { earned: 0, paid: 0 };
+    var owe = ms.reduce(function (a, m) { return a + m.earned - m.paid; }, 0), total = ms.reduce(function (a, m) { return a + m.earned; }, 0);
+    var last6 = ms.slice(0, 6).reverse(), max = Math.max.apply(null, last6.map(function (m) { return m.earned; }).concat([1]));
+    el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Dad still owes</div><div class="mid-money">' + money(owe) + '</div><div class="muted small">This month ' + money(cur.earned, { rp: false }) + ' earned · ' + money(cur.paid, { rp: false }) + ' paid</div></div><span class="km-ic">' + sprite('komisi_out') + '</span></div>' +
+      (last6.length ? '<div class="km-bars">' + last6.map(function (m, i) { var he = m.earned / max * 100, hp = m.paid / max * 100; return '<div class="km-col" style="--i:' + i + '"><div class="km-b"><i class="e" style="height:' + he.toFixed(1) + '%"></i><i class="p" style="height:' + hp.toFixed(1) + '%"></i></div><span>' + monthName(m.k).slice(0, 3) + '</span></div>'; }).join('') + '</div><div class="km-leg"><span><i class="e"></i>Earned</span><span><i class="p"></i>Paid by Dad</span><span class="muted">Total ' + money(total, { rp: false }) + '</span></div>'
+        : '<div class="muted small" style="margin-top:10px">Add income with category RESERVE TRANSFER or KOMISI and it shows here per month.</div>');
+  }
+  function komisiSheet() {
+    var ms = komisiByMonth(), owe = ms.reduce(function (a, m) { return a + m.earned - m.paid; }, 0), earned = ms.reduce(function (a, m) { return a + m.earned; }, 0);
+    openSheet('<h3>Komisi Noah</h3><div class="dd-stats" style="margin-top:0;border:0;padding-top:0"><div><small>Total earned</small><b>' + money(earned, { rp: false }) + '</b></div><div><small>Paid by Dad</small><b>' + money(earned - owe, { rp: false }) + '</b></div><div><small>Still owed</small><b class="pos">' + money(owe, { rp: false }) + '</b></div></div>' +
+      (ms.length ? ms.map(function (m) {
+        var pc = m.earned ? Math.round(m.paid / m.earned * 100) : 0;
+        return '<div class="sheet-sec">' + monthName(m.k) + ' · ' + pc + '% paid</div><div class="card list-card">' + m.recs.map(function (d) {
+          return '<button class="w-row" data-km="' + esc(d.id) + '">' + icon(cat(d.incomeCat), 'sm') + '<span class="grow">' + esc(d.title || 'Commission') + '<span class="sub">' + fmtDate(d.created) + ' · ' + money(dPaid(d), { rp: false }) + ' of ' + money(d.amount, { rp: false }) + ' paid</span><span class="bill-bar"><i style="--w:' + (d.amount ? Math.min(100, dPaid(d) / d.amount * 100) : 0).toFixed(0) + '%"></i></span></span><span class="amt ' + (dRemain(d) ? 'pos' : 'muted') + '">' + (dRemain(d) ? money(dRemain(d), { rp: false }) : 'Paid ✓') + '</span></button>';
+        }).join('') + '</div>';
+      }).join('') : '<div class="empty">' + dinoImg('empty-dino') + 'No commission yet.<br>Press + → Income → RESERVE TRANSFER.</div>') +
+      '<button class="btn primary block" id="kmAdd">＋ Add commission</button>',
+      function (r) {
+        r.addEventListener('click', function (e) { var b = e.target.closest('[data-km]'); if (b) debtDetail(debtById(b.dataset.km)); });
+        r.querySelector('#kmAdd').onclick = function () { txSheet(null, { type: 'income', cat: 'reserve_transfer' }); };
+      });
+  }
   function unbook(d, why) { var r = dRemain(d); if (d.prebooked && r > 0) addTx({ type: 'expense', cat: 'balance_adj', amount: r, wallet: d.wallet, date: today(), merchant: d.person, note: why + ': ' + (d.title || ''), debtId: d.id }); }
   function debtDetail(d) {
     if (!d) return;
@@ -1098,8 +1131,18 @@
         root.querySelector('#fCatSel').onclick = function () { pickOpen = !pickOpen; haptic(); paint(); };
         root.querySelector('#fCatQ').addEventListener('input', paint);
         root.querySelector('#fType').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.type = b.dataset.t; haptic(); paint(); } });
-        root.querySelector('#fCats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); } });
-        paint();
+        function autoOwed() {
+          var payer = (S.settings.autoOwed || {})[st.cat];
+          if (!ub || st.type !== 'income' || !payer) return;
+          ub.checked = true; root.querySelector('#fUnpaidF').hidden = false;
+          var pf = root.querySelector('#fPayer'); if (!pf.value) pf.value = payer;
+          var df = root.querySelector('#fDue'); if (!df.value) { var x = new Date(); x.setDate(x.getDate() + 30); df.value = ymd(x); }
+          var rw = S.wallets.filter(function (w) { return /reserve/i.test(w.name); })[0]; if (rw) root.querySelector('#fWallet').value = rw.id;
+          var box = root.querySelector('#fUnpaidBox'); box.classList.remove('auto'); void box.offsetWidth; box.classList.add('auto');
+          toast('Commission: ' + payer + ' owes this amount');
+        }
+        root.querySelector('#fCats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); autoOwed(); } });
+        paint(); if (isNew && prefill && prefill.cat) autoOwed();
         if (isNew) setTimeout(function () { amt.focus(); }, 380);
 
         root.querySelector('#fSave').onclick = function () {
@@ -1407,6 +1450,8 @@
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
     $('realBtn').onclick = function () { haptic(); realSheet(); };
+    $('hKomisi').onclick = function () { haptic(); komisiSheet(); };
+    $('kmOpen').onclick = function () { haptic(); komisiSheet(); };
     $('hRange').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; sparkDays = +b.dataset.r; haptic(); renderSpark(); };
     $('allocLegend').onclick = function (e) { if (e.target.closest('[data-group]')) walletPicker(); };
     $('donutGo').onclick = function () { haptic(); cur = new Date(); cur.setDate(1); renderAll(); show('v-report'); };
@@ -1961,7 +2006,7 @@
   }
 
   // ---------- customizable home ----------
-  var SEC_NAMES = { insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
+  var SEC_NAMES = { komisi: 'Komisi Noah', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
   function homeLayout() {
     var keys = Object.keys(SEC_NAMES), L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
     keys.forEach(function (k) { if (!L.some(function (x) { return x.k === k; })) L.push({ k: k, on: true }); });
