@@ -556,7 +556,7 @@
     else if (t.time) sub = t.time + ' · ' + sub;
     var cls = t.type === 'transfer' ? '' : flowIn(t) ? 'pos' : 'neg';
     return '<div class="tx" data-id="' + esc(t.id) + '" style="--i:' + i + '">' + icon(c) + '<div class="tx-main"><div class="tx-cat">' + esc(c.name) +
-      (t.src === 'bca' ? '<span class="badge">BCA</span>' : '') + '</div><div class="tx-note">' + esc(sub) + '</div></div>' +
+      (t.src === 'bca' ? '<span class="badge">BCA</span>' : '') + (t.files && t.files.length ? '<span class="clip" title="Attachments">📎' + (t.files.length > 1 ? t.files.length : '') + '</span>' : '') + '</div><div class="tx-note">' + esc(sub) + '</div></div>' +
       '<div class="amt-col"><div class="amt ' + cls + '">' + money(t.amount, { rp: false }) + '</div><small>' + (t.type === 'income' ? 'Received' : t.type === 'expense' ? 'Spent' : t.type === 'debt' ? (flowIn(t) ? 'Money in' : 'Money out') : 'Moved') + '</small></div></div>';
   }
 
@@ -881,6 +881,7 @@
         (pays.length ? '' : '<div class="muted small" style="padding:6px 0">No payments yet.</div>') +
       '</div>' +
       ((d.tags || d.notes) ? '<div class="sheet-sec">Notes</div><div class="card" style="box-shadow:none">' + (d.tags ? '<div class="small muted">Tags: ' + esc(d.tags) + '</div>' : '') + (d.notes ? '<div style="white-space:pre-wrap;margin-top:4px">' + esc(d.notes) + '</div>' : '') + '</div>' : '') +
+      '<div class="sheet-sec">Attachments</div><div id="ddFiles"></div>' +
       '<div class="small muted" style="margin:10px 2px">Linked wallet: ' + esc(wallet(d.wallet).name) + '</div>' +
       (dOpen(d) ? '<button class="btn block wa-btn" id="ddWa"><svg viewBox="0 0 24 24"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.1z"/></svg>' + (inn ? 'Remind on WhatsApp' : 'Message on WhatsApp') + '</button>' : '') +
       (dOpen(d) ? '<button class="btn primary block" id="ddPay">＋ ' + (inn ? 'Record payment' : 'Record repayment') + '</button>' : '') +
@@ -889,6 +890,7 @@
       '<button class="btn danger block" id="ddDel">Delete record</button>',
       function (r) {
         growBars(r);
+        d.files = d.files || []; attachUI(r.querySelector('#ddFiles'), d.files, function () { var bt = d.bookTx && S.tx.filter(function (x) { return x.id === d.bookTx; })[0]; if (bt) bt.files = d.files.slice(); save(); renderAll(); });
         var b;
         if ((b = r.querySelector('#ddPay'))) b.onclick = function () { paySheet(d); };
         if ((b = r.querySelector('#ddWa'))) b.onclick = function () { haptic(); waRemind(d); };
@@ -1078,6 +1080,66 @@
       });
   }
 
+  // ---------- attachments: photos, PDFs, files (stored on this device in IndexedDB) ----------
+  var fdb = null;
+  function fileDB() {
+    if (fdb) return fdb;
+    fdb = new Promise(function (ok, no) { var r = indexedDB.open('apex_files', 1); r.onupgradeneeded = function () { r.result.createObjectStore('f'); }; r.onsuccess = function () { ok(r.result); }; r.onerror = function () { no(r.error); }; });
+    return fdb;
+  }
+  function filePut(id, blob) { return fileDB().then(function (db) { return new Promise(function (ok, no) { var tx = db.transaction('f', 'readwrite'); tx.objectStore('f').put(blob, id); tx.oncomplete = ok; tx.onerror = function () { no(tx.error); }; }); }); }
+  function fileGet(id) { return fileDB().then(function (db) { return new Promise(function (ok) { var q = db.transaction('f').objectStore('f').get(id); q.onsuccess = function () { ok(q.result); }; q.onerror = function () { ok(null); }; }); }); }
+  function fileDel(id) { return fileDB().then(function (db) { db.transaction('f', 'readwrite').objectStore('f').delete(id); }).catch(function () {}); }
+  // Shrink photos so many receipts fit on the phone; PDFs and other files are kept as they are.
+  function prepFile(f) {
+    if (!/^image\//.test(f.type) || /gif|svg/.test(f.type)) return Promise.resolve(f);
+    return new Promise(function (ok) {
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function () { var k = Math.min(1, 1800 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); c.toBlob(function (b) { ok(b || f); }, 'image/jpeg', .82); };
+      img.onerror = function () { URL.revokeObjectURL(url); ok(f); };
+      img.src = url;
+    });
+  }
+  function fileKind(m) { return /^image\//.test(m.type) ? 'img' : /pdf/.test(m.type) || /\.pdf$/i.test(m.name) ? 'pdf' : 'file'; }
+  function sizeTxt(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+  function openFile(m) {
+    fileGet(m.id).then(function (b) {
+      if (!b) { toast('File not found on this device'); return; }
+      var url = URL.createObjectURL(b);
+      if (fileKind(m) === 'img') {
+        var ov = document.createElement('div'); ov.className = 'viewer'; ov.innerHTML = '<img src="' + url + '" alt=""><div class="v-bar"><span>' + esc(m.name) + '</span><a href="' + url + '" download="' + esc(m.name) + '">Save</a><button>Close</button></div>';
+        document.body.appendChild(ov); requestAnimationFrame(function () { ov.classList.add('show'); });
+        ov.onclick = function (e) { if (e.target.tagName === 'A') return; ov.classList.remove('show'); setTimeout(function () { ov.remove(); URL.revokeObjectURL(url); }, 300); };
+      } else { var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; if (fileKind(m) !== 'pdf') a.download = m.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 60000); }
+    });
+  }
+  // A small attachments widget used in the transaction sheet and the commission record.
+  function attachUI(host, list, onChange) {
+    function thumb(m, i) {
+      var k = fileKind(m);
+      return '<div class="att" data-i="' + i + '"><button type="button" class="att-open" data-open="' + i + '">' + (k === 'img' ? '<img data-img="' + esc(m.id) + '" alt="">' : '<span class="att-badge ' + k + '">' + (k === 'pdf' ? 'PDF' : (m.name.split('.').pop() || 'FILE').slice(0, 4).toUpperCase()) + '</span>') +
+        '<span class="att-name">' + esc(m.name) + '</span><span class="att-size">' + sizeTxt(m.size || 0) + '</span></button><button type="button" class="att-x" data-rm="' + i + '" aria-label="Remove">×</button></div>';
+    }
+    function draw() {
+      host.innerHTML = '<div class="att-grid">' + list.map(thumb).join('') + '<label class="att add"><input type="file" multiple accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" hidden><span class="att-plus">＋</span><span class="att-name">Photo, PDF or file</span></label></div>';
+      host.querySelectorAll('[data-img]').forEach(function (im) { fileGet(im.dataset.img).then(function (b) { if (b) im.src = URL.createObjectURL(b); }); });
+      host.querySelector('input').onchange = function () {
+        var fs = [].slice.call(this.files); if (!fs.length) return; busy(true, 'Attaching…');
+        Promise.all(fs.map(function (f) {
+          if (f.size > 25 * 1048576) { toast(f.name + ' is over 25 MB'); return null; }
+          return prepFile(f).then(function (b) { var m = { id: 'f' + uid(), name: f.name, type: b.type || f.type, size: b.size, at: Date.now() }; return filePut(m.id, b).then(function () { return m; }); });
+        })).then(function (ms) { ms.filter(Boolean).forEach(function (m) { list.push(m); }); busy(false); draw(); if (onChange) onChange(); haptic(); })
+          .catch(function () { busy(false); toast('Could not store the file (phone storage full?)'); });
+      };
+    }
+    host.addEventListener('click', function (e) {
+      var o = e.target.closest('[data-open]'), x = e.target.closest('[data-rm]');
+      if (o) openFile(list[+o.dataset.open]);
+      else if (x) { if (!confirm('Remove this attachment?')) return; var m = list.splice(+x.dataset.rm, 1)[0]; fileDel(m.id); draw(); if (onChange) onChange(); }
+    });
+    draw();
+  }
+
   function txSheet(t, prefill) {
     var isNew = !t;
     t = t || Object.assign({ id: uid(), type: 'expense', amount: 0, cat: 'food', wallet: S.settings.bcaWallet || (S.wallets[0] || {}).id, toWallet: '', date: ymd(new Date()), time: hm(new Date()), note: '', merchant: '', src: 'manual', created: Date.now() }, prefill || {});
@@ -1098,12 +1160,14 @@
         '<label class="fld">Already received (optional)<input id="fPaidNow" inputmode="numeric" placeholder="0"></label></div></div>' : '') +
       '<label class="fld">Merchant / person<input id="fMerch" value="' + esc(t.merchant || '') + '"></label>' +
       '<label class="fld">Note<input id="fNote" value="' + esc(t.note || '') + '"></label>' +
+      '<div class="fld">Attachments<div id="fFiles"></div></div>' +
       (t.src === 'bca' ? '<p class="muted small">Imported from a BCA email' + (t.ref ? ' · ref ' + esc(t.ref) : '') + '.</p>' : '') +
       (t.src === 'bca' && !isNew ? '<label class="set-row plain"><span class="grow small">Always use this category for "' + esc(t.merchant || '') + '"</span><input type="checkbox" class="switch" id="fRemember" checked></label>' : '') +
       '<button class="btn primary block" id="fSave">Save</button>' +
       (isNew ? '' : '<button class="btn danger block" id="fDel">Delete</button>'),
       function (root) {
         var amt = root.querySelector('#fAmt'); fmtInput(amt);
+        var files = (t.files || []).slice(); attachUI(root.querySelector('#fFiles'), files);
         var ub = root.querySelector('#fUnpaid');
         if (ub) { fmtInput(root.querySelector('#fPaidNow')); ub.onchange = function () { root.querySelector('#fUnpaidF').hidden = !ub.checked; haptic(); if (ub.checked) setTimeout(function () { root.querySelector('#fPayer').focus(); }, 200); }; }
         root.querySelector('#fScan').onclick = function () { haptic(); scanInto(root); };
@@ -1154,8 +1218,8 @@
             var payer = root.querySelector('#fPayer').value.trim(); if (!payer) { toast('Who will pay you?'); root.querySelector('#fPayer').focus(); return; }
             var dd = { id: uid(), dir: 'in', earned: true, incomeCat: st.cat, person: payer, title: cat(st.cat).name + (root.querySelector('#fNote').value.trim() ? ' · ' + root.querySelector('#fNote').value.trim() : ''), amount: a,
               created: root.querySelector('#fDate').value || today(), due: root.querySelector('#fDue').value, wallet: w, tags: 'income', notes: '', payments: [], ts: Date.now() };
-            dd.prebooked = true; S.debts.push(dd);
-            var bt = addTx({ type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id }); dd.bookTx = bt.id;
+            dd.prebooked = true; dd.files = files; S.debts.push(dd);
+            var bt = addTx({ type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id, files: files }); dd.bookTx = bt.id;
             var pn = parseNum(root.querySelector('#fPaidNow').value);
             if (pn) dd.payments.push({ id: uid(), amount: Math.min(pn, a), date: dd.created, wallet: w, note: 'Already received', txId: null });
             haptic(); save(); closeSheet(); renderAll();
@@ -1170,6 +1234,8 @@
           });
           var rem = root.querySelector('#fRemember');
           if (rem && rem.checked && t.merchant && t.cat && t.cat !== oldCat) learnRule(t.merchant, t.cat);
+          t.files = files; if (!files.length) delete t.files;
+          if (t.debtId) S.debts.forEach(function (d) { if (d.bookTx === t.id) d.files = files; });
           if (isNew) S.tx.push(t);
           if (t.debtId) S.debts.forEach(function (d) { (d.payments || []).forEach(function (p) { if (p.txId === t.id) { p.amount = t.amount; p.date = t.date; p.wallet = t.wallet; } }); });
           haptic(); save(); closeSheet(); renderAll(); toast(isNew ? 'Added ✓' : 'Saved ✓');
@@ -1178,6 +1244,7 @@
         var del = root.querySelector('#fDel');
         if (del) del.onclick = function () {
           if (!confirm('Delete this transaction?')) return;
+          (t.files || []).forEach(function (m) { if (!S.debts.some(function (d) { return (d.files || []).some(function (x) { return x.id === m.id; }) && d.bookTx !== t.id; })) fileDel(m.id); });
           S.tx = S.tx.filter(function (x) { return x.id !== t.id; });
           S.debts.forEach(function (d) { d.payments = (d.payments || []).filter(function (p) { return p.txId !== t.id; }); if (d.startTx === t.id) delete d.startTx; });
           save(); closeSheet(); renderAll(); toast('Deleted');
