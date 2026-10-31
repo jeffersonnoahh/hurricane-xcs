@@ -260,6 +260,8 @@
   // ---------- state ----------
   var cur = new Date(); cur.setDate(1);
   var walletSel = 'all';
+  // Activity always opens on RESERVE (falls back to the BCA wallet, then Total).
+  function homeWalletId() { var r = S.wallets.filter(function (w) { return /^reserve$/i.test(String(w.name).trim()); })[0] || S.wallets.filter(function (w) { return w.id === S.settings.bcaWallet; })[0]; return r ? r.id : 'all'; }
   var repKind = 'expense';
   var view = 'v-home';
   var cfMonths = 6, cfSel = null, catTab = 'expense';
@@ -2569,7 +2571,7 @@
 
   // ---------- events ----------
   function bind() {
-    document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.onclick = function () { haptic(); var sv = b.querySelector('svg'); sv.classList.remove('pop'); void sv.offsetWidth; sv.classList.add('pop'); show(b.dataset.v); }; });
+    document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.onclick = function () { haptic(); var sv = b.querySelector('svg'); sv.classList.remove('pop'); void sv.offsetWidth; sv.classList.add('pop'); if (b.dataset.v === 'v-tx') { walletSel = homeWalletId(); renderTx(); } show(b.dataset.v); }; });
     window.addEventListener('resize', moveInd);
     $('fab').onclick = function () { haptic(); if (view === 'v-debts') debtSheet(null, dDir); else txSheet(null, walletSel !== 'all' ? { wallet: walletSel } : null); };
     document.querySelectorAll('[data-priv]').forEach(function (b) { b.onclick = togglePrivacy; });
@@ -3615,7 +3617,7 @@
     var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
-  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
+  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   setTimeout(mlSeedFromHash, 1500);
   $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); };
