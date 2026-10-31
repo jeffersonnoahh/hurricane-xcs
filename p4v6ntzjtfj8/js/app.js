@@ -33,12 +33,16 @@
     ['gifts', 'GIFTS 🍾', '🍾', 'expense'], ['to_reserve', 'TRANSFER TO RESERVE', '♟', 'expense'], ['bi', 'BI', '🏆', 'expense'],
     ['gold_debit', 'GOLD DEBIT CARD', '💳', 'expense'], ['korea_loan', 'Korea loan', '✈', 'expense'], ['wedding', 'WEDDING AND PROPOSAL', '💍', 'expense'],
     ['shanghai', 'Shanghai', '🛶', 'expense'], ['dvn', 'DVN', '🌀', 'expense'], ['my_home', 'MY HOME', '🏠', 'expense'],
-    ['salary', 'Salary', '💼', 'income'], ['bonus', 'Bonus', '🎁', 'income'], ['interest', 'Collect Interest', '📈', 'income'],
-    ['transfer_in', 'Incoming transfer', '↙', 'income'], ['other_in', 'Other Income', '💰', 'income'],
+    ['salary', 'Salary', '💵', 'income'], ['my_cash', 'MY CASH', '❤', 'income', 'salary'], ['reserve_transfer', 'RESERVE TRANSFER', '💰', 'income', 'salary'],
+    ['other_in', 'Other Income', '📦', 'income'], ['transfer_in', 'Incoming transfer', '📥', 'income'], ['interest', 'Collect Interest', '📈', 'income'],
+    ['uncat_in', 'Uncategorized', '❔', 'income'], ['plus_crypto', 'PLUS CRYPTO', '🪙', 'income'], ['ajaib_kripto_plus', 'AJAIB KRIPTO PLUS', '💹', 'income'],
+    ['bitget_plus', 'BITGET PLUS', '🚀', 'income'], ['mexc_plus', 'MEXC PLUS', '📈', 'income'], ['bybit_plus', 'BYBIT PLUS', '🎯', 'income'],
+    ['stocks_plus', 'STOCKS PLUS', '📊', 'income'], ['gold_debit_in', 'GOLD DEBIT', '💳', 'income'], ['brpt_plus', 'BRPT PLUS', '♟', 'income'],
+    ['pokemon_plus', 'Pokemon plus', '👾', 'income'], ['sentaris', 'SENTARIS', '🏙', 'income'],
     ['debt', 'Debt', '📥', 'debt', '', 'in'], ['loan', 'Loan', '💸', 'debt', '', 'out'],
     ['debt_collection', 'Debt Collection', '🪙', 'debt', '', 'in'], ['repayment', 'Repayment', '🧾', 'debt', '', 'out']
   ];
-  var CAT_VER = 2;
+  var CAT_VER = 3;
   var CAT_MAP = { transport: 'other_out', phone: 'phone_bill', family: 'my_home', loan_out: 'loan' };
   var OLD_DEFAULT_IDS = ['food', 'transport', 'shopping', 'bills', 'phone', 'health', 'fun', 'family', 'giving', 'education', 'loan_out', 'transfer_out', 'other_out', 'salary', 'bonus', 'interest', 'transfer_in', 'other_in'];
   var DEFAULT_RULES = [
@@ -76,6 +80,15 @@
     Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; });
     Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; });
     // New default categories added in later versions.
+    if ((S.catVer || 1) === 2) {
+      // Version 3: the user's own income categories.
+      var used = function (id) { return S.tx.some(function (t) { return t.cat === id; }); };
+      S.cats = S.cats.filter(function (c) { return !(c.id === 'bonus' && !used('bonus')); });
+      S.cats.forEach(function (c) { var d3 = DEFAULT_CATS.filter(function (x) { return x[0] === c.id; })[0]; if (d3 && c.type === 'income') { c.icon = d3[2]; c.name = d3[1]; } });
+      var at = S.cats.map(function (c) { return c.type; }).lastIndexOf('income') + 1 || S.cats.length;
+      DEFAULT_CATS.forEach(function (x) { if (x[3] === 'income' && !S.cats.some(function (c) { return c.id === x[0]; })) S.cats.splice(at++, 0, mkCat(x)); });
+      S.catVer = CAT_VER;
+    }
     if ((S.catVer || 1) < CAT_VER) {
       // Switch to the full category list; keep categories the user made themselves.
       var mine = S.cats.filter(function (c) { return OLD_DEFAULT_IDS.indexOf(c.id) === -1 && !DEFAULT_CATS.some(function (x) { return x[0] === c.id; }); });
@@ -84,6 +97,7 @@
       S.tx.forEach(function (t) {
         if (t.cat === 'loan_out') { t.type = 'debt'; t.cat = 'loan'; return; }
         if (CAT_MAP[t.cat]) t.cat = CAT_MAP[t.cat];
+        if (t.cat === 'bonus') t.cat = 'other_in';
         if (t.cat && !ok(t.cat)) t.cat = t.type === 'income' ? 'other_in' : 'other_out';
       });
       Object.keys(S.budgets).forEach(function (k) { var n = CAT_MAP[k] || k; var v = S.budgets[k]; delete S.budgets[k]; if (ok(n)) S.budgets[n] = v; });
