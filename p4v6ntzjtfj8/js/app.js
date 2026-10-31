@@ -1976,7 +1976,28 @@
     S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now();
     S.zeroVer = 1;
   }
-  load(); zeroStart(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  // One-time: the owner's wallet list (names from their Money Lover), balances start at 0.
+  function ownerWallets() {
+    if (S.walletVer === 1) return;
+    var LIST = [['bca', 'RESERVE', '💰', 'savings'], ['cash', 'Personal Expense', '🍿', 'cash'], ['gold', 'GOLD', '🥇', 'invest'], ['mandiri', 'BANK MANDIRI', '🏦', 'cash'],
+      ['daytona', 'INVESTMENT DAYTONA', '⌚', 'invest'], ['jimney', 'JIMNEY INVESTMENT', '🚙', 'invest'], ['hulk', 'INVESTMENT HULK ROLEX', '⌚', 'invest'],
+      ['ajaib', 'AJAIB', '💹', 'invest'], ['stocks', 'STOCKS', '📊', 'invest'], ['goldputer', 'GOLD PUTER', '🪙', 'invest']];
+    var byName = function (n) { return S.wallets.filter(function (w) { return w.name.toLowerCase() === n.toLowerCase(); })[0]; };
+    var out = LIST.map(function (x) {
+      var w = byName(x[1]) || S.wallets.filter(function (y) { return y.id === x[0]; })[0] || { id: x[0], initial: 0 };
+      w.name = x[1]; w.icon = x[2]; w.group = x[3]; delete w.sp; delete w.custom; if (w.initial == null) w.initial = 0;
+      return w;
+    });
+    // keep any other wallet the owner made, at the end
+    S.wallets.forEach(function (w) { if (out.indexOf(w) === -1) out.push(w); });
+    S.wallets = out;
+    var res = out[0];
+    S.settings.bcaWallet = res.id;
+    ensureAccounts(); S.settings.bcaAccounts.forEach(function (a) { if (/46$/.test(a.mask)) a.wallet = res.id; });
+    if (walletSel !== 'all' && !S.wallets.some(function (w) { return w.id === walletSel; })) walletSel = 'all';
+    S.walletVer = 1;
+  }
+  load(); zeroStart(); ownerWallets(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
