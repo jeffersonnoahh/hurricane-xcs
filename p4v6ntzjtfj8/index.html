@@ -19,7 +19,7 @@
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" href="css/style.css?v=20261101-9">
+<link rel="stylesheet" href="css/style.css?v=20261101-10">
 </head>
 <body>
 <style>
@@ -272,19 +272,25 @@
 <section class="view" id="v-account">
   <header class="page-head"><h1>More</h1><button class="icon-btn priv-btn" data-priv aria-label="Hide or show all amounts"></button></header>
 
-  <div class="card list-card">
-    <button class="set-row" data-go="v-budget"><span class="ic sm" data-sp="bybit"></span><span class="grow">Budgets</span><span class="muted">›</span></button>
-    <button class="set-row" id="instBtn"><span class="ic sm" data-sp="my_home"></span><span class="grow">Installments<span class="sub">Rumah Noah, wedding… kept out of net worth</span></span><span class="muted">›</span></button>
-    <button class="set-row" id="bizBtn"><span class="ic sm" data-sp="kas_kantor"></span><span class="grow">Business<span class="sub">Hurricane, Sentaris and more: income & expense</span></span><span class="muted">›</span></button>
-    <button class="set-row" id="wrapBtn"><span class="ic sm" data-sp="fun_money"></span><span class="grow">Monthly Wrapped<span class="sub">Your month as an animated story</span></span><span class="muted">›</span></button>
-    <button class="set-row" id="homeBtn"><span class="ic sm" data-sp="my_home"></span><span class="grow">Customize Home<span class="sub">Show, hide and reorder sections</span></span><span class="muted">›</span></button>
-    <button class="set-row" id="recBtn"><span class="ic sm" data-sp="streaming"></span><span class="grow">Bills &amp; subscriptions<span class="sub">Recurring payments that add themselves</span></span><span class="muted">›</span></button>
-    <button class="set-row" data-go="v-report"><span class="ic sm" data-sp="stocks"></span><span class="grow">Reports</span><span class="muted">›</span></button>
-    <div class="set-row" style="cursor:default"><span class="ic sm" data-sp="dvn"></span><span class="grow">Appearance</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
-    <label class="set-row"><span class="ic sm" data-sp="insurance"></span><span class="grow">Privacy mode<span class="sub">Hide every amount in the app</span></span><input type="checkbox" class="switch" id="hideToggle"></label>
+  <div class="tiles">
+    <button class="tile" id="bizBtn"><span class="tile-ic" data-sp="bi"></span><span>Business</span></button>
+    <button class="tile" id="instBtn"><span class="tile-ic" data-sp="my_home"></span><span>Installments</span></button>
+    <button class="tile" id="kmBtn"><span class="tile-ic" data-sp="komisi_out"></span><span>Komisi</span></button>
+    <button class="tile" id="realBtn2"><span class="tile-ic" data-sp="reserve_transfer"></span><span>Real money</span></button>
+    <button class="tile" data-go="v-budget"><span class="tile-ic" data-sp="bybit"></span><span>Budgets</span></button>
+    <button class="tile" data-go="v-report"><span class="tile-ic" data-sp="stocks"></span><span>Reports</span></button>
+    <button class="tile" id="recBtn"><span class="tile-ic" data-sp="streaming"></span><span>Bills</span></button>
+    <button class="tile" id="wrapBtn"><span class="tile-ic" data-sp="fun_money"></span><span>Wrapped</span></button>
   </div>
 
-  <div class="section-h">Cloud backup</div>
+  <div class="section-h">Personalize</div>
+  <div class="card list-card">
+    <div class="set-row" style="cursor:default"><span class="ic sm" data-sp="dvn"></span><span class="grow">Appearance</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
+    <label class="set-row"><span class="ic sm" data-sp="insurance"></span><span class="grow">Privacy mode<span class="sub">Hide every amount in the app</span></span><input type="checkbox" class="switch" id="hideToggle"></label>
+    <button class="set-row" id="homeBtn"><span class="ic sm" data-sp="my_home"></span><span class="grow">Customize Home<span class="sub">Show, hide and reorder sections</span></span><span class="muted">›</span></button>
+  </div>
+
+  <div class="section-h">Data &amp; sync</div>
   <div class="card cloud-card"><div class="cloud-row"><span class="ic sm i3d" data-sp="insurance"></span><div class="grow"><b>Encrypted cloud backup</b><div class="muted small" id="cloudStatus">Off</div></div><button class="btn" id="cloudBtn">Turn on</button></div></div>
 
   <div class="section-h"><span>Wallets</span><button class="link" id="addWallet">+ Add</button></div>
@@ -294,7 +300,7 @@
   <div class="seg cat-seg" id="catSeg"><button data-t="expense" class="on">Expense</button><button data-t="income">Income</button><button data-t="debt">Debt/Loan</button><i class="seg-ind"></i></div>
   <div class="card list-card cat-card" id="catList"></div>
 
-  <div class="section-h">BCA email sync</div>
+  <details class="fold"><summary><span class="ic sm i3d" data-sp="w_bank"></span><span class="grow">BCA email sync</span><i>›</i></summary>
   <div class="card">
     <p class="muted small">Every BCA email (QRIS, transfer, payment) becomes a transaction automatically.</p>
     <label class="fld">Apps Script URL<input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"></label>
@@ -308,16 +314,21 @@
     <div class="muted small" id="sStatus"></div>
   </div>
 
+  </details>
+
   <div class="card" id="reviewCard" hidden>
     <h2>Emails I couldn't read</h2>
     <p class="muted small">These BCA emails had no clear amount. Tap one to add it by hand, or dismiss it.</p>
     <div id="reviewList"></div>
   </div>
 
-  <div class="section-h"><span>Auto category rules</span><button class="link" id="addRule">+ Add</button></div>
+  <details class="fold"><summary><span class="ic sm i3d" data-sp="ajaib_kripto"></span><span class="grow">Auto category rules</span><i>›</i></summary>
+  <div style="text-align:right;margin:-4px 2px 6px"><button class="link" id="addRule">+ Add rule</button></div>
   <div class="card list-card"><p class="muted small pad">If the merchant name contains the word, that category is used.</p><div id="ruleList"></div></div>
 
-  <div class="section-h">Test the reader</div>
+  </details>
+
+  <details class="fold"><summary><span class="ic sm i3d" data-sp="uncat"></span><span class="grow">Test the email reader</span><i>›</i></summary>
   <div class="card">
     <p class="muted small">Paste a BCA email (subject on the first line) to see what would be recorded.</p>
     <textarea id="tInput" rows="5" placeholder="Transaksi QRIS Berhasil&#10;Nama Merchant : KOPI ...&#10;Nominal : Rp 38.000,00"></textarea>
@@ -325,18 +336,24 @@
     <pre class="small" id="tOut"></pre>
   </div>
 
-  <div class="section-h">Backup</div>
+  </details>
+
+  <details class="fold"><summary><span class="ic sm i3d" data-sp="reserve_transfer"></span><span class="grow">Backup & export</span><i>›</i></summary>
   <div class="card">
     <p class="muted small">Your data lives only on this phone. Export a backup now and then.</p>
     <div class="btn-row"><button class="btn" id="exportBtn">Export backup</button><button class="btn" id="csvBtn">Export CSV</button><button class="btn danger" id="zeroBtn">Reset to 0</button><button class="btn" id="restoreZero" hidden>Undo reset to 0</button><label class="btn">Import<input type="file" id="importFile" accept="application/json" hidden></label></div>
   </div>
 
-  <div class="section-h">Start fresh</div>
+  </details>
+
+  <details class="fold"><summary><span class="ic sm i3d" data-sp="balance_adj"></span><span class="grow">Start fresh</span><i>›</i></summary>
   <div class="card">
     <p class="muted small">Delete all transactions and set every wallet to Rp 0. After this, only new BCA transactions are added.</p>
     <p class="muted small" id="startFromLine"></p>
     <button class="btn danger" id="resetBtn">Start fresh</button>
   </div>
+  </details>
+
   <div class="foot muted small">Apex · private · your data stays on this device</div>
 </section>
 
@@ -361,6 +378,6 @@
 
 
 <script src="js/bca-parser.js?v=20261031-3"></script>
-<script src="js/app.js?v=20261101-9"></script>
+<script src="js/app.js?v=20261101-10"></script>
 </body>
 </html>

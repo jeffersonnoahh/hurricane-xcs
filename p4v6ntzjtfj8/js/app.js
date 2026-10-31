@@ -999,7 +999,7 @@
     var last6 = ms.slice(0, 6).reverse(), max = Math.max.apply(null, last6.map(function (m) { return m.earned; }).concat([1]));
     el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Dad still owes</div><div class="mid-money">' + money(owe) + '</div><div class="muted small">This month ' + money(cur.earned, { rp: false }) + ' earned · ' + money(cur.paid, { rp: false }) + ' paid</div></div><span class="card-3d">' + sprite('komisi_out') + '</span></div>' +
       (last6.length ? '<div class="km-bars">' + last6.map(function (m, i) { var he = m.earned / max * 100, hp = m.paid / max * 100; return '<div class="km-col" style="--i:' + i + '"><div class="km-b"><i class="e" style="height:' + he.toFixed(1) + '%"></i><i class="p" style="height:' + hp.toFixed(1) + '%"></i></div><span>' + monthName(m.k).slice(0, 3) + '</span></div>'; }).join('') + '</div><div class="km-leg"><span><i class="e"></i>Earned</span><span><i class="p"></i>Paid by Dad</span><span class="muted">Total ' + money(total, { rp: false }) + '</span></div>'
-        : '<div class="muted small" style="margin-top:10px">Add income with category RESERVE TRANSFER or KOMISI and it shows here per month.</div>');
+        : '<div class="muted small" style="margin-top:10px">Tap + → Income → RESERVE TRANSFER to start.</div>');
   }
   function komisiSheet() {
     var ms = komisiByMonth(), owe = ms.reduce(function (a, m) { return a + m.earned - m.paid; }, 0), earned = ms.reduce(function (a, m) { return a + m.earned; }, 0);
@@ -1208,13 +1208,15 @@
   }
 
   // ---------- navigation ----------
+  var scrollMem = {};
   function show(id, back) {
     if (id === view) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    scrollMem[view] = window.scrollY;
     var prev = view; view = id;
     document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active', 'back'); });
     var el = $(id); void el.offsetWidth;
     el.classList.add('active'); if (back) el.classList.add('back');
-    window.scrollTo(0, 0);
+    window.scrollTo(0, scrollMem[id] || 0);
     var navId = id === 'v-report' ? (prev === 'v-tx' ? 'v-tx' : prev === 'v-account' ? 'v-account' : 'v-home') : id === 'v-budget' ? (prev === 'v-home' ? 'v-home' : 'v-account') : id;
     if (id === 'v-budget') budFrom = prev;
     if (id === 'v-report') repFrom = prev;
@@ -1228,7 +1230,8 @@
   }
   var budFrom = 'v-account';
   var TITLES = { 'v-home': 'Apex', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
-  function onScroll() { var y = window.scrollY; $('topbar').classList.toggle('show', y > 120); document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
+  function onScroll() { var y = window.scrollY; $('topbar').classList.toggle('show', y > 120);
+    if (view === 'v-home') { var nv = $('hNet'); $('topTitle').innerHTML = '<span class="tb-l">Net worth</span> ' + (S.settings.hide ? 'Rp ••••••' : money(balance('all') + recvNet() - dSum('out', 'remain'))); } document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
 
   // ---------- extra motion ----------
   // Coin burst (used when income is added).
@@ -1814,6 +1817,7 @@
     $('realBtn').onclick = function () { haptic(); realSheet(); };
     $('hKomisi').onclick = function () { haptic(); komisiSheet(); };
     $('kmOpen').onclick = function () { haptic(); komisiSheet(); };
+    $('kmBtn').onclick = function () { haptic(); komisiSheet(); }; $('realBtn2').onclick = function () { haptic(); realSheet(); };
     $('hInst').onclick = function () { haptic(); instSheet(); }; $('instOpen').onclick = function () { haptic(); instSheet(); }; $('instBtn').onclick = function () { haptic(); instSheet(); };
     $('hBiz').onclick = function () { haptic(); bizSheet(); }; $('bizOpen').onclick = function () { haptic(); bizSheet(); }; $('bizBtn').onclick = function () { haptic(); bizSheet(); };
     $('hRange').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; sparkDays = +b.dataset.r; haptic(); renderSpark(); };
@@ -2377,8 +2381,10 @@
   // ---------- customizable home ----------
   var SEC_NAMES = { installments: 'Installments', business: 'Business', komisi: 'Komisi Noah', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
   function homeLayout() {
-    var keys = Object.keys(SEC_NAMES), L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
-    keys.forEach(function (k) { if (!L.some(function (x) { return x.k === k; })) L.push({ k: k, on: true }); });
+    // Calm default: daily things first, duplicate charts off (turn on in Customize Home).
+    var DEF = ['wallets', 'upcoming', 'komisi', 'business', 'installments', 'insights', 'goals', 'bills', 'cashflow', 'recent', 'allocation', 'spending', 'month'], OFF = { allocation: 1, spending: 1, month: 1 };
+    var L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
+    DEF.concat(Object.keys(SEC_NAMES)).forEach(function (k) { if (SEC_NAMES[k] && !L.some(function (x) { return x.k === k; })) L.push({ k: k, on: !S.settings.home ? !OFF[k] : true }); });
     return L;
   }
   function applyHome() {
