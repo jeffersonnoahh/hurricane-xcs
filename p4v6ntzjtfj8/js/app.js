@@ -1192,10 +1192,10 @@
   }
   // ---------- Komisi Noah: commission per month ----------
   function komisiCats() { return Object.keys(S.settings.autoOwed || {}); }
-  function komisiRecs() { var cs = komisiCats(); return S.debts.filter(function (d) { return d.earned && cs.indexOf(d.incomeCat) !== -1 && d.closed !== 'cancelled'; }); }
+  function komisiRecs() { var cs = kmCats(); return S.debts.filter(function (d) { return d.earned && cs.indexOf(d.incomeCat) !== -1 && d.closed !== 'cancelled'; }); }
   function komisiByMonth() {
     var by = {};
-    komisiRecs().forEach(function (d) { var k = d.created.slice(0, 7); var m = by[k] = by[k] || { k: k, earned: 0, paid: 0, recs: [] }; m.earned += d.amount; m.paid += Math.min(d.amount, dPaid(d)); m.recs.push(d); });
+    komisiRecs().forEach(function (d) { var k = d.forMonth || d.created.slice(0, 7); var m = by[k] = by[k] || { k: k, earned: 0, paid: 0, recs: [] }; m.earned += d.amount; m.paid += Math.min(d.amount, dPaid(d)); m.recs.push(d); });
     return Object.keys(by).sort().reverse().map(function (k) { return by[k]; });
   }
   function monthName(k) { var d = new Date(k + '-01T00:00:00'); return MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
@@ -1453,6 +1453,48 @@
         var c = r.querySelector('#wgClear'); if (c) c.onclick = function () { S.settings.worldGoal = 0; save(); closeSheet(); done && done(); };
       });
   }
+  // ---------- Track a commission whose money is already in a wallet (e.g. imported RESERVE TRANSFER): who still owes, payments so far ----------
+  function kmCats() { var cs = komisiCats(); return cs.length ? cs : ['reserve_transfer', 'komisi_in']; }
+  function kmTrackPick() {
+    var cs = kmCats(), list = S.tx.filter(function (t) { return t.type === 'income' && cs.indexOf(t.cat) !== -1 && !t.debtId; }).sort(function (a, b) { return b.date.localeCompare(a.date); }).slice(0, 30);
+    openSheet('<h3>Already in your wallet</h3><p class="muted small" style="text-align:center;margin:-6px 0 12px">Pick the commission transfer that’s already in your wallet. You’ll enter what’s been paid; Apex tracks the rest without counting the money twice.</p>' +
+      (list.length ? '<div class="card list-card">' + list.map(function (t) {
+        return '<button class="w-row" data-kt="' + esc(t.id) + '">' + icon(cat(t.cat), 'sm') + '<span class="grow">' + esc(cat(t.cat).name) + '<span class="sub">' + fmtDate(t.date) + ' · ' + esc(wallet(t.wallet).name) + (t.note ? ' · ' + esc(t.note) : '') + '</span></span><b>' + money(t.amount, { rp: false }) + '</b></button>';
+      }).join('') + '</div>' : '<div class="empty">No untracked commission transfers found.</div>'),
+      function (r) { r.addEventListener('click', function (e) { var b = e.target.closest('[data-kt]'); if (!b) return; var t = S.tx.filter(function (x) { return x.id === b.dataset.kt; })[0]; if (t) kmTrackSheet(t); }); });
+  }
+  function kmAmt(v) { var n = parseNum(v); return n > 0 && n < 100000 ? n * 1e6 : n; } // "85" = 85 jt
+  function kmTrackSheet(t) {
+    var d0 = new Date(t.date + 'T00:00:00'), forM = ym(new Date(d0.getFullYear(), d0.getMonth() - 1, 1));
+    var who = (S.settings.autoOwed || {})[t.cat] || 'Dad';
+    function payRow(i) { return '<div class="kt-pay"><input class="kt-a" inputmode="numeric" placeholder="e.g. 85 = 85 jt"><input class="kt-d" type="date" value="' + esc(t.date) + '"><button type="button" class="kt-x" aria-label="Remove">✕</button></div>'; }
+    openSheet('<h3>Track commission</h3>' +
+      '<div class="kt-hero"><small>' + esc(cat(t.cat).name) + ' · ' + fmtDate(t.date) + ' · already in ' + esc(wallet(t.wallet).name) + '</small><b>' + money(t.amount) + '</b></div>' +
+      '<div class="two"><label class="fld">Commission for<input id="ktMonth" type="month" value="' + forM + '"></label><label class="fld">Who pays<input id="ktWho" value="' + esc(who) + '"></label></div>' +
+      '<div class="fld">Already paid<div id="ktPays">' + payRow() + payRow() + '</div><button type="button" class="link" id="ktAddPay">＋ Add payment</button></div>' +
+      '<div class="kt-sum" id="ktSum"></div>' +
+      '<button class="btn primary block" id="ktSave">Save</button>',
+      function (r) {
+        function rows() { return [].slice.call(r.querySelectorAll('.kt-pay')); }
+        function sum() {
+          var paid = rows().reduce(function (a, x) { return a + kmAmt(x.querySelector('.kt-a').value); }, 0), left = t.amount - paid;
+          r.querySelector('#ktSum').innerHTML = '<div class="gl-row"><span>Commission</span><b>' + money(t.amount) + '</b></div><div class="gl-row"><span>Paid so far</span><b class="pos">' + money(paid) + '</b></div><div class="gl-row big"><span>Still to collect from ' + esc(r.querySelector('#ktWho').value || 'them') + '</span><b class="' + (left > 0 ? 'neg' : 'pos') + '">' + money(Math.max(0, left)) + '</b></div>' + (left < 0 ? '<div class="muted small">Paid is more than the commission.</div>' : '');
+        }
+        function wire() { rows().forEach(function (x) { var a = x.querySelector('.kt-a'); if (!a._w) { a._w = 1; a.addEventListener('input', sum); a.addEventListener('blur', function () { var n = kmAmt(a.value); a.value = n ? n.toLocaleString('id-ID') : ''; sum(); }); x.querySelector('.kt-x').onclick = function () { x.remove(); sum(); }; } }); }
+        r.querySelector('#ktAddPay').onclick = function () { r.querySelector('#ktPays').insertAdjacentHTML('beforeend', payRow()); wire(); };
+        r.querySelector('#ktWho').addEventListener('input', sum);
+        wire(); sum();
+        r.querySelector('#ktSave').onclick = function () {
+          var person = r.querySelector('#ktWho').value.trim() || 'Dad', fm = r.querySelector('#ktMonth').value || forM;
+          var pays = rows().map(function (x) { return { amt: kmAmt(x.querySelector('.kt-a').value), date: x.querySelector('.kt-d').value || t.date }; }).filter(function (p) { return p.amt > 0; });
+          var dd = { id: uid(), dir: 'in', earned: true, incomeCat: t.cat, person: person, title: 'Komisi ' + monthName(fm), amount: t.amount, created: t.date, forMonth: fm, due: '', wallet: t.wallet, tags: 'income', notes: '', prebooked: true, bookTx: t.id, ts: Date.now(),
+            payments: pays.map(function (p) { return { id: uid(), amount: Math.min(p.amt, t.amount), date: p.date, wallet: t.wallet, note: 'Paid', txId: null }; }) };
+          S.debts.push(dd); t.debtId = dd.id;
+          haptic(); save(); closeSheet(); renderAll();
+          var left = dRemain(dd); toast(left ? person + ' still owes ' + money(left, { rp: true }) : 'Fully paid 🎉');
+        };
+      });
+  }
   function komisiSheet() {
     var ms = komisiByMonth(), owe = ms.reduce(function (a, m) { return a + m.earned - m.paid; }, 0), earned = ms.reduce(function (a, m) { return a + m.earned; }, 0);
     openSheet('<h3>Komisi Noah</h3><div class="dd-stats" style="margin-top:0;border:0;padding-top:0"><div><small>Total earned</small><b>' + money(earned, { rp: false }) + '</b></div><div><small>Paid by Dad</small><b>' + money(earned - owe, { rp: false }) + '</b></div><div><small>Still owed</small><b class="pos">' + money(owe, { rp: false }) + '</b></div></div>' +
@@ -1462,10 +1504,12 @@
           return '<button class="w-row" data-km="' + esc(d.id) + '">' + icon(cat(d.incomeCat), 'sm') + '<span class="grow">' + esc(d.title || 'Commission') + '<span class="sub">' + fmtDate(d.created) + ' · ' + money(dPaid(d), { rp: false }) + ' of ' + money(d.amount, { rp: false }) + ' paid</span><span class="bill-bar"><i style="--w:' + (d.amount ? Math.min(100, dPaid(d) / d.amount * 100) : 0).toFixed(0) + '%"></i></span></span><span class="amt ' + (dRemain(d) ? 'pos' : 'muted') + '">' + (dRemain(d) ? money(dRemain(d), { rp: false }) : 'Paid ✓') + '</span></button>';
         }).join('') + '</div>';
       }).join('') : '<div class="empty">' + dinoImg('empty-dino') + 'No commission yet.<br>Press + → Income → RESERVE TRANSFER.</div>') +
-      '<button class="btn primary block" id="kmAdd">＋ Add commission</button>',
+      '<button class="btn primary block" id="kmAdd">＋ Add commission</button>' +
+      '<button class="btn block" id="kmTrack" style="margin-top:8px">Track one already in RESERVE</button>',
       function (r) {
         r.addEventListener('click', function (e) { var b = e.target.closest('[data-km]'); if (b) debtDetail(debtById(b.dataset.km)); });
         r.querySelector('#kmAdd').onclick = function () { txSheet(null, { type: 'income', cat: 'reserve_transfer' }); };
+        r.querySelector('#kmTrack').onclick = function () { haptic(); kmTrackPick(); };
       });
   }
   // ---------- Business: income & expense per business ----------
