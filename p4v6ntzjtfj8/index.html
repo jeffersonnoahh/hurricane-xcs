@@ -18,7 +18,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/9f768fe2-f124-466e-bec9-2c70d3ffe350.png" type="image/png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/9f768fe2-f124-466e-bec9-2c70d3ffe350.png">
-<link rel="stylesheet" href="css/style.css?v=20261031-50">
+<link rel="stylesheet" href="css/style.css?v=20261031-60">
 </head>
 <body>
 <div class="bg-mesh" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
@@ -41,11 +41,16 @@
     <span class="chip" id="hChip"></span>
   </div>
 
-  <div class="quick">
-    <button data-q="expense"><span class="q-ic" data-i3d="💸"></span>Expense</button>
-    <button data-q="income"><span class="q-ic" data-i3d="💰"></span>Income</button>
-    <button data-q="owed"><span class="q-ic" data-i3d="🧾"></span>Owed</button>
-    <button data-q="budget"><span class="q-ic" data-i3d="🎯"></span>Budgets</button>
+  <div class="spark-wrap">
+    <svg class="spark" id="hSpark" viewBox="0 0 360 96" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div class="range" id="hRange"><button data-r="7">1W</button><button data-r="30" class="on">1M</button><button data-r="90">3M</button><button data-r="365">1Y</button></div>
+  </div>
+
+  <div class="actions">
+    <button data-q="expense"><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Expense</button>
+    <button data-q="income"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Income</button>
+    <button data-q="owed"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Owed</button>
+    <button data-q="budget"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 12V4M12 12l6 4"/></svg>Budget</button>
   </div>
 
   <button class="card stat-strip" id="balDetails" type="button">
@@ -57,8 +62,11 @@
   <div class="section-h" id="upHead" hidden><span>Upcoming &amp; overdue</span><button class="link" data-go="v-debts">View all</button></div>
   <div class="card list-card" id="hUpcoming" hidden></div>
 
-  <div class="section-h"><span>Accounts</span></div>
-  <div class="sum-row" id="hGroups"></div>
+  <div class="card alloc">
+    <div class="card-h2"><h2>Allocation</h2><span class="muted small" id="allocTotal"></span></div>
+    <div class="alloc-bar" id="allocBar"></div>
+    <div id="allocLegend"></div>
+  </div>
 
   <div class="card list-card">
     <div class="card-h"><h2>Wallets</h2><button class="link" id="seeAllWallets">See all</button></div>
@@ -260,6 +268,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-2"></script>
-<script src="js/app.js?v=20261031-50"></script>
+<script src="js/app.js?v=20261031-60"></script>
 </body>
 </html>

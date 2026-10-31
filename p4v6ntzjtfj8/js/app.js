@@ -330,14 +330,16 @@
     if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '▲ ' : '▼ ') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% this month'; }
     else chip.hidden = true;
 
-    var gt = {}; S.wallets.filter(included).forEach(function (w) { var g = groupOf(w); gt[g] = (gt[g] || 0) + balance(w.id); });
-    $('hGroups').innerHTML = Object.keys(GROUPS).filter(function (g) { return g in gt; }).map(function (g, i) {
-      var G = GROUPS[g], share = total ? Math.round(gt[g] / total * 100) : 0;
-      return '<div class="sum-card g-' + g + '" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + sprite(SP_GROUP[g]) + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
-        '<div class="sum-amt"><span class="mid-money" data-roll="g_' + g + '" data-v="' + gt[g] + '"></span><span class="chip soft">' + share + '% of total</span></div>' +
-        '<button class="sum-foot" data-group="' + g + '"><span>View wallets</span><span>→</span></button></div>';
+    var gt = {}; S.wallets.filter(included).forEach(function (w) { var g = groupOf(w); gt[g] = (gt[g] || 0) + Math.max(0, balance(w.id)); });
+    var gsum = Object.keys(gt).reduce(function (x, g) { return x + gt[g]; }, 0) || 1;
+    var GC = { cash: 'var(--info)', savings: 'var(--gold)', invest: 'var(--violet)' };
+    var order = Object.keys(GROUPS).filter(function (g) { return gt[g] > 0; });
+    $('allocTotal').innerHTML = order.length + ' group' + (order.length === 1 ? '' : 's');
+    $('allocBar').innerHTML = order.map(function (g, i) { return '<i style="--w:' + (gt[g] / gsum * 100).toFixed(2) + '%;background:' + GC[g] + ';--i:' + i + '"></i>'; }).join('');
+    $('allocLegend').innerHTML = order.map(function (g) {
+      return '<button class="lg-row" data-group="' + g + '"><i style="background:' + GC[g] + '"></i><span class="grow">' + GROUPS[g].name + '</span><span class="muted small">' + Math.round(gt[g] / gsum * 100) + '%</span><b>' + money(gt[g], { rp: false }) + '</b></button>';
     }).join('');
-    $('hGroups').querySelectorAll('[data-roll]').forEach(function (el) { rollTo(el, +el.dataset.v, {}, el.dataset.roll); });
+    renderSpark();
     renderCashflow(); renderDonut();
     var ws = S.wallets.slice().sort(function (a, b) { return balance(b.id) - balance(a.id); }).slice(0, 3);
     $('hWallets').innerHTML = ws.map(function (w) {
@@ -408,6 +410,33 @@
     }).join('');
   }
 
+  // Net worth trend (wallet balances at the end of each day).
+  var sparkDays = 30;
+  function renderSpark() {
+    var n = sparkDays, now = new Date(), pts = [];
+    var step = n > 120 ? 7 : 1;
+    for (var k = n; k >= 0; k -= step) { var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - k + 1); pts.push(balance('all', ymd(d))); }
+    var mn = Math.min.apply(null, pts), mx = Math.max.apply(null, pts), W = 360, H = 96, pad = 8;
+    var flat = mx === mn; if (flat) { mn -= 1; mx += 1; }
+    var xy = pts.map(function (v, i) { return [i / (pts.length - 1) * W, pad + (1 - (v - mn) / (mx - mn)) * (H - pad * 2)]; });
+    var d = xy.map(function (p, i) {
+      if (!i) return 'M' + p[0].toFixed(1) + ',' + p[1].toFixed(1);
+      var q = xy[i - 1], cx = (q[0] + p[0]) / 2;
+      return 'C' + cx.toFixed(1) + ',' + q[1].toFixed(1) + ' ' + cx.toFixed(1) + ',' + p[1].toFixed(1) + ' ' + p[0].toFixed(1) + ',' + p[1].toFixed(1);
+    }).join('');
+    var first = pts[0], last = pts[pts.length - 1], diff = last - first, up = diff >= 0;
+    var col = up ? 'var(--pos)' : 'var(--neg)', end = xy[xy.length - 1];
+    $('hSpark').innerHTML = '<defs><linearGradient id="spg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + (up ? '#34d399' : '#f87171') + '" stop-opacity=".28"/><stop offset="1" stop-color="' + (up ? '#34d399' : '#f87171') + '" stop-opacity="0"/></linearGradient></defs>' +
+      '<path class="sp-area" d="' + d + ' L' + W + ',' + H + ' L0,' + H + 'Z" fill="url(#spg)"/>' +
+      '<path class="sp-line" d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke" pathLength="1"/>' +
+      '<circle class="sp-dot" cx="' + end[0].toFixed(1) + '" cy="' + end[1].toFixed(1) + '" r="3.5" fill="' + col + '"/>';
+    var chip = $('hChip'), lbl = { 7: '1W', 30: '1M', 90: '3M', 365: '1Y' }[n];
+    chip.hidden = false; chip.className = 'chip' + (up ? '' : ' dn');
+    var pc = first ? Math.abs(diff / first * 100) : 0;
+    chip.innerHTML = (up ? '▲ ' : '▼ ') + money(Math.abs(diff), { rp: true }) + ' · ' + pc.toFixed(pc < 10 ? 1 : 0) + '% · ' + lbl;
+    document.querySelectorAll('#hRange button').forEach(function (b) { b.classList.toggle('on', +b.dataset.r === n); });
+  }
+
   function renderCashflow(still) {
     var now = new Date(), months = [];
     for (var k = cfMonths - 1; k >= 0; k--) { var d = new Date(now.getFullYear(), now.getMonth() - k, 1); months.push({ key: ym(d), label: MONTHS[d.getMonth()].slice(0, 3), full: MONTHS[d.getMonth()] + ' ' + d.getFullYear(), tin: 0, tout: 0 }); }
@@ -426,8 +455,8 @@
     var ticks = [1, .75, .5, .25, 0].map(function (f) { return S.settings.hide || !realMax ? '' : short(max * f); });
     $('cfChart').innerHTML = '<div class="cf-chart' + (still ? ' still' : '') + '"><div class="cf-y">' + ticks.map(function (t) { return '<span>' + t + '</span>'; }).join('') + '</div><div class="cf-plot">' +
       months.map(function (m, i) {
-        var v = Math.max(m.tout, m.tin), h = Math.max(v ? 4 : 2, v / max * 100);
-        return '<button class="cf-bar' + (i === cfSel ? ' sel' : '') + '" data-i="' + i + '" style="--i:' + i + '" aria-label="' + m.full + '"><i style="height:' + h.toFixed(1) + '%;--top:' + (100 - h).toFixed(1) + '%"></i></button>';
+        var hi = Math.max(m.tin ? 3 : 1.5, m.tin / max * 100), ho = Math.max(m.tout ? 3 : 1.5, m.tout / max * 100);
+        return '<button class="cf-bar pair' + (i === cfSel ? ' sel' : '') + '" data-i="' + i + '" style="--i:' + i + '" aria-label="' + m.full + '"><i class="in" style="height:' + hi.toFixed(1) + '%"></i><i class="out" style="height:' + ho.toFixed(1) + '%"></i></button>';
       }).join('') + '</div></div><div class="cf-x">' + months.map(function (m, i) { return '<span class="' + (i === cfSel ? 'sel' : '') + '">' + (cfMonths === 12 ? m.label.slice(0, 1) : m.label) + '</span>'; }).join('') + '</div>';
     var m = months[cfSel], plot = $('cfChart').querySelector('.cf-plot'), bar = plot.children[cfSel];
     var tip = document.createElement('div'); tip.className = 'cf-tip';
@@ -438,7 +467,7 @@
     left = Math.max(tw / 2, Math.min(pw - tw / 2, left));
     tip.style.left = left + 'px';
     // Sit just above the selected bar; may rise into the space above the plot.
-    var barTop = bar.querySelector('i').offsetTop;
+    var barTop = Math.min.apply(null, [].map.call(bar.querySelectorAll('i'), function (x) { return x.offsetTop; }));
     tip.style.top = Math.max(-tip.offsetHeight + 4, barTop - tip.offsetHeight - 14) + 'px';
   }
 
@@ -1242,7 +1271,7 @@
       var g = e.target.closest('[data-go]'); if (g) { haptic(); show(g.dataset.go); return; }
       var bk = e.target.closest('[data-back]'); if (bk) { haptic(); show(budFrom === 'v-budget' ? 'v-account' : budFrom, true); }
     });
-    document.querySelectorAll('.quick [data-q]').forEach(function (b) {
+    document.querySelectorAll('.actions [data-q]').forEach(function (b) {
       b.onclick = function () {
         haptic(); var q = b.dataset.q;
         if (q === 'expense' || q === 'income') txSheet(null, { type: q, cat: q === 'income' ? 'salary' : 'food' });
@@ -1266,9 +1295,11 @@
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
+    $('hRange').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; sparkDays = +b.dataset.r; haptic(); renderSpark(); };
+    $('allocLegend').onclick = function (e) { if (e.target.closest('[data-group]')) walletPicker(); };
     $('donutGo').onclick = function () { haptic(); cur = new Date(); cur.setDate(1); renderAll(); show('v-report'); };
     $('balDetails').onclick = function () { haptic(); walletPicker(); };
-    $('hGroups').onclick = function (e) { if (e.target.closest('[data-group]')) { haptic(); walletPicker(); } };
+
     $('cfSeg').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; cfMonths = +b.dataset.n; cfSel = null; haptic(); renderCashflow(); };
     $('cfChart').onclick = function (e) { var b = e.target.closest('.cf-bar'); if (!b) return; cfSel = +b.dataset.i; haptic(); renderCashflow(true); };
     $('themeSeg').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; S.settings.theme = b.dataset.t; haptic(); save(); applyTheme(); renderCashflow(true); };
