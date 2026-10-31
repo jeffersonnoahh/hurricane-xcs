@@ -321,6 +321,11 @@ button:active,.tx:active,.w-row:active,.set-row:active{transform:scale(.97)}
 .quick-amts button{padding:7px 12px;border-radius:20px;border:1px solid var(--line2);font-size:12.5px;font-weight:600;color:var(--ink2)}
 
 /* ---------- forms ---------- */
+.acct-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.acct-row .grow{flex:1;min-width:0}
+.acct-row b{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.acct-row select{width:auto;max-width:48%;margin:0;padding:9px 10px;font-size:13.5px}
+
 .set-row{display:flex;align-items:center;gap:14px;padding:12px 18px;width:100%;text-align:left;margin:0;font-size:15px;color:var(--ink);cursor:pointer}
 .set-row.plain{padding:12px 0}
 .set-row .grow{flex:1;font-weight:500}

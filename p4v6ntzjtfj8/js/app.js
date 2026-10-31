@@ -68,7 +68,7 @@
       cats: DEFAULT_CATS.map(mkCat), catVer: CAT_VER,
       tx: [], budgets: {},
       rules: DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }),
-      settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', lastSync: 0, startFrom: 0, hide: false, theme: 'dark' },
+      settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', bcaAccounts: null, lastSync: 0, startFrom: 0, hide: false, theme: 'dark' },
       seen: {}, review: [], debts: []
     };
   }
@@ -113,6 +113,27 @@
       S.rules = DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }).concat(S.rules.filter(function (r) { return !DEFAULT_RULES.some(function (d) { return d[0] === r.kw; }) && ok(r.cat); }));
       S.catVer = CAT_VER;
     }
+  }
+  // BCA emails show the source account masked (first 4 + last 2 digits). Map each to a wallet.
+  function ensureAccounts() {
+    if (Array.isArray(S.settings.bcaAccounts)) return;
+    var reserve = S.wallets.filter(function (w) { return /reserve/i.test(w.name); })[0];
+    S.settings.bcaAccounts = [
+      { mask: '6275****46', label: 'Tahapan Xpresi / Tahapan (ends 46)', wallet: reserve ? reserve.id : '' },
+      { mask: '6275****91', label: 'Tahapan Xpresi (ends 91)', wallet: '' },
+      { mask: '6370****23', label: 'Tahapan Xpresi (ends 23)', wallet: '' }
+    ];
+  }
+  function maskMatch(mask, src) {
+    var a = String(mask || '').replace(/[^0-9*xX•]/g, ''), b = String(src || '').replace(/[^0-9*xX•]/g, '');
+    if (!a || !b) return false;
+    var pa = a.match(/^\d*/)[0], sa = a.match(/\d*$/)[0], pb = b.match(/^\d*/)[0], sb = b.match(/\d*$/)[0];
+    var n = Math.min(pa.length, pb.length), m = Math.min(sa.length, sb.length);
+    return n >= 2 && m >= 2 && pa.slice(0, n) === pb.slice(0, n) && sa.slice(-m) === sb.slice(-m);
+  }
+  function walletForSrc(src) {
+    var acc = (S.settings.bcaAccounts || []).filter(function (a) { return a.wallet && maskMatch(a.mask, src); })[0];
+    return acc && S.wallets.some(function (w) { return w.id === acc.wallet; }) ? acc.wallet : null;
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(S)); }
@@ -498,6 +519,10 @@
     $('startFromLine').textContent = s.startFrom ? 'Tracking BCA emails since ' + new Date(s.startFrom).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '';
     $('sWallet').innerHTML = S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '">' + esc(w.icon + ' ' + w.name) + '</option>'; }).join('');
     $('sWallet').value = s.bcaWallet;
+    ensureAccounts();
+    $('acctList').innerHTML = s.bcaAccounts.map(function (a, i) {
+      return '<div class="acct-row"><div class="grow"><b>' + esc(a.mask) + '</b><span class="sub">' + esc(a.label || '') + '</span></div><select data-acct="' + i + '"><option value="">Default wallet</option>' + S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === a.wallet ? ' selected' : '') + '>' + esc(w.icon + ' ' + w.name) + '</option>'; }).join('') + '</select><button class="x" data-delacct="' + i + '" aria-label="Remove">×</button></div>';
+    }).join('');
 
     $('walletList').innerHTML = S.wallets.map(function (w) {
       return '<button class="w-row" data-edit-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(balance(w.id)) + (w.excluded ? ' · not in total' : '') + '</span></span><span class="muted">›</span></button>';
@@ -1017,7 +1042,7 @@
           var d = new Date(em.date);
           S.tx.push({
             id: uid(), type: p.type, amount: p.amount, cat: guessCat(p.merchant, p.type),
-            wallet: S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id,
+            wallet: walletForSrc(p.src) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || '',
             toWallet: '', date: ymd(d), time: hm(d), merchant: p.merchant, note: '', src: 'bca', srcId: em.id, ref: p.ref || '', created: Date.now()
           });
           added++;
@@ -1247,6 +1272,13 @@
     $('repDaily').addEventListener('click', showTip);
     $('budgetList').onclick = function (e) { var r = e.target.closest('[data-budget]'); if (r) budgetSheet(r.dataset.budget); };
 
+    $('acctList').addEventListener('change', function (e) { var sel = e.target.closest('[data-acct]'); if (!sel) return; S.settings.bcaAccounts[+sel.dataset.acct].wallet = sel.value; save(); toast('Saved ✓'); });
+    $('acctList').addEventListener('click', function (e) { var b = e.target.closest('[data-delacct]'); if (!b) return; S.settings.bcaAccounts.splice(+b.dataset.delacct, 1); save(); renderAccount(); });
+    $('addAcct').onclick = function () {
+      var m = prompt('Account as BCA shows it in emails (first 4 and last 2 digits), e.g. 6275****46'); if (!m) return;
+      var l = prompt('Name for this account (optional)', '') || '';
+      ensureAccounts(); S.settings.bcaAccounts.push({ mask: m.trim(), label: l.trim(), wallet: '' }); save(); renderAccount();
+    };
     $('sSave').onclick = function () {
       var url = $('sUrl').value.trim();
       if (url && !/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { toast('That does not look like an Apps Script web app URL'); return false; }

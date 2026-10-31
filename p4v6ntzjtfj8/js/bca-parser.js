@@ -10,7 +10,7 @@
     'total\\s*(?:amount|bayar|pembayaran|transaksi|transfer)?',
     'nominal(?:\\s*transaksi|\\s*transfer)?',
     'jumlah(?:\\s*transfer|\\s*pembayaran|\\s*transaksi|\\s*dana)?',
-    'amount', 'transfer\\s*amount', 'nilai\\s*transaksi'
+    'top\\s*up\\s*amount', 'payment\\s*amount', 'amount', 'transfer\\s*amount', 'nilai\\s*transaksi'
   ];
   var CUR = '(?:rp\\.?|idr)';
 
@@ -28,6 +28,8 @@
   var MERCHANT_LABELS_IN = [
     'nama\\s*pengirim', 'pengirim', 'sender\\s*name', 'sender', 'dari', 'from\\s*account\\s*name', 'remitter'
   ];
+  // Which of my accounts the money left (or entered). BCA masks it, e.g. 6275****46.
+  var SRC_LABELS = ['source\\s*of\\s*funds?', 'sumber\\s*dana', 'rekening\\s*sumber', 'from\\s*account', 'dari\\s*rekening', 'no\\.?\\s*rekening', 'account\\s*number'];
   var REF_LABELS = [
     'no\\.?\\s*referensi', 'nomor\\s*referensi', 'reference\\s*(?:no\\.?|number)?', 'no\\.?\\s*ref\\.?',
     'ref\\.?\\s*no\\.?', 'no\\.?\\s*transaksi', 'transaction\\s*(?:id|no\\.?)'
@@ -113,11 +115,13 @@
     var line = '([^\\n|;]{2,80})';
     var merchant = cleanName(firstMatch(body, type === 'income' ? MERCHANT_LABELS_IN : MERCHANT_LABELS_OUT, line));
     if (!merchant && type === 'income') merchant = cleanName(firstMatch(body, MERCHANT_LABELS_OUT, line));
+    if (!merchant) merchant = cleanName(firstMatch(body, ['transaction\\s*type', 'jenis\\s*transaksi'], line));
     if (!merchant) merchant = subject.replace(/^(re|fw|fwd):\s*/i, '').slice(0, 60) || 'BCA';
 
     var ref = firstMatch(body, REF_LABELS, '([A-Za-z0-9\\-/]{4,40})');
 
-    return { amount: amount, type: type, merchant: merchant, ref: ref };
+    var src = firstMatch(body, SRC_LABELS, '([0-9][0-9*xX•\\-\\s]{5,24}[0-9])').replace(/[\s-]/g, '');
+    return { amount: amount, type: type, merchant: merchant, ref: ref, src: src };
   }
 
   var api = { parseBcaEmail: parseBcaEmail, parseAmount: parseAmount, normalize: normalize };
