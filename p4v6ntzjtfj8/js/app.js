@@ -515,6 +515,89 @@
     else if (!st.style.height) st.style.height = hShut + 'px';
     else st._hT = setTimeout(function () { if (!stackOpen) st.style.height = hShut + 'px'; }, 520);
   }
+  // ---------- Wallet deck (Apple Wallet style: swipe cards, tap outside / back / swipe down to close) ----------
+  function walletDeck(startId, fromEl) {
+    var ws = S.wallets.filter(included); if (!ws.length) return;
+    var start = Math.max(0, ws.map(function (w) { return w.id; }).indexOf(startId));
+    var ov = document.createElement('div'); ov.className = 'deck';
+    ov.innerHTML = '<div class="dk-bg"></div><div class="dk-in">' +
+      '<div class="dk-head"><button class="dk-x" type="button" aria-label="Close">‹</button><span>Wallets</span><button class="dk-man" type="button">Manage</button></div>' +
+      '<div class="dk-track">' + ws.map(function (w, i) {
+        var g = GCARD[groupOf(w)] || ['#059669', '#064e3b'];
+        return '<div class="dk-card" data-i="' + i + '" style="--a:' + g[0] + ';--b:' + g[1] + '"><i class="dk-sheen"></i>' +
+          '<div class="dk-top"><span class="dk-name">' + esc(w.name) + '</span><span class="dk-3d">' + (spKey(w) ? sprite(spKey(w)) : '<b>' + esc(w.icon) + '</b>') + '</span></div>' +
+          '<div class="dk-bot"><span class="dk-grp">' + ((GROUPS[groupOf(w)] || {}).name || '') + '</span><span class="dk-amt">' + money(balance(w.id)) + '</span></div></div>';
+      }).join('') + '</div>' +
+      '<div class="dk-dots">' + ws.map(function (w, i) { return '<i data-i="' + i + '"></i>'; }).join('') + '</div>' +
+      '<div class="dk-info"></div></div>';
+    document.body.appendChild(ov);
+    var track = ov.querySelector('.dk-track'), cards = [].slice.call(track.children), dots = [].slice.call(ov.querySelectorAll('.dk-dots i')), info = ov.querySelector('.dk-info'), curI = -1, raf = 0;
+    function paintInfo(i) {
+      if (i === curI) return; curI = i; var w = ws[i];
+      dots.forEach(function (d, k) { d.classList.toggle('on', k === i); });
+      var tx = S.tx.filter(function (t) { return t.wallet === w.id || t.toWallet === w.id; }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
+      var m = ym(new Date()), inM = 0, outM = 0;
+      tx.forEach(function (t) { if (t.date.slice(0, 7) !== m) return; var d = delta(t, w.id); if (d > 0) inM += d; else outM -= d; });
+      var u = unpaidIn(w.id);
+      info.innerHTML = '<div class="dk-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
+        '<div class="dk-acts"><button type="button" data-a="add"><span>＋</span>Add</button><button type="button" data-a="move"><span>⇄</span>Transfer</button><button type="button" data-a="hist"><span>☰</span>History</button><button type="button" data-a="edit"><span>✎</span>Edit</button></div>' +
+        '<div class="dk-sec">Recent</div><div class="dk-list">' + (tx.length ? tx.slice(0, 5).map(function (t, k) { return txRow(t, k, true); }).join('') : '<div class="dk-empty">No transactions in this wallet yet.</div>') + '</div>';
+    }
+    function onScroll() {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(function () {
+        var c = track.scrollLeft + track.clientWidth / 2, best = 0, bd = 1e9;
+        cards.forEach(function (el, i) {
+          var mid = el.offsetLeft + el.offsetWidth / 2, d = (mid - c) / el.offsetWidth, ad = Math.min(1, Math.abs(d));
+          el.style.transform = 'scale(' + (1 - ad * 0.1).toFixed(3) + ') rotateY(' + (-d * 10).toFixed(1) + 'deg)';
+          el.style.opacity = (1 - ad * 0.45).toFixed(2);
+          if (Math.abs(d) < bd) { bd = Math.abs(d); best = i; }
+        });
+        paintInfo(best);
+      });
+    }
+    track.addEventListener('scroll', onScroll, { passive: true });
+    // open: jump to the tapped card, then glide it from its spot on Home
+    track.style.scrollSnapType = 'none'; track.scrollLeft = cards[start].offsetLeft - (track.clientWidth - cards[start].offsetWidth) / 2; track.style.scrollSnapType = '';
+    onScroll(); paintInfo(start);
+    var target = cards[start];
+    if (fromEl) {
+      var a = fromEl.getBoundingClientRect(), b = target.getBoundingClientRect();
+      target.animate([{ transform: 'translate(' + (a.left - b.left) + 'px,' + (a.top - b.top) + 'px) scale(' + (a.width / b.width).toFixed(3) + ',' + (a.height / b.height).toFixed(3) + ')', borderRadius: '18px' }, { transform: 'none' }], { duration: 520, easing: 'cubic-bezier(.32,.72,0,1)' });
+    }
+    requestAnimationFrame(function () { ov.classList.add('show'); });
+    haptic();
+    history.pushState({ deck: 1 }, '');
+    var closed = false;
+    function close(fromPop) {
+      if (closed) return; closed = true;
+      window.removeEventListener('popstate', pop);
+      ov.classList.remove('show'); ov.classList.add('hide');
+      setTimeout(function () { ov.remove(); }, 380);
+      if (fromPop !== true && history.state && history.state.deck) history.back();
+    }
+    function pop() { close(true); }
+    window.addEventListener('popstate', pop);
+    ov.querySelector('.dk-x').onclick = close;
+    ov.querySelector('.dk-bg').onclick = close;
+    ov.querySelector('.dk-in').addEventListener('click', function (e) {
+      if (e.target === this || /^(dk-dots|dk-track|dk-info|dk-head)$/.test(e.target.className)) return close();
+      var d = e.target.closest('.dk-dots i'); if (d) { var el = cards[+d.dataset.i]; track.scrollTo({ left: el.offsetLeft - (track.clientWidth - el.offsetWidth) / 2, behavior: 'smooth' }); return; }
+      var cd = e.target.closest('.dk-card'); if (cd && +cd.dataset.i !== curI) { track.scrollTo({ left: cd.offsetLeft - (track.clientWidth - cd.offsetWidth) / 2, behavior: 'smooth' }); return; }
+      var t = e.target.closest('.tx'); if (t) { var tt = S.tx.filter(function (x) { return x.id === t.dataset.id; })[0]; if (tt) { close(); setTimeout(function () { txSheet(tt); }, 200); } return; }
+      var b = e.target.closest('[data-a]'); if (!b) return; var w = ws[curI]; haptic();
+      if (b.dataset.a === 'add') { close(); setTimeout(function () { txSheet(null, { wallet: w.id }); }, 200); }
+      if (b.dataset.a === 'move') { close(); setTimeout(function () { txSheet(null, { wallet: w.id, type: 'transfer' }); }, 200); }
+      if (b.dataset.a === 'hist') { close(); walletSel = w.id; renderTx(); show('v-tx'); }
+      if (b.dataset.a === 'edit') { close(); setTimeout(function () { walletSheet(w); }, 200); }
+    });
+    ov.querySelector('.dk-man').onclick = function () { close(); show('v-account'); setTimeout(function () { var l = $('walletList'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); };
+    // swipe down on the header / empty space to close
+    var y0 = null, inEl = ov.querySelector('.dk-in');
+    inEl.addEventListener('touchstart', function (e) { y0 = inEl.scrollTop <= 0 && !e.target.closest('.dk-track') ? e.touches[0].clientY : null; }, { passive: true });
+    inEl.addEventListener('touchmove', function (e) { if (y0 == null) return; var dy = e.touches[0].clientY - y0; if (dy > 0) { inEl.style.transform = 'translateY(' + dy * 0.6 + 'px)'; inEl.style.transition = 'none'; } }, { passive: true });
+    inEl.addEventListener('touchend', function (e) { if (y0 == null) return; var dy = (e.changedTouches[0].clientY - y0); y0 = null; inEl.style.transition = ''; if (dy > 110) close(); else inEl.style.transform = ''; });
+  }
   function reorderWallets(ids) {
     var by = {}; S.wallets.forEach(function (w) { by[w.id] = w; });
     var moved = ids.map(function (id) { return by[id]; }).filter(Boolean);
@@ -2085,9 +2168,8 @@
     $('walletPill').onclick = walletPicker;
     $('hWallets').addEventListener('click', function (e) {
       var st = $('hWallets').querySelector('.wstack'); if (!st || st.dataset.dragged) { if (st) delete st.dataset.dragged; return; }
-      if (e.target.closest('.ws-close')) { stackOpen = false; layoutStack(); haptic(); return; }
-      if (!stackOpen) { stackOpen = true; layoutStack(); haptic(); return; }
-      var c = e.target.closest('[data-wallet]'); if (c) { walletSel = c.dataset.wallet; renderTx(); show('v-tx'); }
+      var c = e.target.closest('[data-wallet]') || st.querySelector('.wcard');
+      if (c) walletDeck(c.dataset.wallet, c);
     });
     $('seeReports').onclick = function () { cur = new Date(); cur.setDate(1); renderAll(); show('v-report'); };
     $('periodReport').onclick = function () { show('v-report'); };
