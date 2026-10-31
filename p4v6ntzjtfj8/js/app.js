@@ -1002,73 +1002,122 @@
       (last6.length ? '<div class="km-bars">' + last6.map(function (m, i) { var he = m.earned / max * 100, hp = m.paid / max * 100; return '<div class="km-col" style="--i:' + i + '"><div class="km-b"><i class="e" style="height:' + he.toFixed(1) + '%"></i><i class="p" style="height:' + hp.toFixed(1) + '%"></i></div><span>' + monthName(m.k).slice(0, 3) + '</span></div>'; }).join('') + '</div><div class="km-leg"><span><i class="e"></i>Earned</span><span><i class="p"></i>Paid by Dad</span><span class="muted">Total ' + money(total, { rp: false }) + '</span></div>'
         : '<div class="muted small" style="margin-top:10px">Tap + → Income → RESERVE TRANSFER to start.</div>');
   }
-  // ---------- 3D Earth (NASA Blue Marble mapped onto a sphere, drawn per pixel) ----------
+  // ---------- Cartoon 3D Earth (toy-style sphere drawn per pixel + cute face) ----------
   var EARTH = { tex: null, wait: [] };
   function earthTex(cb) {
     if (EARTH.tex) return cb(EARTH.tex);
     EARTH.wait.push(cb); if (EARTH.wait.length > 1) return;
-    var names = ['day', 'night', 'clouds', 'water'], out = { W: 1024, H: 512 }, left = names.length;
-    names.forEach(function (n) {
+    var W = 1024, H = 512, got = {}, left = 2;
+    ['day', 'water'].forEach(function (n) {
       var im = new Image();
       im.onload = function () {
-        var c = document.createElement('canvas'); c.width = 1024; c.height = 512;
-        var x = c.getContext('2d'); x.drawImage(im, 0, 0, 1024, 512);
-        out[n] = x.getImageData(0, 0, 1024, 512).data;
-        if (--left === 0) { EARTH.tex = out; EARTH.wait.splice(0).forEach(function (f) { f(out); }); }
+        var c = document.createElement('canvas'); c.width = W; c.height = H;
+        var x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H); got[n] = x.getImageData(0, 0, W, H).data;
+        if (--left) return;
+        // stylize: flat ocean / land / desert / ice + coastline outline + shallow band
+        var day = got.day, wa = got.water, land = new Uint8Array(W * H), out = new Uint8ClampedArray(W * H * 3), i, j, k;
+        for (k = 0; k < W * H; k++) land[k] = wa[k * 4] < 128 ? 1 : 0;
+        function near(i, j, r, v) { for (var dy = -r; dy <= r; dy++) { var y = j + dy; if (y < 0 || y >= H) continue; for (var dx = -r; dx <= r; dx++) { if (dx * dx + dy * dy > r * r) continue; var x = (i + dx + W) % W; if (land[y * W + x] === v) return true; } } return false; }
+        for (j = 0; j < H; j++) for (i = 0; i < W; i++) {
+          k = j * W + i; var o = k * 3, lat = 90 - (j + .5) / H * 180, R, G, B;
+          var r = day[k * 4], g = day[k * 4 + 1], b = day[k * 4 + 2];
+          if (land[k]) {
+            if (near(i, j, 2, 0)) { R = 46; G = 122; B = 74; }
+            else if (Math.abs(lat) > 66 || (r > 185 && g > 185 && b > 185)) { R = 242; G = 250; B = 255; }
+            else if (r > g * 1.04 && r > 120) { R = 255; G = 204; B = 92; }
+            else { R = 92; G = 214; B = 110; }
+          } else {
+            if (Math.abs(lat) > 74) { R = 230; G = 246; B = 255; }
+            else if (near(i, j, 6, 1)) { R = 104; G = 206; B = 255; }
+            else { R = 46; G = 154; B = 245; }
+          }
+          out[o] = R; out[o + 1] = G; out[o + 2] = B;
+        }
+        // puffy cartoon clouds (separate alpha layer that drifts faster)
+        var cl = new Uint8ClampedArray(W * H), seed = 7;
+        function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+        for (var n2 = 0; n2 < 16; n2++) {
+          var cx = rnd() * W, cy = H * (0.18 + rnd() * 0.64), puffs = 3 + (rnd() * 2 | 0), s = 8 + rnd() * 6;
+          for (var p = 0; p < puffs; p++) {
+            var px = cx + (p - puffs / 2) * s * 1.1, py = cy + (rnd() - .5) * s * .6, pr = s * (0.8 + rnd() * 0.5);
+            for (var y = Math.max(0, py - pr | 0); y < Math.min(H, py + pr + 1); y++) {
+              var sx = pr / Math.max(.25, Math.cos((90 - (y + .5) / H * 180) * Math.PI / 180));
+              for (var x = px - sx | 0; x < px + sx + 1; x++) {
+                var dx = (x - px) / sx, dy = (y - py) / pr, d2 = dx * dx + dy * dy;
+                if (d2 < 1) { var xx = ((x % W) + W) % W, v = dy > 0.35 ? 205 : 255; if (cl[y * W + xx] < v) cl[y * W + xx] = v; }
+              }
+            }
+          }
+        }
+        EARTH.tex = { W: W, H: H, col: out, cl: cl };
+        EARTH.wait.splice(0).forEach(function (f) { f(EARTH.tex); });
       };
       im.onerror = function () { EARTH.wait = []; };
       im.src = 'img/earth-' + n + '.jpg?v=1';
     });
   }
-  function mountEarth(cv, speed) {
+  function mountEarth(cv, speed, face) {
     if (!cv || cv._earth) return; cv._earth = 1;
     earthTex(function (T) {
       var css = cv.clientWidth || +cv.dataset.s || 120, dpr = Math.min(2, window.devicePixelRatio || 1), N = Math.round(css * dpr);
       cv.width = cv.height = N;
       var ctx = cv.getContext('2d'), img = ctx.createImageData(N, N), D = img.data, W = T.W, H = T.H;
-      var L = [-0.86, 0.28, 0.43], ll = Math.hypot(L[0], L[1], L[2]); L = L.map(function (v) { return v / ll; });
+      var L = [-0.55, 0.55, 0.63], ll = Math.hypot(L[0], L[1], L[2]); L = L.map(function (v) { return v / ll; });
       var Hx = L[0], Hy = L[1], Hz = L[2] + 1, hl = Math.hypot(Hx, Hy, Hz); Hx /= hl; Hy /= hl; Hz /= hl;
-      var roll = -23.4 * Math.PI / 180, pitch = 18 * Math.PI / 180, cr = Math.cos(roll), sr = Math.sin(roll), cp = Math.cos(pitch), spn = Math.sin(pitch);
-      var pix = [], TY = [], TX = [], LT = [], LM = [], SPC = [], RIM = [];
+      var roll = -18 * Math.PI / 180, pitch = 16 * Math.PI / 180, cr = Math.cos(roll), sr = Math.sin(roll), cp = Math.cos(pitch), spn = Math.sin(pitch);
+      var edge = 1 - (2.6 * dpr * (css > 80 ? 1.15 : .7)) / (N / 2);
+      var pix = [], TY = [], TX = [], SH = [], HI = [], ED = [];
       for (var j = 0; j < N; j++) for (var i = 0; i < N; i++) {
         var x = (i + 0.5) / N * 2 - 1, y = 1 - (j + 0.5) / N * 2, r2 = x * x + y * y;
         if (r2 > 1) continue;
-        var z = Math.sqrt(1 - r2);
-        var d = x * L[0] + y * L[1] + z * L[2];
-        // view -> globe frame: undo axial roll, then pitch toward viewer
-        var x1 = x * cr - y * sr, y1 = x * sr + y * cr;
-        var gy = y1 * cp - z * spn, gz = y1 * spn + z * cp, gx = x1;
-        var lat = Math.asin(Math.max(-1, Math.min(1, gy))), lon = Math.atan2(gx, gz);
+        var rr = Math.sqrt(r2), z = Math.sqrt(1 - r2), d = x * L[0] + y * L[1] + z * L[2];
+        var x1 = x * cr - y * sr, y1 = x * sr + y * cr, gy = y1 * cp - z * spn, gz = y1 * spn + z * cp;
+        var lat = Math.asin(Math.max(-1, Math.min(1, gy))), lon = Math.atan2(x1, gz);
         pix.push((j * N + i) * 4);
         TY.push(Math.min(H - 1, Math.floor((0.5 - lat / Math.PI) * H)) * W);
         TX.push((lon / (2 * Math.PI) + 0.5) * W);
-        var t = Math.max(0, Math.min(1, (d + 0.12) / 0.34)); LT.push(t * t * (3 - 2 * t));
-        LM.push(0.28 + 0.9 * Math.max(0, d));
-        SPC.push(Math.pow(Math.max(0, x * Hx + y * Hy + z * Hz), 48) * 0.55);
-        var e = 1 - z; RIM.push(Math.pow(e, 2.6));
-        // soft edge alpha
+        // cel shading: 3 soft bands
+        var band = d > 0.42 ? 1.06 : d > 0.02 ? 0.9 : d > -0.4 ? 0.74 : 0.62;
+        SH.push(band);
+        var h = Math.max(0, x * Hx + y * Hy + z * Hz);
+        HI.push(Math.pow(h, 22) * 0.55 + (Math.pow(h, 160) > .5 ? .55 : 0));
+        ED.push(rr > edge ? 1 : 0);
       }
-      var n = pix.length, PX = new Int32Array(pix), TYa = new Int32Array(TY), TXa = new Float32Array(TX), LTa = new Float32Array(LT), LMa = new Float32Array(LM), SPa = new Float32Array(SPC), RMa = new Float32Array(RIM);
-      var day = T.day, night = T.night, cl = T.clouds, wa = T.water, t0 = performance.now(), last = 0, visible = true;
+      var n = pix.length, PX = new Int32Array(pix), TYa = new Int32Array(TY), TXa = new Float32Array(TX), SHa = new Float32Array(SH), HIa = new Float32Array(HI), EDa = new Uint8Array(ED);
+      var col = T.col, cl = T.cl, t0 = performance.now(), last = 0, visible = true;
       if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }).observe(cv);
+      function drawFace(now) {
+        var s = N / 2, cx = s, cy = s * 1.08, t = (now - t0) / 1000;
+        var blink = (t % 4.2) > 4.05 ? 0.12 : 1, look = Math.sin(t * 0.7) * s * 0.03;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,120,160,.55)';
+        [[-0.46, 0.2], [0.46, 0.2]].forEach(function (b) { ctx.beginPath(); ctx.ellipse(cx + b[0] * s, cy + b[1] * s, s * .13, s * .075, 0, 0, 7); ctx.fill(); });
+        ctx.fillStyle = '#16213f';
+        [-0.27, 0.27].forEach(function (ex) {
+          ctx.beginPath(); ctx.ellipse(cx + ex * s + look, cy - 0.04 * s, s * .085, s * .125 * blink, 0, 0, 7); ctx.fill();
+          if (blink > .5) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + ex * s + look - s * .03, cy - 0.09 * s, s * .032, 0, 7); ctx.fill(); ctx.fillStyle = '#16213f'; }
+        });
+        ctx.strokeStyle = '#16213f'; ctx.lineWidth = Math.max(1.5, s * .045); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(cx + look, cy + 0.1 * s, s * .13, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+        ctx.restore();
+      }
       function frame(now) {
         if (!cv.isConnected) return;
         requestAnimationFrame(frame);
         if (!visible || document.hidden || now - last < 30) return; last = now;
-        var off = (now - t0) * speed, coff = off * 1.18;
+        var off = (now - t0) * speed, coff = off * 1.45;
         for (var k = 0; k < n; k++) {
+          var p = PX[k];
+          if (EDa[k]) { D[p] = 22; D[p + 1] = 33; D[p + 2] = 80; D[p + 3] = 255; continue; }
           var row = TYa[k], tx = (TXa[k] - off) % W; if (tx < 0) tx += W;
-          var ti = (row + (tx | 0)) * 4, cx = (TXa[k] - coff) % W; if (cx < 0) cx += W;
-          var c = cl[(row + (cx | 0)) * 4] / 255, lt = LTa[k], lm = LMa[k] * lt, nt = (1 - lt) * 1.6, w = wa[ti] / 255;
-          var s = SPa[k] * w * lt * 255, rim = RMa[k], cd = 1 - c * 0.92, cw = c * 255 * (lt * 0.95 + 0.04);
-          var r = (day[ti] * lm + night[ti] * nt) * cd + cw + s;
-          var g = (day[ti + 1] * lm + night[ti + 1] * nt) * cd + cw + s;
-          var b = (day[ti + 2] * lm + night[ti + 2] * nt) * cd + cw + s;
-          var a = rim * (0.25 + lt);
-          r += (110 - r) * a * 0.55; g += (165 - g) * a * 0.6; b += (255 - b) * a * 0.75;
-          var p = PX[k]; D[p] = r; D[p + 1] = g; D[p + 2] = b; D[p + 3] = 255;
+          var ti = (row + (tx | 0)) * 3, cx = (TXa[k] - coff) % W; if (cx < 0) cx += W;
+          var c = cl[row + (cx | 0)] / 255, sh = SHa[k], hi = HIa[k] * 255;
+          var r = col[ti], g = col[ti + 1], b = col[ti + 2];
+          if (c) { if (c > 0.9) { r = g = b = 255; } else { r = 206; g = 222; b = 250; } }
+          D[p] = r * sh + hi; D[p + 1] = g * sh + hi; D[p + 2] = b * sh + hi; D[p + 3] = 255;
         }
         ctx.putImageData(img, 0, 0);
+        if (face) drawFace(now);
         cv.classList.add('on');
       }
       requestAnimationFrame(frame);
@@ -1105,7 +1154,7 @@
     el.innerHTML = '<div class="wdc-glow"></div><div class="wdc-top"><div><div class="eyebrow">Invested this year</div><div class="mid-money">' + money(st.year) + '</div>' +
       '<div class="small wdc-sub">This month ' + money(st.month, { rp: false }) + ' · All time ' + money(st.all, { rp: false }) + '</div></div><span class="wdc-globe"><canvas class="earth" data-s="56"></canvas></span></div>' +
       (goal ? '<div class="wdc-bar"><i style="width:' + pc.toFixed(1) + '%"></i></div><div class="small wdc-sub">' + Math.round(pc) + '% of your ' + money(goal, { rp: false }) + ' goal</div>' : '<div class="small wdc-sub" style="margin-top:8px">Tap to step into the world ✨</div>');
-    mountEarth(el.querySelector('.earth'), 0.016);
+    mountEarth(el.querySelector('.earth'), 0.01, true);
   }
   function countUp(el, to) {
     if (S.settings.hide) { el.innerHTML = money(to); return; }
@@ -1145,7 +1194,7 @@
         '<button class="wd-pick" id="wPick">Pick categories · ' + cats.length + ' selected</button>' +
         '</div>';
       if (first !== false) countUp(ov.querySelector('#wTotal'), tot);
-      mountEarth(ov.querySelector('.wd-earth'), 0.02);
+      mountEarth(ov.querySelector('.wd-earth'), 0.012, true);
       ov.querySelector('#wClose').onclick = worldClose;
       ov.querySelector('#wEdit').onclick = ov.querySelector('#wPick').onclick = function () { worldPicker(function () { paint(); renderWorldCard(); }); };
       ov.querySelector('#wGoal').onclick = function () { worldGoalSheet(function () { paint(false); renderWorldCard(); }); };
