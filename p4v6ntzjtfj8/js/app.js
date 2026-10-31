@@ -9,33 +9,57 @@
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- defaults ----------
+  // [id, name, icon, type, parent, flow]  type: expense | income | debt (flow in/out for debt)
   var DEFAULT_CATS = [
-    ['food', 'Food & Drink', '🍜', 'expense'], ['transport', 'Transport', '🛵', 'expense'],
-    ['shopping', 'Shopping', '🛍️', 'expense'], ['bills', 'Bills & Utilities', '💡', 'expense'],
-    ['phone', 'Phone & Internet', '📱', 'expense'], ['health', 'Health', '💊', 'expense'],
-    ['fun', 'Entertainment', '🎬', 'expense'], ['family', 'Family & Home', '🏡', 'expense'],
-    ['giving', 'Giving & Tithe', '⛪', 'expense'], ['education', 'Education', '📚', 'expense'],
-    ['loan_out', 'Loan', '💸', 'expense'], ['transfer_out', 'Transfer out', '↗️', 'expense'], ['other_out', 'Other expense', '📦', 'expense'],
+    ['food', 'Food & Beverage', '🍖', 'expense'],
+    ['bills', 'Bills & Utilities', '🧾', 'expense'], ['phone_bill', 'Phone Bill', '📞', 'expense', 'bills'], ['gas_bill', 'Gas Bill', '🔥', 'expense', 'bills'],
+    ['internet_bill', 'Internet Bill', '🌐', 'expense', 'bills'], ['personal_expense', 'PERSONAL EXPENSE', '🍿', 'expense', 'bills'],
+    ['shopping', 'Shopping', '🧺', 'expense'], ['personal_items', 'Personal Items', '📱', 'expense', 'shopping'],
+    ['health', 'Health & Fitness', '🩺', 'expense'], ['tennis', 'TENNIS', '🎾', 'expense', 'health'],
+    ['education', 'Education', '🎓', 'expense'],
+    ['fun', 'Entertainment', '🎮', 'expense'], ['streaming', 'Streaming Service', '📺', 'expense', 'fun'], ['fun_money', 'Fun Money', '🎉', 'expense', 'fun'],
+    ['insurance', 'Insurances', '🛡', 'expense'],
+    ['investment', 'Investment', '📊', 'expense'], ['digital_assets', 'DIGITAL ASSETS', '🪙', 'expense', 'investment'], ['bitget', 'BITGET', '🚀', 'expense', 'investment'],
+    ['ajaib_kripto', 'AJAIB KRIPTO', '💰', 'expense', 'investment'], ['pluang', 'PLUANG', '💶', 'expense', 'investment'], ['ajaib_essa', 'AJAIB ESSA', '💹', 'expense', 'investment'],
+    ['bybit', 'BYBIT', '🎯', 'expense', 'investment'], ['stocks', 'STOCKS', '📈', 'expense', 'investment'], ['ethereum', 'ETHERIUM', '💎', 'expense', 'investment'],
+    ['gold_inv', 'GOLD', '🥇', 'expense', 'investment'], ['louis_hugo', 'LOUIS AND HUGO', '👔', 'expense', 'investment'], ['bren', 'BREN', '💵', 'expense', 'investment'],
+    ['usd', 'USD', '🧧', 'expense', 'investment'], ['pokemon', 'Pokemon', '👾', 'expense', 'investment'],
+    ['other_out', 'Other Expense', '📦', 'expense'], ['transfer_out', 'Outgoing transfer', '📤', 'expense'], ['pay_interest', 'Pay Interest', '🧮', 'expense'],
+    ['uncat', 'Uncategorized', '❔', 'expense'], ['makan_team', 'MAKAN SAMA TEAM', '🍩', 'expense'], ['iklan_tokped', 'IKLAN TOKOPEDIA', '📢', 'expense'],
+    ['giving', 'PERSEMBAHAN AND PERPULUHAN', '⛪', 'expense'], ['spending', 'SPENDING', '🏅', 'expense'], ['kasih', 'KASIH KE ORANG SUSAH', '💝', 'expense'],
+    ['balance_adj', 'BALANCE', '⚖', 'expense'], ['utang', 'UTANG', '🃏', 'expense'], ['komisi_out', 'KOMISI', '💰', 'expense'],
+    ['kas_kantor', 'Uang kas kantor', '🏢', 'expense'], ['berkati_ortu', 'BERKATI ORANG TUA', '💐', 'expense'],
+    ['sharss', 'SHARSS ❤️❤️', '❤', 'expense'], ['branding', 'PERSONAL BRANDING', '📸', 'expense'], ['project', 'PROJECT', '🏗', 'expense'],
+    ['gifts', 'GIFTS 🍾', '🍾', 'expense'], ['to_reserve', 'TRANSFER TO RESERVE', '♟', 'expense'], ['bi', 'BI', '🏆', 'expense'],
+    ['gold_debit', 'GOLD DEBIT CARD', '💳', 'expense'], ['korea_loan', 'Korea loan', '✈', 'expense'], ['wedding', 'WEDDING AND PROPOSAL', '💍', 'expense'],
+    ['shanghai', 'Shanghai', '🛶', 'expense'], ['dvn', 'DVN', '🌀', 'expense'], ['my_home', 'MY HOME', '🏠', 'expense'],
     ['salary', 'Salary', '💼', 'income'], ['bonus', 'Bonus', '🎁', 'income'], ['interest', 'Collect Interest', '📈', 'income'],
-    ['transfer_in', 'Transfer in', '↙️', 'income'], ['other_in', 'Other income', '💰', 'income']
+    ['transfer_in', 'Incoming transfer', '↙', 'income'], ['other_in', 'Other Income', '💰', 'income'],
+    ['debt', 'Debt', '📥', 'debt', '', 'in'], ['loan', 'Loan', '💸', 'debt', '', 'out'],
+    ['debt_collection', 'Debt Collection', '🪙', 'debt', '', 'in'], ['repayment', 'Repayment', '🧾', 'debt', '', 'out']
   ];
+  var CAT_VER = 2;
+  var CAT_MAP = { transport: 'other_out', phone: 'phone_bill', family: 'my_home', loan_out: 'loan' };
+  var OLD_DEFAULT_IDS = ['food', 'transport', 'shopping', 'bills', 'phone', 'health', 'fun', 'family', 'giving', 'education', 'loan_out', 'transfer_out', 'other_out', 'salary', 'bonus', 'interest', 'transfer_in', 'other_in'];
   var DEFAULT_RULES = [
     ['kopi', 'food'], ['coffee', 'food'], ['resto', 'food'], ['mcd', 'food'], ['kfc', 'food'], ['gofood', 'food'], ['grabfood', 'food'], ['shopeefood', 'food'],
-    ['gojek', 'transport'], ['grab', 'transport'], ['pertamina', 'transport'], ['shell', 'transport'], ['parkir', 'transport'], ['tol', 'transport'],
+    ['gojek', 'other_out'], ['grab', 'other_out'], ['pertamina', 'other_out'], ['shell', 'other_out'], ['parkir', 'other_out'],
     ['tokopedia', 'shopping'], ['shopee', 'shopping'], ['lazada', 'shopping'], ['indomaret', 'shopping'], ['alfamart', 'shopping'],
-    ['pln', 'bills'], ['pdam', 'bills'], ['bpjs', 'health'], ['apotek', 'health'], ['telkomsel', 'phone'], ['indihome', 'phone'], ['xl', 'phone'],
-    ['netflix', 'fun'], ['spotify', 'fun'], ['gereja', 'giving'], ['church', 'giving'], ['persembahan', 'giving'], ['perpuluhan', 'giving']
+    ['pln', 'bills'], ['pdam', 'bills'], ['pgn', 'gas_bill'], ['bpjs', 'insurance'], ['apotek', 'health'], ['telkomsel', 'phone_bill'], ['indosat', 'phone_bill'], ['indihome', 'internet_bill'], ['biznet', 'internet_bill'],
+    ['netflix', 'streaming'], ['spotify', 'streaming'], ['youtube', 'streaming'], ['gereja', 'giving'], ['church', 'giving'], ['persembahan', 'giving'], ['perpuluhan', 'giving'],
+    ['bitget', 'bitget'], ['bybit', 'bybit'], ['pluang', 'pluang'], ['ajaib', 'ajaib_kripto']
   ];
   // Fluent Emoji 3D (Microsoft, MIT license), stored in img/3d as webp. Emoji -> file name.
-  var ICONS = {"🍜":"steaming-bowl","🛵":"motor-scooter","🛍":"shopping-bags","💡":"light-bulb","📱":"mobile-phone","💊":"pill","🎬":"clapper-board","🏡":"house-with-garden","📚":"books","💸":"money-with-wings","📦":"package","💼":"briefcase","🎁":"wrapped-gift","📈":"chart-increasing","💰":"money-bag","🔁":"repeat-button","❔":"white-question-mark","🏦":"bank","💵":"dollar-banknote","🍿":"popcorn","🪙":"coin","🚙":"sport-utility-vehicle","⌚":"watch","💹":"chart-increasing-with-yen","📊":"bar-chart","🥇":"1st-place-medal","👛":"purse","🌐":"globe-with-meridians","🏷":"label","🐷":"pig-face","🌱":"seedling","🧾":"receipt","👁":"eye","🎨":"artist-palette","💳":"credit-card","📅":"calendar","🔐":"locked-with-key","🧮":"abacus","⏰":"alarm-clock","🏠":"house","🚗":"automobile","✈":"airplane","🍔":"hamburger","☕":"hot-beverage","🛒":"shopping-cart","💄":"lipstick","🐶":"dog-face","🎮":"video-game","⛽":"fuel-pump","🎓":"graduation-cap","🏥":"hospital","💍":"ring","🎉":"party-popper","🍀":"four-leaf-clover","💎":"gem-stone","🧧":"red-envelope","🏆":"trophy","🧳":"luggage","💻":"laptop","⛪":"church","🔄":"counterclockwise-arrows-button","🗂":"card-index-dividers","🛡":"shield","⭐":"star","🍎":"red-apple","🧸":"teddy-bear","🏍":"motorcycle","🏢":"office-building","📉":"chart-decreasing","↗":"up-right-arrow","↙":"down-left-arrow","👕":"t-shirt","🎯":"bullseye"};
+  var ICONS = {"🍜":"steaming-bowl","🛵":"motor-scooter","🛍":"shopping-bags","💡":"light-bulb","📱":"mobile-phone","💊":"pill","🎬":"clapper-board","🏡":"house-with-garden","📚":"books","💸":"money-with-wings","📦":"package","💼":"briefcase","🎁":"wrapped-gift","📈":"chart-increasing","💰":"money-bag","🔁":"repeat-button","❔":"white-question-mark","🏦":"bank","💵":"dollar-banknote","🍿":"popcorn","🪙":"coin","🚙":"sport-utility-vehicle","⌚":"watch","💹":"chart-increasing-with-yen","📊":"bar-chart","🥇":"1st-place-medal","👛":"purse","🌐":"globe-with-meridians","🏷":"label","🐷":"pig-face","🌱":"seedling","🧾":"receipt","👁":"eye","🎨":"artist-palette","💳":"credit-card","📅":"calendar","🔐":"locked-with-key","🧮":"abacus","⏰":"alarm-clock","🏠":"house","🚗":"automobile","✈":"airplane","🍔":"hamburger","☕":"hot-beverage","🛒":"shopping-cart","💄":"lipstick","🐶":"dog-face","🎮":"video-game","⛽":"fuel-pump","🎓":"graduation-cap","🏥":"hospital","💍":"ring","🎉":"party-popper","🍀":"four-leaf-clover","💎":"gem-stone","🧧":"red-envelope","🏆":"trophy","🧳":"luggage","💻":"laptop","⛪":"church","🔄":"counterclockwise-arrows-button","🗂":"card-index-dividers","🛡":"shield","⭐":"star","🍎":"red-apple","🧸":"teddy-bear","🏍":"motorcycle","🏢":"office-building","📉":"chart-decreasing","↗":"up-right-arrow","↙":"down-left-arrow","👕":"t-shirt","🎯":"bullseye","❤":"red-heart","🏙":"cityscape","🐵":"monkey-face","♟":"chess-pawn","🏀":"basketball","🍖":"meat-on-bone","📞":"telephone-receiver","🔥":"fire","🧺":"basket","🩺":"stethoscope","🎾":"tennis","📺":"television","💶":"euro-banknote","👔":"necktie","👾":"alien-monster","📤":"outbox-tray","📥":"inbox-tray","🍩":"doughnut","📢":"loudspeaker","🏅":"sports-medal","💝":"heart-with-ribbon","⚖":"balance-scale","🃏":"joker","💐":"bouquet","📸":"camera-with-flash","🏗":"building-construction","🍾":"bottle-with-popping-cork","🛶":"canoe","🌀":"cyclone","🚀":"rocket"};
   function key3d(e) { return String(e || '').replace(/\uFE0F/g, ''); }
   function img3d(e, cls) { var f = ICONS[key3d(e)]; return f ? '<img class="' + (cls || 'i3') + '" src="img/3d/' + f + '.webp" alt="" decoding="async">' : esc(e); }
   var PALETTE = ['#3fb27f', '#e8833a', '#4f7cff', '#d9a520', '#8e5bd6', '#e05d6f', '#2fb5c9', '#5f6b7a', '#c2553b', '#2e8f6b'];
 
+  function mkCat(c) { var o = { id: c[0], name: c[1], icon: c[2], type: c[3] }; if (c[4]) o.parent = c[4]; if (c[5]) o.flow = c[5]; return o; }
   function blank() {
     return {
       wallets: [{ id: 'bca', name: 'BCA', icon: '🏦', initial: 0 }, { id: 'cash', name: 'Cash', icon: '💵', initial: 0 }],
-      cats: DEFAULT_CATS.map(function (c) { return { id: c[0], name: c[1], icon: c[2], type: c[3] }; }),
+      cats: DEFAULT_CATS.map(mkCat), catVer: CAT_VER,
       tx: [], budgets: {},
       rules: DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }),
       settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', lastSync: 0, startFrom: 0, hide: false, theme: 'dark' },
@@ -49,13 +73,23 @@
     try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
     var d = blank();
     if (!S || typeof S !== 'object') S = d;
-    Object.keys(d).forEach(function (k) { if (S[k] == null) S[k] = d[k]; });
+    Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; });
     Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; });
     // New default categories added in later versions.
-    d.cats.forEach(function (c) { if (!S.cats.some(function (x) { return x.id === c.id; })) S.cats.push(c); });
-    // Swap old default icons for ones that have a 3D version.
-    var OLD = { family: ['👨‍👩‍👧', '🏡', 'Family', 'Family & Home'], giving: ['🙏', '⛪'], interest: ['％', '📈'] };
-    S.cats.forEach(function (c) { var o = OLD[c.id]; if (o && c.icon === o[0]) { c.icon = o[1]; if (o[2] && c.name === o[2]) c.name = o[3]; } });
+    if ((S.catVer || 1) < CAT_VER) {
+      // Switch to the full category list; keep categories the user made themselves.
+      var mine = S.cats.filter(function (c) { return OLD_DEFAULT_IDS.indexOf(c.id) === -1 && !DEFAULT_CATS.some(function (x) { return x[0] === c.id; }); });
+      S.cats = DEFAULT_CATS.map(mkCat).concat(mine);
+      var ok = function (id) { return S.cats.some(function (c) { return c.id === id; }); };
+      S.tx.forEach(function (t) {
+        if (t.cat === 'loan_out') { t.type = 'debt'; t.cat = 'loan'; return; }
+        if (CAT_MAP[t.cat]) t.cat = CAT_MAP[t.cat];
+        if (t.cat && !ok(t.cat)) t.cat = t.type === 'income' ? 'other_in' : 'other_out';
+      });
+      Object.keys(S.budgets).forEach(function (k) { var n = CAT_MAP[k] || k; var v = S.budgets[k]; delete S.budgets[k]; if (ok(n)) S.budgets[n] = v; });
+      S.rules = DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }).concat(S.rules.filter(function (r) { return !DEFAULT_RULES.some(function (d) { return d[0] === r.kw; }) && ok(r.cat); }));
+      S.catVer = CAT_VER;
+    }
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(S)); }
@@ -130,12 +164,13 @@
   var walletSel = 'all';
   var repKind = 'expense';
   var view = 'v-home';
-  var cfMonths = 6, cfSel = null;
+  var cfMonths = 6, cfSel = null, catTab = 'expense';
 
   // Effect of one transaction on one wallet.
+  function flowIn(t) { return t.type === 'income' || (t.type === 'debt' && cat(t.cat).flow === 'in'); }
+  function isFlow(t) { return t.type === 'income' || t.type === 'expense'; }
   function delta(t, w) {
-    if (t.type === 'income') return t.wallet === w ? t.amount : 0;
-    if (t.type === 'expense') return t.wallet === w ? -t.amount : 0;
+    if (t.type === 'income' || t.type === 'expense' || t.type === 'debt') return t.wallet === w ? (flowIn(t) ? t.amount : -t.amount) : 0;
     if (t.type === 'transfer') return (t.toWallet === w ? t.amount : 0) - (t.wallet === w ? t.amount : 0);
     return 0;
   }
@@ -228,7 +263,7 @@
     }).join('');
 
     var now = new Date(), m = ym(now), mt = txIn(m, 'all');
-    var io = inOut(mt.filter(function (t) { return t.type !== 'transfer'; }), 'all');
+    var io = inOut(mt.filter(isFlow), 'all');
     var day = now.getDate();
     setMoney($('hAvg'), io.tout / day, { rp: false });
     $('hSpentLine').innerHTML = 'Spent ' + money(io.tout) + ' so far';
@@ -296,7 +331,7 @@
     for (var k = cfMonths - 1; k >= 0; k--) { var d = new Date(now.getFullYear(), now.getMonth() - k, 1); months.push({ key: ym(d), label: MONTHS[d.getMonth()].slice(0, 3), full: MONTHS[d.getMonth()] + ' ' + d.getFullYear(), tin: 0, tout: 0 }); }
     var idx = {}; months.forEach(function (m, i) { idx[m.key] = i; });
     S.tx.forEach(function (t) {
-      var i = idx[t.date.slice(0, 7)]; if (i == null || t.type === 'transfer' || !touches(t, 'all')) return;
+      var i = idx[t.date.slice(0, 7)]; if (i == null || !isFlow(t) || !touches(t, 'all')) return;
       if (t.type === 'income') months[i].tin += t.amount; else months[i].tout += t.amount;
     });
     var net = months.reduce(function (a, m) { return a + m.tin - m.tout; }, 0);
@@ -358,14 +393,14 @@
     if (t.type !== 'transfer' && t.merchant && t.note) sub = t.merchant + ' · ' + t.note;
     if (showDate) { var d = new Date(t.date + 'T00:00:00'); sub = d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' · ' + sub; }
     else if (t.time) sub = t.time + ' · ' + sub;
-    var cls = t.type === 'income' ? 'pos' : t.type === 'expense' ? 'neg' : '';
+    var cls = t.type === 'transfer' ? '' : flowIn(t) ? 'pos' : 'neg';
     return '<div class="tx" data-id="' + esc(t.id) + '" style="--i:' + i + '">' + icon(c) + '<div class="tx-main"><div class="tx-cat">' + esc(c.name) +
       (t.src === 'bca' ? '<span class="badge">BCA</span>' : '') + '</div><div class="tx-note">' + esc(sub) + '</div></div>' +
-      '<div class="amt-col"><div class="amt ' + cls + '">' + money(t.amount, { rp: false }) + '</div><small>' + (t.type === 'income' ? 'Received' : t.type === 'expense' ? 'Spent' : 'Moved') + '</small></div></div>';
+      '<div class="amt-col"><div class="amt ' + cls + '">' + money(t.amount, { rp: false }) + '</div><small>' + (t.type === 'income' ? 'Received' : t.type === 'expense' ? 'Spent' : t.type === 'debt' ? (flowIn(t) ? 'Money in' : 'Money out') : 'Moved') + '</small></div></div>';
   }
 
   function renderReport() {
-    var mKey = ym(cur), mt = txIn(mKey, 'all').filter(function (t) { return t.type !== 'transfer'; });
+    var mKey = ym(cur), mt = txIn(mKey, 'all').filter(isFlow);
     var io = inOut(mt, 'all'), net = io.tin - io.tout;
     $('repMonth').textContent = MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
     rollTo($('repNet'), net, { sign: true });
@@ -434,8 +469,10 @@
     $('walletList').innerHTML = S.wallets.map(function (w) {
       return '<button class="w-row" data-edit-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(balance(w.id)) + (w.excluded ? ' · not in total' : '') + '</span></span><span class="muted">›</span></button>';
     }).join('');
-    $('catList').innerHTML = S.cats.map(function (c) {
-      return '<button class="w-row" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '<span class="sub">' + c.type + '</span></span><span class="muted">›</span></button>';
+    document.querySelectorAll('#catSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === catTab); });
+    $('catSeg').style.setProperty('--x', ['expense', 'income', 'debt'].indexOf(catTab) * 100 + '%');
+    $('catList').innerHTML = catTree(catTab).map(function (c) {
+      return '<button class="w-row' + (c.parent ? ' child' : '') + '" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + (c.flow ? '<span class="sub">' + (c.flow === 'in' ? 'Money in' : 'Money out') + '</span>' : '') + '</span><span class="muted">›</span></button>';
     }).join('');
     $('ruleList').innerHTML = S.rules.length ? S.rules.map(function (r, i) {
       var c = cat(r.cat);
@@ -572,7 +609,7 @@
   (function () {
     var y0 = null, dy = 0, sh;
     document.addEventListener('touchstart', function (e) {
-      sh = $('sheet'); if (!sheetOpen || !sh.contains(e.target) || sh.scrollTop > 0) { y0 = null; return; }
+      sh = $('sheet'); if (!sheetOpen || !sh.contains(e.target) || sh.scrollTop > 0 || e.target.closest('.cat-list,.icon-pick')) { y0 = null; return; }
       y0 = e.touches[0].clientY; dy = 0;
     }, { passive: true });
     document.addEventListener('touchmove', function (e) {
@@ -618,9 +655,9 @@
     $('fab').classList.add('open');
     openSheet(
       '<h3>' + (isNew ? 'Add transaction' : 'Edit transaction') + '</h3>' +
-      '<div class="seg type-seg" id="fType" style="display:grid;grid-template-columns:1fr 1fr 1fr"><button data-t="expense">Expense</button><button data-t="income">Income</button><button data-t="transfer">Transfer</button><i class="seg-ind" style="width:calc(33.33% - 2px)"></i></div>' +
+      '<div class="seg type-seg" id="fType" style="display:grid;grid-template-columns:repeat(4,1fr)"><button data-t="expense">Expense</button><button data-t="income">Income</button><button data-t="debt">Debt/Loan</button><button data-t="transfer">Transfer</button><i class="seg-ind" style="width:calc(25% - 1.5px)"></i></div>' +
       '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="fAmt" inputmode="numeric" placeholder="0" value="' + (t.amount ? t.amount.toLocaleString('en-US') : '') + '"></div>' +
-      '<div id="fCatWrap"><div class="muted small" style="margin-top:10px">Category</div><div class="cat-grid" id="fCats"></div></div>' +
+      '<div id="fCatWrap"><button type="button" class="cat-sel" id="fCatSel"></button><div class="cat-pick" id="fCatPick"><input id="fCatQ" placeholder="Search category" autocomplete="off"><div class="cat-list" id="fCats"></div></div></div>' +
       '<label class="fld" id="fWalletL"><span>Wallet</span><select id="fWallet">' + wOpts(t.wallet) + '</select></label>' +
       '<label class="fld" id="fToL">To wallet<select id="fTo">' + wOpts(t.toWallet || (S.wallets[1] && S.wallets[1].id)) + '</select></label>' +
       '<div class="two"><label class="fld">Date<input id="fDate" type="date" value="' + esc(t.date) + '"></label><label class="fld">Time<input id="fTime" type="time" value="' + esc(t.time || '') + '"></label></div>' +
@@ -634,7 +671,7 @@
         var amt = root.querySelector('#fAmt'); fmtInput(amt);
         var ind = root.querySelector('#fType .seg-ind');
         function paint() {
-          var idx = ['expense', 'income', 'transfer'].indexOf(st.type);
+          var idx = ['expense', 'income', 'debt', 'transfer'].indexOf(st.type);
           ind.style.transform = 'translateX(' + (idx * 100) + '%)';
           root.querySelectorAll('#fType button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === st.type); });
           root.querySelector('#fCatWrap').hidden = st.type === 'transfer';
@@ -642,12 +679,19 @@
           root.querySelector('#fWalletL span').textContent = st.type === 'transfer' ? 'From wallet' : 'Wallet';
           var cats = S.cats.filter(function (c) { return c.type === st.type; });
           if (st.type !== 'transfer' && !cats.some(function (c) { return c.id === st.cat; })) st.cat = cats[0] ? cats[0].id : '';
-          root.querySelector('#fCats').innerHTML = cats.map(function (c) {
-            return '<button data-c="' + esc(c.id) + '" class="' + (c.id === st.cat ? 'on' : '') + '">' + icon(c) + esc(c.name) + '</button>';
-          }).join('');
+          var sc = cat(st.cat);
+          root.querySelector('#fCatSel').innerHTML = icon(sc) + '<span class="grow"><small>Category</small>' + esc(sc.name) + '</span><span class="chev2">' + (pickOpen ? '▴' : '▾') + '</span>';
+          root.querySelector('#fCatPick').classList.toggle('open', pickOpen);
+          var q = root.querySelector('#fCatQ').value.trim().toLowerCase();
+          root.querySelector('#fCats').innerHTML = catTree(st.type).filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(function (c, i) {
+            return '<button type="button" data-c="' + esc(c.id) + '" class="cat-row' + (c.parent ? ' child' : '') + (c.id === st.cat ? ' on' : '') + '" style="--i:' + Math.min(i, 14) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '</span>' + (c.id === st.cat ? '<span class="check">✓</span>' : '') + '</button>';
+          }).join('') || '<p class="muted small" style="text-align:center">No category found</p>';
         }
+        var pickOpen = isNew;
+        root.querySelector('#fCatSel').onclick = function () { pickOpen = !pickOpen; haptic(); paint(); };
+        root.querySelector('#fCatQ').addEventListener('input', paint);
         root.querySelector('#fType').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.type = b.dataset.t; haptic(); paint(); } });
-        root.querySelector('#fCats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.cat = b.dataset.c; haptic(); paint(); } });
+        root.querySelector('#fCats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); } });
         paint();
         if (isNew) setTimeout(function () { amt.focus(); }, 380);
 
@@ -677,6 +721,15 @@
       });
   }
 
+  // Categories of one type, each parent followed by its children.
+  function catTree(type) {
+    var list = S.cats.filter(function (c) { return c.type === type; }), out = [];
+    list.filter(function (c) { return !c.parent || !list.some(function (p) { return p.id === c.parent; }); }).forEach(function (p) {
+      out.push(p); list.forEach(function (c) { if (c.parent === p.id) out.push(c); });
+    });
+    return out;
+  }
+
   function learnRule(merchant, catId) {
     var kw = merchant.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').trim().split(/\s+/).slice(0, 2).join(' ');
     if (!kw) return;
@@ -690,6 +743,7 @@
       var r = S.rules[i], c = cat(r.cat);
       if (r.kw && c.type === type && m.indexOf(r.kw.toLowerCase()) !== -1) return r.cat;
     }
+    if (type === 'debt') return 'debt';
     if (type === 'income') return S.cats.some(function (c) { return c.id === 'transfer_in'; }) ? 'transfer_in' : (S.cats.filter(function (c) { return c.type === 'income'; })[0] || {}).id;
     return S.cats.some(function (c) { return c.id === 'other_out'; }) ? 'other_out' : (S.cats.filter(function (c) { return c.type === 'expense'; })[0] || {}).id;
   }
@@ -796,25 +850,38 @@
       });
   }
 
-  function catSheet(c) {
-    var isNew = !c; c = c || { id: uid(), name: '', icon: '🏷️', type: 'expense' };
+  function catSheet(c, type) {
+    var isNew = !c; c = c || { id: uid(), name: '', icon: '🏷️', type: type || 'expense' };
     openSheet('<h3>' + (isNew ? 'New category' : 'Edit category') + '</h3>' +
       '<label class="fld">Name<input id="cName" value="' + esc(c.name) + '"></label>' +
       '<div class="fld">Icon' + picker(c.icon) + '</div><label class="fld">Or type any emoji<input id="cIcon" value="' + esc(c.icon) + '"></label>' +
-      '<label class="fld">Type<select id="cType"><option value="expense">Expense</option><option value="income">Income</option></select></label>' +
+      '<label class="fld">Type<select id="cType"><option value="expense">Expense</option><option value="income">Income</option><option value="debt">Debt/Loan</option></select></label>' +
+      '<label class="fld" id="cParentL">Inside category (optional)<select id="cParent"></select></label>' +
+      '<label class="fld" id="cFlowL">Money goes<select id="cFlow"><option value="out">Out of my wallet (lend, repay)</option><option value="in">Into my wallet (borrow, collect)</option></select></label>' +
       '<button class="btn primary block" id="cSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="cDel">Delete category</button>'),
       function (r) {
         bindPicker(r, r.querySelector('#cIcon'));
         r.querySelector('#cType').value = c.type;
         r.querySelector('#cType').disabled = !isNew;
+        function opts() {
+          var ty = r.querySelector('#cType').value;
+          r.querySelector('#cParent').innerHTML = '<option value="">None (main category)</option>' + S.cats.filter(function (p) { return p.type === ty && !p.parent && p.id !== c.id; }).map(function (p) { return '<option value="' + esc(p.id) + '"' + (c.parent === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
+          r.querySelector('#cFlowL').hidden = ty !== 'debt';
+          r.querySelector('#cParentL').hidden = S.cats.some(function (x) { return x.parent === c.id; });
+        }
+        r.querySelector('#cType').onchange = opts; opts();
+        r.querySelector('#cFlow').value = c.flow || 'out';
         r.querySelector('#cSave').onclick = function () {
           var n = r.querySelector('#cName').value.trim(); if (!n) { toast('Give it a name'); return; }
           c.name = n; c.icon = r.querySelector('#cIcon').value.trim() || '🏷️'; c.type = r.querySelector('#cType').value;
+          var pv = r.querySelector('#cParent').value; if (pv) c.parent = pv; else delete c.parent;
+          if (c.type === 'debt') c.flow = r.querySelector('#cFlow').value; else delete c.flow;
           if (isNew) S.cats.push(c); save(); closeSheet(); renderAll();
         };
         var d = r.querySelector('#cDel');
         if (d) d.onclick = function () {
           if (S.tx.some(function (t) { return t.cat === c.id; })) { toast('Category is in use. Recategorize those transactions first.'); return; }
+          if (S.cats.some(function (x) { return x.parent === c.id; })) { toast('Move or delete its sub categories first.'); return; }
           S.cats = S.cats.filter(function (x) { return x.id !== c.id; });
           S.rules = S.rules.filter(function (x) { return x.cat !== c.id; });
           delete S.budgets[c.id]; save(); closeSheet(); renderAll();
@@ -943,7 +1010,8 @@
     };
 
     $('addWallet').onclick = function () { walletSheet(); };
-    $('addCat').onclick = function () { catSheet(); };
+    $('addCat').onclick = function () { catSheet(null, catTab); };
+    $('catSeg').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; catTab = b.dataset.t; haptic(); renderAccount(); };
     $('addRule').onclick = ruleSheet;
     $('v-account').addEventListener('click', function (e) {
       var t = e.target.closest('[data-edit-wallet],[data-edit-cat],[data-del-rule],[data-review],[data-del-review]');

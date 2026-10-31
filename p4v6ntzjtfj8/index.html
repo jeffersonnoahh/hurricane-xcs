@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="css/style.css?v=20261031-15">
+<link rel="stylesheet" href="css/style.css?v=20261031-16">
 </head>
 <body>
 <div class="bg-mesh" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
@@ -175,8 +175,9 @@
   <div class="section-h"><span>Wallets</span><button class="link" id="addWallet">+ Add</button></div>
   <div class="card list-card" id="walletList"></div>
 
-  <div class="section-h"><span>Categories</span><button class="link" id="addCat">+ Add</button></div>
-  <div class="card list-card" id="catList"></div>
+  <div class="section-h"><span>Categories</span><button class="link" id="addCat">+ New category</button></div>
+  <div class="seg cat-seg" id="catSeg"><button data-t="expense" class="on">Expense</button><button data-t="income">Income</button><button data-t="debt">Debt/Loan</button><i class="seg-ind"></i></div>
+  <div class="card list-card cat-card" id="catList"></div>
 
   <div class="section-h"><span>Auto category rules</span><button class="link" id="addRule">+ Add</button></div>
   <div class="card list-card"><p class="muted small pad">If the merchant name contains the word, that category is used.</p><div id="ruleList"></div></div>
@@ -223,6 +224,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-1"></script>
-<script src="js/app.js?v=20261031-14"></script>
+<script src="js/app.js?v=20261031-16"></script>
 </body>
 </html>
