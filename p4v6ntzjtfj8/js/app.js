@@ -277,7 +277,7 @@
   // Balance of a wallet (or the total) counting only transactions dated before `before` (yyyy-mm-dd), or all.
   function balance(w, before) {
     var ids = walletIds(w), live = 0, manual = [];
-    ids.forEach(function (id) { var lv = liveValue(wallet(id)); if (lv != null) live += lv; else manual.push(id); });
+    ids.forEach(function (id) { var lv = bookValue(wallet(id)); if (lv != null) live += lv; else manual.push(id); });
     if (!manual.length) return live;
     var init = S.wallets.reduce(function (a, x) { return a + (manual.indexOf(x.id) !== -1 ? (+x.initial || 0) : 0); }, 0);
     return live + S.tx.reduce(function (a, t) { if (before && t.date >= before) return a; var d = 0; manual.forEach(function (id) { d += delta(t, id); }); return a + d; }, init);
@@ -568,7 +568,7 @@
     function holdPanel(w) { return holdHtml(w); }
     function applyView(i) {
       var w = ws[i], h = w.holding, c = cards[i]; if (!c) return;
-      var amt = h && h.asset && wView(w) === 'cost' ? (+h.cost || 0) : balance(w.id);
+      var lvv = liveValue(w), amt = h && h.asset && wView(w) === 'cost' ? (+h.cost || 0) : (h && h.asset && lvv != null ? lvv : balance(w.id));
       c.querySelector('.dw-big').innerHTML = money(Math.round(amt)); c.querySelector('.dw-amt').innerHTML = money(Math.round(amt));
       c.classList.toggle('is-cost', !!(h && h.asset && wView(w) === 'cost'));
     }
@@ -847,7 +847,7 @@
     $('pillIc').outerHTML = icon(wo, 'sm').replace('<span ', '<span id="pillIc" ');
     $('pillName').textContent = wo.name;
     var hw = w === 'all' ? null : wallet(w), hb = $('txHold');
-    setMoney($('txBal'), hw && hasHolding(hw) && wViewOf(hw) === 'cost' ? (+hw.holding.cost || 0) : balance(w));
+    setMoney($('txBal'), hw && hasHolding(hw) ? (wViewOf(hw) === 'cost' ? (+hw.holding.cost || 0) : (liveValue(hw) != null ? Math.round(liveValue(hw)) : balance(w))) : balance(w));
     if (hb) { var hh = hw ? holdHtml(hw) : ''; hb.innerHTML = hh; hb.hidden = !hh; if (hh) bindHold(hb, hw, renderTx); }
     $('monthLabel').textContent = MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
     var mKey = ym(cur), open = balance(w, mKey + '-01'), end = balance(w, nextMonthStart(cur));
@@ -2808,6 +2808,8 @@
   var ASSETS = { gold: { name: 'Gold (gram)', unit: 'g' }, btc: { name: 'Bitcoin', unit: 'BTC' }, eth: { name: 'Ethereum', unit: 'ETH' }, usd: { name: 'US Dollar', unit: 'USD' } };
   var PRICES = (function () { try { return JSON.parse(localStorage.getItem('apex_prices')) || {}; } catch (e) { return {}; } })();
   function fmtG(g) { return (+g).toLocaleString('id-ID', { maximumFractionDigits: g < 10 ? 3 : 2 }) + ' g'; }
+  // What a holding counts for in balances and net worth. Gold counts at the money invested (not the live price); other assets use the live price.
+  function bookValue(w) { var h = w && w.holding; if (h && h.asset === 'gold' && +h.qty && +h.cost) return +h.cost; return liveValue(w); }
   function liveValue(w) { var h = w && w.holding; if (!h || !h.asset || !(+h.qty)) return null; var p = PRICES[h.asset]; return p ? +h.qty * p : null; }
   function fetchPrices(force) {
     if (!force && PRICES.ts && Date.now() - PRICES.ts < 5 * 60e3) return Promise.resolve();
