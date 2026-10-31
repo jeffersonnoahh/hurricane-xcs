@@ -598,28 +598,29 @@
       delete S.budgets[id];
       (S.businesses || []).forEach(function (b) { if (b.cats) b.cats = b.cats.filter(function (x) { return x !== id; }); });
       if (S.settings.autoOwed) delete S.settings.autoOwed[id];
-      var row = document.querySelector('.sw[data-cid="' + id + '"]');
-      if (row) { row.classList.add('gone'); setTimeout(function () { save(); renderAll(); }, 320); } else { save(); renderAll(); }
+      var rows = document.querySelectorAll('.sw[data-cid="' + id + '"]');
+      rows.forEach(function (r) { r.classList.add('gone'); });
+      setTimeout(function () { save(); renderAll(); document.dispatchEvent(new Event('catdeleted')); }, rows.length ? 320 : 0);
       toast(c.name + ' deleted');
     });
   }
-  function closeSwipes(except) { document.querySelectorAll('.sw.open').forEach(function (s) { if (s !== except) { s.classList.remove('open'); s.querySelector('.w-row').style.transform = ''; } }); }
+  function closeSwipes(except) { document.querySelectorAll('.sw.open').forEach(function (s) { if (s !== except) { s.classList.remove('open'); s.querySelector('.w-row, .cat-row').style.transform = ''; } }); }
   function bindSwipe(box) {
     var cur = null, x0 = 0, y0 = 0, dx = 0, lock = null, W = 92;
     box.addEventListener('touchstart', function (e) {
       var sw = e.target.closest('.sw'); if (!sw || e.target.closest('.sw-del')) return;
       cur = sw; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; lock = null; closeSwipes(sw);
-      cur.querySelector('.w-row').style.transition = 'none';
+      cur.querySelector('.w-row, .cat-row').style.transition = 'none';
     }, { passive: true });
     box.addEventListener('touchmove', function (e) {
       if (!cur) return; var mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
       if (lock == null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) lock = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
       if (lock !== 'x') return; e.preventDefault(); cur.classList.add('swiping');
       var base = cur.classList.contains('open') ? -W : 0; dx = Math.min(0, Math.max(-W * 1.6, base + mx));
-      cur.querySelector('.w-row').style.transform = 'translateX(' + dx + 'px)';
+      cur.querySelector('.w-row, .cat-row').style.transform = 'translateX(' + dx + 'px)';
     }, { passive: false });
     box.addEventListener('touchend', function () {
-      if (!cur) return; var row = cur.querySelector('.w-row'); row.style.transition = ''; var c0 = cur; setTimeout(function () { c0.classList.remove('swiping'); }, 350);
+      if (!cur) return; var row = cur.querySelector('.w-row, .cat-row'); row.style.transition = ''; var c0 = cur; setTimeout(function () { c0.classList.remove('swiping'); }, 350);
       if (lock === 'x') {
         cur.dataset.swiped = '1';
         if (dx < -W * 1.35) { row.style.transform = ''; cur.classList.remove('open'); deleteCategory(cur.dataset.cid); }
@@ -1486,7 +1487,7 @@
           root.querySelector('#fCatPick').classList.toggle('open', pickOpen);
           var q = root.querySelector('#fCatQ').value.trim().toLowerCase();
           root.querySelector('#fCats').innerHTML = catTree(st.type).filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(function (c, i) {
-            return '<button type="button" data-c="' + esc(c.id) + '" class="cat-row' + (c.parent ? ' child' : '') + (c.id === st.cat ? ' on' : '') + '" style="--i:' + Math.min(i, 14) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '</span>' + (c.id === st.cat ? '<span class="check">✓</span>' : '') + '</button>';
+            return '<div class="sw" data-cid="' + esc(c.id) + '"><button class="sw-del" type="button" data-delcat="' + esc(c.id) + '"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete</button><button type="button" data-c="' + esc(c.id) + '" class="cat-row' + (c.parent ? ' child' : '') + (c.id === st.cat ? ' on' : '') + '" style="--i:' + Math.min(i, 14) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '</span>' + (c.id === st.cat ? '<span class="check">✓</span>' : '') + '</button></div>';
           }).join('') || '<p class="muted small" style="text-align:center">No category found</p>';
         }
         var pickOpen = isNew;
@@ -1503,7 +1504,9 @@
           var box = root.querySelector('#fUnpaidBox'); box.classList.remove('auto'); void box.offsetWidth; box.classList.add('auto');
           toast('Commission: ' + payer + ' owes this amount');
         }
-        root.querySelector('#fCats').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); autoOwed(); } });
+        bindSwipe(root.querySelector('#fCats'));
+        var onDel = function () { if (!document.body.contains(root)) { document.removeEventListener('catdeleted', onDel); return; } paint(); }; document.addEventListener('catdeleted', onDel);
+        root.querySelector('#fCats').addEventListener('click', function (e) { var b = e.target.closest('button[data-c]'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); autoOwed(); } });
         paint(); if (isNew && prefill && prefill.cat) autoOwed();
         if (isNew) setTimeout(function () { amt.focus(); }, 380);
 
