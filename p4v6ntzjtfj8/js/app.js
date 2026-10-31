@@ -862,6 +862,10 @@
     var hw = w === 'all' ? null : wallet(w), hb = $('txHold');
     setMoney($('txBal'), hw && hasHolding(hw) ? (wViewOf(hw) === 'cost' ? Math.round((+hw.holding.cost || 0) + cashPart(hw)) : (liveValue(hw) != null ? Math.round(liveValue(hw) + cashPart(hw)) : balance(w))) : balance(w));
     if (hb) { var hh = hw ? holdHtml(hw) : ''; hb.innerHTML = hh; hb.hidden = !hh; if (hh) bindHold(hb, hw, renderTx); }
+    // Real money: what's actually in this wallet (booked-but-not-received income taken out)
+    var rb = $('txReal');
+    if (rb) { var un = unpaidIn(w === 'all' ? null : w), real = balance(w) - un;
+      rb.innerHTML = '<span class="rb-3d">' + sprite('reserve_transfer') + '</span><span>Real money</span><b>' + money(real, { rp: true }) + '</b><i>›</i>' + (un ? '<em>' + money(un, { rp: false }) + ' not received yet</em>' : ''); }
     $('monthLabel').innerHTML = txAll ? 'All time' : MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
     $('monthLabel').classList.toggle('all', txAll);
     var mKey = ym(cur), mt, open, end;
@@ -2550,7 +2554,7 @@
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
-    $('realBtn').onclick = function () { haptic(); realSheet(); };
+    $('realBtn').onclick = function () { haptic(); realSheet(); }; $('txReal').onclick = function () { haptic(); realSheet(); };
     $('hKomisi').onclick = function () { haptic(); komisiSheet(); };
     $('kmOpen').onclick = function () { haptic(); komisiSheet(); };
     $('hWorld').onclick = worldOpen; $('worldOpen').onclick = worldOpen; $('worldBtn').onclick = worldOpen;
