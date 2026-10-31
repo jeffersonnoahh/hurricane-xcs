@@ -13,10 +13,10 @@
     ['food', 'Food & Drink', '🍜', 'expense'], ['transport', 'Transport', '🛵', 'expense'],
     ['shopping', 'Shopping', '🛍️', 'expense'], ['bills', 'Bills & Utilities', '💡', 'expense'],
     ['phone', 'Phone & Internet', '📱', 'expense'], ['health', 'Health', '💊', 'expense'],
-    ['fun', 'Entertainment', '🎬', 'expense'], ['family', 'Family', '👨‍👩‍👧', 'expense'],
-    ['giving', 'Giving & Tithe', '🙏', 'expense'], ['education', 'Education', '📚', 'expense'],
+    ['fun', 'Entertainment', '🎬', 'expense'], ['family', 'Family & Home', '🏡', 'expense'],
+    ['giving', 'Giving & Tithe', '⛪', 'expense'], ['education', 'Education', '📚', 'expense'],
     ['loan_out', 'Loan', '💸', 'expense'], ['transfer_out', 'Transfer out', '↗️', 'expense'], ['other_out', 'Other expense', '📦', 'expense'],
-    ['salary', 'Salary', '💼', 'income'], ['bonus', 'Bonus', '🎁', 'income'], ['interest', 'Collect Interest', '％', 'income'],
+    ['salary', 'Salary', '💼', 'income'], ['bonus', 'Bonus', '🎁', 'income'], ['interest', 'Collect Interest', '📈', 'income'],
     ['transfer_in', 'Transfer in', '↙️', 'income'], ['other_in', 'Other income', '💰', 'income']
   ];
   var DEFAULT_RULES = [
@@ -26,6 +26,10 @@
     ['pln', 'bills'], ['pdam', 'bills'], ['bpjs', 'health'], ['apotek', 'health'], ['telkomsel', 'phone'], ['indihome', 'phone'], ['xl', 'phone'],
     ['netflix', 'fun'], ['spotify', 'fun'], ['gereja', 'giving'], ['church', 'giving'], ['persembahan', 'giving'], ['perpuluhan', 'giving']
   ];
+  // Fluent Emoji 3D (Microsoft, MIT license), stored in img/3d as webp. Emoji -> file name.
+  var ICONS = {"🍜":"steaming-bowl","🛵":"motor-scooter","🛍":"shopping-bags","💡":"light-bulb","📱":"mobile-phone","💊":"pill","🎬":"clapper-board","🏡":"house-with-garden","📚":"books","💸":"money-with-wings","📦":"package","💼":"briefcase","🎁":"wrapped-gift","📈":"chart-increasing","💰":"money-bag","🔁":"repeat-button","❔":"white-question-mark","🏦":"bank","💵":"dollar-banknote","🍿":"popcorn","🪙":"coin","🚙":"sport-utility-vehicle","⌚":"watch","💹":"chart-increasing-with-yen","📊":"bar-chart","🥇":"1st-place-medal","👛":"purse","🌐":"globe-with-meridians","🏷":"label","🐷":"pig-face","🌱":"seedling","🧾":"receipt","👁":"eye","🎨":"artist-palette","💳":"credit-card","📅":"calendar","🔐":"locked-with-key","🧮":"abacus","⏰":"alarm-clock","🏠":"house","🚗":"automobile","✈":"airplane","🍔":"hamburger","☕":"hot-beverage","🛒":"shopping-cart","💄":"lipstick","🐶":"dog-face","🎮":"video-game","⛽":"fuel-pump","🎓":"graduation-cap","🏥":"hospital","💍":"ring","🎉":"party-popper","🍀":"four-leaf-clover","💎":"gem-stone","🧧":"red-envelope","🏆":"trophy","🧳":"luggage","💻":"laptop","⛪":"church","🔄":"counterclockwise-arrows-button","🗂":"card-index-dividers","🛡":"shield","⭐":"star","🍎":"red-apple","🧸":"teddy-bear","🏍":"motorcycle","🏢":"office-building","📉":"chart-decreasing","↗":"up-right-arrow","↙":"down-left-arrow","👕":"t-shirt","🎯":"bullseye"};
+  function key3d(e) { return String(e || '').replace(/\uFE0F/g, ''); }
+  function img3d(e, cls) { var f = ICONS[key3d(e)]; return f ? '<img class="' + (cls || 'i3') + '" src="img/3d/' + f + '.webp" alt="" decoding="async">' : esc(e); }
   var PALETTE = ['#3fb27f', '#e8833a', '#4f7cff', '#d9a520', '#8e5bd6', '#e05d6f', '#2fb5c9', '#5f6b7a', '#c2553b', '#2e8f6b'];
 
   function blank() {
@@ -49,6 +53,9 @@
     Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; });
     // New default categories added in later versions.
     d.cats.forEach(function (c) { if (!S.cats.some(function (x) { return x.id === c.id; })) S.cats.push(c); });
+    // Swap old default icons for ones that have a 3D version.
+    var OLD = { family: ['👨‍👩‍👧', '🏡', 'Family', 'Family & Home'], giving: ['🙏', '⛪'], interest: ['％', '📈'] };
+    S.cats.forEach(function (c) { var o = OLD[c.id]; if (o && c.icon === o[0]) { c.icon = o[1]; if (o[2] && c.name === o[2]) c.name = o[3]; } });
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(S)); }
@@ -79,7 +86,9 @@
   function wallet(id) { return S.wallets.filter(function (w) { return w.id === id; })[0] || { id: id, name: '(deleted wallet)', icon: '❔', initial: 0 }; }
   function parseNum(v) { return parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0; }
   function color(id) { var h = 0; String(id).split('').forEach(function (ch) { h = (h * 31 + ch.charCodeAt(0)) >>> 0; }); return PALETTE[h % PALETTE.length]; }
-  function icon(obj, cls) { return '<span class="ic ' + (cls || '') + '" style="--c:' + (obj.color || color(obj.id)) + '">' + esc(obj.icon) + '</span>'; }
+  function icon(obj, cls) { var has = !!ICONS[key3d(obj.icon)]; return '<span class="ic ' + (cls || '') + (has ? ' i3d' : '') + '" style="--c:' + (obj.color || color(obj.id)) + '">' + img3d(obj.icon) + '</span>'; }
+  function picker(cur) { return '<div class="icon-pick">' + Object.keys(ICONS).map(function (e) { return '<button type="button" data-e="' + e + '" class="' + (key3d(cur) === e ? 'on' : '') + '">' + img3d(e) + '</button>'; }).join('') + '</div>'; }
+  function bindPicker(root, input, preview) { root.querySelector('.icon-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; input.value = b.dataset.e; root.querySelectorAll('.icon-pick button').forEach(function (x) { x.classList.toggle('on', x === b); }); if (preview) preview(); haptic(); }); }
   function included(w) { return !w.excluded; }
   function fmtInput(el) { el.addEventListener('input', function () { var n = parseNum(el.value); el.value = n ? n.toLocaleString('en-US') : ''; }); }
 
@@ -187,7 +196,7 @@
     var gt = {}; S.wallets.filter(included).forEach(function (w) { var g = groupOf(w); gt[g] = (gt[g] || 0) + balance(w.id); });
     $('hGroups').innerHTML = Object.keys(GROUPS).filter(function (g) { return g in gt; }).map(function (g, i) {
       var G = GROUPS[g], share = total ? Math.round(gt[g] / total * 100) : 0;
-      return '<div class="sum-card" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + G.icon + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
+      return '<div class="sum-card" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + img3d(G.icon) + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
         '<div class="sum-amt"><span class="mid-money">' + money(gt[g]) + '</span><span class="chip soft">' + share + '% of total</span></div>' +
         '<button class="sum-foot" data-group="' + g + '"><span>View wallets</span><span>→</span></button></div>';
     }).join('');
@@ -225,7 +234,7 @@
 
     var recent = S.tx.slice().sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')) || b.created - a.created; }).slice(0, 5);
     $('hRecent').innerHTML = recent.length ? '<div class="stagger">' + recent.map(function (t, i) { return txRow(t, i, true); }).join('') + '</div>'
-      : '<div class="empty"><span class="big-e">🌱</span>No transactions yet.<br>Tap + or wait for your next BCA payment.</div>';
+      : '<div class="empty"><span class="big-e">' + img3d('🌱') + '</span>No transactions yet.<br>Tap + or wait for your next BCA payment.</div>';
 
     var pip = $('hSyncPip');
     pip.hidden = !S.review.length; pip.textContent = S.review.length;
@@ -269,7 +278,7 @@
     var w = walletSel;
     if (w !== 'all' && !S.wallets.some(function (x) { return x.id === w; })) w = walletSel = 'all';
     var wo = w === 'all' ? { id: 'all', name: 'Total', icon: '🌐', color: '#2fb5c9' } : wallet(w);
-    $('pillIc').outerHTML = '<span class="ic sm" id="pillIc" style="--c:' + (wo.color || color(wo.id)) + '">' + esc(wo.icon) + '</span>';
+    $('pillIc').outerHTML = icon(wo, 'sm').replace('<span ', '<span id="pillIc" ');
     $('pillName').textContent = wo.name;
     setMoney($('txBal'), balance(w));
     $('monthLabel').textContent = MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
@@ -279,7 +288,7 @@
     $('pNet').innerHTML = money(end - open, { sign: true });
 
     var mt = txIn(mKey, w);
-    if (!mt.length) { $('txList').innerHTML = '<div class="card empty"><span class="big-e">🧾</span>No transactions in ' + MONTHS[cur.getMonth()] + '.</div>'; return; }
+    if (!mt.length) { $('txList').innerHTML = '<div class="card empty"><span class="big-e">' + img3d('🧾') + '</span>No transactions in ' + MONTHS[cur.getMonth()] + '.</div>'; return; }
     var byDay = {};
     mt.forEach(function (t) { (byDay[t.date] = byDay[t.date] || []).push(t); });
     var i = 0;
@@ -627,15 +636,16 @@
     var isNew = !w; w = w || { id: uid(), name: '', icon: '👛', initial: 0 };
     var curBal = isNew ? 0 : balance(w.id);
     openSheet('<h3>' + (isNew ? 'New wallet' : 'Edit wallet') + '</h3>' +
-      '<div style="text-align:center;margin-bottom:6px">' + icon(w) + '</div>' +
+      icon(w, 'preview') +
       '<label class="fld">Name<input id="wName" value="' + esc(w.name) + '"></label>' +
-      '<label class="fld">Icon (any emoji)<input id="wIcon" value="' + esc(w.icon) + '"></label>' +
+      '<div class="fld">Icon' + picker(w.icon) + '</div><label class="fld">Or type any emoji<input id="wIcon" value="' + esc(w.icon) + '"></label>' +
       '<label class="fld">Current balance<input id="wBal" inputmode="numeric" value="' + (curBal ? Math.abs(curBal).toLocaleString('en-US') : '') + '" placeholder="0"></label>' +
       '<label class="fld">Group<select id="wGroup">' + Object.keys(GROUPS).map(function (g) { return '<option value="' + g + '"' + (groupOf(w) === g ? ' selected' : '') + '>' + GROUPS[g].icon + ' ' + GROUPS[g].name + '</option>'; }).join('') + '</select></label>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
         fmtInput(r.querySelector('#wBal'));
+        bindPicker(r, r.querySelector('#wIcon'));
         r.querySelector('#wSave').onclick = function () {
           var n = r.querySelector('#wName').value.trim(); if (!n) { toast('Give it a name'); return; }
           w.name = n; w.icon = r.querySelector('#wIcon').value.trim() || '👛';
@@ -660,10 +670,11 @@
     var isNew = !c; c = c || { id: uid(), name: '', icon: '🏷️', type: 'expense' };
     openSheet('<h3>' + (isNew ? 'New category' : 'Edit category') + '</h3>' +
       '<label class="fld">Name<input id="cName" value="' + esc(c.name) + '"></label>' +
-      '<label class="fld">Icon (any emoji)<input id="cIcon" value="' + esc(c.icon) + '"></label>' +
+      '<div class="fld">Icon' + picker(c.icon) + '</div><label class="fld">Or type any emoji<input id="cIcon" value="' + esc(c.icon) + '"></label>' +
       '<label class="fld">Type<select id="cType"><option value="expense">Expense</option><option value="income">Income</option></select></label>' +
       '<button class="btn primary block" id="cSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="cDel">Delete category</button>'),
       function (r) {
+        bindPicker(r, r.querySelector('#cIcon'));
         r.querySelector('#cType').value = c.type;
         r.querySelector('#cType').disabled = !isNew;
         r.querySelector('#cSave').onclick = function () {
@@ -695,7 +706,7 @@
 
   function budgetSheet(catId) {
     var c = cat(catId);
-    openSheet('<h3>' + esc(c.name) + ' budget</h3><div style="text-align:center;margin-bottom:6px">' + icon(c) + '</div>' +
+    openSheet('<h3>' + esc(c.name) + ' budget</h3>' + icon(c, 'preview') +
       '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="bAmt" inputmode="numeric" value="' + (S.budgets[catId] ? (+S.budgets[catId]).toLocaleString('en-US') : '') + '" placeholder="0"></div>' +
       '<p class="muted small">Monthly limit. Leave empty for no budget.</p><button class="btn primary block" id="bSave">Save</button>',
       function (r) {
@@ -776,6 +787,8 @@
       col.classList.add('sel');
       var tip = document.createElement('div'); tip.className = 'tip'; tip.textContent = col.dataset.tip; col.appendChild(tip);
     }
+    // Static 3D icons in the page markup.
+    document.querySelectorAll('[data-i3d]').forEach(function (el) { el.innerHTML = img3d(el.dataset.i3d); el.classList.add('i3d'); });
     $('repDaily').addEventListener('mouseover', showTip);
     $('repDaily').addEventListener('focusin', showTip);
     $('repDaily').addEventListener('click', showTip);

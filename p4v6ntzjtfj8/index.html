@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="css/style.css?v=20261031-7">
+<link rel="stylesheet" href="css/style.css?v=20261031-9">
 </head>
 <body>
 
@@ -27,7 +27,7 @@
   <div class="bal-card">
     <div class="bal-in">
       <div class="bal-top">
-        <span class="bal-ico">👛</span>
+        <span class="bal-ico" data-i3d="👛">👛</span>
         <span class="t"><b>My balance</b><small>All wallets in total</small></span>
         <button class="eye" id="eyeBtn" aria-label="Hide or show amounts"></button>
       </div>
@@ -137,8 +137,8 @@
   <header class="page-head"><h1>Account</h1></header>
 
   <div class="card list-card">
-    <div class="set-row" style="cursor:default"><span class="ic sm" style="--c:#2f7a4a">🎨</span><span class="grow">Theme</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
-    <label class="set-row"><span class="ic sm" style="--c:#4f7cff">👁️</span><span class="grow">Hide amounts</span><input type="checkbox" class="switch" id="hideToggle"></label>
+    <div class="set-row" style="cursor:default"><span class="ic sm" style="--c:#2f7a4a" data-i3d="🎨">🎨</span><span class="grow">Theme</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
+    <label class="set-row"><span class="ic sm" style="--c:#4f7cff" data-i3d="👁">👁️</span><span class="grow">Hide amounts</span><input type="checkbox" class="switch" id="hideToggle"></label>
   </div>
 
   <div class="section-h">BCA email sync</div>
@@ -209,6 +209,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-1"></script>
-<script src="js/app.js?v=20261031-7"></script>
+<script src="js/app.js?v=20261031-9"></script>
 </body>
 </html>

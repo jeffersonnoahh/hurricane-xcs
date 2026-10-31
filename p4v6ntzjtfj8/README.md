@@ -59,3 +59,6 @@ In myBCA / KlikBCA, turn on email notification for transactions, and confirm a t
 | `apps-script/Code.gs` | The Gmail bridge you paste into Google Apps Script |
 
 No build step. When changing css/js, bump the `?v=` in `index.html`.
+
+## Credits
+3D icons: [Fluent Emoji](https://github.com/microsoft/fluentui-emoji) by Microsoft, MIT license (see `img/3d/LICENSE.txt`).

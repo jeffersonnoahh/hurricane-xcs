@@ -1,0 +1,3 @@
+3D icons: Fluent Emoji by Microsoft (https://github.com/microsoft/fluentui-emoji)
+MIT License. Copyright (c) Microsoft Corporation.
+Resized to 144px WebP for this app.

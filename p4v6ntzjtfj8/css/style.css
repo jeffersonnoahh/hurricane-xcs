@@ -293,6 +293,25 @@ pre:empty{display:none}
 .theme-seg button{border:0;background:none;padding:7px 14px;border-radius:9px;font-weight:600;color:var(--ink2);font-size:14px;transition:background .25s,color .25s}
 .theme-seg button.on{background:var(--segind);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
 
+/* ---------- 3D icons ---------- */
+.ic.i3d{background:var(--card2);background:color-mix(in srgb,var(--c) 20%,var(--card2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 25%,transparent)}
+.i3{width:74%;height:74%;object-fit:contain;display:block;filter:drop-shadow(0 3px 3px rgba(0,0,0,.18));transition:transform .35s var(--spring);pointer-events:none;-webkit-user-drag:none}
+.tx:active .i3,.w-row:active .i3,.b-row:active .i3,.cat-grid button:active .i3{transform:scale(1.14) rotate(-8deg)}
+.cat-grid button.on .i3{animation:wiggle .5s var(--spring)}
+@keyframes wiggle{30%{transform:scale(1.2) rotate(-10deg)}60%{transform:scale(1.1) rotate(6deg)}}
+.stagger .i3{animation:iconPop .5s var(--spring) both;animation-delay:calc(min(var(--i,0),12) * 35ms + .1s)}
+@keyframes iconPop{from{transform:scale(.4) rotate(-15deg);opacity:0}}
+.bal-ico.i3d .i3,.sum-ico .i3{width:80%;height:80%}
+.bal-ico{overflow:hidden}
+.sum-ico{background:color-mix(in srgb,var(--accent) 12%,var(--card2))}
+.empty .big-e .i3{width:84px;height:84px;margin:0 auto}
+.ic.preview{width:68px;height:68px;margin:0 auto 4px}
+.icon-pick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px;max-height:190px;overflow-y:auto;padding:2px;border-radius:14px}
+.icon-pick button{aspect-ratio:1;border:1.5px solid transparent;background:var(--card2);border-radius:14px;padding:6px;display:grid;place-items:center}
+.icon-pick button .i3{width:100%;height:100%}
+.icon-pick button.on{border-color:var(--accent);background:var(--chip-on)}
+.icon-pick button:active{transform:scale(.9)}
+
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}
 }
