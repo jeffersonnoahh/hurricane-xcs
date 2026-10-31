@@ -492,7 +492,8 @@
     $('hWallets').innerHTML = '<div class="wstack' + (stackOpen ? ' open' : '') + '">' + ws.map(function (w, i) {
       var g = GCARD[groupOf(w)] || ['#059669', '#064e3b'], u = typeof unpaidIn === 'function' ? unpaidIn(w.id) : 0;
       return '<div class="wcard" data-wallet="' + esc(w.id) + '" data-id="' + esc(w.id) + '" style="--a:' + g[0] + ';--b:' + g[1] + ';--i:' + i + '">' +
-        '<div class="wc-top"><span class="wc-ic">' + (spKey(w) ? sprite(spKey(w)) : esc(w.icon)) + '</span><span class="wc-name">' + esc(w.name) + '</span><span class="wc-grp">' + (GROUPS[groupOf(w)] || {}).name + '</span></div>' +
+        '<span class="wc-3d">' + (spKey(w) ? sprite(spKey(w)) : '<b>' + esc(w.icon) + '</b>') + '</span>' +
+        '<div class="wc-top"><span class="wc-name">' + esc(w.name) + '</span><span class="wc-grp">' + (GROUPS[groupOf(w)] || {}).name + '</span></div>' +
         '<div class="wc-bot"><span class="wc-amt">' + money(balance(w.id)) + '</span>' + (plTag(w) || (u ? '<span class="wc-sub">' + money(u, { rp: false }) + ' not received</span>' : '')) + '</div><i class="wc-shine"></i></div>';
     }).join('') + '<button class="ws-close" type="button">Close</button><div class="ws-hint">' + ws.length + ' wallets · tap to open</div></div>';
     layoutStack();
@@ -2254,7 +2255,13 @@
     S.walletVer = 1;
   }
   function addKomisi() { if (!S.cats.some(function (c) { return c.id === 'komisi_in'; })) { var at = S.cats.map(function (c) { return c.type; }).lastIndexOf('income') + 1 || S.cats.length; S.cats.splice(at, 0, { id: 'komisi_in', name: 'KOMISI', icon: '💰', type: 'income', sp: 'komisi_out' }); } }
-  load(); zeroStart(); ownerWallets(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  function walletIcons() {
+    if (S.wIconVer === 1) return;
+    var M = [[/reserve/i, 'w_reserve'], [/personal/i, 'personal_expense'], [/puter/i, 'w_goldputer'], [/^gold$/i, 'gold_inv'], [/mandiri|bank|bca/i, 'w_bank'], [/daytona/i, 'w_daytona'], [/jimney/i, 'w_jimney'], [/hulk|rolex/i, 'w_hulk'], [/ajaib/i, 'w_ajaib'], [/stock|saham/i, 'stocks'], [/cash|tunai/i, 'w_cash']];
+    S.wallets.forEach(function (w) { if (w.sp) return; for (var i = 0; i < M.length; i++) if (M[i][0].test(w.name)) { w.sp = M[i][1]; break; } });
+    S.wIconVer = 1;
+  }
+  load(); zeroStart(); ownerWallets(); walletIcons(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();

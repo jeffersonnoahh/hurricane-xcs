@@ -1032,3 +1032,15 @@ em.neg{font-style:normal}
 .w-row.dragging,.hl-row.dragging{position:relative;z-index:5;background:var(--surface2);box-shadow:0 18px 34px -16px rgba(0,0,0,.7);border-radius:12px}
 .sorting .w-row:not(.dragging),.sorting .hl-row:not(.dragging){transition:translate .25s var(--spring)}
 .hl-row .x{display:none}
+
+/* big 3D emoji on wallet cards */
+.wc-top{flex-direction:column;align-items:flex-start;gap:1px;padding-right:76px}
+.wc-name{flex:none;max-width:100%}
+.wc-grp{opacity:.7}
+.wc-bot{padding-right:76px}
+.wc-3d{position:absolute;right:10px;top:50%;width:74px;height:74px;transform:translateY(-50%) rotate(-8deg);filter:drop-shadow(0 10px 14px rgba(0,0,0,.4));z-index:1;transition:transform .5s var(--spring)}
+.wc-3d .sp{width:100%;height:100%;filter:none}
+.wc-3d b{font-size:52px;display:grid;place-items:center;height:100%}
+.wstack.open .wc-3d{animation:wcFloat 3.4s ease-in-out calc(var(--i) * .25s) infinite}
+@keyframes wcFloat{0%,100%{transform:translateY(-50%) rotate(-8deg)}50%{transform:translateY(calc(-50% - 4px)) rotate(-4deg)}}
+.wcard:active .wc-3d{transform:translateY(-50%) rotate(0) scale(1.12)}
