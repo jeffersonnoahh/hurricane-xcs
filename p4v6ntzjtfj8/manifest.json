@@ -1,9 +1,11 @@
 {
-  "name": "Arus Money",
-  "short_name": "Arus",
+  "name": "MONETA",
+  "short_name": "MONETA",
+  "description": "Private wealth and money tracker",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f6f5",
-  "theme_color": "#0f766e",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }

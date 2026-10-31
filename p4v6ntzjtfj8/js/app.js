@@ -69,7 +69,7 @@
       tx: [], budgets: {},
       rules: DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }),
       settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', lastSync: 0, startFrom: 0, hide: false, theme: 'dark' },
-      seen: {}, review: []
+      seen: {}, review: [], debts: []
     };
   }
 
@@ -122,7 +122,7 @@
   // ---------- helpers ----------
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function fmt(n) { return Math.abs(Math.round(n)).toLocaleString('en-US'); }
+  function fmt(n) { return Math.abs(Math.round(n)).toLocaleString('id-ID'); }
   var MASK = '••••••••';
   // Money text that respects "Hide amounts". sign: true shows +/−.
   function money(n, opt) {
@@ -147,7 +147,7 @@
   function picker(cur) { return '<div class="icon-pick">' + Object.keys(ICONS).map(function (e) { return '<button type="button" data-e="' + e + '" class="' + (key3d(cur) === e ? 'on' : '') + '">' + img3d(e) + '</button>'; }).join('') + '</div>'; }
   function bindPicker(root, input, preview) { root.querySelector('.icon-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; input.value = b.dataset.e; root.querySelectorAll('.icon-pick button').forEach(function (x) { x.classList.toggle('on', x === b); }); if (preview) preview(); haptic(); }); }
   function included(w) { return !w.excluded; }
-  function fmtInput(el) { el.addEventListener('input', function () { var n = parseNum(el.value); el.value = n ? n.toLocaleString('en-US') : ''; }); }
+  function fmtInput(el) { el.addEventListener('input', function () { var n = parseNum(el.value); el.value = n ? n.toLocaleString('id-ID') : ''; }); }
 
   // Wallet groups for the summary cards. A wallet can pick one; otherwise its name decides.
   var GROUPS = {
@@ -254,18 +254,28 @@
   // ---------- render ----------
   function renderAll() {
     applyTheme(); renderEye();
-    renderHome(); renderTx(); renderBudgets(); renderReport(); renderAccount();
+    renderHome(); renderTx(); renderBudgets(); renderReport(); renderAccount(); renderDebts();
   }
 
   var EYE_OPEN = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
   var EYE_OFF = '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.3 3.9M6.5 7.5A17 17 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4.4-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
-  function renderEye() { $('eyeBtn').innerHTML = S.settings.hide ? EYE_OFF : EYE_OPEN; $('hideToggle').checked = !!S.settings.hide; }
+  function renderEye() {
+    var h = !!S.settings.hide;
+    $('eyeBtn').innerHTML = h ? EYE_OFF : EYE_OPEN; $('hideToggle').checked = h;
+    document.documentElement.classList.toggle('privacy', h);
+    document.querySelectorAll('[data-priv]').forEach(function (b) { b.innerHTML = h ? EYE_OFF : EYE_OPEN; b.classList.toggle('on', h); b.setAttribute('aria-pressed', h); });
+  }
+  function togglePrivacy() { S.settings.hide = !S.settings.hide; haptic(); save(); renderAll(); toast(S.settings.hide ? 'Privacy on: all amounts hidden' : 'Amounts visible'); }
 
   function renderHome() {
     var total = balance('all');
-    setMoney($('hTotal'), total);
+    var liquid = S.wallets.filter(function (w) { return included(w) && groupOf(w) !== 'invest'; }).reduce(function (a, w) { return a + balance(w.id); }, 0);
+    var recv = dSum('in', 'remain'), pay = dSum('out', 'remain'), net = total + recv - pay;
+    setMoney($('hNet'), net);
+    rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
-    $('hGreet').textContent = (hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night') + '. Here is your money today.';
+    $('hGreet').textContent = hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night';
+    renderUpcoming();
     var mStart = ym(new Date()) + '-01', open0 = balance('all', mStart), chg = total - open0;
     var chip = $('hChip');
     if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '+' : '−') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% ' + (chg > 0 ? '↑' : '↓'); }
@@ -509,6 +519,201 @@
     }).join('');
   }
 
+  // ---------- money owed (receivables + payables) ----------
+  var dDir = 'in', dFilter = 'open';
+  var ST_LABEL = { unpaid: 'Unpaid', partial: 'Partially paid', paid: 'Fully paid', overdue: 'Overdue', cancelled: 'Cancelled', writtenoff: 'Written off' };
+  function today() { return ymd(new Date()); }
+  function debtById(id) { return S.debts.filter(function (d) { return d.id === id; })[0]; }
+  function dPaid(d) { return (d.payments || []).reduce(function (a, p) { return a + p.amount; }, 0); }
+  function dRemain(d) { return Math.max(0, d.amount - dPaid(d)); }
+  function dStatus(d) {
+    if (d.closed === 'cancelled') return 'cancelled';
+    if (d.closed === 'writtenoff') return 'writtenoff';
+    var paid = dPaid(d);
+    if (paid >= d.amount) return 'paid';
+    if (d.due && d.due < today()) return 'overdue';
+    return paid > 0 ? 'partial' : 'unpaid';
+  }
+  function dOpen(d) { var s2 = dStatus(d); return s2 !== 'paid' && s2 !== 'cancelled' && s2 !== 'writtenoff'; }
+  function dSum(dir, what) {
+    return S.debts.filter(function (d) { return d.dir === dir && !d.closed; }).reduce(function (a, d) {
+      return a + (what === 'remain' ? (dOpen(d) ? dRemain(d) : 0) : what === 'paid' ? dPaid(d) : what === 'over' ? (dStatus(d) === 'overdue' ? dRemain(d) : 0) : d.amount);
+    }, 0);
+  }
+  function initials(n) { return String(n || '?').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase(); }
+  function avatar(n) { return '<span class="av" style="--c:' + color('p' + String(n).toLowerCase()) + '">' + esc(initials(n)) + '</span>'; }
+  function dueText(d) {
+    if (!d.due) return 'No due date';
+    var days = Math.round((new Date(d.due + 'T00:00:00') - new Date(today() + 'T00:00:00')) / 864e5);
+    if (dStatus(d) === 'paid') return 'Due ' + fmtDate(d.due);
+    return days < 0 ? 'Overdue ' + (-days) + ' day' + (days === -1 ? '' : 's') : days === 0 ? 'Due today' : 'Due in ' + days + ' day' + (days === 1 ? '' : 's');
+  }
+  function fmtDate(s) { var x = new Date(s + 'T00:00:00'); return x.getDate() + ' ' + MONTHS[x.getMonth()].slice(0, 3) + ' ' + x.getFullYear(); }
+
+  function renderDebts() {
+    var dir = dDir, list = S.debts.filter(function (d) { return d.dir === dir; });
+    document.querySelectorAll('#dSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.d === dir); });
+    $('dSeg').style.setProperty('--x', dir === 'in' ? '0%' : '100%');
+    document.querySelectorAll('#dFilter button').forEach(function (b) { b.classList.toggle('on', b.dataset.f === dFilter); });
+    var tot = dSum(dir, 'amount'), paid = dSum(dir, 'paid'), rem = dSum(dir, 'remain'), over = dSum(dir, 'over');
+    $('dHeroLbl').textContent = dir === 'in' ? 'Owed to me' : 'I owe';
+    $('dPaidLbl').textContent = dir === 'in' ? 'Collected' : 'Paid back';
+    rollTo($('dOut'), rem);
+    $('dTotal').innerHTML = money(tot, { rp: false }); $('dPaid').innerHTML = money(paid, { rp: false }); $('dOver').innerHTML = money(over, { rp: false });
+    var openN = list.filter(dOpen).length;
+    $('dHeroSub').textContent = openN + ' open · ' + list.filter(function (d) { return dStatus(d) === 'overdue'; }).length + ' overdue';
+    var pct = tot ? Math.round(paid / tot * 100) : 0;
+    $('dRingTxt').textContent = pct + '%';
+    requestAnimationFrame(function () { $('dRing').style.strokeDashoffset = (113.1 * (1 - pct / 100)).toFixed(1); });
+
+    var q = $('dQ').value.trim().toLowerCase();
+    var f = dFilter;
+    list = list.filter(function (d) {
+      var st = dStatus(d);
+      if (q && (d.person + ' ' + (d.title || '') + ' ' + (d.tags || '')).toLowerCase().indexOf(q) === -1) return false;
+      if (f === 'open') return dOpen(d); if (f === 'all') return true; if (f === 'closed') return st === 'cancelled' || st === 'writtenoff';
+      return st === f;
+    });
+    var so = $('dSort').value;
+    list.sort(function (a, b) {
+      if (so === 'due') return (a.due || '9999') .localeCompare(b.due || '9999');
+      if (so === 'recent') return (b.created || '').localeCompare(a.created || '') || b.ts - a.ts;
+      if (so === 'name') return a.person.localeCompare(b.person);
+      return dRemain(b) - dRemain(a);
+    });
+    $('dList').innerHTML = list.length ? '<div class="stagger">' + list.map(function (d, i) {
+      var st = dStatus(d), p = dPaid(d), pc = d.amount ? Math.min(100, Math.round(p / d.amount * 100)) : 0;
+      return '<div class="d-card" style="--i:' + i + '"><div class="d-top">' + avatar(d.person) + '<div class="grow"><div class="d-name">' + esc(d.person) + '</div><div class="d-title">' + esc(d.title || (dir === 'in' ? 'Owes me' : 'I owe')) + '</div></div><span class="st ' + st + '">' + ST_LABEL[st] + '</span></div>' +
+        '<div class="d-amts"><div><small>Remaining</small><span class="mid-money">' + money(dRemain(d)) + '</span></div><div style="text-align:right"><small>' + pc + '% ' + (dir === 'in' ? 'collected' : 'paid') + '</small><span class="muted small">' + money(p, { rp: false }) + ' of ' + money(d.amount, { rp: false }) + '</span></div></div>' +
+        '<div class="d-prog ' + (st === 'overdue' ? 'overdue' : st === 'partial' ? 'partial' : '') + '"><i data-w="' + pc + '"></i></div>' +
+        '<div class="d-meta"><span>' + dueText(d) + '</span><span>' + (d.payments || []).length + ' payment' + ((d.payments || []).length === 1 ? '' : 's') + '</span></div>' +
+        '<div class="d-actions">' + (dOpen(d) ? '<button class="btn primary" data-pay="' + esc(d.id) + '">＋ Record payment</button>' : '<button class="btn" disabled style="opacity:.5">' + ST_LABEL[st] + '</button>') + '<button class="btn" data-view="' + esc(d.id) + '">View details</button></div></div>';
+    }).join('') + '</div>' : '<div class="card empty"><span class="big-e">' + img3d(dir === 'in' ? '🧾' : '💸') + '</span>' + (S.debts.some(function (d) { return d.dir === dir; }) ? 'Nothing matches this filter.' : (dir === 'in' ? 'Nobody owes you money yet.<br>Tap ＋ to add someone, for example Dad owes you Rp 100.000.000.' : 'You don\'t owe anyone.<br>Tap ＋ to track money you borrowed.')) + '</div>';
+    growBars($('dList'));
+  }
+
+  function renderUpcoming() {
+    var soon = ymd(new Date(Date.now() + 14 * 864e5));
+    var list = S.debts.filter(function (d) { return dOpen(d) && d.due && d.due <= soon; }).sort(function (a, b) { return a.due.localeCompare(b.due); }).slice(0, 4);
+    $('upHead').hidden = $('hUpcoming').hidden = !list.length;
+    $('hUpcoming').innerHTML = list.map(function (d) {
+      var st = dStatus(d);
+      return '<button class="w-row" data-view="' + esc(d.id) + '">' + avatar(d.person) + '<span class="grow">' + esc(d.person) + '<span class="sub" style="color:' + (st === 'overdue' ? 'var(--neg)' : 'var(--muted)') + '">' + (d.dir === 'in' ? 'Owes you · ' : 'You owe · ') + dueText(d) + '</span></span><span class="amt ' + (d.dir === 'in' ? 'pos' : 'neg') + '">' + money(dRemain(d), { rp: false }) + '</span></button>';
+    }).join('');
+  }
+
+  function walletOpts(sel) { return S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' + esc(w.icon + ' ' + w.name) + '</option>'; }).join(''); }
+  function addTx(o) { var t = Object.assign({ id: uid(), toWallet: '', time: hm(new Date()), note: '', merchant: '', src: 'manual', created: Date.now() }, o); S.tx.push(t); return t; }
+
+  function debtSheet(d, dir) {
+    var isNew = !d;
+    d = d || { id: uid(), dir: dir || 'in', person: '', title: '', amount: 0, created: today(), due: '', tags: '', notes: '', wallet: S.settings.bcaWallet || (S.wallets[0] || {}).id, payments: [], ts: Date.now() };
+    openSheet('<h3>' + (isNew ? 'New record' : 'Edit record') + '</h3>' +
+      '<div class="seg d-seg" id="nDir" style="--x:' + (d.dir === 'in' ? '0%' : '100%') + '"><button data-d="in" class="' + (d.dir === 'in' ? 'on' : '') + '">Owed to me</button><button data-d="out" class="' + (d.dir === 'out' ? 'on' : '') + '">I owe</button><i class="seg-ind"></i></div>' +
+      '<label class="fld">Person or company<input id="nPerson" value="' + esc(d.person) + '" placeholder="e.g. Dad"></label>' +
+      '<label class="fld">Title<input id="nTitle" value="' + esc(d.title) + '" placeholder="e.g. House renovation loan"></label>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="nAmt" inputmode="numeric" placeholder="0" value="' + (d.amount ? d.amount.toLocaleString('id-ID') : '') + '"></div>' +
+      '<div class="two"><label class="fld">Date<input id="nDate" type="date" value="' + esc(d.created) + '"></label><label class="fld">Due date (optional)<input id="nDue" type="date" value="' + esc(d.due || '') + '"></label></div>' +
+      '<label class="fld">Linked wallet<select id="nWallet">' + walletOpts(d.wallet) + '</select></label>' +
+      (isNew ? '<label class="set-row plain"><span class="grow small" id="nMoveLbl"></span><input type="checkbox" class="switch" id="nMove"></label>' : '') +
+      '<label class="fld">Tags (optional)<input id="nTags" value="' + esc(d.tags || '') + '" placeholder="family, business"></label>' +
+      '<label class="fld">Notes<textarea id="nNotes" rows="2">' + esc(d.notes || '') + '</textarea></label>' +
+      '<button class="btn primary block" id="nSave">Save</button>',
+      function (r) {
+        var amt = r.querySelector('#nAmt'); fmtInput(amt);
+        var dirNow = d.dir;
+        function lbl() { var ml = r.querySelector('#nMoveLbl'); if (ml) ml.textContent = dirNow === 'in' ? 'I paid this out of my wallet now (lend / paid upfront for them)' : 'I received this money into my wallet now (borrowed)'; }
+        lbl();
+        r.querySelector('#nDir').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dirNow = b.dataset.d; this.style.setProperty('--x', dirNow === 'in' ? '0%' : '100%'); this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); lbl(); haptic(); };
+        if (isNew) setTimeout(function () { r.querySelector('#nPerson').focus(); }, 380);
+        r.querySelector('#nSave').onclick = function () {
+          var person = r.querySelector('#nPerson').value.trim(), a = parseNum(amt.value);
+          if (!person) { toast('Who is it?'); return; } if (!a) { toast('Enter the amount'); return; }
+          Object.assign(d, { dir: dirNow, person: person, title: r.querySelector('#nTitle').value.trim(), amount: a, created: r.querySelector('#nDate').value || today(), due: r.querySelector('#nDue').value, wallet: r.querySelector('#nWallet').value, tags: r.querySelector('#nTags').value.trim(), notes: r.querySelector('#nNotes').value.trim() });
+          if (isNew) {
+            S.debts.push(d);
+            var mv = r.querySelector('#nMove');
+            if (mv && mv.checked) { var t = addTx({ type: 'debt', cat: d.dir === 'in' ? 'loan' : 'debt', amount: a, wallet: d.wallet, date: d.created, merchant: person, note: d.title, debtId: d.id }); d.startTx = t.id; }
+          }
+          dDir = d.dir; haptic(); save(); closeSheet(); renderAll(); toast(isNew ? 'Saved ✓' : 'Updated ✓');
+        };
+      });
+  }
+
+  function paySheet(d) {
+    if (!d) return;
+    var rem = dRemain(d), inn = d.dir === 'in';
+    openSheet('<h3>' + (inn ? 'Record payment' : 'Record repayment') + '</h3>' +
+      '<div class="d-top" style="margin-bottom:10px">' + avatar(d.person) + '<div class="grow"><div class="d-name">' + esc(d.person) + '</div><div class="d-title">Remaining ' + money(rem) + '</div></div></div>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="pAmt" inputmode="numeric" placeholder="0"></div>' +
+      '<div class="quick-amts"><button type="button" data-a="' + rem + '">Full ' + money(rem, { rp: false }) + '</button><button type="button" data-a="' + Math.round(rem / 2) + '">50%</button><button type="button" data-a="' + Math.round(rem / 4) + '">25%</button></div>' +
+      '<div class="two"><label class="fld">Date<input id="pDate" type="date" value="' + today() + '"></label><label class="fld">' + (inn ? 'Received into' : 'Paid from') + '<select id="pWallet">' + walletOpts(d.wallet) + '</select></label></div>' +
+      '<label class="fld">Note (optional)<input id="pNote" placeholder="e.g. transfer from BCA"></label>' +
+      '<button class="btn primary block" id="pSave">Save payment</button>',
+      function (r) {
+        var amt = r.querySelector('#pAmt'); fmtInput(amt);
+        setTimeout(function () { amt.focus(); }, 380);
+        r.querySelector('.quick-amts').onclick = function (e) { var b = e.target.closest('button'); if (b) { amt.value = (+b.dataset.a).toLocaleString('id-ID'); haptic(); } };
+        r.querySelector('#pSave').onclick = function () {
+          var a = parseNum(amt.value); if (!a) { toast('Enter the amount'); return; }
+          if (a > rem && !confirm('This is more than the remaining ' + 'Rp ' + fmt(rem) + '. Save anyway?')) return;
+          var date = r.querySelector('#pDate').value || today(), w = r.querySelector('#pWallet').value, note = r.querySelector('#pNote').value.trim();
+          var t = addTx({ type: 'debt', cat: inn ? 'debt_collection' : 'repayment', amount: a, wallet: w, date: date, merchant: d.person, note: note || d.title, debtId: d.id });
+          d.payments = d.payments || []; d.payments.push({ id: uid(), amount: a, date: date, wallet: w, note: note, txId: t.id });
+          var done = dPaid(d) >= d.amount;
+          haptic(); save(); closeSheet(); renderAll();
+          toast(done ? (inn ? 'Fully paid 🎉' : 'All paid back 🎉') : 'Payment saved ✓');
+          if (done) { var fr = $('fab').getBoundingClientRect(); burst(fr.left + fr.width / 2, fr.top); }
+        };
+      });
+  }
+
+  function debtDetail(d) {
+    if (!d) return;
+    var st = dStatus(d), p = dPaid(d), pc = d.amount ? Math.min(100, Math.round(p / d.amount * 100)) : 0, inn = d.dir === 'in';
+    var pays = (d.payments || []).slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+    openSheet('<div class="d-top" style="margin:4px 0 8px">' + avatar(d.person) + '<div class="grow"><div class="d-name" style="font-size:18px">' + esc(d.person) + '</div><div class="d-title">' + esc(d.title || (inn ? 'Owes me' : 'I owe')) + '</div></div><span class="st ' + st + '">' + ST_LABEL[st] + '</span></div>' +
+      '<div class="eyebrow" style="margin-top:14px">Remaining</div><div class="mid-money xl">' + money(dRemain(d)) + '</div>' +
+      '<div class="d-prog ' + (st === 'overdue' ? 'overdue' : st === 'partial' ? 'partial' : '') + '" style="margin-top:12px"><i data-w="' + pc + '"></i></div>' +
+      '<div class="d-meta"><span>' + pc + '% ' + (inn ? 'collected' : 'paid') + '</span><span>' + dueText(d) + '</span></div>' +
+      '<div class="dd-stats"><div><small>Total ' + (inn ? 'owed' : 'borrowed') + '</small><b>' + money(d.amount, { rp: false }) + '</b></div><div><small>' + (inn ? 'Received' : 'Paid') + '</small><b>' + money(p, { rp: false }) + '</b></div><div><small>Remaining</small><b>' + money(dRemain(d), { rp: false }) + '</b></div></div>' +
+      '<div class="sheet-sec">Payment timeline</div><div class="timeline">' +
+        '<div class="tl start"><div><b>' + (inn ? 'Owed' : 'Borrowed') + ' ' + money(d.amount) + '</b><small>' + fmtDate(d.created) + (d.startTx ? ' · moved via ' + esc(wallet(d.wallet).name) : '') + '</small></div></div>' +
+        pays.map(function (x) { return '<div class="tl"><div><b class="pos">+ ' + money(x.amount) + '</b><small>' + fmtDate(x.date) + ' · ' + esc(wallet(x.wallet).name) + (x.note ? ' · ' + esc(x.note) : '') + '</small></div><button class="x" data-delpay="' + esc(x.id) + '" aria-label="Delete payment">×</button></div>'; }).join('') +
+        (pays.length ? '' : '<div class="muted small" style="padding:6px 0">No payments yet.</div>') +
+      '</div>' +
+      ((d.tags || d.notes) ? '<div class="sheet-sec">Notes</div><div class="card" style="box-shadow:none">' + (d.tags ? '<div class="small muted">Tags: ' + esc(d.tags) + '</div>' : '') + (d.notes ? '<div style="white-space:pre-wrap;margin-top:4px">' + esc(d.notes) + '</div>' : '') + '</div>' : '') +
+      '<div class="small muted" style="margin:10px 2px">Linked wallet: ' + esc(wallet(d.wallet).name) + '</div>' +
+      (dOpen(d) ? '<button class="btn primary block" id="ddPay">＋ ' + (inn ? 'Record payment' : 'Record repayment') + '</button>' : '') +
+      '<div class="two"><button class="btn" id="ddEdit">Edit</button>' + (d.closed ? '<button class="btn" id="ddReopen">Reopen</button>' : '<button class="btn" id="ddCancel">Cancel debt</button>') + '</div>' +
+      (!d.closed && inn ? '<button class="btn block" id="ddWrite">Write off</button>' : '') +
+      '<button class="btn danger block" id="ddDel">Delete record</button>',
+      function (r) {
+        growBars(r);
+        var b;
+        if ((b = r.querySelector('#ddPay'))) b.onclick = function () { paySheet(d); };
+        r.querySelector('#ddEdit').onclick = function () { debtSheet(d); };
+        if ((b = r.querySelector('#ddCancel'))) b.onclick = function () { if (!confirm('Mark as cancelled? It will no longer count as outstanding.')) return; d.closed = 'cancelled'; save(); closeSheet(); renderAll(); toast('Cancelled'); };
+        if ((b = r.querySelector('#ddWrite'))) b.onclick = function () { if (!confirm('Write off the remaining Rp ' + fmt(dRemain(d)) + '? It will no longer count in your net worth.')) return; d.closed = 'writtenoff'; save(); closeSheet(); renderAll(); toast('Written off'); };
+        if ((b = r.querySelector('#ddReopen'))) b.onclick = function () { delete d.closed; save(); closeSheet(); renderAll(); toast('Reopened'); };
+        r.querySelector('#ddDel').onclick = function () {
+          if (!confirm('Delete this record and its ' + (d.payments || []).length + ' payment(s)? Linked wallet transactions are removed too.')) return;
+          var ids = (d.payments || []).map(function (x) { return x.txId; }).concat(d.startTx ? [d.startTx] : []);
+          S.tx = S.tx.filter(function (t) { return ids.indexOf(t.id) === -1; });
+          S.debts = S.debts.filter(function (x) { return x.id !== d.id; });
+          save(); closeSheet(); renderAll(); toast('Deleted');
+        };
+        r.addEventListener('click', function (e) {
+          var x = e.target.closest('[data-delpay]'); if (!x) return;
+          if (!confirm('Delete this payment? Its wallet transaction is removed too.')) return;
+          var pay = d.payments.filter(function (y) { return y.id === x.dataset.delpay; })[0];
+          d.payments = d.payments.filter(function (y) { return y !== pay; });
+          if (pay) S.tx = S.tx.filter(function (t) { return t.id !== pay.txId; });
+          save(); renderAll(); debtDetail(d);
+        });
+      });
+  }
+
   // ---------- navigation ----------
   function show(id, back) {
     if (id === view) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
@@ -517,16 +722,19 @@
     var el = $(id); void el.offsetWidth;
     el.classList.add('active'); if (back) el.classList.add('back');
     window.scrollTo(0, 0);
-    var navId = id === 'v-report' ? prev === 'v-tx' ? 'v-tx' : 'v-home' : id;
+    var navId = id === 'v-report' ? (prev === 'v-tx' ? 'v-tx' : prev === 'v-account' ? 'v-account' : 'v-home') : id === 'v-budget' ? (prev === 'v-home' ? 'v-home' : 'v-account') : id;
+    if (id === 'v-budget') budFrom = prev;
     if (id === 'v-report') repFrom = prev;
     document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === navId); });
     moveInd();
     $('fab').classList.toggle('gone', id === 'v-account' || id === 'v-report');
+    if (id === 'v-debts') renderDebts();
     if (id === 'v-budget' || id === 'v-report') { growBars($(id)); }
     if (id === 'v-home') renderHome();
     $('topTitle').textContent = TITLES[id] || ''; onScroll();
   }
-  var TITLES = { 'v-home': 'Overview', 'v-tx': 'Transactions', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'Account' };
+  var budFrom = 'v-account';
+  var TITLES = { 'v-home': 'MONETA', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
   function onScroll() { $('topbar').classList.toggle('show', window.scrollY > 70); }
 
   // ---------- extra motion ----------
@@ -679,7 +887,7 @@
     openSheet(
       '<h3>' + (isNew ? 'Add transaction' : 'Edit transaction') + '</h3>' +
       '<div class="seg type-seg" id="fType" style="display:grid;grid-template-columns:repeat(4,1fr)"><button data-t="expense">Expense</button><button data-t="income">Income</button><button data-t="debt">Debt/Loan</button><button data-t="transfer">Transfer</button><i class="seg-ind" style="width:calc(25% - 1.5px)"></i></div>' +
-      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="fAmt" inputmode="numeric" placeholder="0" value="' + (t.amount ? t.amount.toLocaleString('en-US') : '') + '"></div>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="fAmt" inputmode="numeric" placeholder="0" value="' + (t.amount ? t.amount.toLocaleString('id-ID') : '') + '"></div>' +
       '<div id="fCatWrap"><button type="button" class="cat-sel" id="fCatSel"></button><div class="cat-pick" id="fCatPick"><input id="fCatQ" placeholder="Search category" autocomplete="off"><div class="cat-list" id="fCats"></div></div></div>' +
       '<label class="fld" id="fWalletL"><span>Wallet</span><select id="fWallet">' + wOpts(t.wallet) + '</select></label>' +
       '<label class="fld" id="fToL">To wallet<select id="fTo">' + wOpts(t.toWallet || (S.wallets[1] && S.wallets[1].id)) + '</select></label>' +
@@ -732,6 +940,7 @@
           var rem = root.querySelector('#fRemember');
           if (rem && rem.checked && t.merchant && t.cat && t.cat !== oldCat) learnRule(t.merchant, t.cat);
           if (isNew) S.tx.push(t);
+          if (t.debtId) S.debts.forEach(function (d) { (d.payments || []).forEach(function (p) { if (p.txId === t.id) { p.amount = t.amount; p.date = t.date; p.wallet = t.wallet; } }); });
           haptic(); save(); closeSheet(); renderAll(); toast(isNew ? 'Added ✓' : 'Saved ✓');
           if (isNew && t.type === 'income') { var fr = $('fab').getBoundingClientRect(); burst(fr.left + fr.width / 2, fr.top); }
         };
@@ -739,6 +948,7 @@
         if (del) del.onclick = function () {
           if (!confirm('Delete this transaction?')) return;
           S.tx = S.tx.filter(function (x) { return x.id !== t.id; });
+          S.debts.forEach(function (d) { d.payments = (d.payments || []).filter(function (p) { return p.txId !== t.id; }); if (d.startTx === t.id) delete d.startTx; });
           save(); closeSheet(); renderAll(); toast('Deleted');
         };
       });
@@ -846,7 +1056,7 @@
       icon(w, 'preview') +
       '<label class="fld">Name<input id="wName" value="' + esc(w.name) + '"></label>' +
       '<div class="fld">Icon' + picker(w.icon) + '</div><label class="fld">Or type any emoji<input id="wIcon" value="' + esc(w.icon) + '"></label>' +
-      '<label class="fld">Current balance<input id="wBal" inputmode="numeric" value="' + (curBal ? Math.abs(curBal).toLocaleString('en-US') : '') + '" placeholder="0"></label>' +
+      '<label class="fld">Current balance<input id="wBal" inputmode="numeric" value="' + (curBal ? Math.abs(curBal).toLocaleString('id-ID') : '') + '" placeholder="0"></label>' +
       '<label class="fld">Group<select id="wGroup">' + Object.keys(GROUPS).map(function (g) { return '<option value="' + g + '"' + (groupOf(w) === g ? ' selected' : '') + '>' + GROUPS[g].icon + ' ' + GROUPS[g].name + '</option>'; }).join('') + '</select></label>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
@@ -927,7 +1137,7 @@
   function budgetSheet(catId) {
     var c = cat(catId);
     openSheet('<h3>' + esc(c.name) + ' budget</h3>' + icon(c, 'preview') +
-      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="bAmt" inputmode="numeric" value="' + (S.budgets[catId] ? (+S.budgets[catId]).toLocaleString('en-US') : '') + '" placeholder="0"></div>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="bAmt" inputmode="numeric" value="' + (S.budgets[catId] ? (+S.budgets[catId]).toLocaleString('id-ID') : '') + '" placeholder="0"></div>' +
       '<p class="muted small">Monthly limit. Leave empty for no budget.</p><button class="btn primary block" id="bSave">Save</button>',
       function (r) {
         var i = r.querySelector('#bAmt'); fmtInput(i);
@@ -973,11 +1183,33 @@
   function bind() {
     document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.onclick = function () { haptic(); show(b.dataset.v); }; });
     window.addEventListener('resize', moveInd);
-    $('fab').onclick = function () { haptic(); txSheet(null, walletSel !== 'all' ? { wallet: walletSel } : null); };
+    $('fab').onclick = function () { haptic(); if (view === 'v-debts') debtSheet(null, dDir); else txSheet(null, walletSel !== 'all' ? { wallet: walletSel } : null); };
+    document.querySelectorAll('[data-priv]').forEach(function (b) { b.onclick = togglePrivacy; });
+    document.addEventListener('click', function (e) {
+      var g = e.target.closest('[data-go]'); if (g) { haptic(); show(g.dataset.go); return; }
+      var bk = e.target.closest('[data-back]'); if (bk) { haptic(); show(budFrom === 'v-budget' ? 'v-account' : budFrom, true); }
+    });
+    document.querySelectorAll('.quick [data-q]').forEach(function (b) {
+      b.onclick = function () {
+        haptic(); var q = b.dataset.q;
+        if (q === 'expense' || q === 'income') txSheet(null, { type: q, cat: q === 'income' ? 'salary' : 'food' });
+        else if (q === 'owed') show('v-debts'); else if (q === 'budget') show('v-budget');
+      };
+    });
+    $('dSeg').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dDir = b.dataset.d; haptic(); renderDebts(); };
+    $('dFilter').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dFilter = b.dataset.f; haptic(); renderDebts(); };
+    $('dQ').addEventListener('input', renderDebts);
+    $('dSort').onchange = renderDebts;
+    $('dAdd').onclick = function () { haptic(); debtSheet(null, dDir); };
+    $('dList').addEventListener('click', function (e) {
+      var p = e.target.closest('[data-pay]'); if (p) { haptic(); paySheet(debtById(p.dataset.pay)); return; }
+      var v = e.target.closest('[data-view]'); if (v) { haptic(); debtDetail(debtById(v.dataset.view)); }
+    });
+    $('hUpcoming').addEventListener('click', function (e) { var r = e.target.closest('[data-view]'); if (r) debtDetail(debtById(r.dataset.view)); });
     $('sheetBg').onclick = closeSheet;
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
 
-    $('eyeBtn').onclick = function () { S.settings.hide = !S.settings.hide; haptic(); save(); renderAll(); };
+    $('eyeBtn').onclick = togglePrivacy;
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;

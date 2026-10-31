@@ -1,64 +1,87 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#09090b">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Arus">
-<title>Arus Money</title>
-<script>try{var _s=(JSON.parse(localStorage.getItem('arus_v1')||'{}')||{}).settings;if(_s&&_s.theme==='light'){document.documentElement.setAttribute('data-theme','light');document.querySelector('meta[name=theme-color]').setAttribute('content','#f3f5f1');}}catch(e){}</script>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MONETA">
+<title>MONETA</title>
+<script>try{var _s=(JSON.parse(localStorage.getItem('arus_v1')||'{}')||{}).settings;if(_s&&_s.theme==='light'){document.documentElement.setAttribute('data-theme','light');document.querySelector('meta[name=theme-color]').setAttribute('content','#f5f3ee');}if(_s&&_s.hide)document.documentElement.classList.add('privacy');}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="css/style.css?v=20261031-17">
+<link rel="stylesheet" href="css/style.css?v=20261031-20">
 </head>
 <body>
-<div class="bg-mesh" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+<div class="bg-mesh" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
 <div class="topbar" id="topbar"><span id="topTitle">Overview</span></div>
 <div class="ptr" id="ptr"><span class="ptr-ic">⟳</span><span id="ptrTxt">Pull to sync</span></div>
 
 <!-- HOME -->
 <section class="view active" id="v-home">
-  <header class="ov-head">
-    <div><h1>Overview</h1><div class="muted" id="hGreet">Here is the summary of your money</div></div>
-    <button class="round-btn" id="hSync" aria-label="Sync BCA"><span class="sync-ic">⟳</span><span class="pip" id="hSyncPip" hidden></span></button>
+  <header class="app-head">
+    <div class="brand"><span class="mark">M</span><div><div class="eyebrow" id="hGreet">Good evening</div><div class="wordmark">MONETA</div></div></div>
+    <div class="head-actions">
+      <button class="icon-btn priv-btn" data-priv aria-label="Hide or show all amounts"></button>
+      <button class="icon-btn" id="hSync" aria-label="Sync BCA"><span class="sync-ic">⟳</span><span class="pip" id="hSyncPip" hidden></span></button>
+    </div>
   </header>
 
   <div class="bal-wrap"><i class="stk s2"></i><i class="stk s1"></i>
   <div class="bal-card">
     <div class="bal-in">
       <div class="bal-top">
-        <span class="bal-ico" data-i3d="👛">👛</span>
-        <span class="t"><b>My balance</b><small>All wallets in total</small></span>
+        <span class="t"><small>Total net worth</small></span>
+        <span class="chip" id="hChip"></span>
         <button class="eye" id="eyeBtn" aria-label="Hide or show amounts"></button>
       </div>
-      <div class="bal-amt"><span class="big-money" id="hTotal">Rp 0</span><span class="chip" id="hChip"></span></div>
+      <div class="bal-amt"><span class="big-money" id="hNet">Rp 0</span></div>
+      <div class="bal-stats">
+        <div><small>Liquid money</small><b id="hTotal">0</b></div>
+        <div><small>Owed to me</small><b id="hRecv">0</b></div>
+        <div><small>I owe</small><b id="hPay">0</b></div>
+      </div>
     </div>
-    <button class="bal-foot" id="balDetails"><span>See details</span><span class="arr">→</span></button>
+    <button class="bal-foot" id="balDetails"><span>Accounts</span><span class="arr">→</span></button>
   </div>
   </div>
 
+  <div class="quick">
+    <button data-q="expense"><span class="q-ic" data-i3d="💸"></span>Expense</button>
+    <button data-q="income"><span class="q-ic" data-i3d="💰"></span>Income</button>
+    <button data-q="owed"><span class="q-ic" data-i3d="🧾"></span>Owed</button>
+    <button data-q="budget"><span class="q-ic" data-i3d="🎯"></span>Budgets</button>
+  </div>
+
+  <div class="section-h" id="upHead" hidden><span>Upcoming &amp; overdue</span><button class="link" data-go="v-debts">View all</button></div>
+  <div class="card list-card" id="hUpcoming" hidden></div>
+
+  <div class="section-h"><span>Accounts by group</span></div>
   <div class="sum-row" id="hGroups"></div>
 
   <div class="card list-card">
-    <div class="card-h"><h2>My Wallets</h2><button class="link" id="seeAllWallets">See all</button></div>
+    <div class="card-h"><h2>Wallets</h2><button class="link" id="seeAllWallets">See all</button></div>
     <div id="hWallets"></div>
   </div>
 
   <div class="card">
     <div class="cf-head">
       <h2>Cash flow</h2>
-      <div class="cf-seg" id="cfSeg"><button data-n="6" class="on">6 months</button><button data-n="12">1 year</button></div>
+      <div class="cf-seg" id="cfSeg"><button data-n="6" class="on">6M</button><button data-n="12">1Y</button></div>
     </div>
     <div class="mid-money" id="cfNet">Rp 0</div><div class="muted small" id="cfSub"></div>
     <div id="cfChart"></div>
   </div>
 
   <div class="card donut-card">
-    <div class="card-h2"><span class="pill-ic">◔</span><h2>Spendings</h2><button class="round-btn mini" id="donutGo" aria-label="Open report">↗</button></div>
+    <div class="card-h2"><h2>Spending</h2><button class="icon-btn mini" id="donutGo" aria-label="Open report">↗</button></div>
     <div class="donut-wrap">
       <svg viewBox="0 0 160 160" class="donut" id="donutSvg" aria-hidden="true"><defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="transparent"/><rect width="3" height="7" fill="currentColor"/></pattern></defs></svg>
       <div class="donut-mid"><b id="donutPct">0%</b><small id="donutCap">of spending</small></div>
@@ -66,60 +89,74 @@
     <div class="donut-legend" id="donutLegend"></div>
   </div>
 
-  <div class="section-h">Spending insight</div>
   <div class="card insight">
-    <div class="ins-top"><h2>This month</h2></div>
+    <div class="card-h2"><h2>This month</h2><button class="link" id="seeReports">Report</button></div>
     <div class="ins-body">
       <div>
-        <div class="muted">Average</div>
+        <div class="muted small">Average spend</div>
         <div class="ins-avg"><span id="hAvg">0</span><small>/day</small></div>
         <div class="muted small" id="hSpentLine"></div>
       </div>
       <div class="ring-wrap">
-        <svg viewBox="0 0 44 44" class="ring" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86efac"/><stop offset="1" stop-color="#16a34a"/></linearGradient></defs><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" id="hRing"/></svg>
+        <svg viewBox="0 0 44 44" class="ring" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ee7b7"/><stop offset="1" stop-color="#059669"/></linearGradient></defs><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" id="hRing"/></svg>
         <div class="ring-txt" id="hRingTxt">0%</div>
         <div class="muted small ring-cap" id="hRingCap"></div>
       </div>
     </div>
-  </div>
-
-  <div class="section-h"><span>Report this month</span><button class="link" id="seeReports">See reports</button></div>
-  <div class="card">
     <div class="rep-split">
-      <div><div class="muted">Total spent</div><div class="neg big2" id="hSpent">0</div></div>
-      <div><div class="muted">Total income</div><div class="pos big2" id="hIncome">0</div></div>
+      <div><div class="muted small">Spent</div><div class="neg big2" id="hSpent">0</div></div>
+      <div><div class="muted small">Income</div><div class="pos big2" id="hIncome">0</div></div>
     </div>
     <div class="split-bar"><i id="hBarOut"></i><i id="hBarIn"></i></div>
   </div>
 
-  <div class="section-h"><span>Recent transactions</span><button class="link" id="seeAllTx">See all</button></div>
+  <div class="section-h"><span>Recent activity</span><button class="link" id="seeAllTx">See all</button></div>
   <div class="card list-card" id="hRecent"></div>
 </section>
 
 <!-- TRANSACTIONS -->
 <section class="view" id="v-tx">
-  <header class="tx-head">
-    <button class="round-btn" id="txPrev" aria-label="Previous month">‹</button>
-    <button class="wallet-pill" id="walletPill"><span class="ic sm" id="pillIc"></span><span id="pillName">Total</span><span class="chev">⇅</span></button>
-    <button class="round-btn" id="txNext" aria-label="Next month">›</button>
-  </header>
-  <div class="tx-bal"><div class="muted">Balance</div><div class="mid-money" id="txBal">Rp 0</div></div>
-  <div class="month-pill" id="monthLabel">October 2026</div>
+  <header class="page-head"><h1>Activity</h1><button class="icon-btn priv-btn" data-priv aria-label="Hide or show all amounts"></button></header>
+  <div class="tx-head">
+    <button class="icon-btn" id="txPrev" aria-label="Previous month">‹</button>
+    <button class="wallet-pill" id="walletPill"><span class="ic sm" id="pillIc"></span><span id="pillName">Total</span><span class="chev">⌄</span></button>
+    <button class="icon-btn" id="txNext" aria-label="Next month">›</button>
+  </div>
+  <div class="tx-bal"><div class="eyebrow">Balance</div><div class="mid-money xl" id="txBal">Rp 0</div><div class="month-pill" id="monthLabel">October 2026</div></div>
   <div class="card period">
     <div class="row"><span class="muted">Opening balance</span><span id="pOpen">0</span></div>
     <div class="row"><span class="muted">Ending balance</span><span id="pEnd">0</span></div>
     <div class="rule"></div>
-    <div class="row end"><b id="pNet">0</b></div>
+    <div class="row end"><span class="muted">Net change</span><b id="pNet">0</b></div>
     <button class="link center" id="periodReport">View report for this period</button>
   </div>
   <div id="txList"></div>
 </section>
 
+<!-- MONEY OWED -->
+<section class="view" id="v-debts">
+  <header class="page-head"><h1>Money owed</h1><div class="head-actions"><button class="icon-btn priv-btn" data-priv aria-label="Hide or show all amounts"></button><button class="icon-btn accent" id="dAdd" aria-label="New">＋</button></div></header>
+  <div class="seg d-seg" id="dSeg"><button data-d="in" class="on">Owed to me</button><button data-d="out">I owe</button><i class="seg-ind"></i></div>
+  <div class="card d-hero">
+    <div class="d-hero-top">
+      <div><div class="eyebrow" id="dHeroLbl">Outstanding</div><div class="mid-money xl" id="dOut">Rp 0</div><div class="muted small" id="dHeroSub"></div></div>
+      <div class="ring-wrap sm"><svg viewBox="0 0 44 44" class="ring" aria-hidden="true"><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" id="dRing"/></svg><div class="ring-txt" id="dRingTxt">0%</div></div>
+    </div>
+    <div class="d-hero-stats"><div><small>Total</small><b id="dTotal">0</b></div><div><small id="dPaidLbl">Collected</small><b id="dPaid">0</b></div><div><small>Overdue</small><b id="dOver">0</b></div></div>
+  </div>
+  <div class="d-tools">
+    <input id="dQ" placeholder="Search person or title" autocomplete="off">
+    <select id="dSort" aria-label="Sort"><option value="remain">Largest remaining</option><option value="due">Due date</option><option value="recent">Newest</option><option value="name">Name</option></select>
+  </div>
+  <div class="chips" id="dFilter"><button data-f="open" class="on">Open</button><button data-f="all">All</button><button data-f="overdue">Overdue</button><button data-f="partial">Partially paid</button><button data-f="unpaid">Unpaid</button><button data-f="paid">Fully paid</button><button data-f="closed">Cancelled / written off</button></div>
+  <div id="dList"></div>
+</section>
+
 <!-- BUDGETS -->
 <section class="view" id="v-budget">
-  <header class="page-head"><h1>Budgets</h1><div class="muted small" id="budgetMonth"></div></header>
+  <header class="page-head with-back"><button class="icon-btn" data-back aria-label="Back">‹</button><h1>Budgets</h1><span class="muted small" id="budgetMonth"></span></header>
   <div class="card budget-hero">
-    <div class="muted">Spent of budget this month</div>
+    <div class="eyebrow">Spent of budget this month</div>
     <div class="mid-money" id="bTotal">0</div>
     <div class="bar"><i id="bTotalBar"></i></div>
     <div class="muted small" id="bTotalLine"></div>
@@ -127,13 +164,12 @@
   <div class="card list-card" id="budgetList"></div>
 </section>
 
-<!-- REPORTS (sub page) -->
+<!-- REPORTS -->
 <section class="view" id="v-report">
-  <header class="page-head with-back"><button class="round-btn" id="repBack" aria-label="Back">‹</button><h1>Report</h1><span></span></header>
-  <div class="month-pill" id="repMonth"></div>
+  <header class="page-head with-back"><button class="icon-btn" id="repBack" aria-label="Back">‹</button><h1>Report</h1><span class="month-pill" id="repMonth"></span></header>
   <div class="card">
-    <div class="muted">Net income</div>
-    <div class="mid-money" id="repNet">0</div>
+    <div class="eyebrow">Net income</div>
+    <div class="mid-money xl" id="repNet">0</div>
     <div class="muted small" id="repAvg"></div>
   </div>
   <div class="card">
@@ -146,14 +182,23 @@
   </div>
 </section>
 
-<!-- ACCOUNT -->
+<!-- MORE / ACCOUNT -->
 <section class="view" id="v-account">
-  <header class="page-head"><h1>Account</h1></header>
+  <header class="page-head"><h1>More</h1><button class="icon-btn priv-btn" data-priv aria-label="Hide or show all amounts"></button></header>
 
   <div class="card list-card">
-    <div class="set-row" style="cursor:default"><span class="ic sm" style="--c:#2f7a4a" data-i3d="🎨">🎨</span><span class="grow">Theme</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
-    <label class="set-row"><span class="ic sm" style="--c:#4f7cff" data-i3d="👁">👁️</span><span class="grow">Hide amounts</span><input type="checkbox" class="switch" id="hideToggle"></label>
+    <button class="set-row" data-go="v-budget"><span class="ic sm" data-i3d="🎯">🎯</span><span class="grow">Budgets</span><span class="muted">›</span></button>
+    <button class="set-row" data-go="v-report"><span class="ic sm" data-i3d="📊">📊</span><span class="grow">Reports</span><span class="muted">›</span></button>
+    <div class="set-row" style="cursor:default"><span class="ic sm" data-i3d="🎨">🎨</span><span class="grow">Appearance</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
+    <label class="set-row"><span class="ic sm" data-i3d="👁">👁️</span><span class="grow">Privacy mode<span class="sub">Hide every amount in the app</span></span><input type="checkbox" class="switch" id="hideToggle"></label>
   </div>
+
+  <div class="section-h"><span>Wallets</span><button class="link" id="addWallet">+ Add</button></div>
+  <div class="card list-card" id="walletList"></div>
+
+  <div class="section-h"><span>Categories</span><button class="link" id="addCat">+ New category</button></div>
+  <div class="seg cat-seg" id="catSeg"><button data-t="expense" class="on">Expense</button><button data-t="income">Income</button><button data-t="debt">Debt/Loan</button><i class="seg-ind"></i></div>
+  <div class="card list-card cat-card" id="catList"></div>
 
   <div class="section-h">BCA email sync</div>
   <div class="card">
@@ -171,13 +216,6 @@
     <p class="muted small">These BCA emails had no clear amount. Tap one to add it by hand, or dismiss it.</p>
     <div id="reviewList"></div>
   </div>
-
-  <div class="section-h"><span>Wallets</span><button class="link" id="addWallet">+ Add</button></div>
-  <div class="card list-card" id="walletList"></div>
-
-  <div class="section-h"><span>Categories</span><button class="link" id="addCat">+ New category</button></div>
-  <div class="seg cat-seg" id="catSeg"><button data-t="expense" class="on">Expense</button><button data-t="income">Income</button><button data-t="debt">Debt/Loan</button><i class="seg-ind"></i></div>
-  <div class="card list-card cat-card" id="catList"></div>
 
   <div class="section-h"><span>Auto category rules</span><button class="link" id="addRule">+ Add</button></div>
   <div class="card list-card"><p class="muted small pad">If the merchant name contains the word, that category is used.</p><div id="ruleList"></div></div>
@@ -202,16 +240,17 @@
     <p class="muted small" id="startFromLine"></p>
     <button class="btn danger" id="resetBtn">Start fresh</button>
   </div>
-  <div class="foot muted small">Arus Money · data stays on this phone</div>
+  <div class="foot muted small">MONETA · private · your data stays on this device</div>
 </section>
 
 <nav class="bottom-nav" id="nav">
   <i class="nav-ind" id="navInd"></i>
-  <button data-v="v-home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
-  <button data-v="v-tx"><svg viewBox="0 0 24 24"><path d="M3 7h15a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l12-3v3M16 13h2"/></svg>Transactions</button>
+  <div class="side-brand"><span class="mark">M</span><span>MONETA</span></div>
+  <button data-v="v-home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+  <button data-v="v-tx"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="17" r="3"/></svg><span>Activity</span></button>
   <span class="nav-gap"></span>
-  <button data-v="v-budget"><svg viewBox="0 0 24 24"><path d="M5 4h9l5 5v11H5zM14 4v5h5M8 13h8M8 17h5"/></svg>Budgets</button>
-  <button data-v="v-account"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Account</button>
+  <button data-v="v-debts"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M12 3v9l6 3"/></svg><span>Owed</span></button>
+  <button data-v="v-account"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>
 </nav>
 <button class="fab" id="fab" aria-label="Add transaction"><span>+</span></button>
 
@@ -224,6 +263,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-1"></script>
-<script src="js/app.js?v=20261031-18"></script>
+<script src="js/app.js?v=20261031-20"></script>
 </body>
 </html>
