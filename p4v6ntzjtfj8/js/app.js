@@ -559,10 +559,28 @@
       var tx = S.tx.filter(function (t) { return t.wallet === w.id || t.toWallet === w.id; }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
       var m = ym(new Date()), inM = 0, outM = 0, u = unpaidIn(w.id);
       tx.forEach(function (t) { if (t.date.slice(0, 7) !== m) return; var d = delta(t, w.id); if (d > 0) inM += d; else outM -= d; });
-      info.innerHTML = '<div class="dw-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
+      info.innerHTML = holdPanel(w) + '<div class="dw-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
         '<div class="dw-acts"><button type="button" data-a="add"><span>＋</span>Add</button><button type="button" data-a="move"><span>⇄</span>Transfer</button><button type="button" data-a="hist"><span>☰</span>History</button><button type="button" data-a="edit"><span>✎</span>Edit</button></div>' +
         '<div class="dw-sec">Recent</div><div class="dw-list">' + (tx.length ? tx.slice(0, 4).map(function (t, k) { return txRow(t, k, true); }).join('') : '<div class="dw-empty">No transactions in this wallet yet.</div>') + '</div>';
     }
+    function wView(w) { return ((S.settings.wView || {})[w.id]) || 'live'; }
+    function holdPanel(w) {
+      var h = w.holding; if (!h || !h.asset || !(+h.qty)) return '';
+      var p = PRICES[h.asset], v = p ? h.qty * p : null, inv = +h.cost || 0, d = v != null && inv ? v - inv : null, live = wView(w) === 'live', u = ASSETS[h.asset].unit;
+      var avg = h.avg || (inv && h.qty ? inv / h.qty : 0);
+      return '<div class="hv"><div class="hv-seg"><button type="button" data-v="cost" class="' + (live ? '' : 'on') + '">Invested</button><button type="button" data-v="live" class="' + (live ? 'on' : '') + '"><i class="live"></i>Live value</button></div>' +
+        '<div class="hv-big"><small>' + (live ? 'Worth now' : 'Money you put in') + '</small><b>' + (live ? (v != null ? money(Math.round(v)) : 'Fetching…') : money(inv)) + '</b>' +
+        (d != null ? '<span class="hv-pl ' + (d >= 0 ? 'up' : 'dn') + '">' + (d >= 0 ? '▲ +' : '▼ −') + money(Math.abs(Math.round(d)), { rp: false }) + ' · ' + (d >= 0 ? '+' : '−') + Math.abs(d / inv * 100).toFixed(2) + '%</span>' : '') + '</div>' +
+        '<div class="hv-grid"><div><small>You own</small><b>' + (h.asset === 'gold' ? fmtG(h.qty) : (+h.qty).toLocaleString('id-ID', { maximumFractionDigits: 6 }) + ' ' + u) + '</b></div><div><small>Your average</small><b>' + (avg ? money(Math.round(avg), { rp: false }) : '–') + '</b></div><div><small>Live price</small><b>' + (p ? money(Math.round(p), { rp: false }) : '–') + '</b></div><div><small>Invested</small><b>' + money(inv, { rp: false }) + '</b></div></div></div>';
+    }
+    function applyView(i) {
+      var w = ws[i], h = w.holding, c = cards[i]; if (!c) return;
+      var amt = h && h.asset && wView(w) === 'cost' ? (+h.cost || 0) : balance(w.id);
+      c.querySelector('.dw-big').innerHTML = money(Math.round(amt)); c.querySelector('.dw-amt').innerHTML = money(Math.round(amt));
+      c.classList.toggle('is-cost', !!(h && h.asset && wView(w) === 'cost'));
+    }
+    cards.forEach(function (c, i) { applyView(i); });
+    window.__deckLive = function () { cards.forEach(function (c, i) { applyView(i); }); if (sel >= 0) paintInfo(sel); };
     function pick(i) { haptic(); if (i === sel || i < 0) { sel = -1; } else { sel = i; paintInfo(i); inEl.scrollTo({ top: 0, behavior: 'smooth' }); } layout(); }
     // open: cards rise from the Home stack and fan into place
     // First layout with CSS transitions off, so only one animation (the fly-in) moves the cards.
@@ -583,7 +601,7 @@
     haptic(); history.pushState({ deck: 1 }, '');
     var closed = false;
     function close(fromPop) {
-      if (closed) return; closed = true; window.removeEventListener('popstate', pop);
+      if (closed) return; closed = true; window.removeEventListener('popstate', pop); window.__deckLive = null;
       ov.classList.remove('show'); ov.classList.add('hide');
       cards.forEach(function (c, i) { c.style.transitionDelay = (i * 15) + 'ms'; c.style.transform = 'translateY(' + (inEl.clientHeight + 40) + 'px)'; });
       setTimeout(function () { ov.remove(); }, 460);
@@ -598,6 +616,8 @@
       var c = e.target.closest('.dw-card');
       if (c) { var i = +c.dataset.i; return pick(sel >= 0 && i !== sel ? -1 : i); }
       var t = e.target.closest('.tx'); if (t) { var tt = S.tx.filter(function (x) { return x.id === t.dataset.id; })[0]; if (tt) { close(); setTimeout(function () { txSheet(tt); }, 220); } return; }
+      var vb = e.target.closest('[data-v]');
+      if (vb && sel >= 0) { var ww = ws[sel]; S.settings.wView = S.settings.wView || {}; S.settings.wView[ww.id] = vb.dataset.v; save(); haptic(); paintInfo(sel); applyView(sel); return; }
       var b = e.target.closest('[data-a]');
       if (b && sel >= 0) {
         var w = ws[sel]; haptic();
@@ -2009,19 +2029,33 @@
       '<label class="fld">Current balance<input id="wBal" inputmode="numeric" value="' + (curBal ? Math.abs(curBal).toLocaleString('id-ID') : '') + '" placeholder="0"></label>' +
       '<label class="fld">Group<select id="wGroup">' + Object.keys(GROUPS).map(function (g) { return '<option value="' + g + '"' + (groupOf(w) === g ? ' selected' : '') + '>' + GROUPS[g].icon + ' ' + GROUPS[g].name + '</option>'; }).join('') + '</select></label>' +
       '<div class="live-box"><label class="fld">Track live price<select id="wAsset"><option value="">No, I set the balance myself</option>' + Object.keys(ASSETS).map(function (k) { return '<option value="' + k + '"' + (w.holding && w.holding.asset === k ? ' selected' : '') + '>' + ASSETS[k].name + '</option>'; }).join('') + '</select></label>' +
-      '<div class="two" id="wLiveF"><label class="fld">Quantity<input id="wQty" inputmode="decimal" value="' + (w.holding ? esc(w.holding.qty) : '') + '" placeholder="e.g. 25.5"></label><label class="fld">Total paid (Rp)<input id="wCost" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="for profit/loss"></label></div><div class="muted small" id="wLiveV"></div></div>' +
+      '<div class="two" id="wLiveF"><label class="fld">Quantity<input id="wQty" inputmode="decimal" value="' + (w.holding ? esc(w.holding.qty) : '') + '" placeholder="e.g. 25.5"></label><label class="fld">Total paid (Rp)<input id="wCost" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="for profit/loss"></label></div><div class="two" id="wGoldF"><label class="fld">Money invested (Rp)<input id="wInv" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="e.g. 50.000.000"></label><label class="fld">Average price / gram<input id="wAvg" inputmode="numeric" value="' + (w.holding && w.holding.cost && +w.holding.qty ? Math.round(w.holding.avg || w.holding.cost / w.holding.qty).toLocaleString('id-ID') : '') + '" placeholder="e.g. 1.950.000"></label></div><div class="gl-prev" id="wLiveV"></div></div>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
         fmtInput(r.querySelector('#wBal')); fmtInput(r.querySelector('#wCost'));
-        function liveUi() { var a = r.querySelector('#wAsset').value, q = parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0; r.querySelector('#wLiveF').hidden = !a; r.querySelector('#wBal').closest('label').hidden = !!a; r.querySelector('#wLiveV').innerHTML = a ? (PRICES[a] ? 'Now worth ' + money(q * PRICES[a]) + ' · 1 ' + ASSETS[a].unit + ' = ' + money(PRICES[a]) : 'Fetching live price…') : ''; }
+        fmtInput(r.querySelector('#wInv')); fmtInput(r.querySelector('#wAvg'));
+        function liveUi() {
+          var a = r.querySelector('#wAsset').value, gold = a === 'gold', q = parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, out = '';
+          r.querySelector('#wLiveF').hidden = !a || gold; r.querySelector('#wGoldF').hidden = !gold; r.querySelector('#wBal').closest('label').hidden = !!a;
+          if (gold) {
+            var inv = parseNum(r.querySelector('#wInv').value), avg = parseNum(r.querySelector('#wAvg').value), g = inv && avg ? inv / avg : 0, p = PRICES.gold;
+            if (!g) out = '<span class="muted">Enter how much you put in and your average price per gram.</span>';
+            else if (!p) out = fmtG(g) + ' of gold · fetching live price…';
+            else { var v = g * p, d = v - inv, pc = d / inv * 100; out = '<div class="gl-row"><span>You own</span><b>' + fmtG(g) + '</b></div><div class="gl-row"><span>Live price</span><b>' + money(Math.round(p)) + ' / g</b></div><div class="gl-row big"><span>Worth now</span><b>' + money(Math.round(v)) + '</b></div><div class="gl-row"><span>Profit / loss</span><b class="' + (d >= 0 ? 'pos' : 'neg') + '">' + (d >= 0 ? '+' : '−') + money(Math.abs(Math.round(d)), { rp: false }) + ' (' + (d >= 0 ? '+' : '−') + Math.abs(pc).toFixed(2) + '%)</b></div>'; }
+          } else if (a) out = PRICES[a] ? 'Now worth ' + money(q * PRICES[a]) + ' · 1 ' + ASSETS[a].unit + ' = ' + money(PRICES[a]) : 'Fetching live price…';
+          r.querySelector('#wLiveV').innerHTML = out;
+        }
+        r.querySelector('#wInv').oninput = liveUi; r.querySelector('#wAvg').oninput = liveUi;
         r.querySelector('#wAsset').onchange = function () { if (this.value && !PRICES[this.value]) fetchPrices(true).then(liveUi); liveUi(); }; r.querySelector('#wQty').oninput = liveUi; liveUi();
         var wst = { sp: spKey(w) }; bindSpPicker(r, wst);
         r.querySelector('#wSave').onclick = function () {
           var n = r.querySelector('#wName').value.trim(); if (!n) { toast('Give it a name'); return; }
           w.name = n; if (wst.sp) { w.sp = wst.sp; delete w.custom; }
           w.excluded = !r.querySelector('#wInc').checked;
-          var wa = r.querySelector('#wAsset').value; if (wa) w.holding = { asset: wa, qty: parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, cost: parseNum(r.querySelector('#wCost').value) }; else delete w.holding;
+          var wa = r.querySelector('#wAsset').value;
+          if (wa === 'gold') { var inv = parseNum(r.querySelector('#wInv').value), avg = parseNum(r.querySelector('#wAvg').value); if (!inv || !avg) { toast('Enter money invested and average price'); return; } w.holding = { asset: 'gold', qty: inv / avg, cost: inv, avg: avg }; }
+          else if (wa) w.holding = { asset: wa, qty: parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, cost: parseNum(r.querySelector('#wCost').value) }; else delete w.holding;
           w.group = r.querySelector('#wGroup').value;
           if (isNew) S.wallets.push(w);
           if (!w.holding) setBalance(w, parseNum(r.querySelector('#wBal').value) * (curBal < 0 ? -1 : 1));
@@ -2524,6 +2558,7 @@
   // ---------- live asset prices ----------
   var ASSETS = { gold: { name: 'Gold (gram)', unit: 'g' }, btc: { name: 'Bitcoin', unit: 'BTC' }, eth: { name: 'Ethereum', unit: 'ETH' }, usd: { name: 'US Dollar', unit: 'USD' } };
   var PRICES = (function () { try { return JSON.parse(localStorage.getItem('apex_prices')) || {}; } catch (e) { return {}; } })();
+  function fmtG(g) { return (+g).toLocaleString('id-ID', { maximumFractionDigits: g < 10 ? 3 : 2 }) + ' g'; }
   function liveValue(w) { var h = w && w.holding; if (!h || !h.asset || !(+h.qty)) return null; var p = PRICES[h.asset]; return p ? +h.qty * p : null; }
   function fetchPrices(force) {
     if (!force && PRICES.ts && Date.now() - PRICES.ts < 5 * 60e3) return Promise.resolve();
@@ -2571,6 +2606,7 @@
         GOLD = { price: c.current_price, chg: c.price_change_percentage_24h || 0, hi: c.high_24h, lo: c.low_24h, spark: (c.sparkline_in_7d && c.sparkline_in_7d.price) || [], ts: Date.now() };
         try { localStorage.setItem('apex_gold', JSON.stringify(GOLD)); } catch (e) {}
         PRICES.gold = GOLD.price / OZ;
+        if (prev !== GOLD.price && S.wallets.some(function (w) { return w.holding && w.holding.asset === 'gold'; })) { renderAll(); if (window.__deckLive) window.__deckLive(); }
         renderGold(prev && prev !== GOLD.price ? (GOLD.price > prev ? 'up' : 'dn') : '');
       }).catch(function () {});
   }
