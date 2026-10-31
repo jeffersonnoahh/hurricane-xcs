@@ -508,7 +508,12 @@
       if (stackOpen) { c.style.transform = 'translateY(' + (i * (CARD_H + GAP)) + 'px)'; c.style.opacity = 1; c.style.zIndex = n - i; c.style.transitionDelay = (i * 35) + 'ms'; }
       else { var k = Math.min(i, 3); c.style.transform = 'translateY(' + (k * 12) + 'px) scale(' + (1 - k * .05) + ')'; c.style.opacity = i > 2 ? 0 : 1 - k * .12; c.style.zIndex = n - i; c.style.transitionDelay = ((n - i) * 18) + 'ms'; }
     });
-    st.style.height = (stackOpen ? n * (CARD_H + GAP) + 40 : CARD_H + 24 + 26) + 'px';
+    // Height jumps open instantly (cards slide via transform); shrink only after the cards have closed, so the page doesn't re-layout every frame.
+    var hOpen = n * (CARD_H + GAP) + 40, hShut = CARD_H + 24 + 26;
+    clearTimeout(st._hT);
+    if (stackOpen) st.style.height = hOpen + 'px';
+    else if (!st.style.height) st.style.height = hShut + 'px';
+    else st._hT = setTimeout(function () { if (!stackOpen) st.style.height = hShut + 'px'; }, 520);
   }
   function reorderWallets(ids) {
     var by = {}; S.wallets.forEach(function (w) { by[w.id] = w; });

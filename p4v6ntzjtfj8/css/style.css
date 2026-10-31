@@ -1349,8 +1349,8 @@ html.vp-short .fab{bottom:2px}
 
 /* ===== iOS polish: no black flash on press, native-styled form controls ===== */
 /* Scaling a frosted (backdrop-filter) element on press makes iOS Safari paint it black for a moment. Dim instead. */
-button.card:active,.card button:active,.stat-strip:active,.real-btn:active,.tile:active,.actions button:active,.lg-row:active,.wcard:active,.goal:active,.set-row:active,.w-row:active,.tx:active,.sheet-tools button:active,.wd-x:active,.wd-pick:active,.world-card:active{transform:none!important;opacity:.72}
-button.card,.card button,.stat-strip,.real-btn,.tile,.actions button,.lg-row,.wcard,.goal,.set-row,.w-row,.tx,.sheet-tools button,.world-card{transition:opacity .18s ease}
+button.card:active,.card button:active,.stat-strip:active,.real-btn:active,.tile:active,.actions button:active,.lg-row:active,.goal:active,.set-row:active,.w-row:active,.tx:active,.sheet-tools button:active,.wd-x:active,.wd-pick:active,.world-card:active{transform:none!important;opacity:.72}
+button.card,.card button,.stat-strip,.real-btn,.tile,.actions button,.lg-row,.goal,.set-row,.w-row,.tx,.sheet-tools button,.world-card{transition:opacity .18s ease}
 select{-webkit-appearance:none;appearance:none;padding-right:36px!important;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238e8e93' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
   background-repeat:no-repeat!important;background-position:right 14px center!important;background-size:12px 8px!important}
@@ -1374,3 +1374,14 @@ body{min-height:100vh;min-height:100lvh}
 .bottom-nav::before{content:"";position:absolute;left:0;right:0;top:100%;height:200px;background:#121214;pointer-events:none}
 :root[data-theme="light"] .bottom-nav::before{background:#f9f9f9}
 @media (min-width:900px){.bottom-nav::before{display:none}}
+
+/* perf: wallet stack + sheet open */
+.wstack{transition:none}
+.wcard{will-change:transform;backface-visibility:hidden}
+body.sheet-open .view.active{filter:none!important;overflow:visible!important;border-radius:0!important}
+/* perf: endless decorative motion behind glass forces iOS to re-blur every card each frame. Keep the look, stop the loop. */
+.bg-mesh,.bg-mesh *,.bg-mesh::before,.bg-mesh::after{animation:none!important}
+.card-3d,.wdc-glow,.dino.empty-dino{animation:none!important}
+.sp-pulse{animation-iteration-count:2!important}
+body.sheet-open .view.active{scale:1!important}
+.wstack.open .wc-shine{animation:none!important}
