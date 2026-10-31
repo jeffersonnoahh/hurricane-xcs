@@ -1103,3 +1103,15 @@ em.neg{font-style:normal}
 .inst-mini .inst-bar i{background:var(--c)!important}
 .inst-next{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 14px;border-radius:12px;background:var(--surface2);font-size:14px}
 .inst-next span{color:var(--muted)}
+
+/* more 3D emoji */
+.card-3d{width:48px;height:48px;flex:none;order:2;margin-left:auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.35));animation:float 3.6s ease-in-out infinite}
+.card-3d .sp{width:100%;height:100%;filter:none}
+.km-top{align-items:center}
+.h-3d{display:inline-block;width:24px;height:24px;vertical-align:-5px;margin-right:8px}
+.h-3d .sp{width:100%;height:100%}
+.rb-3d{width:20px;height:20px;display:inline-block}
+.rb-3d .sp{width:100%;height:100%}
+.hero-3d{display:block;width:64px;height:64px;margin:0 auto 6px;animation:float 3.4s ease-in-out infinite}
+.hero-3d .sp{width:100%;height:100%}
+.inst-mini .biz-ic,.biz-chip .biz-ic{width:36px;height:36px;border-radius:11px}

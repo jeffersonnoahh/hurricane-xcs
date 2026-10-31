@@ -961,7 +961,7 @@
     var el = $('realBtn'); if (!el) return;
     var u = unpaidIn(null), owing = S.debts.filter(function (d) { return d.dir === 'in' && dOpen(d); }).length;
     el.hidden = !u && !owing;
-    $('realAmt').innerHTML = money(realBalance('all'), { rp: true });
+    $('realAmt').innerHTML = money(realBalance('all'), { rp: true }); var rs = el.querySelector('svg'); if (rs) rs.outerHTML = '<span class="rb-3d">' + sprite('reserve_transfer') + '</span>';
   }
   function realSheet() {
     var tot = balance('all'), unp = unpaidIn(null), real = tot - unp;
@@ -972,7 +972,7 @@
     var owers = S.debts.filter(function (d) { return d.dir === 'in' && dOpen(d); }).sort(function (a, b) { return dRemain(b) - dRemain(a); });
     var oweTot = owers.reduce(function (a, d) { return a + dRemain(d); }, 0);
     openSheet('<h3>Real money</h3>' +
-      '<div class="card real-hero"><div class="eyebrow">Actually in your accounts</div><div class="mid-money xl">' + money(real) + '</div>' +
+      '<div class="card real-hero"><span class="hero-3d">' + sprite('reserve_transfer') + '</span><div class="eyebrow">Actually in your accounts</div><div class="mid-money xl">' + money(real) + '</div>' +
       '<div class="real-bar"><i class="r" style="--w:' + (tot > 0 ? Math.max(0, real / tot * 100) : 100).toFixed(1) + '%"></i><i class="u" style="--w:' + (tot > 0 ? Math.min(100, unp / tot * 100) : 0).toFixed(1) + '%"></i></div>' +
       '<div class="real-legend"><span><i class="r"></i>Received ' + money(real, { rp: false }) + '</span><span><i class="u"></i>Not received yet ' + money(unp, { rp: false }) + '</span></div></div>' +
       '<div class="sheet-sec">By wallet</div><div class="card list-card">' + (rows || '<p class="muted small pad" style="padding-bottom:12px">All wallets are at 0.</p>') + '</div>' +
@@ -997,7 +997,7 @@
     var ms = komisiByMonth(), cur = ms.filter(function (m) { return m.k === ym(new Date()); })[0] || { earned: 0, paid: 0 };
     var owe = ms.reduce(function (a, m) { return a + m.earned - m.paid; }, 0), total = ms.reduce(function (a, m) { return a + m.earned; }, 0);
     var last6 = ms.slice(0, 6).reverse(), max = Math.max.apply(null, last6.map(function (m) { return m.earned; }).concat([1]));
-    el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Dad still owes</div><div class="mid-money">' + money(owe) + '</div><div class="muted small">This month ' + money(cur.earned, { rp: false }) + ' earned · ' + money(cur.paid, { rp: false }) + ' paid</div></div><span class="km-ic">' + sprite('komisi_out') + '</span></div>' +
+    el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Dad still owes</div><div class="mid-money">' + money(owe) + '</div><div class="muted small">This month ' + money(cur.earned, { rp: false }) + ' earned · ' + money(cur.paid, { rp: false }) + ' paid</div></div><span class="card-3d">' + sprite('komisi_out') + '</span></div>' +
       (last6.length ? '<div class="km-bars">' + last6.map(function (m, i) { var he = m.earned / max * 100, hp = m.paid / max * 100; return '<div class="km-col" style="--i:' + i + '"><div class="km-b"><i class="e" style="height:' + he.toFixed(1) + '%"></i><i class="p" style="height:' + hp.toFixed(1) + '%"></i></div><span>' + monthName(m.k).slice(0, 3) + '</span></div>'; }).join('') + '</div><div class="km-leg"><span><i class="e"></i>Earned</span><span><i class="p"></i>Paid by Dad</span><span class="muted">Total ' + money(total, { rp: false }) + '</span></div>'
         : '<div class="muted small" style="margin-top:10px">Add income with category RESERVE TRANSFER or KOMISI and it shows here per month.</div>');
   }
@@ -1025,7 +1025,7 @@
   function renderBizCard() {
     var el = $('hBiz'); if (!el) return; var m = ym(new Date()), bs = S.businesses || [];
     var tot = bs.reduce(function (a, b) { var r = bizIO(b.id, m); a.i += r.i; a.e += r.e; return a; }, { i: 0, e: 0 });
-    el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Business profit · ' + MONTHS[new Date().getMonth()] + '</div><div class="mid-money ' + (tot.i - tot.e < 0 ? 'neg' : '') + '">' + money(tot.i - tot.e, { sign: true }) + '</div><div class="muted small">In ' + money(tot.i, { rp: false }) + ' · Out ' + money(tot.e, { rp: false }) + '</div></div></div>' +
+    el.innerHTML = '<div class="km-top"><span class="card-3d">' + sprite('bi') + '</span><div><div class="eyebrow">Business profit · ' + MONTHS[new Date().getMonth()] + '</div><div class="mid-money ' + (tot.i - tot.e < 0 ? 'neg' : '') + '">' + money(tot.i - tot.e, { sign: true }) + '</div><div class="muted small">In ' + money(tot.i, { rp: false }) + ' · Out ' + money(tot.e, { rp: false }) + '</div></div></div>' +
       '<div class="biz-chips">' + bs.map(function (b, i) { var r = bizIO(b.id, m); return '<span class="biz-chip">' + bizIcon(b, i) + '<b>' + esc(b.name) + '</b><em class="' + (r.i - r.e < 0 ? 'neg' : 'pos') + '">' + money(r.i - r.e, { rp: false, sign: true }) + '</em></span>'; }).join('') + '</div>';
   }
   function bizSheet() {
@@ -1095,7 +1095,7 @@
     var el = $('hInst'); if (!el) return; var ps = S.inst || [];
     var tot = ps.reduce(function (a, p) { return a + (p.total || 0); }, 0), paid = ps.reduce(function (a, p) { return a + iPaid(p); }, 0);
     var nx = ps.map(function (p) { return { p: p, d: iNext(p) }; }).filter(function (x) { return x.d; }).sort(function (a, b) { return a.d.localeCompare(b.d); })[0];
-    el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Still to pay · not in your net worth</div><div class="mid-money">' + money(tot - paid) + '</div><div class="muted small">' + (nx ? 'Next: ' + esc(nx.p.name) + ' · ' + money(nx.p.monthly, { rp: false }) + ' on ' + fmtDate(nx.d) : 'Paid ' + money(paid, { rp: false }) + ' of ' + money(tot, { rp: false })) + '</div></div></div>' +
+    el.innerHTML = '<div class="km-top"><span class="card-3d">' + sprite('my_home') + '</span><div><div class="eyebrow">Still to pay · not in your net worth</div><div class="mid-money">' + money(tot - paid) + '</div><div class="muted small">' + (nx ? 'Next: ' + esc(nx.p.name) + ' · ' + money(nx.p.monthly, { rp: false }) + ' on ' + fmtDate(nx.d) : 'Paid ' + money(paid, { rp: false }) + ' of ' + money(tot, { rp: false })) + '</div></div></div>' +
       '<div class="inst-list">' + ps.map(function (p, i) { var pc = p.total ? Math.min(100, iPaid(p) / p.total * 100) : 0; return '<div class="inst-mini" style="--c:' + ICOL[i % ICOL.length] + '"><span class="biz-ic" style="--c:' + ICOL[i % ICOL.length] + '">' + sprite(p.sp || 'my_home') + '</span><span class="grow"><b>' + esc(p.name) + '</b><span class="bill-bar inst-bar"><i style="--w:' + pc.toFixed(1) + '%"></i></span></span><em>' + Math.round(pc) + '%</em></div>'; }).join('') + '</div>';
   }
   function instSheet() {
@@ -2489,7 +2489,11 @@
     S.bizLinkVer = 1;
   }
   function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
-  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  function secIcons() {
+    var M = { komisi: 'komisi_out', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
+    document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
+  }
+  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
