@@ -352,7 +352,7 @@
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
     $('hGreet').textContent = hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night';
-    renderUpcoming(); renderRealBtn(); renderKomisi();
+    renderUpcoming(); renderRealBtn(); renderKomisi(); renderBizCard();
     var mStart = ym(new Date()) + '-01', open0 = balance('all', mStart), chg = total - open0;
     var chip = $('hChip');
     if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '▲ ' : '▼ ') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% this month'; }
@@ -943,6 +943,67 @@
         r.querySelector('#kmAdd').onclick = function () { txSheet(null, { type: 'income', cat: 'reserve_transfer' }); };
       });
   }
+  // ---------- Business: income & expense per business ----------
+  function bizTx(id, m) { return S.tx.filter(function (t) { return t.biz === id && (t.type === 'income' || t.type === 'expense') && (!m || t.date.slice(0, 7) === m); }); }
+  function bizIO(id, m) { var r = { i: 0, e: 0 }; bizTx(id, m).forEach(function (t) { if (t.type === 'income') r.i += t.amount; else r.e += t.amount; }); return r; }
+  var BCOL = ['#34d399', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#2dd4bf'];
+  function bizIcon(b, i) { return '<span class="biz-ic" style="--c:' + BCOL[i % BCOL.length] + '">' + sprite(b.sp || 'kas_kantor') + '</span>'; }
+  function renderBizCard() {
+    var el = $('hBiz'); if (!el) return; var m = ym(new Date()), bs = S.businesses || [];
+    var tot = bs.reduce(function (a, b) { var r = bizIO(b.id, m); a.i += r.i; a.e += r.e; return a; }, { i: 0, e: 0 });
+    el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Business profit · ' + MONTHS[new Date().getMonth()] + '</div><div class="mid-money ' + (tot.i - tot.e < 0 ? 'neg' : '') + '">' + money(tot.i - tot.e, { sign: true }) + '</div><div class="muted small">In ' + money(tot.i, { rp: false }) + ' · Out ' + money(tot.e, { rp: false }) + '</div></div></div>' +
+      '<div class="biz-chips">' + bs.map(function (b, i) { var r = bizIO(b.id, m); return '<span class="biz-chip">' + bizIcon(b, i) + '<b>' + esc(b.name) + '</b><em class="' + (r.i - r.e < 0 ? 'neg' : 'pos') + '">' + money(r.i - r.e, { rp: false, sign: true }) + '</em></span>'; }).join('') + '</div>';
+  }
+  function bizSheet() {
+    var m = ym(new Date()), bs = S.businesses || [];
+    openSheet('<div class="sheet-top"><span style="width:36px"></span><h3>Business</h3><span style="width:36px"></span></div>' +
+      '<div class="muted small" style="text-align:center;margin:-8px 0 12px">' + MONTHS[new Date().getMonth()] + ' ' + new Date().getFullYear() + '</div>' +
+      '<div class="card list-card stagger">' + bs.map(function (b, i) {
+        var r = bizIO(b.id, m), net = r.i - r.e, mx = Math.max(r.i, r.e, 1);
+        return '<button class="w-row biz-row" data-biz="' + esc(b.id) + '" style="--i:' + i + '">' + bizIcon(b, i) + '<span class="grow"><b>' + esc(b.name) + '</b><span class="sub">In ' + money(r.i, { rp: false }) + ' · Out ' + money(r.e, { rp: false }) + '</span><span class="biz-mini"><i class="in" style="--w:' + (r.i / mx * 100).toFixed(0) + '%"></i><i class="out" style="--w:' + (r.e / mx * 100).toFixed(0) + '%"></i></span></span><span class="amt ' + (net < 0 ? 'neg' : 'pos') + '">' + money(net, { rp: false, sign: true }) + '</span></button>';
+      }).join('') + '<button class="w-row" id="bizAdd"><span class="biz-ic add">＋</span><span class="grow"><b>Add business</b><span class="sub">Track another business</span></span></button></div>',
+      function (r) {
+        r.addEventListener('click', function (e) { var b = e.target.closest('[data-biz]'); if (b) { haptic(); bizDetail(bs.filter(function (x) { return x.id === b.dataset.biz; })[0]); } });
+        r.querySelector('#bizAdd').onclick = function () { bizEdit(); };
+      });
+  }
+  function bizEdit(b) {
+    var isNew = !b; b = b || { id: uid(), name: '', sp: 'kas_kantor' }; var st = { sp: b.sp };
+    openSheet('<h3>' + (isNew ? 'Add business' : 'Edit business') + '</h3><span class="ic preview i3d">' + sprite(st.sp) + '</span>' +
+      '<label class="fld">Business name<input id="bzName" value="' + esc(b.name) + '" placeholder="e.g. HURRICANE"></label>' +
+      '<div class="fld">Icon' + picker(null, st.sp) + '</div>' +
+      '<button class="btn primary block" id="bzSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="bzDel">Delete business</button>'),
+      function (r) {
+        bindSpPicker(r, st); if (isNew) setTimeout(function () { r.querySelector('#bzName').focus(); }, 380);
+        r.querySelector('#bzSave').onclick = function () { var n = r.querySelector('#bzName').value.trim(); if (!n) { toast('Name it'); return; } b.name = n; b.sp = st.sp; if (isNew) (S.businesses = S.businesses || []).push(b); save(); renderAll(); bizSheet(); toast('Saved ✓'); };
+        var d = r.querySelector('#bzDel'); if (d) d.onclick = function () { if (!confirm('Delete ' + b.name + '? Its transactions stay, just without a business.')) return; S.tx.forEach(function (t) { if (t.biz === b.id) delete t.biz; }); S.businesses = S.businesses.filter(function (x) { return x !== b; }); save(); renderAll(); bizSheet(); };
+      });
+  }
+  function bizDetail(b) {
+    var i0 = S.businesses.indexOf(b), col = BCOL[i0 % BCOL.length], mDate = new Date(); mDate.setDate(1);
+    function draw() {
+      var m = ym(mDate), r = bizIO(b.id, m), net = r.i - r.e, list = bizTx(b.id, m).sort(function (x, y) { return (y.date + (y.time || '')).localeCompare(x.date + (x.time || '')); });
+      var months = []; for (var k = 5; k >= 0; k--) { var d = new Date(mDate.getFullYear(), mDate.getMonth() - k, 1); months.push({ k: ym(d), l: MONTHS[d.getMonth()].slice(0, 3), io: bizIO(b.id, ym(d)) }); }
+      var mx = Math.max.apply(null, months.map(function (x) { return Math.max(x.io.i, x.io.e); }).concat([1]));
+      openSheet('<div class="sheet-top"><button class="icon-btn" id="bzBack" aria-label="Back">‹</button><h3>' + esc(b.name) + '</h3><button class="icon-btn" id="bzEdit" aria-label="Edit">✎</button></div>' +
+        '<div class="biz-month"><button id="bzPrev">‹</button><span>' + MONTHS[mDate.getMonth()] + ' ' + mDate.getFullYear() + '</span><button id="bzNext">›</button></div>' +
+        '<div class="card" style="text-align:center"><div class="eyebrow">Profit</div><div class="mid-money xl ' + (net < 0 ? 'neg' : 'pos') + '">' + money(net, { sign: true }) + '</div>' +
+        '<div class="dd-stats"><div><small>Income</small><b class="pos">' + money(r.i, { rp: false }) + '</b></div><div><small>Expense</small><b class="neg">' + money(r.e, { rp: false }) + '</b></div><div><small>Margin</small><b>' + (r.i ? Math.round(net / r.i * 100) + '%' : '–') + '</b></div></div>' +
+        '<div class="km-bars" style="height:90px">' + months.map(function (x, j) { return '<div class="km-col" style="--i:' + j + '"><div class="km-b biz-b"><i class="bi" style="height:' + (x.io.i / mx * 100).toFixed(1) + '%"></i><i class="be" style="height:' + (x.io.e / mx * 100).toFixed(1) + '%"></i></div><span' + (x.k === m ? ' style="color:var(--ink);font-weight:600"' : '') + '>' + x.l + '</span></div>'; }).join('') + '</div>' +
+        '<div class="km-leg" style="justify-content:center"><span><i style="background:var(--pos)"></i>Income</span><span><i style="background:var(--neg)"></i>Expense</span></div></div>' +
+        '<div class="two"><button class="btn primary" id="bzIn">＋ Income</button><button class="btn" id="bzOut">＋ Expense</button></div>' +
+        '<div class="sheet-sec">Transactions</div>' + (list.length ? '<div class="card list-card stagger">' + list.map(function (t, j) { return txRow(t, j, true); }).join('') + '</div>' : '<div class="empty">' + dinoImg('empty-dino') + 'No ' + esc(b.name) + ' transactions this month.</div>'),
+        function (el) {
+          el.querySelector('#bzBack').onclick = bizSheet; el.querySelector('#bzEdit').onclick = function () { bizEdit(b); };
+          el.querySelector('#bzPrev').onclick = function () { mDate.setMonth(mDate.getMonth() - 1); haptic(); draw(); };
+          el.querySelector('#bzNext').onclick = function () { mDate.setMonth(mDate.getMonth() + 1); haptic(); draw(); };
+          el.querySelector('#bzIn').onclick = function () { txSheet(null, { type: 'income', cat: 'other_in', biz: b.id }); };
+          el.querySelector('#bzOut').onclick = function () { txSheet(null, { type: 'expense', cat: 'other_out', biz: b.id }); };
+          el.addEventListener('click', function (e) { var rw = e.target.closest('.tx'); if (rw) { var t = S.tx.filter(function (x) { return x.id === rw.dataset.id; })[0]; if (t) txSheet(t); } });
+        });
+    }
+    draw();
+  }
   function unbook(d, why) { var r = dRemain(d); if (d.prebooked && r > 0) addTx({ type: 'expense', cat: 'balance_adj', amount: r, wallet: d.wallet, date: today(), merchant: d.person, note: why + ': ' + (d.title || ''), debtId: d.id }); }
   function debtDetail(d) {
     if (!d) return;
@@ -1231,6 +1292,7 @@
       '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="fAmt" inputmode="numeric" placeholder="0" value="' + (t.amount ? t.amount.toLocaleString('id-ID') : '') + '"></div>' +
       '<div id="fCatWrap"><button type="button" class="cat-sel" id="fCatSel"></button><div class="cat-pick" id="fCatPick"><input id="fCatQ" placeholder="Search category" autocomplete="off"><div class="cat-list" id="fCats"></div></div></div>' +
       '<label class="fld" id="fWalletL"><span>Wallet</span><select id="fWallet">' + wOpts(t.wallet) + '</select></label>' +
+      '<label class="fld" id="fBizL">Business<select id="fBiz"><option value="">None (personal)</option>' + (S.businesses || []).map(function (b) { return '<option value="' + esc(b.id) + '"' + (t.biz === b.id ? ' selected' : '') + '>' + esc(b.name) + '</option>'; }).join('') + '</select></label>' +
       '<label class="fld" id="fToL">To wallet<select id="fTo">' + wOpts(t.toWallet || (S.wallets[1] && S.wallets[1].id)) + '</select></label>' +
       '<div class="two"><label class="fld">Date<input id="fDate" type="date" value="' + esc(t.date) + '"></label><label class="fld">Time<input id="fTime" type="time" value="' + esc(t.time || '') + '"></label></div>' +
       (isNew ? '<div class="unpaid" id="fUnpaidBox"><label class="set-row plain"><span class="grow"><b>Not received yet</b><span class="sub">Add the full amount to the wallet now and remind me to collect it</span></span><input type="checkbox" class="switch" id="fUnpaid"></label>' +
@@ -1257,6 +1319,8 @@
           root.querySelectorAll('#fType button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === st.type); });
           root.querySelector('#fCatWrap').hidden = st.type === 'transfer';
           root.querySelector('#fToL').hidden = st.type !== 'transfer';
+          root.querySelector('#fBizL').hidden = st.type === 'transfer';
+          var bz = root.querySelector('#fBiz'); if (isNew && !bz.value) { var cn = cat(st.cat).name.toLowerCase(); (S.businesses || []).forEach(function (b) { if (cn === b.name.toLowerCase()) bz.value = b.id; }); }
           var upb = root.querySelector('#fUnpaidBox'); if (upb) upb.hidden = st.type !== 'income';
           root.querySelector('#fWalletL span').textContent = st.type === 'transfer' ? 'From wallet' : 'Wallet';
           var cats = S.cats.filter(function (c) { return c.type === st.type; });
@@ -1297,7 +1361,7 @@
             var dd = { id: uid(), dir: 'in', earned: true, incomeCat: st.cat, person: payer, title: cat(st.cat).name + (root.querySelector('#fNote').value.trim() ? ' · ' + root.querySelector('#fNote').value.trim() : ''), amount: a,
               created: root.querySelector('#fDate').value || today(), due: root.querySelector('#fDue').value, wallet: w, tags: 'income', notes: '', payments: [], ts: Date.now() };
             dd.prebooked = true; dd.files = files; S.debts.push(dd);
-            var bt = addTx({ type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id, files: files }); dd.bookTx = bt.id;
+            dd.biz = root.querySelector('#fBiz').value || undefined; var bt = addTx({ biz: dd.biz, type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id, files: files }); dd.bookTx = bt.id;
             var pn = parseNum(root.querySelector('#fPaidNow').value);
             if (pn) dd.payments.push({ id: uid(), amount: Math.min(pn, a), date: dd.created, wallet: w, note: 'Already received', txId: null });
             haptic(); save(); closeSheet(); renderAll();
@@ -1308,7 +1372,7 @@
           Object.assign(t, {
             type: st.type, amount: a, cat: st.type === 'transfer' ? '' : st.cat, wallet: w, toWallet: st.type === 'transfer' ? to : '',
             date: root.querySelector('#fDate').value || ymd(new Date()), time: root.querySelector('#fTime').value,
-            merchant: root.querySelector('#fMerch').value.trim(), note: root.querySelector('#fNote').value.trim()
+            merchant: root.querySelector('#fMerch').value.trim(), note: root.querySelector('#fNote').value.trim(), biz: root.querySelector('#fBiz').value || undefined
           });
           var rem = root.querySelector('#fRemember');
           if (rem && rem.checked && t.merchant && t.cat && t.cat !== oldCat) learnRule(t.merchant, t.cat);
@@ -1597,6 +1661,7 @@
     $('realBtn').onclick = function () { haptic(); realSheet(); };
     $('hKomisi').onclick = function () { haptic(); komisiSheet(); };
     $('kmOpen').onclick = function () { haptic(); komisiSheet(); };
+    $('hBiz').onclick = function () { haptic(); bizSheet(); }; $('bizOpen').onclick = function () { haptic(); bizSheet(); }; $('bizBtn').onclick = function () { haptic(); bizSheet(); };
     $('hRange').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; sparkDays = +b.dataset.r; haptic(); renderSpark(); };
     $('allocLegend').onclick = function (e) { if (e.target.closest('[data-group]')) walletPicker(); };
     $('donutGo').onclick = function () { haptic(); cur = new Date(); cur.setDate(1); renderAll(); show('v-report'); };
@@ -2156,7 +2221,7 @@
   }
 
   // ---------- customizable home ----------
-  var SEC_NAMES = { komisi: 'Komisi Noah', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
+  var SEC_NAMES = { business: 'Business', komisi: 'Komisi Noah', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
   function homeLayout() {
     var keys = Object.keys(SEC_NAMES), L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
     keys.forEach(function (k) { if (!L.some(function (x) { return x.k === k; })) L.push({ k: k, on: true }); });
@@ -2261,7 +2326,8 @@
     S.wallets.forEach(function (w) { if (w.sp) return; for (var i = 0; i < M.length; i++) if (M[i][0].test(w.name)) { w.sp = M[i][1]; break; } });
     S.wIconVer = 1;
   }
-  load(); zeroStart(); ownerWallets(); walletIcons(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
+  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();

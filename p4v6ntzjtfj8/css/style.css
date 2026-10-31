@@ -1044,3 +1044,22 @@ em.neg{font-style:normal}
 .wstack.open .wc-3d{animation:wcFloat 3.4s ease-in-out calc(var(--i) * .25s) infinite}
 @keyframes wcFloat{0%,100%{transform:translateY(-50%) rotate(-8deg)}50%{transform:translateY(calc(-50% - 4px)) rotate(-4deg)}}
 .wcard:active .wc-3d{transform:translateY(-50%) rotate(0) scale(1.12)}
+
+/* business */
+.biz-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;background:radial-gradient(120% 120% at 30% 15%,color-mix(in srgb,var(--c) 40%,rgba(255,255,255,.18)),color-mix(in srgb,var(--c) 14%,transparent) 70%);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.biz-ic .sp{width:78%;height:78%}
+.biz-ic.add{font-size:20px;color:var(--accent);background:var(--surface2)}
+.biz-chips{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.biz-chip{display:flex;align-items:center;gap:10px;font-size:14px}
+.biz-chip .biz-ic{width:30px;height:30px;border-radius:9px}
+.biz-chip b{flex:1;font-weight:600}
+.biz-chip em{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums}
+.biz-row .grow b{font-weight:600;display:block}
+.biz-mini{display:flex;flex-direction:column;gap:3px;margin-top:6px;max-width:170px}
+.biz-mini i{display:block;height:4px;border-radius:2px;width:0;animation:allocIn .9s var(--ease) .2s forwards}
+.biz-mini i.in{background:var(--pos)} .biz-mini i.out{background:var(--neg)}
+.biz-month{display:flex;align-items:center;justify-content:center;gap:16px;margin:-6px 0 12px;font-weight:600}
+.biz-month button{width:32px;height:32px;border-radius:50%;background:var(--surface2);font-size:18px}
+.biz-b{gap:3px;display:flex;max-width:30px}
+.biz-b i{position:relative!important;flex:1;border-radius:4px 4px 1px 1px;transform-origin:bottom;animation:grow .8s var(--ease) both;animation-delay:calc(var(--i) * 60ms)}
+.biz-b i.bi{background:var(--pos)} .biz-b i.be{background:var(--neg)}
