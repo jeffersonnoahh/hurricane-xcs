@@ -164,7 +164,35 @@
   function wallet(id) { return S.wallets.filter(function (w) { return w.id === id; })[0] || { id: id, name: '(deleted wallet)', icon: '❔', initial: 0 }; }
   function parseNum(v) { return parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0; }
   function color(id) { var h = 0; String(id).split('').forEach(function (ch) { h = (h * 31 + ch.charCodeAt(0)) >>> 0; }); return PALETTE[h % PALETTE.length]; }
-  function icon(obj, cls) { var has = !!ICONS[key3d(obj.icon)]; return '<span class="ic ' + (cls || '') + (has ? ' i3d' : '') + '" style="--c:' + (obj.color || color(obj.id)) + '">' + img3d(obj.icon) + '</span>'; }
+  // Custom 3D icon sheet (generated for Apex, hosted on Higgsfield). 10 columns x 9 rows.
+  var SHEET = 'https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/69b9c1ff-1600-4e29-b092-0ac3a9737591.webp';
+  var SP = {"food":0,"bills":1,"phone_bill":2,"gas_bill":3,"internet_bill":4,"personal_expense":5,"shopping":6,"personal_items":7,"health":8,"tennis":9,"education":10,"fun":11,"streaming":12,"fun_money":13,"insurance":14,"investment":15,"digital_assets":16,"bitget":17,"ajaib_kripto":18,"pluang":19,"ajaib_essa":20,"bybit":21,"stocks":22,"ethereum":23,"gold_inv":24,"louis_hugo":25,"bren":26,"usd":27,"pokemon":28,"other_out":29,"transfer_out":30,"pay_interest":31,"uncat":32,"makan_team":33,"iklan_tokped":34,"giving":35,"spending":36,"kasih":37,"balance_adj":38,"utang":39,"komisi_out":40,"kas_kantor":41,"berkati_ortu":42,"sharss":43,"branding":44,"project":45,"gifts":46,"to_reserve":47,"bi":48,"gold_debit":49,"korea_loan":50,"wedding":51,"shanghai":52,"dvn":53,"my_home":54,"salary":55,"my_cash":56,"reserve_transfer":57,"other_in":58,"transfer_in":59,"interest":60,"uncat_in":61,"plus_crypto":62,"ajaib_kripto_plus":63,"bitget_plus":64,"mexc_plus":65,"bybit_plus":66,"stocks_plus":67,"gold_debit_in":68,"brpt_plus":69,"pokemon_plus":70,"sentaris":71,"loan":72,"repayment":73,"debt_collection":74,"debt":75,"w_reserve":76,"w_bank":77,"w_daytona":78,"w_jimney":79,"w_hulk":80,"w_ajaib":81,"w_goldputer":82,"w_cash":83,"g_savings":84};
+  var SP_GROUP = { cash: 'w_bank', savings: 'g_savings', invest: 'stocks' };
+  function spKey(obj) {
+    if (!obj || obj.custom) return null;
+    if (SP[obj.id] != null) return obj.id;
+    var n = String(obj.name || '');
+    if (obj.initial != null || obj.excluded != null) {
+      if (/reserve/i.test(n)) return 'w_reserve';
+      if (/daytona/i.test(n)) return 'w_daytona';
+      if (/jimney/i.test(n)) return 'w_jimney';
+      if (/hulk|rolex/i.test(n)) return 'w_hulk';
+      if (/puter/i.test(n)) return 'w_goldputer';
+      if (/gold|emas/i.test(n)) return 'gold_inv';
+      if (/ajaib|stock|saham/i.test(n)) return 'w_ajaib';
+      if (/personal/i.test(n)) return 'personal_expense';
+      if (/cash|tunai|dompet/i.test(n)) return 'w_cash';
+      if (/bank|bca|mandiri|bri|bni|jago|seabank/i.test(n)) return 'w_bank';
+    }
+    return null;
+  }
+  function sprite(k, cls) {
+    var i = SP[k], c = i % 10, r = Math.floor(i / 10);
+    return '<span class="sp ' + (cls || '') + '" style="background-position:' + (c / 9 * 100).toFixed(3) + '% ' + (r / 8 * 100).toFixed(3) + '%"></span>';
+  }
+  function icon(obj, cls) {
+    var k = spKey(obj);
+    if (k) return '<span class="ic ' + (cls || '') + ' i3d" style="--c:' + (obj.color || color(obj.id)) + '">' + sprite(k) + '</span>'; var has = !!ICONS[key3d(obj.icon)]; return '<span class="ic ' + (cls || '') + (has ? ' i3d' : '') + '" style="--c:' + (obj.color || color(obj.id)) + '">' + img3d(obj.icon) + '</span>'; }
   function picker(cur) { return '<div class="icon-pick">' + Object.keys(ICONS).map(function (e) { return '<button type="button" data-e="' + e + '" class="' + (key3d(cur) === e ? 'on' : '') + '">' + img3d(e) + '</button>'; }).join('') + '</div>'; }
   function bindPicker(root, input, preview) { root.querySelector('.icon-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; input.value = b.dataset.e; root.querySelectorAll('.icon-pick button').forEach(function (x) { x.classList.toggle('on', x === b); }); if (preview) preview(); haptic(); }); }
   function included(w) { return !w.excluded; }
@@ -305,7 +333,7 @@
     var gt = {}; S.wallets.filter(included).forEach(function (w) { var g = groupOf(w); gt[g] = (gt[g] || 0) + balance(w.id); });
     $('hGroups').innerHTML = Object.keys(GROUPS).filter(function (g) { return g in gt; }).map(function (g, i) {
       var G = GROUPS[g], share = total ? Math.round(gt[g] / total * 100) : 0;
-      return '<div class="sum-card g-' + g + '" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + img3d(G.icon) + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
+      return '<div class="sum-card g-' + g + '" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + sprite(SP_GROUP[g]) + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
         '<div class="sum-amt"><span class="mid-money" data-roll="g_' + g + '" data-v="' + gt[g] + '"></span><span class="chip soft">' + share + '% of total</span></div>' +
         '<button class="sum-foot" data-group="' + g + '"><span>View wallets</span><span>→</span></button></div>';
     }).join('');
@@ -1090,7 +1118,7 @@
         bindPicker(r, r.querySelector('#wIcon'));
         r.querySelector('#wSave').onclick = function () {
           var n = r.querySelector('#wName').value.trim(); if (!n) { toast('Give it a name'); return; }
-          w.name = n; w.icon = r.querySelector('#wIcon').value.trim() || '👛';
+          var ni = r.querySelector('#wIcon').value.trim() || '👛'; if (ni !== w.icon) w.custom = true; w.name = n; w.icon = ni;
           w.excluded = !r.querySelector('#wInc').checked;
           w.group = r.querySelector('#wGroup').value;
           if (isNew) S.wallets.push(w);
@@ -1131,7 +1159,7 @@
         r.querySelector('#cFlow').value = c.flow || 'out';
         r.querySelector('#cSave').onclick = function () {
           var n = r.querySelector('#cName').value.trim(); if (!n) { toast('Give it a name'); return; }
-          c.name = n; c.icon = r.querySelector('#cIcon').value.trim() || '🏷️'; c.type = r.querySelector('#cType').value;
+          var nci = r.querySelector('#cIcon').value.trim() || '🏷️'; if (nci !== c.icon) c.custom = true; c.name = n; c.icon = nci; c.type = r.querySelector('#cType').value;
           var pv = r.querySelector('#cParent').value; if (pv) c.parent = pv; else delete c.parent;
           if (c.type === 'debt') c.flow = r.querySelector('#cFlow').value; else delete c.flow;
           if (isNew) S.cats.push(c); save(); closeSheet(); renderAll();
@@ -1345,6 +1373,7 @@
     setInterval(function () { if (!document.hidden && S.settings.autoSync) sync(false); }, 5 * 60 * 1000);
   }
 
+  document.documentElement.style.setProperty('--sheet', 'url("' + SHEET + '")');
   load(); importFromHash(); bind(); renderAll();
   bindTilt(); bindSpecular(); bindPull(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);

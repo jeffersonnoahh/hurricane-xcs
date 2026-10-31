@@ -546,3 +546,10 @@ input:not([type=checkbox]):not([type=file]),select,textarea{background:rgba(255,
 :root[data-theme="light"] .bal-card{background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,0) 55%),radial-gradient(120% 90% at 100% 0%,rgba(52,211,153,.25),transparent 55%),radial-gradient(90% 80% at 0% 100%,rgba(214,180,108,.24),transparent 60%),rgba(12,16,14,.94)!important}
 .icon-btn.accent{background:radial-gradient(120% 120% at 30% 15%,#8ff0c6,var(--accent) 50%,#047857)!important;color:#03261a!important}
 .priv-btn.on{background:var(--ink)!important;color:var(--bg)!important}
+
+/* custom 3D icon sheet */
+.sp{display:block;width:80%;height:80%;background-image:var(--sheet);background-size:1000% 900%;background-repeat:no-repeat;filter:drop-shadow(0 4px 5px rgba(0,0,0,.25));transition:transform .35s var(--spring)}
+.sum-ico .sp{width:84%;height:84%}
+.tx:active .sp,.w-row:active .sp,.cat-row:active .sp,.b-row:active .sp{transform:scale(1.12) rotate(-6deg)}
+.stagger .sp{animation:iconPop .5s var(--spring) both;animation-delay:calc(min(var(--i,0),12) * 30ms + .08s)}
+.ic.preview .sp{width:86%;height:86%}
