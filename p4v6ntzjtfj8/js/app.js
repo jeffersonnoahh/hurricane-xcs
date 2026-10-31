@@ -800,7 +800,7 @@
   function bindSpecular() {
     function upd(e) {
       var p = e.touches ? e.touches[0] : e; if (!p) return;
-      var el = document.elementFromPoint(p.clientX, p.clientY); el = el && el.closest('.bottom-nav,.round-btn,.wallet-pill,.sheet,.fab');
+      var el = document.elementFromPoint(p.clientX, p.clientY); el = el && el.closest('.bottom-nav,.round-btn,.wallet-pill,.sheet,.fab,.card,.day,.d-card');
       if (!el) return; var r = el.getBoundingClientRect();
       el.style.setProperty('--mx', ((p.clientX - r.left) / r.width * 100) + '%'); el.style.setProperty('--my', ((p.clientY - r.top) / r.height * 100) + '%');
     }
