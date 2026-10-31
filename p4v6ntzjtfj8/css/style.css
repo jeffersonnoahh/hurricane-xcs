@@ -1066,3 +1066,27 @@ em.neg{font-style:normal}
 
 .chips.wrap{flex-wrap:wrap;margin:8px 0 0;padding:0;max-height:180px;overflow-y:auto}
 .chips.wrap button{font-size:12px;padding:6px 11px}
+
+/* swipe to delete */
+.sw{position:relative;overflow:hidden;transition:max-height .32s var(--ease),opacity .3s;max-height:90px}
+.sw + .sw{border-top:.5px solid var(--line2)}
+.sw .w-row{position:relative;z-index:1;background:var(--surface);transition:transform .35s var(--spring)}
+.cat-card .sw .w-row{background:color-mix(in srgb,var(--surface) 92%,transparent)}
+.sw-del{position:absolute;right:0;top:0;bottom:0;width:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff;font-size:12px;font-weight:600}
+.sw-del svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sw.gone{max-height:0;opacity:0}
+.cat-card .sw .w-row + .w-row{border-top:0}
+/* confirm box */
+.cbox{position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .25s}
+.cbox.show{opacity:1}
+.cbox-in{width:min(320px,100%);border-radius:22px;padding:22px 18px 16px;text-align:center;background:var(--glass-strong);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 .5px var(--line2),0 30px 60px -20px rgba(0,0,0,.7);transform:scale(.9);transition:transform .35s var(--spring)}
+.cbox.show .cbox-in{transform:none}
+.cbox-ic{font-size:34px;margin-bottom:6px}
+.cbox h3{font-size:18px;font-weight:700;margin:0 0 6px}
+.cbox p{color:var(--ink2);font-size:14px;line-height:1.45;margin:0 0 16px}
+.cbox-b{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cbox-b .btn{margin:0}
+.btn.danger-fill{background:linear-gradient(180deg,#ef4444,#b91c1c)!important;color:#fff!important;border:0}
+
+.sw-del{opacity:0;transition:opacity .2s}
+.sw.open .sw-del,.sw.swiping .sw-del{opacity:1}

@@ -564,6 +564,78 @@
     });
   }
 
+  // ---------- swipe to delete categories (with two confirmations) ----------
+  function confirmBox(title, body, ok, danger) {
+    return new Promise(function (res) {
+      var ov = document.createElement('div'); ov.className = 'cbox';
+      ov.innerHTML = '<div class="cbox-in"><div class="cbox-ic">' + (danger ? '⚠️' : '🗑️') + '</div><h3>' + title + '</h3><p>' + body + '</p><div class="cbox-b"><button class="btn" data-r="0">Cancel</button><button class="btn ' + (danger ? 'danger-fill' : 'primary') + '" data-r="1">' + ok + '</button></div></div>';
+      document.body.appendChild(ov); requestAnimationFrame(function () { ov.classList.add('show'); });
+      ov.onclick = function (e) { var b = e.target.closest('[data-r]'); if (!b && e.target !== ov) return; var r = b ? b.dataset.r === '1' : false; ov.classList.remove('show'); setTimeout(function () { ov.remove(); }, 250); res(r); };
+    });
+  }
+  function deleteCategory(id) {
+    var c = cat(id);
+    if (LOCKED.indexOf(id) !== -1) { toast('🔒 ' + c.name + ' is built in and can\u2019t be deleted'); return; }
+    var used = S.tx.filter(function (t) { return t.cat === id; }).length + S.debts.filter(function (d) { return d.incomeCat === id; }).length + (S.recurring || []).filter(function (r) { return r.cat === id; }).length;
+    var kids = S.cats.filter(function (x) { return x.parent === id; });
+    var fb = c.type === 'income' ? 'uncat_in' : c.type === 'debt' ? (c.flow === 'in' ? 'debt' : 'loan') : 'uncat';
+    haptic();
+    confirmBox('Delete \u201c' + esc(c.name) + '\u201d?', 'This category will be removed from your list.', 'Delete', false).then(function (ok1) {
+      if (!ok1) return false;
+      var details = [];
+      if (used) details.push(used + ' transaction' + (used > 1 ? 's' : '') + ' will move to <b>' + esc(cat(fb).name) + '</b>');
+      if (kids.length) details.push(kids.length + ' sub categor' + (kids.length > 1 ? 'ies' : 'y') + ' will become main categories');
+      details.push('This can\u2019t be undone.');
+      return confirmBox('Are you sure?', details.join('.<br>'), 'Yes, delete', true);
+    }).then(function (ok2) {
+      if (!ok2) { closeSwipes(); return; }
+      S.tx.forEach(function (t) { if (t.cat === id) t.cat = fb; });
+      S.debts.forEach(function (d) { if (d.incomeCat === id) d.incomeCat = fb; });
+      (S.recurring || []).forEach(function (r) { if (r.cat === id) r.cat = fb; });
+      kids.forEach(function (k) { delete k.parent; });
+      S.cats = S.cats.filter(function (x) { return x.id !== id; });
+      S.rules = S.rules.filter(function (r) { return r.cat !== id; });
+      delete S.budgets[id];
+      (S.businesses || []).forEach(function (b) { if (b.cats) b.cats = b.cats.filter(function (x) { return x !== id; }); });
+      if (S.settings.autoOwed) delete S.settings.autoOwed[id];
+      var row = document.querySelector('.sw[data-cid="' + id + '"]');
+      if (row) { row.classList.add('gone'); setTimeout(function () { save(); renderAll(); }, 320); } else { save(); renderAll(); }
+      toast(c.name + ' deleted');
+    });
+  }
+  function closeSwipes(except) { document.querySelectorAll('.sw.open').forEach(function (s) { if (s !== except) { s.classList.remove('open'); s.querySelector('.w-row').style.transform = ''; } }); }
+  function bindSwipe(box) {
+    var cur = null, x0 = 0, y0 = 0, dx = 0, lock = null, W = 92;
+    box.addEventListener('touchstart', function (e) {
+      var sw = e.target.closest('.sw'); if (!sw || e.target.closest('.sw-del')) return;
+      cur = sw; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; lock = null; closeSwipes(sw);
+      cur.querySelector('.w-row').style.transition = 'none';
+    }, { passive: true });
+    box.addEventListener('touchmove', function (e) {
+      if (!cur) return; var mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+      if (lock == null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) lock = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+      if (lock !== 'x') return; e.preventDefault(); cur.classList.add('swiping');
+      var base = cur.classList.contains('open') ? -W : 0; dx = Math.min(0, Math.max(-W * 1.6, base + mx));
+      cur.querySelector('.w-row').style.transform = 'translateX(' + dx + 'px)';
+    }, { passive: false });
+    box.addEventListener('touchend', function () {
+      if (!cur) return; var row = cur.querySelector('.w-row'); row.style.transition = ''; var c0 = cur; setTimeout(function () { c0.classList.remove('swiping'); }, 350);
+      if (lock === 'x') {
+        cur.dataset.swiped = '1';
+        if (dx < -W * 1.35) { row.style.transform = ''; cur.classList.remove('open'); deleteCategory(cur.dataset.cid); }
+        else if (dx < -W / 2) { cur.classList.add('open'); row.style.transform = 'translateX(' + (-W) + 'px)'; haptic(); }
+        else { cur.classList.remove('open'); row.style.transform = ''; }
+      }
+      cur = null;
+    });
+    box.addEventListener('click', function (e) {
+      var d = e.target.closest('[data-delcat]'); if (d) { e.stopPropagation(); deleteCategory(d.dataset.delcat); return; }
+      var sw = e.target.closest('.sw'); if (!sw) return;
+      if (sw.dataset.swiped) { delete sw.dataset.swiped; e.stopPropagation(); return; }
+      if (sw.classList.contains('open')) { e.stopPropagation(); closeSwipes(); }
+    }, true);
+  }
+
   function renderCashflow(still) {
     var now = new Date(), months = [];
     for (var k = cfMonths - 1; k >= 0; k--) { var d = new Date(now.getFullYear(), now.getMonth() - k, 1); months.push({ key: ym(d), label: MONTHS[d.getMonth()].slice(0, 3), full: MONTHS[d.getMonth()] + ' ' + d.getFullYear(), tin: 0, tout: 0 }); }
@@ -715,8 +787,9 @@
     document.querySelectorAll('#catSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === catTab); });
     $('catSeg').style.setProperty('--x', ['expense', 'income', 'debt'].indexOf(catTab) * 100 + '%');
     $('catList').innerHTML = catTree(catTab).map(function (c) {
-      return '<button class="w-row' + (c.parent ? ' child' : '') + '" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + (c.flow ? '<span class="sub">' + (c.flow === 'in' ? 'Money in' : 'Money out') + '</span>' : '') + '</span>' + (LOCKED.indexOf(c.id) !== -1 ? '<span class="lock" title="Built in">🔒</span>' : '') + '<span class="muted">›</span></button>';
+      return '<div class="sw" data-cid="' + esc(c.id) + '"><button class="sw-del" type="button" data-delcat="' + esc(c.id) + '"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete</button><button class="w-row' + (c.parent ? ' child' : '') + '" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + (c.flow ? '<span class="sub">' + (c.flow === 'in' ? 'Money in' : 'Money out') + '</span>' : '') + '</span>' + (LOCKED.indexOf(c.id) !== -1 ? '<span class="lock" title="Built in">🔒</span>' : '') + '<span class="muted">›</span></button></div>';
     }).join('');
+    if (!$('catList').dataset.swipe) { $('catList').dataset.swipe = 1; bindSwipe($('catList')); }
     $('ruleList').innerHTML = S.rules.length ? S.rules.map(function (r, i) {
       var c = cat(r.cat);
       return '<div class="w-row"><span class="grow" style="font-weight:500">"' + esc(r.kw) + '" → ' + esc(c.icon + ' ' + c.name) + '</span><button class="x" data-del-rule="' + i + '" aria-label="Delete">×</button></div>';
@@ -1562,7 +1635,7 @@
         };
         var d = r.querySelector('#cDel');
         if (d) d.onclick = function () {
-          if (S.tx.some(function (t) { return t.cat === c.id; })) { toast('Category is in use. Recategorize those transactions first.'); return; }
+          closeSheet(); setTimeout(function () { deleteCategory(c.id); }, 300); return;
           if (S.cats.some(function (x) { return x.parent === c.id; })) { toast('Move or delete its sub categories first.'); return; }
           S.cats = S.cats.filter(function (x) { return x.id !== c.id; });
           S.rules = S.rules.filter(function (x) { return x.cat !== c.id; });
