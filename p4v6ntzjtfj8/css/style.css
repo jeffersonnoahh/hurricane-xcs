@@ -1562,3 +1562,12 @@ body.sheet-open .view.active{scale:1!important}
 .ihsg-bar+.fx-bar{margin-top:-4px}
 .fx-bar{background:linear-gradient(100deg,rgba(34,197,94,.1),rgba(34,197,94,.02) 55%,transparent)!important}
 .fx-bar::before{background:linear-gradient(180deg,#86efac,#15803d)!important}
+/* Activity: all-time toggle + empty-month jump */
+#monthLabel{cursor:pointer;-webkit-user-select:none;user-select:none}
+#monthLabel::after{content:" ⇄";opacity:.45;font-size:.85em}
+#monthLabel.all{background:var(--accent-soft);color:var(--accent)}
+.tx-jump{display:block;margin:14px auto 4px}
+.tx-jump2{display:block;margin:6px auto 0}
+.tx-more{margin-top:10px}
+.ml-status{text-align:center;font-size:12px;color:var(--muted);margin-top:8px}
+.ml-status.ok{color:var(--accent)}

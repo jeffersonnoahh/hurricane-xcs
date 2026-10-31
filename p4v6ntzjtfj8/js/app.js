@@ -849,6 +849,7 @@
       haptic(); save(); renderAll(); onChange(); toast((ia === 'usd' ? 'Dollars' : 'Gold') + ' now tracked live ✓');
     };
   }
+  var txAll = false, txLimit = 80;
   function renderTx() {
     var w = walletSel;
     if (w !== 'all' && !S.wallets.some(function (x) { return x.id === w; })) w = walletSel = 'all';
@@ -858,16 +859,32 @@
     var hw = w === 'all' ? null : wallet(w), hb = $('txHold');
     setMoney($('txBal'), hw && hasHolding(hw) ? (wViewOf(hw) === 'cost' ? (+hw.holding.cost || 0) : (liveValue(hw) != null ? Math.round(liveValue(hw)) : balance(w))) : balance(w));
     if (hb) { var hh = hw ? holdHtml(hw) : ''; hb.innerHTML = hh; hb.hidden = !hh; if (hh) bindHold(hb, hw, renderTx); }
-    $('monthLabel').textContent = MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
-    var mKey = ym(cur), open = balance(w, mKey + '-01'), end = balance(w, nextMonthStart(cur));
+    $('monthLabel').innerHTML = txAll ? 'All time' : MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
+    $('monthLabel').classList.toggle('all', txAll);
+    var mKey = ym(cur), mt, open, end;
+    if (txAll) {
+      mt = S.tx.filter(function (t) { return touches(t, w); });
+      var firstD = mt.reduce(function (a, t) { return !a || t.date < a ? t.date : a; }, '');
+      open = firstD ? balance(w, firstD) : balance(w); end = balance(w);
+    } else { mt = txIn(mKey, w); open = balance(w, mKey + '-01'); end = balance(w, nextMonthStart(cur)); }
     $('pOpen').innerHTML = money(open);
     $('pEnd').innerHTML = money(end, { sign: true });
     rollTo($('pNet'), end - open, { sign: true });
 
-    var mt = txIn(mKey, w);
-    if (!mt.length) { $('txList').innerHTML = '<div class="card empty">' + dinoImg('empty-dino') + '<br>No transactions in ' + MONTHS[cur.getMonth()] + '.</div>'; return; }
+    if (!mt.length) {
+      // Empty month: offer a jump to the nearest month that has transactions (e.g. after importing history).
+      var other = S.tx.filter(function (t) { return touches(t, w); }), near = null;
+      other.forEach(function (t) { var k = t.date.slice(0, 7); if (k === mKey) return; if (!near || Math.abs(monthsBetween(k, mKey)) < Math.abs(monthsBetween(near, mKey)) || (Math.abs(monthsBetween(k, mKey)) === Math.abs(monthsBetween(near, mKey)) && k < near)) near = k; });
+      var nN = near ? other.filter(function (t) { return t.date.slice(0, 7) === near; }).length : 0;
+      $('txList').innerHTML = '<div class="card empty">' + dinoImg('empty-dino') + '<br>No transactions in ' + MONTHS[cur.getMonth()] + '.' +
+        (near ? '<button class="btn tx-jump" type="button" data-jump="' + near + '">Go to ' + monthName(near) + ' · ' + nN + ' transaction' + (nN === 1 ? '' : 's') + '</button><button class="link tx-jump2" type="button" data-alltime="1">See all ' + other.length.toLocaleString('id-ID') + ' transactions</button>' : '') + '</div>';
+      return;
+    }
+    var shownTx = mt.slice().sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')) || b.created - a.created; });
+    var more = txAll && shownTx.length > txLimit ? shownTx.length - txLimit : 0;
+    if (txAll) shownTx = shownTx.slice(0, txLimit);
     var byDay = {};
-    mt.forEach(function (t) { (byDay[t.date] = byDay[t.date] || []).push(t); });
+    shownTx.forEach(function (t) { (byDay[t.date] = byDay[t.date] || []).push(t); });
     var i = 0;
     $('txList').innerHTML = '<div class="stagger">' + Object.keys(byDay).sort().reverse().map(function (d) {
       var list = byDay[d].sort(function (a, b) { return (b.time || '').localeCompare(a.time || '') || b.created - a.created; });
@@ -875,7 +892,15 @@
       var dt = new Date(d + 'T00:00:00');
       return '<div class="day" style="--i:' + (i++) + '"><div class="day-h"><div class="dnum">' + dt.getDate() + '</div><div class="dmeta"><b>' + DOW[dt.getDay()] + '</b>' + MONTHS[dt.getMonth()] + ' ' + dt.getFullYear() + '</div><div class="dnet">' + money(net, { sign: true, rp: false }) + '</div></div>' +
         list.map(function (t) { return txRow(t, 0, false); }).join('') + '</div>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + (more ? '<button class="btn block tx-more" type="button" data-more="1">Show more · ' + more.toLocaleString('id-ID') + ' older</button>' : '');
+    renderMlStatus();
+  }
+  function monthsBetween(a, b) { return (+a.slice(0, 4) - +b.slice(0, 4)) * 12 + (+a.slice(5, 7) - +b.slice(5, 7)); }
+  function renderMlStatus() {
+    var el = $('mlStatus'); if (!el) return;
+    var n = S.tx.filter(function (t) { return t.src === 'ml'; }).length;
+    el.innerHTML = n ? '✓ ' + n.toLocaleString('id-ID') + ' Money Lover transactions in this app' : 'No Money Lover transactions in this app yet';
+    el.classList.toggle('ok', !!n);
   }
 
   function txRow(t, i, showDate) {
@@ -2487,11 +2512,17 @@
     $('periodReport').onclick = function () { show('v-report'); };
     $('repBack').onclick = function () { show(repFrom === 'v-report' ? 'v-home' : repFrom, true); };
     $('seeAllTx').onclick = function () { walletSel = 'all'; cur = new Date(); cur.setDate(1); renderAll(); show('v-tx'); };
-    $('txPrev').onclick = function () { cur.setMonth(cur.getMonth() - 1); haptic(); renderAll(); };
-    $('txNext').onclick = function () { cur.setMonth(cur.getMonth() + 1); haptic(); renderAll(); };
+    $('txPrev').onclick = function () { if (txAll) txAll = false; else cur.setMonth(cur.getMonth() - 1); haptic(); renderAll(); };
+    $('txNext').onclick = function () { if (txAll) txAll = false; else cur.setMonth(cur.getMonth() + 1); haptic(); renderAll(); };
+    $('monthLabel').onclick = function () { txAll = !txAll; txLimit = 80; haptic(); renderTx(); };
 
     function openTx(e) { var row = e.target.closest('.tx'); if (!row) return; var t = S.tx.filter(function (x) { return x.id === row.dataset.id; })[0]; if (t) txSheet(t); }
-    $('txList').onclick = openTx; $('hRecent').onclick = openTx;
+    $('txList').onclick = function (e) {
+      var j = e.target.closest('[data-jump]'); if (j) { cur = new Date(j.dataset.jump + '-01T00:00:00'); txAll = false; haptic(); renderAll(); return; }
+      if (e.target.closest('[data-alltime]')) { txAll = true; txLimit = 80; haptic(); renderTx(); return; }
+      if (e.target.closest('[data-more]')) { txLimit += 150; haptic(); renderTx(); return; }
+      openTx(e);
+    }; $('hRecent').onclick = openTx;
 
     $('repSeg').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; repKind = b.dataset.k; haptic(); renderReport(); };
     function showTip(e) {
