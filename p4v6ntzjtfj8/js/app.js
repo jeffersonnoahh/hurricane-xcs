@@ -489,7 +489,10 @@
   var GCARD = { cash: ['#2563eb', '#1e3a8a'], savings: ['#b8893b', '#5c3d0e'], invest: ['#7c3aed', '#3b0764'] };
   // Distinct premium card colors so a stack never reads as one block (like real bank cards)
   var CARD_PAL = [['#b8893b', '#5c3d0e'], ['#2563eb', '#1e3a8a'], ['#7c3aed', '#3b0764'], ['#0f9f74', '#064e3b'], ['#e2557a', '#7a1d3b'], ['#334155', '#0f172a'], ['#0e9fb8', '#0b4a63'], ['#e07b2d', '#7a3410'], ['#4f46e5', '#1e1b6b'], ['#a3a3a3', '#3f3f46'], ['#c0396b', '#4a0e2a'], ['#3b82f6', '#0c2d6b']];
-  function walletGrad(w) { var ws = S.wallets.filter(included), i = ws.indexOf(w); return CARD_PAL[(i < 0 ? 0 : i) % CARD_PAL.length]; }
+  function walletGrad(w) {
+    if (w.cardC == null) { S.wallets.filter(included).forEach(function (x, i) { if (x.cardC == null) x.cardC = i % CARD_PAL.length; }); if (w.cardC == null) w.cardC = S.wallets.indexOf(w) % CARD_PAL.length; }
+    return CARD_PAL[w.cardC % CARD_PAL.length];
+  }
   function renderStack() {
     var ws = S.wallets.filter(included);
     $('hWallets').innerHTML = '<div class="wstack' + (stackOpen ? ' open' : '') + '">' + ws.map(function (w, i) {
@@ -618,6 +621,7 @@
     ov.querySelector('.dw-x').onclick = function () { if (sel >= 0) pick(-1); else close(); };
     ov.querySelector('.dw-man').onclick = function () { close(); show('v-account'); setTimeout(function () { var l = $('walletList'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); };
     inEl.addEventListener('click', function (e) {
+      if (eatClick) { e.stopPropagation(); return; }
       var c = e.target.closest('.dw-card');
       if (c) { var i = +c.dataset.i; return pick(sel >= 0 && i !== sel ? -1 : i); }
       var t = e.target.closest('.tx'); if (t) { var tt = S.tx.filter(function (x) { return x.id === t.dataset.id; })[0]; if (tt) { close(); setTimeout(function () { txSheet(tt); }, 220); } return; }
@@ -634,10 +638,53 @@
       if (sel >= 0) pick(-1); else close();   // tap outside
     });
     // swipe down: back to the stack, or close when already in the stack
-    var y0 = null;
+    var y0 = null, hold = null, drag = null, eatClick = false;
     inEl.addEventListener('touchstart', function (e) { y0 = inEl.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
-    inEl.addEventListener('touchend', function (e) { if (y0 == null) return; var dy = e.changedTouches[0].clientY - y0; y0 = null; if (dy > 120) { if (sel >= 0) pick(-1); else close(); } });
+    inEl.addEventListener('touchend', function (e) { if (y0 == null) return; if (eatClick || drag || stack.classList.contains('dw-sorting')) { y0 = null; return; } var dy = e.changedTouches[0].clientY - y0; y0 = null; if (dy > 120) { if (sel >= 0) pick(-1); else close(); } });
     window.addEventListener('resize', function () { if (!closed) layout(); });
+    // Hold a card ~1s in the stack to lift it, drag to reorder, release to drop.
+    function cancelHold() { if (hold) { clearTimeout(hold.t); hold = null; } }
+    stack.addEventListener('touchstart', function (e) {
+      if (sel >= 0 || e.touches.length > 1) return;
+      var c = e.target.closest('.dw-card'); if (!c) return;
+      var y = e.touches[0].clientY, x = e.touches[0].clientX;
+      hold = { c: c, y: y, x: x, t: setTimeout(function () {
+        var i = cards.indexOf(c); if (i < 0) return;
+        drag = { c: c, from: i, to: i, y0: hold.y, base: i * STRIP };
+        hold = null; haptic(); if (navigator.vibrate) navigator.vibrate(12);
+        c.classList.add('dw-lift'); stack.classList.add('dw-sorting'); c.style.transitionDelay = '0ms';
+        c.style.transform = 'translateY(' + drag.base + 'px) scale(1.03)'; c.style.zIndex = 999;
+      }, 1000) };
+    }, { passive: true });
+    stack.addEventListener('touchmove', function (e) {
+      if (hold) { var t = e.touches[0]; if (Math.abs(t.clientY - hold.y) > 8 || Math.abs(t.clientX - hold.x) > 8) cancelHold(); return; }
+      if (!drag) return;
+      e.preventDefault();
+      var dy = e.touches[0].clientY - drag.y0, top = Math.max(-20, Math.min((n - 1) * STRIP + 20, drag.base + dy));
+      drag.c.style.transform = 'translateY(' + top + 'px) scale(1.03)';
+      var to = Math.max(0, Math.min(n - 1, Math.round(top / STRIP)));
+      if (to !== drag.to) { drag.to = to; haptic(); }
+      cards.forEach(function (c, i) {
+        if (c === drag.c) return;
+        var k = i; if (drag.from < drag.to && i > drag.from && i <= drag.to) k = i - 1; else if (drag.from > drag.to && i >= drag.to && i < drag.from) k = i + 1;
+        c.style.transitionDelay = '0ms'; c.style.transform = 'translateY(' + (k * STRIP) + 'px)';
+      });
+    }, { passive: false });
+    function endDrag() {
+      cancelHold(); if (!drag) return;
+      var d = drag; drag = null; eatClick = true; setTimeout(function () { eatClick = false; }, 350);
+      d.c.classList.remove('dw-lift'); stack.classList.remove('dw-sorting');
+      if (d.to !== d.from) {
+        var mc = cards.splice(d.from, 1)[0]; cards.splice(d.to, 0, mc);
+        var mw = ws.splice(d.from, 1)[0]; ws.splice(d.to, 0, mw);
+        cards.forEach(function (c, i) { c.dataset.i = i; c.style.zIndex = i + 1; });
+        var rest = S.wallets.filter(function (w) { return ws.indexOf(w) === -1; });
+        S.wallets = ws.concat(rest); save(); renderStack(); toast('Order saved');
+      } else d.c.style.zIndex = d.from + 1;
+      layout();
+    }
+    stack.addEventListener('touchend', endDrag); stack.addEventListener('touchcancel', endDrag);
+    stack.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   }
   function reorderWallets(ids) {
     var by = {}; S.wallets.forEach(function (w) { by[w.id] = w; });
