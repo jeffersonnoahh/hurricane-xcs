@@ -144,7 +144,7 @@
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function fmt(n) { return Math.abs(Math.round(n)).toLocaleString('id-ID'); }
-  var MASK = '••••••••';
+  var MASK = '••••••';
   // Money text that respects "Hide amounts". sign: true shows +/−.
   function money(n, opt) {
     opt = opt || {};
@@ -327,7 +327,7 @@
     renderUpcoming();
     var mStart = ym(new Date()) + '-01', open0 = balance('all', mStart), chg = total - open0;
     var chip = $('hChip');
-    if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '+' : '−') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% ' + (chg > 0 ? '↑' : '↓'); }
+    if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '▲ ' : '▼ ') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% this month'; }
     else chip.hidden = true;
 
     var gt = {}; S.wallets.filter(included).forEach(function (w) { var g = groupOf(w); gt[g] = (gt[g] || 0) + balance(w.id); });
@@ -421,9 +421,9 @@
     $('cfNet').className = 'mid-money ' + (net > 0 ? 'pos' : net < 0 ? 'neg' : '');
     $('cfSub').textContent = 'Money in minus money out, last ' + (cfMonths === 12 ? '12 months' : cfMonths + ' months');
     document.querySelectorAll('#cfSeg button').forEach(function (b) { b.classList.toggle('on', +b.dataset.n === cfMonths); });
-    var max = Math.max.apply(null, months.map(function (m) { return Math.max(m.tout, m.tin); })) || 1;
+    var realMax = Math.max.apply(null, months.map(function (m) { return Math.max(m.tout, m.tin); })), max = realMax || 1;
     if (cfSel == null || cfSel >= months.length) cfSel = months.length - 1;
-    var ticks = [1, .75, .5, .25, 0].map(function (f) { return S.settings.hide ? '' : short(max * f); });
+    var ticks = [1, .75, .5, .25, 0].map(function (f) { return S.settings.hide || !realMax ? '' : short(max * f); });
     $('cfChart').innerHTML = '<div class="cf-chart' + (still ? ' still' : '') + '"><div class="cf-y">' + ticks.map(function (t) { return '<span>' + t + '</span>'; }).join('') + '</div><div class="cf-plot">' +
       months.map(function (m, i) {
         var v = Math.max(m.tout, m.tin), h = Math.max(v ? 4 : 2, v / max * 100);
@@ -1262,7 +1262,7 @@
     $('sheetBg').onclick = closeSheet;
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
 
-    $('eyeBtn').onclick = togglePrivacy;
+    $('eyeBtnWrap').onclick = togglePrivacy;
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;

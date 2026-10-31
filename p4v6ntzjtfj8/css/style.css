@@ -553,3 +553,103 @@ input:not([type=checkbox]):not([type=file]),select,textarea{background:rgba(255,
 .tx:active .sp,.w-row:active .sp,.cat-row:active .sp,.b-row:active .sp{transform:scale(1.12) rotate(-6deg)}
 .stagger .sp{animation:iconPop .5s var(--spring) both;animation-delay:calc(min(var(--i,0),12) * 30ms + .08s)}
 .ic.preview .sp{width:86%;height:86%}
+
+/* =====================================================================
+   NATIVE iOS LAYER: system type, open hero, real tab bar
+   ===================================================================== */
+:root{--sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Inter,Roboto,sans-serif;--tabh:50px}
+body{font-family:var(--sys);font-size:16px;letter-spacing:-.01em;font-feature-settings:normal;padding-top:calc(env(safe-area-inset-top) + 6px);padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 28px)}
+h1{font:700 34px/1.1 var(--sys);letter-spacing:-.02em}
+.page-head.with-back h1{font-size:28px}
+h2{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.eyebrow{font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
+.section-h{font-size:20px;font-weight:700;letter-spacing:-.02em;text-transform:none;color:var(--ink);margin:28px 2px 10px}
+.section-h .link{font-size:15px;font-weight:400}
+.link{font-weight:400;font-size:15px}
+.sheet h3{font:600 17px/1.3 var(--sys);letter-spacing:-.02em;margin:0 0 16px}
+.dnum{font:300 32px/1 var(--sys)}
+.big-money,.mid-money,.big2,.amt,.ins-avg,.donut-mid b{font-family:var(--sys);font-variant-numeric:tabular-nums}
+
+/* header */
+.app-head{margin:6px 0 4px}
+.logo{width:40px;height:40px;border-radius:11px;object-fit:cover;box-shadow:0 0 0 .5px rgba(255,255,255,.15),0 6px 14px -6px rgba(0,0,0,.6);background:#0b3d2a}
+.logo.sm{width:30px;height:30px;border-radius:8px}
+.hello{font-size:13px;color:var(--muted)}
+.wordmark{font-size:17px;font-weight:700;letter-spacing:-.02em;margin-top:0}
+.icon-btn{width:36px;height:36px;border-radius:50%;font-size:17px}
+.icon-btn svg{width:18px;height:18px}
+.priv-btn.on{background:var(--ink)!important;color:var(--bg)!important}
+
+/* open hero balance */
+.hero{text-align:center;padding:26px 0 22px}
+.hero-lbl{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:15px}
+.hero-lbl .eye{width:20px;height:20px;color:var(--muted);opacity:1}
+.hero-lbl .eye svg{width:17px;height:17px}
+.hero-amt{margin:6px 0 10px}
+.hero .big-money{font-size:clamp(34px,10.5vw,46px);font-weight:600;letter-spacing:-.035em}
+.hero .chip{background:rgba(52,211,153,.12);color:var(--pos);font-size:13px;font-weight:500;padding:4px 10px;border:0;box-shadow:none}
+.hero .chip.dn{background:rgba(248,113,113,.12);color:var(--neg)}
+
+/* privacy: calm dots, never giant */
+.masked{letter-spacing:.08em;opacity:.9}
+.big-money .masked,.mid-money .masked{font-size:.62em;vertical-align:.18em}
+
+/* round action buttons like a banking app */
+.quick{gap:6px;margin:0 0 18px}
+.quick button{background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none;backdrop-filter:none;padding:0;gap:8px;font-size:12.5px;color:var(--ink2)}
+.quick button::after{display:none}
+.q-ic{width:58px;height:58px;border-radius:50%;background:linear-gradient(160deg,var(--glass-2),var(--glass));-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:inset 0 1px 0 var(--glass-hi),inset 0 0 0 .5px rgba(255,255,255,.12),0 10px 22px -14px rgba(0,0,0,.8)}
+.q-ic .i3{width:60%;height:60%}
+.quick button:active .q-ic{transform:scale(.92)}
+
+/* stat strip */
+.stat-strip{display:grid;grid-template-columns:repeat(3,1fr);width:100%;text-align:left;padding:14px 16px!important;gap:8px}
+.stat-strip > div + div{border-left:.5px solid var(--line2);padding-left:12px}
+.stat-strip small{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.stat-strip b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;letter-spacing:-.02em}
+
+/* cards: quieter glass, iOS radius, hairlines */
+.card,.day,.d-card,.sum-card{border-radius:20px!important}
+.card::before,.day::before,.d-card::before{display:none}
+.w-row + .w-row,.tx + .tx,.b-row + .b-row{border-top:.5px solid var(--line2)}
+.w-row,.tx,.b-row{padding:11px 16px}
+.w-row + .w-row,.tx + .tx{margin-left:0}
+.tx-cat{font-weight:500}
+.ic{border-radius:12px;width:40px;height:40px}
+.ic.sm{border-radius:9px;width:32px;height:32px}
+.sum-card::before{display:none}
+.sum-card{padding:14px 14px 0}
+.sum-card .chip.soft{font-weight:500}
+
+/* real iOS tab bar */
+.bottom-nav{left:0;right:0;bottom:0;max-width:none;height:calc(var(--tabh) + env(safe-area-inset-bottom));padding:0 6px env(safe-area-inset-bottom);border-radius:0!important;
+  background:var(--nav-bg)!important;-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%);box-shadow:none!important;border:0!important;border-top:.5px solid var(--line2)!important;align-items:stretch}
+.bottom-nav::after,.nav-ind{display:none!important}
+.bottom-nav button{height:var(--tabh);gap:2px;font-size:10px;font-weight:500;border-radius:0;justify-content:center;padding-top:4px}
+.bottom-nav svg{width:25px;height:25px;stroke-width:1.6}
+.bottom-nav button.on{color:var(--accent)}
+.bottom-nav button.on svg{transform:none}
+.nav-gap{flex:1}
+:root{--nav-bg:rgba(18,18,20,.82)}
+:root[data-theme="light"]{--nav-bg:rgba(249,249,249,.86)}
+.fab{width:46px;height:46px;border-radius:50%!important;bottom:calc(env(safe-area-inset-bottom) + 2px);font-size:28px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 16px -6px rgba(16,185,129,.6)!important}
+.toast{bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 18px)}
+.topbar{font-size:15px;font-weight:600}
+
+/* sheets like iOS */
+.sheet{border-radius:14px 14px 0 0}
+.sheet-grip{width:36px;height:5px;background:var(--line2)}
+.btn{border-radius:12px;font-weight:600;font-size:16px;padding:13px 18px}
+input:not([type=checkbox]):not([type=file]),select,textarea{border-radius:10px;font-size:16px}
+
+/* calmer background: keep glass, lose the heavy aurora */
+.bg-mesh .b1{opacity:.55}.bg-mesh .b2{opacity:.4}.bg-mesh::before{opacity:.35}
+.bal-card,.stk{display:none}
+
+@media (min-width:960px){
+  .bottom-nav{left:16px;top:16px;bottom:16px;right:auto;width:224px;height:auto;border-radius:20px!important;border:.5px solid var(--line2)!important;padding:18px 12px;align-items:stretch}
+  .bottom-nav button{height:44px;font-size:15px;padding:0 14px;border-radius:10px}
+  .side-brand{gap:10px;letter-spacing:-.01em;font-size:17px}
+  .fab{bottom:36px}
+}
+body{padding-top:calc(env(safe-area-inset-top) + 14px)}

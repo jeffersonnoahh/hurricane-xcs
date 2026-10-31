@@ -1,11 +1,23 @@
 {
-  "name": "Apex",
-  "short_name": "Apex",
-  "description": "Private wealth and money tracker",
-  "start_url": "./index.html",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+ "name": "Apex",
+ "short_name": "Apex",
+ "description": "Private wealth and money tracker",
+ "start_url": "./index.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#09090b",
+ "theme_color": "#09090b",
+ "icons": [
+  {
+   "src": "https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/9f768fe2-f124-466e-bec9-2c70d3ffe350.png",
+   "sizes": "180x180",
+   "type": "image/png"
+  },
+  {
+   "src": "https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/287b16fb-a55e-4e9e-a902-274aca121c69.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
 }

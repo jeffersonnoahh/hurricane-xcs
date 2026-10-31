@@ -16,9 +16,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/69b9c1ff-1600-4e29-b092-0ac3a9737591.webp">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="css/style.css?v=20261031-40">
+<link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/9f768fe2-f124-466e-bec9-2c70d3ffe350.png" type="image/png">
+<link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/9f768fe2-f124-466e-bec9-2c70d3ffe350.png">
+<link rel="stylesheet" href="css/style.css?v=20261031-50">
 </head>
 <body>
 <div class="bg-mesh" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
@@ -28,30 +28,17 @@
 <!-- HOME -->
 <section class="view active" id="v-home">
   <header class="app-head">
-    <div class="brand"><span class="mark">A</span><div><div class="eyebrow" id="hGreet">Good evening</div><div class="wordmark">APEX</div></div></div>
+    <div class="brand"><img class="logo" id="logoImg" alt="Apex" src="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/9f768fe2-f124-466e-bec9-2c70d3ffe350.png"><div><div class="hello" id="hGreet">Good evening</div><div class="wordmark">Apex</div></div></div>
     <div class="head-actions">
       <button class="icon-btn priv-btn" data-priv aria-label="Hide or show all amounts"></button>
       <button class="icon-btn" id="hSync" aria-label="Sync BCA"><span class="sync-ic">⟳</span><span class="pip" id="hSyncPip" hidden></span></button>
     </div>
   </header>
 
-  <div class="bal-wrap"><i class="stk s2"></i><i class="stk s1"></i>
-  <div class="bal-card">
-    <div class="bal-in">
-      <div class="bal-top">
-        <span class="t"><small>Total net worth</small></span>
-        <span class="chip" id="hChip"></span>
-        <button class="eye" id="eyeBtn" aria-label="Hide or show amounts"></button>
-      </div>
-      <div class="bal-amt"><span class="big-money" id="hNet">Rp 0</span></div>
-      <div class="bal-stats">
-        <div><small>Liquid money</small><b id="hTotal">0</b></div>
-        <div><small>Owed to me</small><b id="hRecv">0</b></div>
-        <div><small>I owe</small><b id="hPay">0</b></div>
-      </div>
-    </div>
-    <button class="bal-foot" id="balDetails"><span>Accounts</span><span class="arr">→</span></button>
-  </div>
+  <div class="hero">
+    <button class="hero-lbl" id="eyeBtnWrap" type="button"><span>Net worth</span><span class="eye" id="eyeBtn" aria-hidden="true"></span></button>
+    <div class="hero-amt"><span class="big-money" id="hNet">Rp 0</span></div>
+    <span class="chip" id="hChip"></span>
   </div>
 
   <div class="quick">
@@ -61,10 +48,16 @@
     <button data-q="budget"><span class="q-ic" data-i3d="🎯"></span>Budgets</button>
   </div>
 
+  <button class="card stat-strip" id="balDetails" type="button">
+    <div><small>Liquid</small><b id="hTotal">0</b></div>
+    <div><small>Owed to me</small><b id="hRecv">0</b></div>
+    <div><small>I owe</small><b id="hPay">0</b></div>
+  </button>
+
   <div class="section-h" id="upHead" hidden><span>Upcoming &amp; overdue</span><button class="link" data-go="v-debts">View all</button></div>
   <div class="card list-card" id="hUpcoming" hidden></div>
 
-  <div class="section-h"><span>Accounts by group</span></div>
+  <div class="section-h"><span>Accounts</span></div>
   <div class="sum-row" id="hGroups"></div>
 
   <div class="card list-card">
@@ -249,7 +242,7 @@
 
 <nav class="bottom-nav" id="nav">
   <i class="nav-ind" id="navInd"></i>
-  <div class="side-brand"><span class="mark">A</span><span>APEX</span></div>
+  <div class="side-brand"><img class="logo sm" alt="" src="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/9f768fe2-f124-466e-bec9-2c70d3ffe350.png"><span>Apex</span></div>
   <button data-v="v-home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
   <button data-v="v-tx"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="17" r="3"/></svg><span>Activity</span></button>
   <span class="nav-gap"></span>
@@ -267,6 +260,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-2"></script>
-<script src="js/app.js?v=20261031-40"></script>
+<script src="js/app.js?v=20261031-50"></script>
 </body>
 </html>
