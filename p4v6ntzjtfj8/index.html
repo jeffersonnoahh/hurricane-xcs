@@ -4,139 +4,182 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Arus">
 <title>Arus Money</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="css/style.css?v=20261031-3">
+<link rel="stylesheet" href="css/style.css?v=20261031-5">
 </head>
 <body>
-<header class="top">
-  <div class="top-row">
-    <button class="icon-btn" id="prevMonth" aria-label="Previous month">‹</button>
-    <div class="month" id="monthLabel">Month</div>
-    <button class="icon-btn" id="nextMonth" aria-label="Next month">›</button>
+
+<!-- HOME -->
+<section class="view active" id="v-home">
+  <header class="home-head">
+    <div>
+      <div class="total-row">
+        <span class="big-money" id="hTotal">Rp 0</span>
+        <button class="eye" id="eyeBtn" aria-label="Hide or show amounts"></button>
+      </div>
+      <div class="lbl">Total balance</div>
+    </div>
+    <button class="round-btn" id="hSync" aria-label="Sync BCA"><span class="sync-ic">⟳</span><span class="pip" id="hSyncPip" hidden></span></button>
+  </header>
+
+  <div class="card list-card">
+    <div class="card-h"><h2>My Wallets</h2><button class="link" id="seeAllWallets">See all</button></div>
+    <div id="hWallets"></div>
   </div>
-  <div class="balance-card">
-    <div class="bal-label"><select id="walletFilter" aria-label="Wallet"></select></div>
-    <div class="bal-value" id="balValue">Rp 0</div>
-    <div class="bal-split">
-      <div><span class="dot in"></span>Income <b id="sumIn">Rp 0</b></div>
-      <div><span class="dot out"></span>Expense <b id="sumOut">Rp 0</b></div>
+
+  <div class="section-h">Spending insight</div>
+  <div class="card insight">
+    <div class="ins-top"><h2>This month</h2></div>
+    <div class="ins-body">
+      <div>
+        <div class="muted">Average</div>
+        <div class="ins-avg"><span id="hAvg">0</span><small>/day</small></div>
+        <div class="muted small" id="hSpentLine"></div>
+      </div>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 44 44" class="ring" aria-hidden="true"><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" id="hRing"/></svg>
+        <div class="ring-txt" id="hRingTxt">0%</div>
+        <div class="muted small ring-cap" id="hRingCap"></div>
+      </div>
     </div>
-    <div class="sync-line" id="syncLine"></div>
   </div>
-</header>
 
-<main>
-  <section class="view active" id="v-tx">
-    <div id="txList"></div>
-  </section>
-
-  <section class="view" id="v-report">
-    <div class="card">
-      <h3>Net this month</h3>
-      <div class="hero" id="repNet">Rp 0</div>
-      <div class="muted" id="repAvg"></div>
+  <div class="section-h"><span>Report this month</span><button class="link" id="seeReports">See reports</button></div>
+  <div class="card">
+    <div class="rep-split">
+      <div><div class="muted">Total spent</div><div class="neg big2" id="hSpent">0</div></div>
+      <div><div class="muted">Total income</div><div class="pos big2" id="hIncome">0</div></div>
     </div>
-    <div class="card">
-      <div class="seg" id="repSeg">
-        <button data-k="expense" class="on">Expense</button>
-        <button data-k="income">Income</button>
-      </div>
-      <div id="repBars"></div>
-    </div>
-    <div class="card">
-      <h3>Daily spending</h3>
-      <div id="repDaily"></div>
-    </div>
-  </section>
+    <div class="split-bar"><i id="hBarOut"></i><i id="hBarIn"></i></div>
+  </div>
 
-  <section class="view" id="v-budget">
-    <div class="card">
-      <h3>Monthly budgets</h3>
-      <p class="muted">Set a limit per category. Bars turn amber at 80% and red when you go over.</p>
-      <div id="budgetList"></div>
-    </div>
-  </section>
+  <div class="section-h"><span>Recent transactions</span><button class="link" id="seeAllTx">See all</button></div>
+  <div class="card list-card" id="hRecent"></div>
+</section>
 
-  <section class="view" id="v-settings">
-    <div class="card">
-      <h3>BCA email sync</h3>
-      <p class="muted">Every BCA email (QRIS, transfer, payment) becomes a transaction automatically. Setup guide: <a href="README.md" target="_blank">README</a>.</p>
-      <label>Apps Script URL<input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
-      <label>Secret<input id="sToken" type="password" placeholder="same SECRET as in Code.gs"></label>
-      <label>Put BCA transactions in wallet<select id="sWallet"></select></label>
-      <label class="row"><input type="checkbox" id="sAuto"> Sync automatically when the app is open</label>
-      <div class="btn-row">
-        <button class="btn" id="sSave">Save</button>
-        <button class="btn primary" id="sSync">Sync now</button>
-      </div>
-      <div class="muted small" id="sStatus"></div>
-    </div>
+<!-- TRANSACTIONS -->
+<section class="view" id="v-tx">
+  <header class="tx-head">
+    <button class="round-btn" id="txPrev" aria-label="Previous month">‹</button>
+    <button class="wallet-pill" id="walletPill"><span class="ic sm" id="pillIc"></span><span id="pillName">Total</span><span class="chev">⇅</span></button>
+    <button class="round-btn" id="txNext" aria-label="Next month">›</button>
+  </header>
+  <div class="tx-bal"><div class="muted">Balance</div><div class="mid-money" id="txBal">Rp 0</div></div>
+  <div class="month-pill" id="monthLabel">October 2026</div>
+  <div class="card period">
+    <div class="row"><span class="muted">Opening balance</span><span id="pOpen">0</span></div>
+    <div class="row"><span class="muted">Ending balance</span><span id="pEnd">0</span></div>
+    <div class="rule"></div>
+    <div class="row end"><b id="pNet">0</b></div>
+    <button class="link center" id="periodReport">View report for this period</button>
+  </div>
+  <div id="txList"></div>
+</section>
 
-    <div class="card" id="reviewCard" hidden>
-      <h3>Emails I couldn't read</h3>
-      <p class="muted">These BCA emails had no clear amount. Tap one to add it by hand, or dismiss it.</p>
-      <div id="reviewList"></div>
-    </div>
+<!-- BUDGETS -->
+<section class="view" id="v-budget">
+  <header class="page-head"><h1>Budgets</h1><div class="muted small" id="budgetMonth"></div></header>
+  <div class="card budget-hero">
+    <div class="muted">Spent of budget this month</div>
+    <div class="mid-money" id="bTotal">0</div>
+    <div class="bar"><i id="bTotalBar"></i></div>
+    <div class="muted small" id="bTotalLine"></div>
+  </div>
+  <div class="card list-card" id="budgetList"></div>
+</section>
 
-    <div class="card">
-      <h3>Test the reader</h3>
-      <p class="muted">Paste a BCA email (subject on the first line) to see what the app would record.</p>
-      <textarea id="tInput" rows="6" placeholder="Transaksi QRIS Berhasil&#10;Nama Merchant : KOPI ...&#10;Nominal : Rp 38.000,00"></textarea>
-      <button class="btn" id="tRun">Test</button>
-      <pre class="small" id="tOut"></pre>
-    </div>
+<!-- REPORTS (sub page) -->
+<section class="view" id="v-report">
+  <header class="page-head with-back"><button class="round-btn" id="repBack" aria-label="Back">‹</button><h1>Report</h1><span></span></header>
+  <div class="month-pill" id="repMonth"></div>
+  <div class="card">
+    <div class="muted">Net income</div>
+    <div class="mid-money" id="repNet">0</div>
+    <div class="muted small" id="repAvg"></div>
+  </div>
+  <div class="card">
+    <div class="seg" id="repSeg"><button data-k="expense" class="on">Expense</button><button data-k="income">Income</button><i class="seg-ind"></i></div>
+    <div id="repBars"></div>
+  </div>
+  <div class="card">
+    <h2>Daily spending</h2>
+    <div id="repDaily"></div>
+  </div>
+</section>
 
-    <div class="card">
-      <h3>Wallets</h3>
-      <div id="walletList"></div>
-      <button class="btn" id="addWallet">+ Add wallet</button>
-    </div>
+<!-- ACCOUNT -->
+<section class="view" id="v-account">
+  <header class="page-head"><h1>Account</h1></header>
 
-    <div class="card">
-      <h3>Categories</h3>
-      <div id="catList"></div>
-      <button class="btn" id="addCat">+ Add category</button>
-    </div>
+  <div class="card list-card">
+    <label class="set-row"><span class="ic sm" style="--c:#4f7cff">👁️</span><span class="grow">Hide amounts</span><input type="checkbox" class="switch" id="hideToggle"></label>
+  </div>
 
-    <div class="card">
-      <h3>Auto category rules</h3>
-      <p class="muted">If the merchant name contains the word, use that category. Rules are also created when you change a BCA transaction's category.</p>
-      <div id="ruleList"></div>
-      <button class="btn" id="addRule">+ Add rule</button>
-    </div>
+  <div class="section-h">BCA email sync</div>
+  <div class="card">
+    <p class="muted small">Every BCA email (QRIS, transfer, payment) becomes a transaction automatically.</p>
+    <label class="fld">Apps Script URL<input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"></label>
+    <label class="fld">Secret<input id="sToken" type="password" placeholder="same SECRET as in Code.gs" autocomplete="off"></label>
+    <label class="fld">Put BCA transactions in wallet<select id="sWallet"></select></label>
+    <label class="set-row plain"><span class="grow">Sync automatically when the app is open</span><input type="checkbox" class="switch" id="sAuto"></label>
+    <div class="btn-row"><button class="btn" id="sSave">Save</button><button class="btn primary" id="sSync">Sync now</button></div>
+    <div class="muted small" id="sStatus"></div>
+  </div>
 
-    <div class="card">
-      <h3>Start fresh</h3>
-      <p class="muted">Delete all transactions and set every wallet to Rp 0. After this, only new BCA transactions are added; older emails are ignored.</p>
-      <p class="muted small" id="startFromLine"></p>
-      <button class="btn danger" id="resetBtn">Start fresh</button>
-    </div>
+  <div class="card" id="reviewCard" hidden>
+    <h2>Emails I couldn't read</h2>
+    <p class="muted small">These BCA emails had no clear amount. Tap one to add it by hand, or dismiss it.</p>
+    <div id="reviewList"></div>
+  </div>
 
-    <div class="card">
-      <h3>Backup</h3>
-      <p class="muted">Your data lives only on this phone. Export a backup now and then.</p>
-      <div class="btn-row">
-        <button class="btn" id="exportBtn">Export</button>
-        <label class="btn">Import<input type="file" id="importFile" accept="application/json" hidden></label>
-      </div>
-    </div>
-  </section>
-</main>
+  <div class="section-h"><span>Wallets</span><button class="link" id="addWallet">+ Add</button></div>
+  <div class="card list-card" id="walletList"></div>
 
-<button class="fab" id="fab" aria-label="Add transaction">+</button>
+  <div class="section-h"><span>Categories</span><button class="link" id="addCat">+ Add</button></div>
+  <div class="card list-card" id="catList"></div>
 
-<nav class="bottom-nav">
-  <button data-v="v-tx" class="on"><span>📒</span>Transactions</button>
-  <button data-v="v-report"><span>📊</span>Reports</button>
-  <button data-v="v-budget"><span>🎯</span>Budgets</button>
-  <button data-v="v-settings"><span>⚙️</span>Settings</button>
+  <div class="section-h"><span>Auto category rules</span><button class="link" id="addRule">+ Add</button></div>
+  <div class="card list-card"><p class="muted small pad">If the merchant name contains the word, that category is used.</p><div id="ruleList"></div></div>
+
+  <div class="section-h">Test the reader</div>
+  <div class="card">
+    <p class="muted small">Paste a BCA email (subject on the first line) to see what would be recorded.</p>
+    <textarea id="tInput" rows="5" placeholder="Transaksi QRIS Berhasil&#10;Nama Merchant : KOPI ...&#10;Nominal : Rp 38.000,00"></textarea>
+    <button class="btn" id="tRun">Test</button>
+    <pre class="small" id="tOut"></pre>
+  </div>
+
+  <div class="section-h">Backup</div>
+  <div class="card">
+    <p class="muted small">Your data lives only on this phone. Export a backup now and then.</p>
+    <div class="btn-row"><button class="btn" id="exportBtn">Export</button><label class="btn">Import<input type="file" id="importFile" accept="application/json" hidden></label></div>
+  </div>
+
+  <div class="section-h">Start fresh</div>
+  <div class="card">
+    <p class="muted small">Delete all transactions and set every wallet to Rp 0. After this, only new BCA transactions are added.</p>
+    <p class="muted small" id="startFromLine"></p>
+    <button class="btn danger" id="resetBtn">Start fresh</button>
+  </div>
+  <div class="foot muted small">Arus Money · data stays on this phone</div>
+</section>
+
+<nav class="bottom-nav" id="nav">
+  <i class="nav-ind" id="navInd"></i>
+  <button data-v="v-home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+  <button data-v="v-tx"><svg viewBox="0 0 24 24"><path d="M3 7h15a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l12-3v3M16 13h2"/></svg>Transactions</button>
+  <span class="nav-gap"></span>
+  <button data-v="v-budget"><svg viewBox="0 0 24 24"><path d="M5 4h9l5 5v11H5zM14 4v5h5M8 13h8M8 17h5"/></svg>Budgets</button>
+  <button data-v="v-account"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Account</button>
 </nav>
+<button class="fab" id="fab" aria-label="Add transaction"><span>+</span></button>
 
 <div class="sheet-bg" id="sheetBg" hidden></div>
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true">
@@ -147,6 +190,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-1"></script>
-<script src="js/app.js?v=20261031-3"></script>
+<script src="js/app.js?v=20261031-4"></script>
 </body>
 </html>
