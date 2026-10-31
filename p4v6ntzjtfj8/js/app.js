@@ -565,14 +565,20 @@
     }
     function pick(i) { haptic(); if (i === sel || i < 0) { sel = -1; } else { sel = i; paintInfo(i); inEl.scrollTo({ top: 0, behavior: 'smooth' }); } layout(); }
     // open: cards rise from the Home stack and fan into place
+    // First layout with CSS transitions off, so only one animation (the fly-in) moves the cards.
+    cards.forEach(function (c) { c.style.transition = 'none'; }); stack.style.transition = 'none';
     layout(true);
-    if (fromEl) {
-      var a = fromEl.getBoundingClientRect();
-      cards.forEach(function (c, i) {
-        var b = c.getBoundingClientRect();
-        c.animate([{ transform: 'translate(' + (a.left - b.left) + 'px,' + (a.top - b.top + Math.min(i, 3) * 10) + 'px) scale(' + (a.width / b.width).toFixed(3) + ')', opacity: i < 3 ? 1 : 0 }, { transform: c.style.transform, opacity: 1 }], { duration: 560 + i * 30, easing: 'cubic-bezier(.32,.72,0,1)' });
-      });
-    }
+    void stack.offsetHeight;
+    var homeStack = fromEl && fromEl.closest('.wstack'), a = fromEl ? fromEl.getBoundingClientRect() : null, longest = 0;
+    cards.forEach(function (c, i) {
+      var b = c.getBoundingClientRect(), to = c.style.transform, delay = Math.min(i, 9) * 22, dur = 540;
+      var from = a ? 'translate(' + (a.left - b.left) + 'px,' + (a.top - b.top + Math.min(i, 3) * 10) + 'px) scale(' + (a.width / b.width).toFixed(3) + ') ' + to
+                   : 'translateY(' + (inEl.clientHeight * 0.6) + 'px) ' + to;
+      c.animate([{ transform: from, opacity: a && i < 3 ? 1 : 0 }, { transform: to, opacity: 1 }], { duration: dur, delay: delay, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'backwards' });
+      longest = Math.max(longest, dur + delay);
+    });
+    if (homeStack) homeStack.style.visibility = 'hidden';
+    setTimeout(function () { cards.forEach(function (c) { c.style.transition = ''; }); stack.style.transition = ''; }, longest + 30);
     requestAnimationFrame(function () { ov.classList.add('show'); });
     haptic(); history.pushState({ deck: 1 }, '');
     var closed = false;
@@ -581,6 +587,7 @@
       ov.classList.remove('show'); ov.classList.add('hide');
       cards.forEach(function (c, i) { c.style.transitionDelay = (i * 15) + 'ms'; c.style.transform = 'translateY(' + (inEl.clientHeight + 40) + 'px)'; });
       setTimeout(function () { ov.remove(); }, 460);
+      if (homeStack) setTimeout(function () { homeStack.style.visibility = ''; }, 260);
       if (fromPop !== true && history.state && history.state.deck) history.back();
     }
     function pop() { close(true); }
