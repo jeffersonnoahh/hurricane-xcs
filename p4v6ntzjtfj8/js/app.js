@@ -899,7 +899,7 @@
     var max = rows.length ? sums[rows[0]] : 1;
     $('repBars').innerHTML = rows.length ? rows.map(function (id) {
       var c = cat(id), pct = Math.round(sums[id] / total * 100);
-      return '<div class="hbar"><div class="hbar-top"><span class="l">' + icon(c, 'sm') + esc(c.name) + '</span><span class="r">' + money(sums[id], { rp: false }) + ' · ' + pct + '%</span></div>' +
+      return '<div class="hbar" data-catd="' + esc(id) + '"><div class="hbar-top"><span class="l">' + icon(c, 'sm') + esc(c.name) + '</span><span class="r">' + money(sums[id], { rp: false }) + ' · ' + pct + '%</span></div>' +
         '<div class="hbar-track"><div class="hbar-fill" data-w="' + (sums[id] / max * 100).toFixed(1) + '"></div></div></div>';
     }).join('') : '<div class="empty">Nothing yet this month.</div>';
 
@@ -911,6 +911,7 @@
       return '<div class="col" tabindex="0" style="--i:' + i + ';height:' + Math.max(v ? 2 : 0, v / dmax * 100).toFixed(1) + '%" data-tip="' + (i + 1) + ' ' + MONTHS[cur.getMonth()].slice(0, 3) + ': ' + (S.settings.hide ? MASK : 'Rp ' + fmt(v)) + '"></div>';
     }).join('') + '</div><div class="col-axis"><span>1</span><span>' + Math.ceil(daysIn / 2) + '</span><span>' + daysIn + '</span></div>';
     growBars($('repBars'));
+    $('repBars').onclick = function (e) { var h = e.target.closest('[data-catd]'); if (h) { haptic(); catDetail(cat(h.dataset.catd)); } };
   }
   function growBars(root) {
     requestAnimationFrame(function () { requestAnimationFrame(function () {
@@ -2114,6 +2115,9 @@
       cats[k].n++; cats[k].sum += r.amount;
       wallets[r.wallet] = (wallets[r.wallet] || 0) + r.amount;
     });
+    Object.keys(cats).forEach(function (k) {
+      if (!cats[k].c && mlNorm(cats[k].name) === 'bl' && cats[k].dir === 'out') cats[k].c = S.cats.filter(function (c) { return c.id === 'ml_bl_out' || mlNorm(c.name) === 'billiard'; })[0] || { id: 'ml_bl_out', name: 'BILLIARD', icon: '🎱', sp: 'fun', type: 'expense', _new: true };
+    });
     var unmatched = Object.keys(cats).filter(function (k) { return !cats[k].c; });
     var debtKeys = Object.keys(cats).filter(function (k) { return cats[k].c && cats[k].c.type === 'debt'; });
     var expOpts = S.cats.filter(function (c) { return c.type === 'expense'; }), incOpts = S.cats.filter(function (c) { return c.type === 'income'; });
@@ -2174,6 +2178,7 @@
       if (wMatch[n]) return;
       var w = { id: uid(), name: n || 'Money Lover', icon: '👛', initial: 0 }; S.wallets.push(w); wMatch[n] = w;
     });
+    Object.keys(cats).forEach(function (k) { var c = cats[k].c; if (c && c._new) { delete c._new; if (!S.cats.some(function (x) { return x.id === c.id; })) S.cats.push(c); } });
     var have = {}; S.tx.forEach(function (t) { if (t.mlKey) have[t.mlKey] = 1; });
     var added = 0;
     R.forEach(function (x) {
@@ -2248,6 +2253,45 @@
       });
   }
 
+  // ---------- Category page: how much went into this category (month / year / all time, chart, transactions) ----------
+  function catDetail(c) {
+    if (!c) return;
+    var kids = S.cats.filter(function (k) { return k.parent === c.id; }), ids = [c.id].concat(kids.map(function (k) { return k.id; }));
+    var inc = c.type === 'income', now = new Date(), m = ym(now), pm = ym(new Date(now.getFullYear(), now.getMonth() - 1, 1)), y = String(now.getFullYear());
+    var tx = S.tx.filter(function (t) { return ids.indexOf(t.cat) !== -1 && t.type !== 'transfer'; }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
+    var all = 0, mo = 0, last = 0, yr = 0, byM = {}, byKid = {};
+    tx.forEach(function (t) { var a = t.amount, k = t.date.slice(0, 7); all += a; if (k === m) mo += a; if (k === pm) last += a; if (t.date.slice(0, 4) === y) yr += a; byM[k] = (byM[k] || 0) + a; byKid[t.cat] = (byKid[t.cat] || 0) + a; });
+    var first = tx.length ? tx[tx.length - 1].date : null, months = first ? Math.max(1, (now.getFullYear() - +first.slice(0, 4)) * 12 + now.getMonth() - (+first.slice(5, 7) - 1) + 1) : 1;
+    var ms = []; for (var i = 11; i >= 0; i--) ms.push(ym(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+    var bmax = Math.max.apply(null, ms.map(function (k) { return byM[k] || 0; }).concat([1]));
+    var vs = last ? (mo - last) / last * 100 : null, shown = 20;
+    function list(n) { return tx.length ? tx.slice(0, n).map(function (t, k) { return txRow(t, k, true); }).join('') : '<div class="dw-empty">No transactions in this category yet.</div>'; }
+    openSheet('<div class="cd-head">' + icon(c, 'lg') + '<div><h3>' + esc(c.name) + '</h3><span>' + (inc ? 'Income' : 'Expense') + ' category' + (kids.length ? ' · incl. ' + kids.length + ' sub' : '') + '</span></div></div>' +
+      '<div class="cd-hero"><small>' + (inc ? 'Received' : 'Spent') + ' all time</small><b>' + money(all) + '</b><span>' + tx.length.toLocaleString('id-ID') + ' transactions' + (first ? ' since ' + fmtDate(first) : '') + '</span></div>' +
+      '<div class="cd-stats"><div><small>This month</small><b>' + money(mo, { rp: false }) + '</b>' + (vs != null ? '<i class="' + ((vs > 0) === !inc ? 'bad' : 'good') + '">' + (vs > 0 ? '▲ ' : '▼ ') + Math.abs(vs).toFixed(0) + '% vs last</i>' : '') + '</div>' +
+        '<div><small>This year</small><b>' + money(yr, { rp: false }) + '</b></div><div><small>Avg / month</small><b>' + money(Math.round(all / months), { rp: false }) + '</b></div></div>' +
+      '<div class="cd-sec">Last 12 months</div><div class="cd-bars" id="cdBars">' + ms.map(function (k, i) { var v = byM[k] || 0; return '<button type="button" class="cd-b' + (k === m ? ' now' : '') + '" data-k="' + k + '" style="--i:' + i + '"><i style="height:' + Math.max(v ? 3 : 0, v / bmax * 100).toFixed(1) + '%"></i><span>' + MONTHS[+k.slice(5, 7) - 1].slice(0, 1) + '</span></button>'; }).join('') + '</div>' +
+      '<div class="cd-tip" id="cdTip">Tap a bar to see that month</div>' +
+      (kids.length ? '<div class="cd-sec">Inside this category</div><div class="card list-card cd-kids">' + [c].concat(kids).filter(function (k) { return byKid[k.id]; }).sort(function (a, b) { return byKid[b.id] - byKid[a.id]; }).map(function (k) {
+        return '<div class="ml-row">' + icon(k, 'sm') + '<span class="grow">' + esc(k.id === c.id ? c.name + ' (itself)' : k.name) + '</span><b>' + money(byKid[k.id], { rp: false }) + '</b></div>'; }).join('') + '</div>' : '') +
+      '<div class="cd-sec">Transactions</div><div class="dw-list" id="cdList">' + list(shown) + '</div>' +
+      (tx.length > shown ? '<button class="btn block" id="cdMore" style="margin-top:8px">Show more</button>' : '') +
+      '<div class="two" style="margin-top:12px"><button class="btn" id="cdAdd">＋ Add</button><button class="btn" id="cdEdit">Edit category</button></div>',
+      function (r) {
+        r.querySelector('#cdBars').onclick = function (e) {
+          var b = e.target.closest('.cd-b'); if (!b) return; haptic();
+          this.querySelectorAll('.cd-b').forEach(function (x) { x.classList.toggle('sel', x === b); });
+          var k = b.dataset.k, n = tx.filter(function (t) { return t.date.slice(0, 7) === k; }).length;
+          r.querySelector('#cdTip').innerHTML = '<b>' + monthName(k) + '</b> · ' + money(byM[k] || 0) + ' · ' + n + ' transaction' + (n === 1 ? '' : 's');
+        };
+        var mb = r.querySelector('#cdMore'); if (mb) mb.onclick = function () { shown += 40; r.querySelector('#cdList').innerHTML = list(shown); if (shown >= tx.length) mb.remove(); };
+        r.querySelector('#cdList').onclick = function (e) { var t = e.target.closest('.tx'); if (!t) return; var tt = S.tx.filter(function (x) { return x.id === t.dataset.id; })[0]; if (tt) txSheet(tt); };
+        r.querySelector('#cdAdd').onclick = function () { txSheet(null, { type: inc ? 'income' : 'expense', cat: c.id }); };
+        r.querySelector('#cdEdit').onclick = function () { catSheet(c); };
+      });
+  }
+  // "Bl" from Money Lover is billiard: give it a proper name and icon.
+  function fixBilliard() { S.cats.forEach(function (c) { if (c.id === 'ml_bl_out') { c.name = 'BILLIARD'; c.icon = '🎱'; c.sp = 'fun'; } }); }
   function catSheet(c, type) {
     var isNew = !c; c = c || { id: uid(), name: '', icon: '🏷️', type: type || 'expense', sp: type === 'income' ? 'other_in' : type === 'debt' ? 'loan' : 'other_out' };
     openSheet('<h3>' + (isNew ? 'New category' : 'Edit category') + '</h3>' +
@@ -2458,7 +2502,7 @@
       var t = e.target.closest('[data-edit-wallet],[data-edit-cat],[data-del-rule],[data-review],[data-del-review]');
       if (!t) return;
       if (t.dataset.editWallet) walletSheet(wallet(t.dataset.editWallet));
-      else if (t.dataset.editCat) catSheet(cat(t.dataset.editCat));
+      else if (t.dataset.editCat) catDetail(cat(t.dataset.editCat));
       else if (t.dataset.delRule != null) { S.rules.splice(+t.dataset.delRule, 1); save(); renderAll(); }
       else if (t.dataset.delReview != null) { S.review.splice(+t.dataset.delReview, 1); save(); renderAll(); }
       else if (t.dataset.review != null) {
@@ -3329,7 +3373,7 @@
     var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
-  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
+  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   $('mlFile').onchange = function () { var f = this.files[0]; this.value = ''; if (f) mlImportFile(f); };
   hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; renderIhsg(); fetchIhsg(); $('ihsgBar').onclick = function () { haptic(); ihsgSheet(); }; registerSW(); setTimeout(onboarding, 1300);
