@@ -352,7 +352,7 @@
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
     $('hGreet').textContent = hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night';
-    renderUpcoming(); renderRealBtn(); renderKomisi(); renderBizCard();
+    renderUpcoming(); renderRealBtn(); renderKomisi(); renderBizCard(); renderInstCard();
     var mStart = ym(new Date()) + '-01', open0 = balance('all', mStart), chg = total - open0;
     var chip = $('hChip');
     if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '▲ ' : '▼ ') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% this month'; }
@@ -1080,6 +1080,82 @@
     }
     draw();
   }
+  // ---------- INSTALLMENTS: tracked separately, never counted in wallets or net worth ----------
+  function iPaid(p) { return (p.pays || []).reduce(function (a, x) { return a + x.amount; }, 0); }
+  function iLeft(p) { return Math.max(0, (p.total || 0) - iPaid(p)); }
+  function iNext(p) {
+    if (!p.monthly || !iLeft(p)) return null;
+    var now = new Date(), day = Math.min(28, p.dueDay || 1), d = new Date(now.getFullYear(), now.getMonth(), day);
+    var paidThis = (p.pays || []).some(function (x) { return x.date.slice(0, 7) === ym(now); });
+    if (paidThis || d < new Date(now.getFullYear(), now.getMonth(), now.getDate())) d = new Date(now.getFullYear(), now.getMonth() + 1, day);
+    return ymd(d);
+  }
+  var ICOL = ['#60a5fa', '#f472b6', '#34d399', '#fbbf24', '#a78bfa'];
+  function renderInstCard() {
+    var el = $('hInst'); if (!el) return; var ps = S.inst || [];
+    var tot = ps.reduce(function (a, p) { return a + (p.total || 0); }, 0), paid = ps.reduce(function (a, p) { return a + iPaid(p); }, 0);
+    var nx = ps.map(function (p) { return { p: p, d: iNext(p) }; }).filter(function (x) { return x.d; }).sort(function (a, b) { return a.d.localeCompare(b.d); })[0];
+    el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Still to pay · not in your net worth</div><div class="mid-money">' + money(tot - paid) + '</div><div class="muted small">' + (nx ? 'Next: ' + esc(nx.p.name) + ' · ' + money(nx.p.monthly, { rp: false }) + ' on ' + fmtDate(nx.d) : 'Paid ' + money(paid, { rp: false }) + ' of ' + money(tot, { rp: false })) + '</div></div></div>' +
+      '<div class="inst-list">' + ps.map(function (p, i) { var pc = p.total ? Math.min(100, iPaid(p) / p.total * 100) : 0; return '<div class="inst-mini" style="--c:' + ICOL[i % ICOL.length] + '"><span class="biz-ic" style="--c:' + ICOL[i % ICOL.length] + '">' + sprite(p.sp || 'my_home') + '</span><span class="grow"><b>' + esc(p.name) + '</b><span class="bill-bar inst-bar"><i style="--w:' + pc.toFixed(1) + '%"></i></span></span><em>' + Math.round(pc) + '%</em></div>'; }).join('') + '</div>';
+  }
+  function instSheet() {
+    var ps = S.inst || [], tot = ps.reduce(function (a, p) { return a + (p.total || 0); }, 0), paid = ps.reduce(function (a, p) { return a + iPaid(p); }, 0);
+    var monthly = ps.filter(function (p) { return iLeft(p); }).reduce(function (a, p) { return a + (p.monthly || 0); }, 0);
+    openSheet('<h3>Installments</h3><p class="muted small" style="text-align:center;margin:-8px 0 12px">Kept separate: these never change your wallets or net worth.</p>' +
+      '<div class="dd-stats" style="margin-top:0;border:0;padding-top:0"><div><small>Total</small><b>' + money(tot, { rp: false }) + '</b></div><div><small>Paid</small><b class="pos">' + money(paid, { rp: false }) + '</b></div><div><small>Per month</small><b>' + money(monthly, { rp: false }) + '</b></div></div>' +
+      '<div class="card list-card stagger" style="margin-top:12px">' + ps.map(function (p, i) {
+        var pc = p.total ? Math.min(100, iPaid(p) / p.total * 100) : 0, nx = iNext(p);
+        return '<button class="w-row" data-inst="' + esc(p.id) + '" style="--i:' + i + '"><span class="biz-ic" style="--c:' + ICOL[i % ICOL.length] + '">' + sprite(p.sp || 'my_home') + '</span><span class="grow"><b>' + esc(p.name) + '</b><span class="sub">' + money(iPaid(p), { rp: false }) + ' of ' + money(p.total || 0, { rp: false }) + (nx ? ' · next ' + fmtDate(nx) : iLeft(p) ? '' : ' · done 🎉') + '</span><span class="bill-bar inst-bar" style="--c:' + ICOL[i % ICOL.length] + '"><i style="--w:' + pc.toFixed(1) + '%"></i></span></span><span class="amt">' + money(iLeft(p), { rp: false }) + '</span></button>';
+      }).join('') + '<button class="w-row" id="instAdd"><span class="biz-ic add">＋</span><span class="grow"><b>Add installment</b><span class="sub">House, car, wedding, gadget…</span></span></button></div>',
+      function (r) {
+        r.addEventListener('click', function (e) { var b = e.target.closest('[data-inst]'); if (b) { haptic(); instDetail(S.inst.filter(function (x) { return x.id === b.dataset.inst; })[0]); } });
+        r.querySelector('#instAdd').onclick = function () { instEdit(); };
+      });
+  }
+  function instEdit(p) {
+    var isNew = !p; p = p || { id: uid(), name: '', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }; var st = { sp: p.sp };
+    openSheet('<h3>' + (isNew ? 'Add installment' : 'Edit installment') + '</h3><span class="ic preview i3d">' + sprite(st.sp) + '</span>' +
+      '<label class="fld">Name<input id="iName" value="' + esc(p.name) + '" placeholder="e.g. RUMAH NOAH"></label>' +
+      '<label class="fld">Total price (Rp)<input id="iTotal" inputmode="numeric" value="' + (p.total ? p.total.toLocaleString('id-ID') : '') + '" placeholder="0"></label>' +
+      '<div class="two"><label class="fld">Per month (Rp)<input id="iMonthly" inputmode="numeric" value="' + (p.monthly ? p.monthly.toLocaleString('id-ID') : '') + '" placeholder="0"></label><label class="fld">Due day<input id="iDay" inputmode="numeric" value="' + (p.dueDay || 1) + '"></label></div>' +
+      '<div class="fld">Icon' + picker(null, st.sp) + '</div>' +
+      '<button class="btn primary block" id="iSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="iDel">Delete installment</button>'),
+      function (r) {
+        fmtInput(r.querySelector('#iTotal')); fmtInput(r.querySelector('#iMonthly')); bindSpPicker(r, st);
+        r.querySelector('#iSave').onclick = function () {
+          var n = r.querySelector('#iName').value.trim(); if (!n) { toast('Name it'); return; }
+          p.name = n; p.sp = st.sp; p.total = parseNum(r.querySelector('#iTotal').value); p.monthly = parseNum(r.querySelector('#iMonthly').value); p.dueDay = Math.max(1, Math.min(28, parseNum(r.querySelector('#iDay').value) || 1));
+          if (isNew) (S.inst = S.inst || []).push(p); save(); renderAll(); instDetail(p); toast('Saved ✓');
+        };
+        var d = r.querySelector('#iDel'); if (d) d.onclick = function () {
+          confirmBox('Delete \u201c' + esc(p.name) + '\u201d?', 'Its payment history will be removed.', 'Delete').then(function (a) { return a && confirmBox('Are you sure?', 'This can\u2019t be undone.', 'Yes, delete', true); }).then(function (b) { if (!b) return; S.inst = S.inst.filter(function (x) { return x !== p; }); save(); renderAll(); instSheet(); toast('Deleted'); });
+        };
+      });
+  }
+  function instDetail(p) {
+    if (!p) return; var i = S.inst.indexOf(p), col = ICOL[i % ICOL.length], pd = iPaid(p), pct = p.total ? pd / p.total : 0, left = iLeft(p), nx = iNext(p);
+    var monthsLeft = p.monthly ? Math.ceil(left / p.monthly) : null, fin = monthsLeft ? new Date(new Date().getFullYear(), new Date().getMonth() + monthsLeft, 1) : null;
+    var pays = (p.pays || []).slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
+    openSheet('<div class="sheet-top"><button class="icon-btn" id="iBack" aria-label="Back">‹</button><h3>' + esc(p.name) + '</h3><button class="icon-btn" id="iEdit" aria-label="Edit">✎</button></div>' +
+      '<div class="gd-hero"><div class="g-vis big">' + ringSvg(pct, col, 132) + '<span class="g-ic">' + sprite(p.sp || 'my_home') + '</span></div><div class="gd-pct">' + Math.round(pct * 100) + '%</div><div class="muted small">' + money(pd) + ' of ' + money(p.total || 0) + '</div></div>' +
+      '<div class="dd-stats"><div><small>Remaining</small><b>' + money(left, { rp: false }) + '</b></div><div><small>Per month</small><b>' + (p.monthly ? money(p.monthly, { rp: false }) : '–') + '</b></div><div><small>' + (fin ? 'Finished' : 'Months left') + '</small><b>' + (fin ? MONTHS[fin.getMonth()].slice(0, 3) + ' ' + fin.getFullYear() : '–') + '</b></div></div>' +
+      (nx ? '<div class="inst-next"><span>Next payment</span><b>' + money(p.monthly) + ' · ' + fmtDate(nx) + '</b></div>' : '') +
+      (left ? '<div class="amt-wrap" style="margin-top:14px"><span>Rp</span><input class="amt-input" id="iAmt" inputmode="numeric" placeholder="Payment" value="' + (p.monthly ? Math.min(p.monthly, left).toLocaleString('id-ID') : '') + '"></div>' +
+        '<label class="fld">Date<input id="iDate" type="date" value="' + today() + '"></label><button class="btn primary block" id="iPay">＋ Record payment</button>' : '<div class="empty">Fully paid 🎉</div>') +
+      '<p class="muted small" style="text-align:center">Recording here does not take money from any wallet.</p>' +
+      (pays.length ? '<div class="sheet-sec">Payments</div><div class="timeline">' + pays.map(function (x) { return '<div class="tl"><div><b class="pos">+ ' + money(x.amount) + '</b><small>' + fmtDate(x.date) + '</small></div><button class="x" data-ipdel="' + esc(x.id) + '" aria-label="Delete">×</button></div>'; }).join('') + '</div>' : ''),
+      function (r) {
+        requestAnimationFrame(function () { requestAnimationFrame(function () { r.querySelectorAll('.g-fill').forEach(function (c) { c.classList.add('go'); }); }); });
+        r.querySelector('#iBack').onclick = instSheet; r.querySelector('#iEdit').onclick = function () { instEdit(p); };
+        var a = r.querySelector('#iAmt'); if (a) fmtInput(a);
+        var b = r.querySelector('#iPay'); if (b) b.onclick = function () {
+          var v = parseNum(a.value); if (!v) { toast('Enter the amount'); return; }
+          (p.pays = p.pays || []).push({ id: uid(), amount: v, date: r.querySelector('#iDate').value || today() });
+          var done = !iLeft(p); save(); renderAll(); instDetail(p); toast(done ? p.name + ' fully paid! 🎉' : 'Payment recorded'); if (done) confetti();
+        };
+        r.addEventListener('click', function (e) { var x = e.target.closest('[data-ipdel]'); if (!x) return; confirmBox('Delete this payment?', 'It will be removed from ' + esc(p.name) + '.', 'Delete').then(function (ok) { if (!ok) return; p.pays = p.pays.filter(function (y) { return y.id !== x.dataset.ipdel; }); save(); renderAll(); instDetail(p); }); });
+      });
+  }
   function unbook(d, why) { var r = dRemain(d); if (d.prebooked && r > 0) addTx({ type: 'expense', cat: 'balance_adj', amount: r, wallet: d.wallet, date: today(), merchant: d.person, note: why + ': ' + (d.title || ''), debtId: d.id }); }
   function debtDetail(d) {
     if (!d) return;
@@ -1738,6 +1814,7 @@
     $('realBtn').onclick = function () { haptic(); realSheet(); };
     $('hKomisi').onclick = function () { haptic(); komisiSheet(); };
     $('kmOpen').onclick = function () { haptic(); komisiSheet(); };
+    $('hInst').onclick = function () { haptic(); instSheet(); }; $('instOpen').onclick = function () { haptic(); instSheet(); }; $('instBtn').onclick = function () { haptic(); instSheet(); };
     $('hBiz').onclick = function () { haptic(); bizSheet(); }; $('bizOpen').onclick = function () { haptic(); bizSheet(); }; $('bizBtn').onclick = function () { haptic(); bizSheet(); };
     $('hRange').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; sparkDays = +b.dataset.r; haptic(); renderSpark(); };
     $('allocLegend').onclick = function (e) { if (e.target.closest('[data-group]')) walletPicker(); };
@@ -2298,7 +2375,7 @@
   }
 
   // ---------- customizable home ----------
-  var SEC_NAMES = { business: 'Business', komisi: 'Komisi Noah', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
+  var SEC_NAMES = { installments: 'Installments', business: 'Business', komisi: 'Komisi Noah', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
   function homeLayout() {
     var keys = Object.keys(SEC_NAMES), L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
     keys.forEach(function (k) { if (!L.some(function (x) { return x.k === k; })) L.push({ k: k, on: true }); });
@@ -2412,7 +2489,7 @@
     S.bizLinkVer = 1;
   }
   function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
-  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
