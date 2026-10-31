@@ -38,7 +38,7 @@
     ['uncat_in', 'Uncategorized', '❔', 'income'], ['plus_crypto', 'PLUS CRYPTO', '🪙', 'income'], ['ajaib_kripto_plus', 'AJAIB KRIPTO PLUS', '💹', 'income'],
     ['bitget_plus', 'BITGET PLUS', '🚀', 'income'], ['mexc_plus', 'MEXC PLUS', '📈', 'income'], ['bybit_plus', 'BYBIT PLUS', '🎯', 'income'],
     ['stocks_plus', 'STOCKS PLUS', '📊', 'income'], ['gold_debit_in', 'GOLD DEBIT', '💳', 'income'], ['brpt_plus', 'BRPT PLUS', '♟', 'income'],
-    ['pokemon_plus', 'Pokemon plus', '👾', 'income'], ['sentaris', 'SENTARIS', '🏙', 'income'],
+    ['pokemon_plus', 'Pokemon plus', '👾', 'income'], ['sentaris', 'SENTARIS', '🏙', 'income'], ['komisi_in', 'KOMISI', '💰', 'income'],
     ['loan', 'Loan', '💸', 'debt', '', 'out'], ['repayment', 'Repayment', '🧾', 'debt', '', 'out'],
     ['debt_collection', 'Debt Collection', '🪙', 'debt', '', 'in'], ['debt', 'Debt', '📥', 'debt', '', 'in']
   ];
@@ -791,7 +791,7 @@
           var a = parseNum(amt.value); if (!a) { toast('Enter the amount'); return; }
           if (a > rem && !confirm('This is more than the remaining ' + 'Rp ' + fmt(rem) + '. Save anyway?')) return;
           var date = r.querySelector('#pDate').value || today(), w = r.querySelector('#pWallet').value, note = r.querySelector('#pNote').value.trim();
-          var t = addTx({ type: 'debt', cat: inn ? 'debt_collection' : 'repayment', amount: a, wallet: w, date: date, merchant: d.person, note: note || d.title, debtId: d.id });
+          var t = addTx({ type: d.earned ? 'income' : 'debt', cat: d.earned ? (d.incomeCat || 'other_in') : inn ? 'debt_collection' : 'repayment', amount: a, wallet: w, date: date, merchant: d.person, note: note || d.title, debtId: d.id });
           d.payments = d.payments || []; d.payments.push({ id: uid(), amount: a, date: date, wallet: w, note: note, txId: t.id });
           var done = dPaid(d) >= d.amount;
           haptic(); save(); closeSheet(); renderAll();
@@ -1028,6 +1028,9 @@
       '<label class="fld" id="fWalletL"><span>Wallet</span><select id="fWallet">' + wOpts(t.wallet) + '</select></label>' +
       '<label class="fld" id="fToL">To wallet<select id="fTo">' + wOpts(t.toWallet || (S.wallets[1] && S.wallets[1].id)) + '</select></label>' +
       '<div class="two"><label class="fld">Date<input id="fDate" type="date" value="' + esc(t.date) + '"></label><label class="fld">Time<input id="fTime" type="time" value="' + esc(t.time || '') + '"></label></div>' +
+      (isNew ? '<div class="unpaid" id="fUnpaidBox"><label class="set-row plain"><span class="grow"><b>Not received yet</b><span class="sub">Count the full amount now and remind me to collect it</span></span><input type="checkbox" class="switch" id="fUnpaid"></label>' +
+        '<div id="fUnpaidF" hidden><div class="two"><label class="fld">Who pays you<input id="fPayer" placeholder="e.g. Dad"></label><label class="fld">Remind me on<input id="fDue" type="date"></label></div>' +
+        '<label class="fld">Already received (optional)<input id="fPaidNow" inputmode="numeric" placeholder="0"></label></div></div>' : '') +
       '<label class="fld">Merchant / person<input id="fMerch" value="' + esc(t.merchant || '') + '"></label>' +
       '<label class="fld">Note<input id="fNote" value="' + esc(t.note || '') + '"></label>' +
       (t.src === 'bca' ? '<p class="muted small">Imported from a BCA email' + (t.ref ? ' · ref ' + esc(t.ref) : '') + '.</p>' : '') +
@@ -1036,6 +1039,8 @@
       (isNew ? '' : '<button class="btn danger block" id="fDel">Delete</button>'),
       function (root) {
         var amt = root.querySelector('#fAmt'); fmtInput(amt);
+        var ub = root.querySelector('#fUnpaid');
+        if (ub) { fmtInput(root.querySelector('#fPaidNow')); ub.onchange = function () { root.querySelector('#fUnpaidF').hidden = !ub.checked; haptic(); if (ub.checked) setTimeout(function () { root.querySelector('#fPayer').focus(); }, 200); }; }
         root.querySelector('#fScan').onclick = function () { haptic(); scanInto(root); };
         root.querySelector('#fSplit').onclick = function () { var a = parseNum(amt.value); if (!a) { toast('Enter the bill amount first'); amt.focus(); return; } splitSheet(a, root.querySelector('#fMerch').value.trim(), root.querySelector('#fDate').value, root.querySelector('#fWallet').value); };
         var ind = root.querySelector('#fType .seg-ind');
@@ -1045,6 +1050,7 @@
           root.querySelectorAll('#fType button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === st.type); });
           root.querySelector('#fCatWrap').hidden = st.type === 'transfer';
           root.querySelector('#fToL').hidden = st.type !== 'transfer';
+          var upb = root.querySelector('#fUnpaidBox'); if (upb) upb.hidden = st.type !== 'income';
           root.querySelector('#fWalletL span').textContent = st.type === 'transfer' ? 'From wallet' : 'Wallet';
           var cats = S.cats.filter(function (c) { return c.type === st.type; });
           if (st.type !== 'transfer' && !cats.some(function (c) { return c.id === st.cat; })) st.cat = cats[0] ? cats[0].id : '';
@@ -1069,6 +1075,17 @@
           if (!a) { toast('Enter an amount'); amt.focus(); return; }
           var w = root.querySelector('#fWallet').value, to = root.querySelector('#fTo').value;
           if (st.type === 'transfer' && w === to) { toast('Pick two different wallets'); return; }
+          if (ub && ub.checked && st.type === 'income') {
+            var payer = root.querySelector('#fPayer').value.trim(); if (!payer) { toast('Who will pay you?'); root.querySelector('#fPayer').focus(); return; }
+            var dd = { id: uid(), dir: 'in', earned: true, incomeCat: st.cat, person: payer, title: cat(st.cat).name + (root.querySelector('#fNote').value.trim() ? ' · ' + root.querySelector('#fNote').value.trim() : ''), amount: a,
+              created: root.querySelector('#fDate').value || today(), due: root.querySelector('#fDue').value, wallet: w, tags: 'income', notes: '', payments: [], ts: Date.now() };
+            S.debts.push(dd);
+            var pn = parseNum(root.querySelector('#fPaidNow').value);
+            if (pn) { var pt = addTx({ type: 'income', cat: st.cat, amount: pn, wallet: w, date: dd.created, merchant: payer, note: dd.title, debtId: dd.id }); dd.payments.push({ id: uid(), amount: pn, date: dd.created, wallet: w, note: 'First payment', txId: pt.id }); }
+            haptic(); save(); closeSheet(); renderAll();
+            toast(payer + ' owes you ' + money(a - pn, { rp: true }) + ' · reminder set');
+            return;
+          }
           var oldCat = t.cat;
           Object.assign(t, {
             type: st.type, amount: a, cat: st.type === 'transfer' ? '' : st.cat, wallet: w, toWallet: st.type === 'transfer' ? to : '',
@@ -2007,7 +2024,8 @@
     if (walletSel !== 'all' && !S.wallets.some(function (w) { return w.id === walletSel; })) walletSel = 'all';
     S.walletVer = 1;
   }
-  load(); zeroStart(); ownerWallets(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  function addKomisi() { if (!S.cats.some(function (c) { return c.id === 'komisi_in'; })) { var at = S.cats.map(function (c) { return c.type; }).lastIndexOf('income') + 1 || S.cats.length; S.cats.splice(at, 0, { id: 'komisi_in', name: 'KOMISI', icon: '💰', type: 'income', sp: 'komisi_out' }); } }
+  load(); zeroStart(); ownerWallets(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();

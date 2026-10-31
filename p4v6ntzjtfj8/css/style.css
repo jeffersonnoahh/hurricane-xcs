@@ -935,3 +935,6 @@ body.app-in .bottom-nav{animation:navIn .7s var(--spring) .1s both}
 body.app-in .fab{animation:fabIn .6s var(--spring) .25s both}
 @keyframes fabIn{from{scale:0}}
 body.busy-on .topbar{opacity:0!important;transform:translate(-50%,-160%)!important}
+
+.unpaid{border-radius:14px;padding:2px 12px 4px;background:var(--surface2);margin:10px 0 2px}
+.unpaid b{font-weight:600}
