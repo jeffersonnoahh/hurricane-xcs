@@ -411,7 +411,25 @@
   }
 
   // Net worth trend (wallet balances at the end of each day).
-  var sparkDays = 30;
+  var sparkDays = 30, SPK = null, scrubbing = false;
+  function bindScrub() {
+    var svg = $('hSpark'), lbl = $('hScrubLbl');
+    function at(x) {
+      if (!SPK) return; var r = svg.getBoundingClientRect(); var f = Math.max(0, Math.min(1, (x - r.left) / r.width));
+      var i = Math.round(f * (SPK.pts.length - 1)), p = SPK.xy[i], g = svg.querySelector('.sp-scrub');
+      if (!g) return; g.removeAttribute('hidden'); g.querySelector('line').setAttribute('x1', p[0]); g.querySelector('line').setAttribute('x2', p[0]);
+      var c = g.querySelector('circle'); c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]);
+      if (i !== at.last) { at.last = i; haptic(); }
+      var v = SPK.pts[i] + SPK.offset, txt = money(v); $('hNet').innerHTML = txt; delete $('hNet').dataset.sig;
+      if (!S.settings.hide) RS.hNet = { sig: txt.replace(/\d/g, '0'), digits: txt.replace(/\D/g, '').split('').map(Number), v: v };
+      var d = SPK.dates[i]; lbl.textContent = d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear(); lbl.style.left = (f * 100) + '%'; lbl.hidden = false;
+    }
+    function end() { if (!scrubbing) return; scrubbing = false; document.body.classList.remove('scrubbing'); lbl.hidden = true; var g = svg.querySelector('.sp-scrub'); if (g) g.setAttribute('hidden', ''); at.last = -1; if (SPK) rollTo($('hNet'), SPK.pts[SPK.pts.length - 1] + SPK.offset); }
+    svg.addEventListener('touchstart', function (e) { scrubbing = true; document.body.classList.add('scrubbing'); at(e.touches[0].clientX); }, { passive: true });
+    svg.addEventListener('touchmove', function (e) { if (scrubbing) { e.preventDefault(); at(e.touches[0].clientX); } }, { passive: false });
+    svg.addEventListener('touchend', end); svg.addEventListener('touchcancel', end);
+    svg.addEventListener('mousemove', function (e) { scrubbing = true; at(e.clientX); }); svg.addEventListener('mouseleave', end);
+  }
   function renderSpark() {
     var n = sparkDays, now = new Date(), pts = [];
     var step = n > 120 ? 7 : 1;
@@ -429,7 +447,11 @@
     $('hSpark').innerHTML = '<defs><linearGradient id="spg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + (up ? '#34d399' : '#f87171') + '" stop-opacity=".28"/><stop offset="1" stop-color="' + (up ? '#34d399' : '#f87171') + '" stop-opacity="0"/></linearGradient></defs>' +
       '<path class="sp-area" d="' + d + ' L' + W + ',' + H + ' L0,' + H + 'Z" fill="url(#spg)"/>' +
       '<path class="sp-line" d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke" pathLength="1"/>' +
-      '<circle class="sp-dot" cx="' + end[0].toFixed(1) + '" cy="' + end[1].toFixed(1) + '" r="3.5" fill="' + col + '"/>';
+      '<circle class="sp-pulse" cx="' + end[0].toFixed(1) + '" cy="' + end[1].toFixed(1) + '" r="3.5" fill="' + col + '"/>' +
+      '<circle class="sp-dot" cx="' + end[0].toFixed(1) + '" cy="' + end[1].toFixed(1) + '" r="3.5" fill="' + col + '"/>' +
+      '<g class="sp-scrub" hidden><line y1="0" y2="' + H + '" stroke="var(--ink2)" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"/><circle r="5" fill="' + col + '" stroke="var(--bg)" stroke-width="2" vector-effect="non-scaling-stroke"/></g>';
+    var dates = []; for (var k2 = n; k2 >= 0; k2 -= step) dates.push(new Date(now.getFullYear(), now.getMonth(), now.getDate() - k2));
+    SPK = { pts: pts, xy: xy, dates: dates, W: W, offset: (balance('all') + dSum('in', 'remain') - dSum('out', 'remain')) - last };
     var chip = $('hChip'), lbl = { 7: '1W', 30: '1M', 90: '3M', 365: '1Y' }[n];
     chip.hidden = false; chip.className = 'chip' + (up ? '' : ' dn');
     var pc = first ? Math.abs(diff / first * 100) : 0;
@@ -817,7 +839,7 @@
   }
   var budFrom = 'v-account';
   var TITLES = { 'v-home': 'Apex', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
-  function onScroll() { $('topbar').classList.toggle('show', window.scrollY > 70); }
+  function onScroll() { var y = window.scrollY; $('topbar').classList.toggle('show', y > 120); document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
 
   // ---------- extra motion ----------
   // Coin burst (used when income is added).
@@ -908,14 +930,14 @@
     $('sheetBody').innerHTML = html;
     $('sheet').hidden = false; $('sheetBg').hidden = false; $('sheet').scrollTop = 0;
     void $('sheet').offsetWidth;
-    $('sheet').classList.add('show'); $('sheetBg').classList.add('show');
+    $('sheet').classList.add('show'); $('sheetBg').classList.add('show'); document.body.classList.add('sheet-open');
     sheetOpen = true;
     if (onMount) onMount($('sheetBody'));
   }
   function closeSheet() {
     if (!sheetOpen) return;
     sheetOpen = false;
-    $('sheet').classList.remove('show'); $('sheetBg').classList.remove('show'); $('fab').classList.remove('open');
+    $('sheet').classList.remove('show'); $('sheetBg').classList.remove('show'); $('fab').classList.remove('open'); document.body.classList.remove('sheet-open');
     setTimeout(function () { if (!sheetOpen) { $('sheet').hidden = true; $('sheetBg').hidden = true; $('sheetBody').innerHTML = ''; } }, 420);
   }
   // Swipe the sheet down to close.
@@ -1263,7 +1285,7 @@
 
   // ---------- events ----------
   function bind() {
-    document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.onclick = function () { haptic(); show(b.dataset.v); }; });
+    document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.onclick = function () { haptic(); var sv = b.querySelector('svg'); sv.classList.remove('pop'); void sv.offsetWidth; sv.classList.add('pop'); show(b.dataset.v); }; });
     window.addEventListener('resize', moveInd);
     $('fab').onclick = function () { haptic(); if (view === 'v-debts') debtSheet(null, dDir); else txSheet(null, walletSel !== 'all' ? { wallet: walletSel } : null); };
     document.querySelectorAll('[data-priv]').forEach(function (b) { b.onclick = togglePrivacy; });
@@ -1406,7 +1428,7 @@
 
   document.documentElement.style.setProperty('--sheet', 'url("' + SHEET + '")');
   load(); importFromHash(); bind(); renderAll();
-  bindTilt(); bindSpecular(); bindPull(); window.addEventListener('scroll', onScroll, { passive: true });
+  bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
   if (S.settings.autoSync) sync(false);
 })();

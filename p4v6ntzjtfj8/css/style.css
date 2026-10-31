@@ -715,3 +715,40 @@ body{padding-top:calc(env(safe-area-inset-top) + 14px)}
 .cf-tip{min-width:178px;white-space:nowrap}
 .cf-tip .r span{margin-right:10px}
 .donut-mid small{font-size:11px;max-width:92px;line-height:1.2;display:block;margin:2px auto 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ===== premium motion ===== */
+/* living chart */
+.sp-pulse{transform-box:fill-box;transform-origin:center;animation:ping 2.2s cubic-bezier(0,0,.2,1) 1.4s infinite;opacity:0}
+@keyframes ping{0%{transform:scale(1);opacity:.6}80%,100%{transform:scale(4.5);opacity:0}}
+.spark{touch-action:pan-y;cursor:crosshair}
+.scrubbing .spark{touch-action:none}
+.scrub-lbl{position:absolute;top:-4px;transform:translateX(-50%);font-size:11.5px;font-weight:600;color:var(--ink2);background:var(--glass-2);padding:3px 8px;border-radius:7px;white-space:nowrap;pointer-events:none;z-index:2;box-shadow:inset 0 0 0 .5px var(--line2);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.scrubbing .hero .chip,.scrubbing .range{opacity:.35;transition:opacity .2s}
+.scrubbing .hero-lbl span:first-child::after{content:" · scrubbing"}
+
+/* iOS card-stack sheet */
+html{background:#000}
+:root[data-theme="light"] html,html[data-theme="light"]{background:#000}
+.view.active{transition:scale .5s var(--spring),filter .5s var(--spring),border-radius .5s var(--spring),opacity .4s;transform-origin:50% 0}
+body.sheet-open .view.active{scale:.93;filter:brightness(.62);border-radius:18px;overflow:hidden}
+body.sheet-open .bg-mesh{opacity:.5;transition:opacity .4s}
+body.sheet-open .bottom-nav{translate:0 110%;transition:translate .45s var(--spring)}
+.bottom-nav{transition:translate .45s var(--spring)}
+body.sheet-open .fab{scale:0;transition:scale .35s var(--spring)}
+.fab{transition:scale .35s var(--spring),transform .35s var(--spring)}
+.sheet-bg{background:rgba(0,0,0,.25)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* scroll-linked hero */
+:root{--p:0}
+.hero{opacity:calc(1 - var(--p) * .85);scale:calc(1 - var(--p) * .07);translate:0 calc(var(--p) * -14px);transform-origin:50% 0}
+.spark-wrap{opacity:calc(1 - var(--p) * .6)}
+
+/* tab icon spring */
+.bottom-nav svg.pop{animation:tabPop .5s var(--spring)}
+@keyframes tabPop{0%{transform:scale(1)}30%{transform:scale(.78)}65%{transform:scale(1.14)}100%{transform:scale(1)}}
+
+/* press states with spring */
+.actions button,.lg-row,.stat-strip,.range button{transition:transform .25s var(--spring),background-color .2s}
+.actions button:active,.stat-strip:active{transform:scale(.95)}
+.lg-row:active{transform:scale(.98)}
+.card,.day{transition:transform .3s var(--spring)}
