@@ -18,7 +18,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" href="css/style.css?v=20261031-82">
+<link rel="stylesheet" href="css/style.css?v=20261031-90">
 </head>
 <body>
 <div class="bg-mesh" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
@@ -60,29 +60,43 @@
     <div><small>I owe</small><b id="hPay">0</b></div>
   </button>
 
+<div id="homeSecs">
+<div class="sec" data-sec="insights">
   <div class="section-h" id="insHead"><span>Insights</span></div>
   <div class="ins-row" id="hInsights"></div>
+</div>
 
+  <div class="sec" data-sec="upcoming">
   <div class="section-h" id="upHead" hidden><span>Upcoming &amp; overdue</span><button class="link" data-go="v-debts">View all</button></div>
   <div class="card list-card" id="hUpcoming" hidden></div>
+</div>
 
+  <div class="sec" data-sec="goals">
   <div class="section-h"><span>Goals</span><button class="link" id="goalAdd">+ New</button></div>
   <div class="goal-row" id="hGoals"></div>
+</div>
 
+  <div class="sec" data-sec="bills">
   <div class="section-h" id="billHead"><span>Bills &amp; subscriptions</span><button class="link" id="billManage">Manage</button></div>
   <div class="card list-card" id="hBills"></div>
+</div>
 
+  <div class="sec" data-sec="allocation">
   <div class="card alloc">
     <div class="card-h2"><h2>Allocation</h2><span class="muted small" id="allocTotal"></span></div>
     <div class="alloc-bar" id="allocBar"></div>
     <div id="allocLegend"></div>
   </div>
+</div>
 
+  <div class="sec" data-sec="wallets">
   <div class="card list-card">
     <div class="card-h"><h2>Wallets</h2><button class="link" id="seeAllWallets">See all</button></div>
     <div id="hWallets"></div>
   </div>
+</div>
 
+  <div class="sec" data-sec="cashflow">
   <div class="card">
     <div class="cf-head">
       <h2>Cash flow</h2>
@@ -91,7 +105,9 @@
     <div class="mid-money" id="cfNet">Rp 0</div><div class="muted small" id="cfSub"></div>
     <div id="cfChart"></div>
   </div>
+</div>
 
+  <div class="sec" data-sec="spending">
   <div class="card donut-card">
     <div class="card-h2"><h2>Spending</h2><button class="icon-btn mini" id="donutGo" aria-label="Open report">↗</button></div>
     <div class="donut-wrap">
@@ -100,7 +116,9 @@
     </div>
     <div class="donut-legend" id="donutLegend"></div>
   </div>
+</div>
 
+  <div class="sec" data-sec="month">
   <div class="card insight">
     <div class="card-h2"><h2>This month</h2><button class="link" id="seeReports">Report</button></div>
     <div class="ins-body">
@@ -121,9 +139,13 @@
     </div>
     <div class="split-bar"><i id="hBarOut"></i><i id="hBarIn"></i></div>
   </div>
+</div>
 
+  <div class="sec" data-sec="recent">
   <div class="section-h"><span>Recent activity</span><button class="link" id="seeAllTx">See all</button></div>
   <div class="card list-card" id="hRecent"></div>
+</div>
+</div>
 </section>
 
 <!-- TRANSACTIONS -->
@@ -202,11 +224,16 @@
 
   <div class="card list-card">
     <button class="set-row" data-go="v-budget"><span class="ic sm" data-sp="bybit"></span><span class="grow">Budgets</span><span class="muted">›</span></button>
+    <button class="set-row" id="wrapBtn"><span class="ic sm" data-sp="fun_money"></span><span class="grow">Monthly Wrapped<span class="sub">Your month as an animated story</span></span><span class="muted">›</span></button>
+    <button class="set-row" id="homeBtn"><span class="ic sm" data-sp="my_home"></span><span class="grow">Customize Home<span class="sub">Show, hide and reorder sections</span></span><span class="muted">›</span></button>
     <button class="set-row" id="recBtn"><span class="ic sm" data-sp="streaming"></span><span class="grow">Bills &amp; subscriptions<span class="sub">Recurring payments that add themselves</span></span><span class="muted">›</span></button>
     <button class="set-row" data-go="v-report"><span class="ic sm" data-sp="stocks"></span><span class="grow">Reports</span><span class="muted">›</span></button>
     <div class="set-row" style="cursor:default"><span class="ic sm" data-sp="dvn"></span><span class="grow">Appearance</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
     <label class="set-row"><span class="ic sm" data-sp="insurance"></span><span class="grow">Privacy mode<span class="sub">Hide every amount in the app</span></span><input type="checkbox" class="switch" id="hideToggle"></label>
   </div>
+
+  <div class="section-h">Cloud backup</div>
+  <div class="card cloud-card"><div class="cloud-row"><span class="ic sm i3d" data-sp="insurance"></span><div class="grow"><b>Encrypted cloud backup</b><div class="muted small" id="cloudStatus">Off</div></div><button class="btn" id="cloudBtn">Turn on</button></div></div>
 
   <div class="section-h"><span>Wallets</span><button class="link" id="addWallet">+ Add</button></div>
   <div class="card list-card" id="walletList"></div>
@@ -281,7 +308,7 @@
 <div class="toast" id="toast" hidden></div>
 
 
-<script src="js/bca-parser.js?v=20261031-2"></script>
-<script src="js/app.js?v=20261031-82"></script>
+<script src="js/bca-parser.js?v=20261031-3"></script>
+<script src="js/app.js?v=20261031-90"></script>
 </body>
 </html>

@@ -137,7 +137,8 @@
   }
   function useGenerated() { if (S.iconVer === 2) return; (S.cats || []).concat(S.wallets || []).forEach(function (o) { delete o.custom; }); S.iconVer = 2; }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); }
+    S.updatedAt = Date.now();
+    try { localStorage.setItem(KEY, JSON.stringify(S)); cloudQueue(); }
     catch (e) { toast('Could not save. Storage full or blocked.'); }
   }
 
@@ -262,9 +263,11 @@
   function deltaSel(t, w) { return walletIds(w).reduce(function (a, id) { return a + delta(t, id); }, 0); }
   // Balance of a wallet (or the total) counting only transactions dated before `before` (yyyy-mm-dd), or all.
   function balance(w, before) {
-    var ids = walletIds(w);
-    var init = S.wallets.reduce(function (a, x) { return a + (ids.indexOf(x.id) !== -1 ? (+x.initial || 0) : 0); }, 0);
-    return S.tx.reduce(function (a, t) { return (before && t.date >= before) ? a : a + deltaSel(t, w); }, init);
+    var ids = walletIds(w), live = 0, manual = [];
+    ids.forEach(function (id) { var lv = liveValue(wallet(id)); if (lv != null) live += lv; else manual.push(id); });
+    if (!manual.length) return live;
+    var init = S.wallets.reduce(function (a, x) { return a + (manual.indexOf(x.id) !== -1 ? (+x.initial || 0) : 0); }, 0);
+    return live + S.tx.reduce(function (a, t) { if (before && t.date >= before) return a; var d = 0; manual.forEach(function (id) { d += delta(t, id); }); return a + d; }, init);
   }
   function touches(t, w) { var ids = walletIds(w); return ids.indexOf(t.wallet) !== -1 || ids.indexOf(t.toWallet) !== -1; }
   function txIn(month, w) { return S.tx.filter(function (t) { return t.date.slice(0, 7) === month && touches(t, w); }); }
@@ -355,7 +358,7 @@
     renderCashflow(); renderDonut();
     var ws = S.wallets.slice().sort(function (a, b) { return balance(b.id) - balance(a.id); }).slice(0, 3);
     $('hWallets').innerHTML = ws.map(function (w) {
-      return '<button class="w-row" data-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '</span><span class="amt">' + money(balance(w.id)) + '</span></button>';
+      return '<button class="w-row" data-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + plTag(w) + '</span><span class="amt">' + money(balance(w.id)) + '</span></button>';
     }).join('');
 
     var now = new Date(), m = ym(now), mt = txIn(m, 'all');
@@ -386,7 +389,7 @@
 
     var recent = S.tx.slice().sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')) || b.created - a.created; }).slice(0, 5);
     $('hRecent').innerHTML = recent.length ? '<div class="stagger">' + recent.map(function (t, i) { return txRow(t, i, true); }).join('') + '</div>'
-      : '<div class="empty"><span class="big-e">' + img3d('🌱') + '</span>No transactions yet.<br>Tap + or wait for your next BCA payment.</div>';
+      : '<div class="empty">' + dinoImg('empty-dino') + '<b>Nothing here yet</b><br>Tap + or wait for your next BCA payment.</div>';
 
     var pip = $('hSyncPip');
     pip.hidden = !S.review.length; pip.textContent = S.review.length;
@@ -519,7 +522,7 @@
     rollTo($('pNet'), end - open, { sign: true });
 
     var mt = txIn(mKey, w);
-    if (!mt.length) { $('txList').innerHTML = '<div class="card empty"><span class="big-e">' + img3d('🧾') + '</span>No transactions in ' + MONTHS[cur.getMonth()] + '.</div>'; return; }
+    if (!mt.length) { $('txList').innerHTML = '<div class="card empty">' + dinoImg('empty-dino') + '<br>No transactions in ' + MONTHS[cur.getMonth()] + '.</div>'; return; }
     var byDay = {};
     mt.forEach(function (t) { (byDay[t.date] = byDay[t.date] || []).push(t); });
     var i = 0;
@@ -616,7 +619,7 @@
     }).join('');
 
     $('walletList').innerHTML = S.wallets.map(function (w) {
-      return '<button class="w-row" data-edit-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(balance(w.id)) + (w.excluded ? ' · not in total' : '') + '</span></span><span class="muted">›</span></button>';
+      return '<button class="w-row" data-edit-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(balance(w.id)) + (w.excluded ? ' · not in total' : '') + '</span>' + plTag(w) + '</span><span class="muted">›</span></button>';
     }).join('');
     document.querySelectorAll('#catSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === catTab); });
     $('catSeg').style.setProperty('--x', ['expense', 'income', 'debt'].indexOf(catTab) * 100 + '%');
@@ -727,6 +730,7 @@
     openSheet('<h3>' + (isNew ? 'New record' : 'Edit record') + '</h3>' +
       '<div class="seg d-seg" id="nDir" style="--x:' + (d.dir === 'in' ? '0%' : '100%') + '"><button data-d="in" class="' + (d.dir === 'in' ? 'on' : '') + '">Owed to me</button><button data-d="out" class="' + (d.dir === 'out' ? 'on' : '') + '">I owe</button><i class="seg-ind"></i></div>' +
       '<label class="fld">Person or company<input id="nPerson" value="' + esc(d.person) + '" placeholder="e.g. Dad"></label>' +
+      '<label class="fld">WhatsApp number (optional)<input id="nPhone" inputmode="tel" value="' + esc(d.phone || '') + '" placeholder="08…"></label>' +
       '<label class="fld">Title<input id="nTitle" value="' + esc(d.title) + '" placeholder="e.g. House renovation loan"></label>' +
       '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="nAmt" inputmode="numeric" placeholder="0" value="' + (d.amount ? d.amount.toLocaleString('id-ID') : '') + '"></div>' +
       '<div class="two"><label class="fld">Date<input id="nDate" type="date" value="' + esc(d.created) + '"></label><label class="fld">Due date (optional)<input id="nDue" type="date" value="' + esc(d.due || '') + '"></label></div>' +
@@ -745,7 +749,7 @@
         r.querySelector('#nSave').onclick = function () {
           var person = r.querySelector('#nPerson').value.trim(), a = parseNum(amt.value);
           if (!person) { toast('Who is it?'); return; } if (!a) { toast('Enter the amount'); return; }
-          Object.assign(d, { dir: dirNow, person: person, title: r.querySelector('#nTitle').value.trim(), amount: a, created: r.querySelector('#nDate').value || today(), due: r.querySelector('#nDue').value, wallet: r.querySelector('#nWallet').value, tags: r.querySelector('#nTags').value.trim(), notes: r.querySelector('#nNotes').value.trim() });
+          Object.assign(d, { dir: dirNow, person: person, title: r.querySelector('#nTitle').value.trim(), amount: a, created: r.querySelector('#nDate').value || today(), due: r.querySelector('#nDue').value, wallet: r.querySelector('#nWallet').value, tags: r.querySelector('#nTags').value.trim(), notes: r.querySelector('#nNotes').value.trim(), phone: r.querySelector('#nPhone').value.trim() });
           if (isNew) {
             S.debts.push(d);
             var mv = r.querySelector('#nMove');
@@ -800,6 +804,7 @@
       '</div>' +
       ((d.tags || d.notes) ? '<div class="sheet-sec">Notes</div><div class="card" style="box-shadow:none">' + (d.tags ? '<div class="small muted">Tags: ' + esc(d.tags) + '</div>' : '') + (d.notes ? '<div style="white-space:pre-wrap;margin-top:4px">' + esc(d.notes) + '</div>' : '') + '</div>' : '') +
       '<div class="small muted" style="margin:10px 2px">Linked wallet: ' + esc(wallet(d.wallet).name) + '</div>' +
+      (dOpen(d) ? '<button class="btn block wa-btn" id="ddWa"><svg viewBox="0 0 24 24"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.1z"/></svg>' + (inn ? 'Remind on WhatsApp' : 'Message on WhatsApp') + '</button>' : '') +
       (dOpen(d) ? '<button class="btn primary block" id="ddPay">＋ ' + (inn ? 'Record payment' : 'Record repayment') + '</button>' : '') +
       '<div class="two"><button class="btn" id="ddEdit">Edit</button>' + (d.closed ? '<button class="btn" id="ddReopen">Reopen</button>' : '<button class="btn" id="ddCancel">Cancel debt</button>') + '</div>' +
       (!d.closed && inn ? '<button class="btn block" id="ddWrite">Write off</button>' : '') +
@@ -808,6 +813,7 @@
         growBars(r);
         var b;
         if ((b = r.querySelector('#ddPay'))) b.onclick = function () { paySheet(d); };
+        if ((b = r.querySelector('#ddWa'))) b.onclick = function () { haptic(); waRemind(d); };
         r.querySelector('#ddEdit').onclick = function () { debtSheet(d); };
         if ((b = r.querySelector('#ddCancel'))) b.onclick = function () { if (!confirm('Mark as cancelled? It will no longer count as outstanding.')) return; d.closed = 'cancelled'; save(); closeSheet(); renderAll(); toast('Cancelled'); };
         if ((b = r.querySelector('#ddWrite'))) b.onclick = function () { if (!confirm('Write off the remaining Rp ' + fmt(dRemain(d)) + '? It will no longer count in your net worth.')) return; d.closed = 'writtenoff'; save(); closeSheet(); renderAll(); toast('Written off'); };
@@ -1002,6 +1008,7 @@
     $('fab').classList.add('open');
     openSheet(
       '<h3>' + (isNew ? 'Add transaction' : 'Edit transaction') + '</h3>' +
+      '<div class="sheet-tools"><button type="button" id="fScan"><svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"/></svg>Scan receipt</button><button type="button" id="fSplit"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c.6-3 2.6-5 5-5s4.4 2 5 5M11 20c.6-3 2.6-5 5-5s4.4 2 5 5"/></svg>Split bill</button></div><div class="scan-bar" hidden><i></i><span></span></div>' +
       '<div class="seg type-seg" id="fType" style="display:grid;grid-template-columns:repeat(4,1fr)"><button data-t="expense">Expense</button><button data-t="income">Income</button><button data-t="debt">Debt/Loan</button><button data-t="transfer">Transfer</button><i class="seg-ind" style="width:calc(25% - 1.5px)"></i></div>' +
       '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="fAmt" inputmode="numeric" placeholder="0" value="' + (t.amount ? t.amount.toLocaleString('id-ID') : '') + '"></div>' +
       '<div id="fCatWrap"><button type="button" class="cat-sel" id="fCatSel"></button><div class="cat-pick" id="fCatPick"><input id="fCatQ" placeholder="Search category" autocomplete="off"><div class="cat-list" id="fCats"></div></div></div>' +
@@ -1016,6 +1023,8 @@
       (isNew ? '' : '<button class="btn danger block" id="fDel">Delete</button>'),
       function (root) {
         var amt = root.querySelector('#fAmt'); fmtInput(amt);
+        root.querySelector('#fScan').onclick = function () { haptic(); scanInto(root); };
+        root.querySelector('#fSplit').onclick = function () { var a = parseNum(amt.value); if (!a) { toast('Enter the bill amount first'); amt.focus(); return; } splitSheet(a, root.querySelector('#fMerch').value.trim(), root.querySelector('#fDate').value, root.querySelector('#fWallet').value); };
         var ind = root.querySelector('#fType .seg-ind');
         function paint() {
           var idx = ['expense', 'income', 'debt', 'transfer'].indexOf(st.type);
@@ -1174,18 +1183,23 @@
       '<div class="fld">Icon' + picker(w.icon, spKey(w)) + '</div>' +
       '<label class="fld">Current balance<input id="wBal" inputmode="numeric" value="' + (curBal ? Math.abs(curBal).toLocaleString('id-ID') : '') + '" placeholder="0"></label>' +
       '<label class="fld">Group<select id="wGroup">' + Object.keys(GROUPS).map(function (g) { return '<option value="' + g + '"' + (groupOf(w) === g ? ' selected' : '') + '>' + GROUPS[g].icon + ' ' + GROUPS[g].name + '</option>'; }).join('') + '</select></label>' +
+      '<div class="live-box"><label class="fld">Track live price<select id="wAsset"><option value="">No, I set the balance myself</option>' + Object.keys(ASSETS).map(function (k) { return '<option value="' + k + '"' + (w.holding && w.holding.asset === k ? ' selected' : '') + '>' + ASSETS[k].name + '</option>'; }).join('') + '</select></label>' +
+      '<div class="two" id="wLiveF"><label class="fld">Quantity<input id="wQty" inputmode="decimal" value="' + (w.holding ? esc(w.holding.qty) : '') + '" placeholder="e.g. 25.5"></label><label class="fld">Total paid (Rp)<input id="wCost" inputmode="numeric" value="' + (w.holding && w.holding.cost ? (+w.holding.cost).toLocaleString('id-ID') : '') + '" placeholder="for profit/loss"></label></div><div class="muted small" id="wLiveV"></div></div>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
-        fmtInput(r.querySelector('#wBal'));
+        fmtInput(r.querySelector('#wBal')); fmtInput(r.querySelector('#wCost'));
+        function liveUi() { var a = r.querySelector('#wAsset').value, q = parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0; r.querySelector('#wLiveF').hidden = !a; r.querySelector('#wBal').closest('label').hidden = !!a; r.querySelector('#wLiveV').innerHTML = a ? (PRICES[a] ? 'Now worth ' + money(q * PRICES[a]) + ' · 1 ' + ASSETS[a].unit + ' = ' + money(PRICES[a]) : 'Fetching live price…') : ''; }
+        r.querySelector('#wAsset').onchange = function () { if (this.value && !PRICES[this.value]) fetchPrices(true).then(liveUi); liveUi(); }; r.querySelector('#wQty').oninput = liveUi; liveUi();
         var wst = { sp: spKey(w) }; bindSpPicker(r, wst);
         r.querySelector('#wSave').onclick = function () {
           var n = r.querySelector('#wName').value.trim(); if (!n) { toast('Give it a name'); return; }
           w.name = n; if (wst.sp) { w.sp = wst.sp; delete w.custom; }
           w.excluded = !r.querySelector('#wInc').checked;
+          var wa = r.querySelector('#wAsset').value; if (wa) w.holding = { asset: wa, qty: parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, cost: parseNum(r.querySelector('#wCost').value) }; else delete w.holding;
           w.group = r.querySelector('#wGroup').value;
           if (isNew) S.wallets.push(w);
-          setBalance(w, parseNum(r.querySelector('#wBal').value) * (curBal < 0 ? -1 : 1));
+          if (!w.holding) setBalance(w, parseNum(r.querySelector('#wBal').value) * (curBal < 0 ? -1 : 1));
           haptic(); save(); closeSheet(); renderAll(); toast('Saved ✓');
         };
         var d = r.querySelector('#wDel');
@@ -1470,6 +1484,7 @@
       if (mk === lm) { lastFull += t.amount; if (d <= day) prev[t.cat] = (prev[t.cat] || 0) + t.amount; }
     });
     var cards = [];
+    if (S.tx.some(function (t) { return t.date.slice(0, 7) === m; })) cards.push({ sp: 'fun_money', tone: 'wrap', title: MONTHS[now.getMonth()] + ' Wrapped', body: 'Your month as a story. Tap to play ▶', wrap: 1 });
     var moves = Object.keys(cur).map(function (k) { return { k: k, c: cur[k], p: prev[k] || 0 }; }).filter(function (x) { return x.p > 0; })
       .sort(function (a, b) { return Math.abs(b.c - b.p) - Math.abs(a.c - a.p); });
     if (moves[0]) { var mv = moves[0], pc = Math.round((mv.c - mv.p) / mv.p * 100), upm = pc > 0;
@@ -1484,7 +1499,7 @@
     if (od.length) cards.push({ sp: 'debt_collection', tone: 'neg', title: od.length + ' overdue · ' + money(od.reduce(function (a, d) { return a + dRemain(d); }, 0), { rp: true }), body: 'People owe you past the due date', go: 'v-debts' });
     if (!cards.length) cards.push({ sp: 'investment', tone: '', title: 'Insights appear here', body: 'Add a few transactions and Apex starts spotting patterns for you.' });
     $('hInsights').innerHTML = cards.map(function (c, i) {
-      return '<div class="ins-card ' + c.tone + '" style="--i:' + i + '"' + (c.go ? ' data-go="' + c.go + '"' : '') + '><div class="ins-top">' + sprite(c.sp, 'ins-ic') + '</div><b>' + c.title + '</b><span>' + esc(c.body) + '</span>' +
+      return '<div class="ins-card ' + c.tone + '" style="--i:' + i + '"' + (c.go ? ' data-go="' + c.go + '"' : '') + (c.wrap ? ' data-wrap="1"' : '') + '><div class="ins-top">' + sprite(c.sp, 'ins-ic') + '</div><b>' + c.title + '</b><span>' + esc(c.body) + '</span>' +
         (c.bar != null ? '<div class="ins-bars"><i style="--w:' + c.bar.toFixed(1) + '%"></i>' + (c.bar2 != null ? '<i class="ghost" style="--w:' + c.bar2.toFixed(1) + '%"></i>' : '') + '</div>' : '') + '</div>';
     }).join('');
   }
@@ -1664,7 +1679,281 @@
   }
   function renderFeatures() { renderInsights(); renderGoals(); renderBills(); renderTxExtras(); }
 
-  load(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); renderAll();
+  // =================== PREMIUM PACK: live prices, cloud sync, scan, WhatsApp + split, wrapped, home layout, onboarding ===================
+  var DINO = (document.querySelector('link[rel=apple-touch-icon]') || {}).href || 'icon.svg';
+  function dinoImg(cls) { return '<img class="dino ' + (cls || '') + '" src="' + DINO + '" alt="">'; }
+
+  // ---------- live asset prices ----------
+  var ASSETS = { gold: { name: 'Gold (gram)', unit: 'g' }, btc: { name: 'Bitcoin', unit: 'BTC' }, eth: { name: 'Ethereum', unit: 'ETH' }, usd: { name: 'US Dollar', unit: 'USD' } };
+  var PRICES = (function () { try { return JSON.parse(localStorage.getItem('apex_prices')) || {}; } catch (e) { return {}; } })();
+  function liveValue(w) { var h = w && w.holding; if (!h || !h.asset || !(+h.qty)) return null; var p = PRICES[h.asset]; return p ? +h.qty * p : null; }
+  function fetchPrices(force) {
+    if (!force && PRICES.ts && Date.now() - PRICES.ts < 5 * 60e3) return Promise.resolve();
+    if (!S.wallets.some(function (w) { return w.holding && w.holding.asset; }) && !force) return Promise.resolve();
+    return fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,pax-gold&vs_currencies=idr').then(function (r) { return r.json(); }).then(function (j) {
+      PRICES = { btc: j.bitcoin && j.bitcoin.idr, eth: j.ethereum && j.ethereum.idr, usd: j.tether && j.tether.idr, gold: j['pax-gold'] && j['pax-gold'].idr / 31.1034768, ts: Date.now() };
+      try { localStorage.setItem('apex_prices', JSON.stringify(PRICES)); } catch (e) {}
+      renderAll();
+    }).catch(function () {});
+  }
+  function plOf(w) { var v = liveValue(w), c = w.holding && +w.holding.cost; if (v == null || !c) return null; return { v: v, d: v - c, pc: (v - c) / c * 100 }; }
+  function plTag(w) {
+    var p = plOf(w), h = w.holding; if (!h || liveValue(w) == null) return '';
+    var q = (+h.qty).toLocaleString('id-ID', { maximumFractionDigits: 6 }) + ' ' + ASSETS[h.asset].unit;
+    return '<span class="pl ' + (p ? (p.d >= 0 ? 'up' : 'dn') : '') + '"><i class="live"></i>' + q + (p ? ' · ' + (p.d >= 0 ? '▲ ' : '▼ ') + Math.abs(p.pc).toFixed(1) + '%' : '') + '</span>';
+  }
+
+  // ---------- cloud backup & sync (encrypted) ----------
+  var FB = 'https://hurricane-scorecard-default-rtdb.firebaseio.com/apex/';
+  function b64(buf) { var s = '', a = new Uint8Array(buf); for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
+  function unb64(s) { var b = atob(s), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+  function deriveKey(pass, id) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']).then(function (k) {
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc.encode('apex-' + id), iterations: 150000, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
+  }
+  function cloudPayload() { var c = JSON.parse(JSON.stringify(S)); delete c.settings.cloud; return c; }
+  var cloudT = null, cloudBusy = false;
+  function cloudQueue() { var c = S.settings && S.settings.cloud; if (!c || !c.on) return; clearTimeout(cloudT); cloudT = setTimeout(cloudPush, 3500); }
+  function cloudPush() {
+    var c = S.settings.cloud; if (!c || !c.on || cloudBusy) return Promise.resolve();
+    cloudBusy = true; setCloudStatus('Backing up…');
+    var iv = crypto.getRandomValues(new Uint8Array(12)), at = S.updatedAt || Date.now();
+    return deriveKey(c.pass, c.id).then(function (k) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, new TextEncoder().encode(JSON.stringify(cloudPayload()))); })
+      .then(function (ct) { return fetch(FB + c.id + '.json?print=silent', { method: 'PUT', body: JSON.stringify({ v: 1, iv: b64(iv), ct: b64(ct), at: at }) }); })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); c.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); setCloudStatus(); })
+      .catch(function () { setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; });
+  }
+  function cloudPull(id, pass, opts) {
+    opts = opts || {};
+    return fetch(FB + id + '.json').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ct) { if (opts.mustExist) throw new Error('No backup found for that code'); return null; }
+      if (!opts.force && S.updatedAt && j.at <= S.updatedAt) return null;
+      return deriveKey(pass, id).then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(j.iv) }, k, unb64(j.ct)); })
+        .then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); }, function () { throw new Error('Wrong passphrase'); });
+    }).then(function (data) {
+      if (!data) return false;
+      var cloud = { id: id, pass: pass, on: true, last: Date.now() };
+      S = data; S.settings = S.settings || {}; S.settings.cloud = cloud;
+      load2(); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); return true;
+    });
+  }
+  function load2() { var d = blank(); Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; }); Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; }); }
+  function setCloudStatus(msg) {
+    var el = $('cloudStatus'); if (!el) return; var c = S.settings.cloud;
+    el.textContent = msg || (c && c.on ? 'On · last backup ' + (c.last ? new Date(c.last).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : 'pending') : 'Off · your data is only on this device');
+    $('cloudBtn').textContent = c && c.on ? 'Manage' : 'Turn on';
+  }
+  function cloudSheet() {
+    var c = S.settings.cloud;
+    if (c && c.on) {
+      openSheet('<h3>Cloud backup</h3><span class="ic preview i3d">' + sprite('insurance') + '</span>' +
+        '<p class="muted small" style="text-align:center">Encrypted on this phone with your passphrase before upload. Nobody else can read it.</p>' +
+        '<div class="card"><div class="eyebrow">Your sync code</div><div class="sync-code" id="syncCode">' + esc(c.id) + '</div><div class="muted small">Use this code + your passphrase to open your data on another device.</div><button class="btn block" id="copyCode">Copy code</button></div>' +
+        '<button class="btn primary block" id="cNow">Back up now</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
+        function (r) {
+          r.querySelector('#copyCode').onclick = function () { try { navigator.clipboard.writeText(c.id); toast('Code copied'); } catch (e) { toast(c.id); } };
+          r.querySelector('#cNow').onclick = function () { cloudPush().then(function () { toast('Backed up ✓'); closeSheet(); }); };
+          r.querySelector('#cOff').onclick = function () { if (!confirm('Stop backing up from this device? Your cloud copy stays.')) return; c.on = false; save(); closeSheet(); setCloudStatus(); };
+        });
+      return;
+    }
+    openSheet('<h3>Cloud backup</h3><span class="ic preview i3d">' + sprite('insurance') + '</span>' +
+      '<div class="seg" id="cMode" style="display:grid;grid-template-columns:1fr 1fr;--x:0%"><button data-m="new" class="on">New backup</button><button data-m="join">Restore / link</button><i class="seg-ind" style="transform:translateX(var(--x))"></i></div>' +
+      '<label class="fld" id="cCodeL" hidden>Sync code<input id="cCode" autocomplete="off" placeholder="e.g. 7f3a9c..."></label>' +
+      '<label class="fld">Passphrase<input id="cPass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>' +
+      '<label class="fld" id="cPass2L">Repeat passphrase<input id="cPass2" type="password" autocomplete="new-password"></label>' +
+      '<p class="muted small">Remember this passphrase. It is never uploaded, so it cannot be reset.</p>' +
+      '<button class="btn primary block" id="cGo">Turn on backup</button>',
+      function (r) {
+        var mode = 'new';
+        r.querySelector('#cMode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; mode = b.dataset.m; this.style.setProperty('--x', mode === 'join' ? '100%' : '0%'); this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); r.querySelector('#cCodeL').hidden = mode !== 'join'; r.querySelector('#cPass2L').hidden = mode === 'join'; r.querySelector('#cGo').textContent = mode === 'join' ? 'Restore my data' : 'Turn on backup'; };
+        r.querySelector('#cGo').onclick = function () {
+          var p = r.querySelector('#cPass').value; if (p.length < 8) { toast('Use at least 8 characters'); return; }
+          var btn = this; btn.disabled = true;
+          if (mode === 'new') {
+            if (p !== r.querySelector('#cPass2').value) { toast('Passphrases don’t match'); btn.disabled = false; return; }
+            var id = Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(10)), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+            S.settings.cloud = { id: id, pass: p, on: true }; save(); cloudPush().then(function () { closeSheet(); setCloudStatus(); toast('Cloud backup on ☁️'); setTimeout(cloudSheet, 500); });
+          } else {
+            var code = r.querySelector('#cCode').value.trim().toLowerCase(); if (!code) { toast('Enter your sync code'); btn.disabled = false; return; }
+            if (!confirm('Replace the data on this device with your cloud backup?')) { btn.disabled = false; return; }
+            cloudPull(code, p, { force: true, mustExist: true }).then(function () { closeSheet(); toast('Restored from cloud ✓'); }).catch(function (e) { toast(e.message); btn.disabled = false; });
+          }
+        };
+      });
+  }
+
+  // ---------- receipt / screenshot scan ----------
+  function loadOCR() {
+    if (window.Tesseract) return Promise.resolve();
+    return new Promise(function (ok, no) { var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; s.onload = ok; s.onerror = function () { no(new Error('Could not load the scanner')); }; document.head.appendChild(s); });
+  }
+  function parseReceipt(text) {
+    var p = window.BcaParser.parseBcaEmail({ subject: 'Transaksi berhasil', body: text }) || {};
+    var amount = 0, lines = text.split('\n');
+    // Prefer the grand total line (TOTAL / Grand total / Total bayar), never the subtotal.
+    for (var li = lines.length - 1; li >= 0 && !amount; li--) { var L = lines[li]; if (/(grand\s*total|total\s*(bayar|pembayaran|belanja)?)\b/i.test(L) && !/sub\s*-?\s*total/i.test(L)) { var nm = L.match(/([\d]{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{1,2})?/); if (nm) amount = window.BcaParser.parseAmount(nm[0]); } }
+    if (!amount) amount = p.amount || 0;
+    if (!amount) { var m, best = 0, re = /(?:rp\.?|idr|total)\s*:?\s*([\d.,]{4,})/gi; while ((m = re.exec(text))) { var v = window.BcaParser.parseAmount(m[1]); if (v > best) best = v; } amount = best; }
+    var merchant = p.merchant && !/transaksi/i.test(p.merchant) ? p.merchant : (text.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 2 && /[a-z]/i.test(l) && !/rp|idr|total|tanggal|date|struk|receipt/i.test(l); })[0] || '');
+    var dm = text.match(/(\d{1,2})[\/\-. ](\d{1,2}|jan|feb|mar|apr|may|mei|jun|jul|aug|agu|sep|oct|okt|nov|dec|des)[a-z]*[\/\-. ](\d{2,4})/i), date = '';
+    if (dm) { var mon = isNaN(dm[2]) ? ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(dm[2].slice(0, 3).toLowerCase().replace('mei', 'may').replace('agu', 'aug').replace('okt', 'oct').replace('des', 'dec')) + 1 : +dm[2]; var yr = +dm[3] < 100 ? 2000 + +dm[3] : +dm[3]; if (mon >= 1 && mon <= 12) date = yr + '-' + pad(mon) + '-' + pad(+dm[1]); }
+    return { amount: amount, merchant: merchant.slice(0, 50), date: date };
+  }
+  function scanInto(root) {
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = function () {
+      var f = inp.files[0]; if (!f) return;
+      var bar = root.querySelector('.scan-bar'); bar.hidden = false; bar.querySelector('i').style.width = '8%'; bar.querySelector('span').textContent = 'Loading scanner…';
+      loadOCR().then(function () {
+        return window.Tesseract.recognize(f, 'eng+ind', { logger: function (m) { if (m.status === 'recognizing text') { bar.querySelector('i').style.width = (10 + m.progress * 90) + '%'; bar.querySelector('span').textContent = 'Reading receipt… ' + Math.round(m.progress * 100) + '%'; } } });
+      }).then(function (res) {
+        var r = parseReceipt(res.data.text || ''); bar.hidden = true;
+        if (r.amount) { var a = root.querySelector('#fAmt'); a.value = r.amount.toLocaleString('id-ID'); a.classList.add('flash-up'); }
+        if (r.merchant) root.querySelector('#fMerch').value = r.merchant;
+        if (r.date) root.querySelector('#fDate').value = r.date;
+        toast(r.amount ? 'Receipt read ✓ Check and save' : 'Couldn’t find the amount. Type it in.');
+      }).catch(function (e) { bar.hidden = true; toast(e.message || 'Scan failed'); });
+    };
+    inp.click();
+  }
+
+  // ---------- split bill + WhatsApp ----------
+  function splitSheet(total, merchant, date, walletId) {
+    openSheet('<h3>Split bill</h3><div class="muted small" style="text-align:center">' + money(total) + (merchant ? ' · ' + esc(merchant) : '') + '</div>' +
+      '<label class="fld">Friends (comma separated)<input id="spNames" placeholder="Bren, Louis, Hugo"></label>' +
+      '<label class="set-row plain"><span class="grow">Include me in the split</span><input type="checkbox" class="switch" id="spMe" checked></label>' +
+      '<div class="card" id="spPrev"></div><button class="btn primary block" id="spGo">Create money owed</button>',
+      function (r) {
+        function names() { return r.querySelector('#spNames').value.split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
+        function share() { var n = names().length + (r.querySelector('#spMe').checked ? 1 : 0); return n ? Math.round(total / n) : 0; }
+        function prev() { var ns = names(), s = share(); r.querySelector('#spPrev').innerHTML = ns.length ? ns.map(function (n) { return '<div class="sp-row">' + avatar(n) + '<span class="grow">' + esc(n) + '</span><b>' + money(s, { rp: false }) + '</b></div>'; }).join('') : '<div class="muted small">Type names to see each share.</div>'; }
+        r.querySelector('#spNames').addEventListener('input', prev); r.querySelector('#spMe').onchange = prev; prev();
+        setTimeout(function () { r.querySelector('#spNames').focus(); }, 380);
+        r.querySelector('#spGo').onclick = function () {
+          var ns = names(), s = share(); if (!ns.length) { toast('Add at least one friend'); return; }
+          ns.forEach(function (n) { S.debts.push({ id: uid(), dir: 'in', person: n, title: 'Split: ' + (merchant || 'bill'), amount: s, created: date || today(), due: '', wallet: walletId, tags: 'split', notes: '', payments: [], ts: Date.now() }); });
+          save(); closeSheet(); renderAll(); toast(ns.length + ' friend' + (ns.length > 1 ? 's' : '') + ' now owe you ' + money(s, { rp: true }) + ' each');
+        };
+      });
+  }
+  function waRemind(d) {
+    var rem = dRemain(d), inn = d.dir === 'in';
+    var msg = inn ? 'Hi ' + d.person + ', just a friendly reminder about ' + (d.title || 'the money') + ': Rp ' + fmt(rem) + ' is still remaining' + (d.due ? ' (due ' + fmtDate(d.due) + ')' : '') + '. Thank you! 🙏'
+      : 'Hi ' + d.person + ', I still owe you Rp ' + fmt(rem) + ' for ' + (d.title || 'the loan') + '. I’ll settle it soon 🙏';
+    var phone = String(d.phone || '').replace(/[^\d]/g, '').replace(/^0/, '62');
+    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  // ---------- monthly wrapped ----------
+  function wrapData(mDate) {
+    var m = ym(mDate), prevM = ym(new Date(mDate.getFullYear(), mDate.getMonth() - 1, 1));
+    var spent = 0, inc = 0, prevSpent = 0, cats = {}, days = {}, n = 0;
+    S.tx.forEach(function (t) {
+      if (!touches(t, 'all')) return; var mk = t.date.slice(0, 7);
+      if (mk === prevM && t.type === 'expense') prevSpent += t.amount;
+      if (mk !== m) return;
+      if (t.type === 'expense') { spent += t.amount; cats[t.cat] = (cats[t.cat] || 0) + t.amount; days[t.date] = (days[t.date] || 0) + t.amount; n++; }
+      if (t.type === 'income') inc += t.amount;
+    });
+    var topC = Object.keys(cats).sort(function (a, b) { return cats[b] - cats[a]; })[0], topD = Object.keys(days).sort(function (a, b) { return days[b] - days[a]; })[0];
+    var dim = new Date(mDate.getFullYear(), mDate.getMonth() + 1, 0).getDate();
+    return { m: MONTHS[mDate.getMonth()], spent: spent, inc: inc, prevSpent: prevSpent, topC: topC, topCv: topC ? cats[topC] : 0, topD: topD, topDv: topD ? days[topD] : 0, n: n, noSpend: dim - Object.keys(days).length, saved: inc - spent };
+  }
+  function openWrapped(mDate) {
+    var d = wrapData(mDate || new Date()), diff = d.prevSpent ? Math.round((d.spent - d.prevSpent) / d.prevSpent * 100) : null;
+    var goals = (S.goals || []).map(function (g) { return { g: g, p: g.target ? goalSaved(g) / g.target : 0 }; }).sort(function (a, b) { return b.p - a.p; })[0];
+    var slides = [
+      { c: 'w1', h: '<div class="w-k">Your</div><div class="w-big">' + d.m + '</div><div class="w-k">in money</div>' + dinoImg('w-dino'), s: 'Tap to continue' },
+      { c: 'w2', h: '<div class="w-k">You spent</div><div class="w-num" data-n="' + d.spent + '"></div>' + (diff != null ? '<div class="w-chip ' + (diff > 0 ? 'dn' : 'up') + '">' + (diff > 0 ? '▲ ' : '▼ ') + Math.abs(diff) + '% vs last month</div>' : ''), s: d.n + ' transactions' },
+      { c: 'w3', h: d.topC ? '<div class="w-k">Your top category</div><div class="w-ic">' + sprite(spKey(cat(d.topC)) || 'other_out') + '</div><div class="w-mid">' + esc(cat(d.topC).name) + '</div><div class="w-num sm" data-n="' + d.topCv + '"></div>' : '<div class="w-mid">No spending yet</div>', s: d.spent ? Math.round(d.topCv / d.spent * 100) + '% of everything you spent' : '' },
+      { c: 'w4', h: d.topD ? '<div class="w-k">Biggest spending day</div><div class="w-big">' + new Date(d.topD + 'T00:00:00').getDate() + ' ' + d.m.slice(0, 3) + '</div><div class="w-num sm" data-n="' + d.topDv + '"></div>' : '<div class="w-mid">Calm month</div>', s: d.noSpend + ' no-spend days 🌿' },
+      { c: 'w5', h: '<div class="w-k">' + (d.saved >= 0 ? 'You kept' : 'You spent more than you earned by') + '</div><div class="w-num" data-n="' + Math.abs(d.saved) + '"></div><div class="w-bars"><div><i style="--w:100%" class="in"></i><span>In ' + money(d.inc, { rp: false }) + '</span></div><div><i style="--w:' + (d.inc ? Math.min(100, d.spent / d.inc * 100) : 100).toFixed(0) + '%" class="out"></i><span>Out ' + money(d.spent, { rp: false }) + '</span></div></div>', s: d.inc ? Math.round(Math.max(0, d.saved) / d.inc * 100) + '% savings rate' : '' },
+      { c: 'w6', h: (goals ? '<div class="w-k">Closest goal</div><div class="w-ring">' + ringSvg(goals.p, '#34d399', 150) + '<b>' + Math.round(goals.p * 100) + '%</b></div><div class="w-mid">' + esc(goals.g.name) + '</div>' : '<div class="w-k">Next month</div><div class="w-mid">Set a goal and watch it grow</div>') + dinoImg('w-dino sm'), s: 'See you next month 🦖' }
+    ];
+    var ov = document.createElement('div'); ov.className = 'wrapped'; ov.innerHTML = '<div class="w-prog">' + slides.map(function () { return '<i><b></b></i>'; }).join('') + '</div><button class="w-x" aria-label="Close">✕</button><div class="w-stage"></div>';
+    document.body.appendChild(ov); void ov.offsetWidth; ov.classList.add('show');
+    var i = -1, t = null;
+    function go(k) {
+      if (k >= slides.length) return close(); if (k < 0) k = 0; i = k; clearTimeout(t);
+      var sl = slides[i]; ov.querySelector('.w-stage').innerHTML = '<div class="w-slide ' + sl.c + '">' + sl.h + '<div class="w-sub">' + sl.s + '</div></div>';
+      ov.querySelectorAll('.w-prog i').forEach(function (p, j) { p.className = j < i ? 'done' : j === i ? 'on' : ''; });
+      ov.querySelectorAll('.w-num').forEach(function (el) { var n = +el.dataset.n, t0 = performance.now(); (function step(now) { var f = Math.min(1, (now - t0) / 1100), e = 1 - Math.pow(1 - f, 3); el.textContent = S.settings.hide ? 'Rp ••••••' : 'Rp ' + fmt(n * e); if (f < 1) requestAnimationFrame(step); })(t0); });
+      requestAnimationFrame(function () { requestAnimationFrame(function () { ov.querySelectorAll('.g-fill').forEach(function (c) { c.classList.add('go'); }); }); });
+      if (i === slides.length - 1) confetti();
+      t = setTimeout(function () { go(i + 1); }, 5200);
+    }
+    function close() { clearTimeout(t); ov.classList.remove('show'); setTimeout(function () { ov.remove(); }, 400); }
+    ov.querySelector('.w-x').onclick = function (e) { e.stopPropagation(); close(); };
+    ov.addEventListener('click', function (e) { if (e.target.closest('.w-x')) return; haptic(); go(e.clientX < innerWidth * .3 ? i - 1 : i + 1); });
+    var y0 = null; ov.addEventListener('touchstart', function (e) { y0 = e.touches[0].clientY; }, { passive: true }); ov.addEventListener('touchend', function (e) { if (y0 != null && e.changedTouches[0].clientY - y0 > 90) close(); y0 = null; });
+    go(0);
+  }
+
+  // ---------- customizable home ----------
+  var SEC_NAMES = { insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
+  function homeLayout() {
+    var keys = Object.keys(SEC_NAMES), L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
+    keys.forEach(function (k) { if (!L.some(function (x) { return x.k === k; })) L.push({ k: k, on: true }); });
+    return L;
+  }
+  function applyHome() {
+    var box = $('homeSecs'); if (!box) return;
+    homeLayout().forEach(function (x) { var el = box.querySelector('[data-sec="' + x.k + '"]'); if (!el) return; box.appendChild(el); el.classList.toggle('sec-off', !x.on); });
+  }
+  function homeSheet() {
+    var L = homeLayout();
+    function rows() { return L.map(function (x, i) { return '<div class="hl-row" data-i="' + i + '"><label class="grow"><input type="checkbox" class="switch" ' + (x.on ? 'checked' : '') + '> ' + SEC_NAMES[x.k] + '</label><button class="x" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button class="x" data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + '>↓</button></div>'; }).join(''); }
+    openSheet('<h3>Customize Home</h3><p class="muted small" style="text-align:center">Turn sections on or off and change their order.</p><div class="card list-card hl" id="hlList">' + rows() + '</div><button class="btn primary block" id="hlDone">Done</button><button class="btn block" id="hlReset">Reset to default</button>',
+      function (r) {
+        var list = r.querySelector('#hlList');
+        list.addEventListener('click', function (e) {
+          var u = e.target.closest('[data-up]'), d = e.target.closest('[data-dn]');
+          if (u) { var i = +u.dataset.up; L.splice(i - 1, 0, L.splice(i, 1)[0]); } else if (d) { var j = +d.dataset.dn; L.splice(j + 1, 0, L.splice(j, 1)[0]); } else return;
+          haptic(); list.innerHTML = rows(); S.settings.home = L; save(); applyHome();
+        });
+        list.addEventListener('change', function (e) { var row = e.target.closest('.hl-row'); if (!row) return; L[+row.dataset.i].on = e.target.checked; S.settings.home = L; save(); applyHome(); });
+        r.querySelector('#hlDone').onclick = closeSheet;
+        r.querySelector('#hlReset').onclick = function () { delete S.settings.home; save(); applyHome(); closeSheet(); toast('Home reset'); };
+      });
+  }
+
+  // ---------- onboarding ----------
+  function onboarding() {
+    if (S.onboarded) return;
+    if (S.tx.length || S.debts.length || S.wallets.length > 2) { S.onboarded = true; save(); return; }
+    var steps = [
+      { t: 'Welcome to Apex', b: 'Your private money app. Everything stays on your phone unless you turn on encrypted cloud backup.' },
+      { t: 'It fills itself in', b: 'Connect BCA email sync and every QRIS, transfer and payment becomes a transaction automatically.' },
+      { t: 'See the full picture', b: 'Net worth, money people owe you, goals and bills, in one calm place.' }
+    ];
+    var ov = document.createElement('div'); ov.className = 'onb'; document.body.appendChild(ov); var i = 0;
+    function draw() {
+      var s = steps[i];
+      ov.innerHTML = '<div class="onb-in">' + dinoImg('onb-dino') + '<h2>' + s.t + '</h2><p>' + s.b + '</p><div class="onb-dots">' + steps.map(function (_, j) { return '<i class="' + (j === i ? 'on' : '') + '"></i>'; }).join('') + '</div>' +
+        '<button class="btn primary block" id="onbNext">' + (i < steps.length - 1 ? 'Continue' : 'Let’s go') + '</button>' + (i < steps.length - 1 ? '<button class="onb-skip" id="onbSkip">Skip</button>' : '') + '</div>';
+      ov.querySelector('#onbNext').onclick = function () { haptic(); if (i < steps.length - 1) { i++; draw(); } else done(); };
+      var sk = ov.querySelector('#onbSkip'); if (sk) sk.onclick = done;
+    }
+    function done() { S.onboarded = true; save(); ov.classList.add('out'); setTimeout(function () { ov.remove(); }, 450); }
+    draw(); requestAnimationFrame(function () { ov.classList.add('show'); });
+  }
+
+  // ---------- offline ----------
+  function registerSW() { if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {}); }
+
+  function bindPremium() {
+    $('cloudBtn').onclick = cloudSheet; $('homeBtn').onclick = homeSheet; $('wrapBtn').onclick = function () { openWrapped(new Date()); };
+    setInterval(function () { if (!document.hidden) fetchPrices(); }, 5 * 60e3);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { fetchPrices(); var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) toast('Synced from cloud ☁️'); }).catch(function () {}); } });
+  }
+
+  load(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
+  fetchPrices(); registerSW(); setTimeout(onboarding, 400);
+  (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
   if (S.settings.pinHash) { delete S.settings.pinHash; save(); }
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
