@@ -451,3 +451,87 @@ html{background:var(--bg)}
 .sum-row{padding:12px 16px 40px;margin:-10px -16px -18px}
 .bg-mesh i{opacity:.7}
 :root[data-theme="light"] .bg-mesh i{opacity:.42}
+
+/* ================= donut, stacked card, amount labels (both themes) ================= */
+:root{--d1:#22c55e;--d2:#facc15}
+.card-h2{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.card-h2 h2{flex:1;font-size:18px}
+.pill-ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--card2);border:1px solid var(--line);font-size:18px}
+.round-btn.mini{width:38px;height:38px;font-size:17px}
+.donut-wrap{position:relative;width:210px;height:210px;margin:6px auto 10px}
+.donut{width:100%;height:100%;transform:rotate(-90deg);color:var(--ink2)}
+.d-track{fill:none;stroke:var(--card2);stroke-width:20}
+.d-seg{fill:none;stroke-width:22;stroke-linecap:round;transition:stroke-dasharray 1.1s var(--ease),stroke-dashoffset 1.1s var(--ease);transition-delay:calc(var(--i) * 120ms)}
+.d-seg.hatch{stroke-linecap:butt;stroke-width:24}
+.donut-mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.donut-mid b{font-size:34px;font-weight:800;letter-spacing:-1px}
+.donut-mid small{color:var(--muted);font-size:13px;max-width:110px}
+.donut-legend{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:center;font-size:13.5px;color:var(--ink2)}
+.lg{display:inline-flex;align-items:center;gap:6px}
+.lg b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.lg-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.lg-dot.d1{background:var(--d1)} .lg-dot.d2{background:var(--d2)}
+.lg-dot.hatch{background:repeating-linear-gradient(45deg,var(--ink2) 0 2px,transparent 2px 5px);border:1px solid var(--ink2)}
+.amt-col{text-align:right}
+.amt-col small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.bal-wrap{position:relative}
+.stk{display:none}
+.dg-s.cur{font-size:.62em;vertical-align:top;margin-top:.12em;opacity:.9}
+
+/* ================= DARK THEME: black + neon green (reference) ================= */
+:root:not([data-theme="light"]){
+  --bg:#000; --accent:#2ee66b; --pos:#2ee66b; --neg:#ff5a5a; --d1:#2ee66b; --d2:#ffd60a;
+  --gcard:#111213; --gcard-b:#1f2022; --gcard-hi:rgba(255,255,255,.06); --card2:#1b1c1e; --line:#232427;
+  --ink2:#b9bcc2; --muted:#7d8188; --chip-on:rgba(46,230,107,.14); --bar-soft:rgba(46,230,107,.45);
+}
+:root:not([data-theme="light"]) .bg-mesh i{opacity:0}
+:root:not([data-theme="light"]) .bg-mesh .b1{opacity:.22;background:radial-gradient(circle,#2ee66b,transparent 60%)}
+:root:not([data-theme="light"]) .card,:root:not([data-theme="light"]) .day,:root:not([data-theme="light"]) .sum-card{
+  background:var(--gcard)!important;-webkit-backdrop-filter:none;backdrop-filter:none;border:1px solid var(--gcard-b)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;border-radius:26px}
+:root:not([data-theme="light"]) .card::before,:root:not([data-theme="light"]) .day::before{display:none}
+
+/* stacked neon card */
+:root:not([data-theme="light"]) .bal-wrap{padding-top:22px}
+:root:not([data-theme="light"]) .stk{display:block;position:absolute;left:7%;right:7%;height:40px;border-radius:22px 22px 0 0;top:0}
+:root:not([data-theme="light"]) .stk.s2{left:12%;right:12%;top:0;background:linear-gradient(180deg,#14532d,#0f3d22);border:1px solid #1e6b3c}
+:root:not([data-theme="light"]) .stk.s1{top:10px;background:linear-gradient(180deg,#1f9d4b,#15803d);border:1px solid #2fbf60}
+:root:not([data-theme="light"]) .bal-card{background:linear-gradient(160deg,#3cf07a 0%,#22d35e 45%,#14b44b 100%)!important;animation:rise .5s var(--ease) backwards!important;color:#04170b;border:1px solid #6dfb9c;box-shadow:0 20px 50px rgba(46,230,107,.28),inset 0 1px 1px rgba(255,255,255,.6)!important}
+:root:not([data-theme="light"]) .bal-card::before{background:radial-gradient(90% 70% at 100% 0%,rgba(255,255,255,.25),transparent 60%)}
+:root:not([data-theme="light"]) .bal-card .bal-amt .big-money,:root:not([data-theme="light"]) .bal-card .eye,:root:not([data-theme="light"]) .bal-top b{color:#04170b}
+:root:not([data-theme="light"]) .bal-top small{color:#0b3d1d;opacity:1}
+:root:not([data-theme="light"]) .bal-foot{background:#0d0e0f!important;color:#fff!important;border-top:0!important}
+:root:not([data-theme="light"]) .bal-ico{background:#04170b;box-shadow:none}
+:root:not([data-theme="light"]) .chip{background:#ffd60a!important;color:#000!important;border:0;box-shadow:none}
+:root:not([data-theme="light"]) .chip.dn{background:#ff5a5a!important;color:#fff!important}
+
+/* group cards: black with coloured accents */
+:root:not([data-theme="light"]) .sum-card[class*="g-"]{color:var(--ink)}
+:root:not([data-theme="light"]) .sum-card[class*="g-"]::after{display:none}
+:root:not([data-theme="light"]) .sum-card[class*="g-"] .sum-top small,:root:not([data-theme="light"]) .sum-card[class*="g-"] .sum-foot{color:var(--muted)}
+:root:not([data-theme="light"]) .sum-card[class*="g-"] .sum-foot{border-top-color:var(--line)}
+:root:not([data-theme="light"]) .sum-card[class*="g-"] .sum-ico{background:var(--card2);box-shadow:none}
+:root:not([data-theme="light"]) .sum-card.g-cash .chip.soft{background:rgba(59,139,255,.16)!important;color:#7fb2ff!important;border:0}
+:root:not([data-theme="light"]) .sum-card.g-savings .chip.soft{background:rgba(244,114,182,.16)!important;color:#f9a8d4!important;border:0}
+:root:not([data-theme="light"]) .sum-card.g-invest .chip.soft{background:rgba(255,214,10,.16)!important;color:#ffd60a!important;border:0}
+
+/* white pill buttons, white active tab */
+:root:not([data-theme="light"]) .btn.primary,:root:not([data-theme="light"]) .cf-seg button.on{background:#fff!important;color:#000!important;border-color:#fff!important;box-shadow:0 6px 18px rgba(255,255,255,.12)!important}
+:root:not([data-theme="light"]) .btn{background:#1b1c1e;border:1px solid #2a2b2e;box-shadow:none}
+:root:not([data-theme="light"]) .nav-ind{background:#fff!important;border-color:#fff!important;box-shadow:0 4px 18px rgba(255,255,255,.18)!important}
+:root:not([data-theme="light"]) .bottom-nav button.on{color:#000}
+:root:not([data-theme="light"]) .bottom-nav{background:rgba(17,18,19,.78)!important;border-color:#26272a!important}
+:root:not([data-theme="light"]) .fab{background:#2ee66b!important;color:#04170b;border:4px solid #000!important;box-shadow:0 0 0 1px #6dfb9c inset,0 10px 30px rgba(46,230,107,.45)!important}
+:root:not([data-theme="light"]) .round-btn,:root:not([data-theme="light"]) .wallet-pill,:root:not([data-theme="light"]) .month-pill{background:#141516!important;border-color:#26272a!important;box-shadow:none!important}
+
+/* neon bars and charts */
+:root:not([data-theme="light"]) .cf-bar i{background:#2ee66b;opacity:.55}
+:root:not([data-theme="light"]) .cf-bar.sel i{background:#2ee66b!important;opacity:1;box-shadow:0 0 24px rgba(46,230,107,.5)}
+:root:not([data-theme="light"]) .cf-plot{background:none}
+:root:not([data-theme="light"]) .hbar-fill,:root:not([data-theme="light"]) .bar i,:root:not([data-theme="light"]) .col{background:#2ee66b}
+:root:not([data-theme="light"]) .ring-fg{stroke:#2ee66b}
+:root:not([data-theme="light"]) .split-bar #hBarIn{background:#2ee66b}
+:root:not([data-theme="light"]) .tx .amt.pos{color:#2ee66b}
+:root:not([data-theme="light"]) .tx .amt.neg{color:#fff}
+:root:not([data-theme="light"]) .link{color:#2ee66b}
+:root:not([data-theme="light"]) .ic.i3d{background:#1b1c1e;box-shadow:inset 0 0 0 1px #2a2b2e}
+:root:not([data-theme="light"]) .cf-tip{background:#fff;color:#000}

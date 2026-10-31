@@ -170,7 +170,7 @@
     var st = RS[key], cols = el.querySelectorAll('.dg-col');
     var spinAll = !st || st.sig !== sig, from;
     if (!cols.length || el.dataset.sig !== sig) {
-      el.innerHTML = text.split('').map(function (c) { return /\d/.test(c) ? '<span class="dg"><span class="dg-col">' + COL + '</span></span>' : '<span class="dg-s">' + (c === ' ' ? '&nbsp;' : esc(c)) + '</span>'; }).join('');
+      el.innerHTML = text.split('').map(function (c) { return /\d/.test(c) ? '<span class="dg"><span class="dg-col">' + COL + '</span></span>' : '<span class="dg-s' + (/[Rp]/.test(c) ? ' cur' : '') + '">' + (c === ' ' ? '&nbsp;' : esc(c)) + '</span>'; }).join('');
       el.dataset.sig = sig; cols = el.querySelectorAll('.dg-col');
       from = (!spinAll) ? st.digits : digits.map(function () { return 0; });
       cols.forEach(function (c, i) { c.style.transition = 'none'; c.style.transform = ty(10 + from[i]); });
@@ -221,7 +221,7 @@
         '<button class="sum-foot" data-group="' + g + '"><span>View wallets</span><span>→</span></button></div>';
     }).join('');
     $('hGroups').querySelectorAll('[data-roll]').forEach(function (el) { rollTo(el, +el.dataset.v, {}, el.dataset.roll); });
-    renderCashflow();
+    renderCashflow(); renderDonut();
     var ws = S.wallets.slice().sort(function (a, b) { return balance(b.id) - balance(a.id); }).slice(0, 3);
     $('hWallets').innerHTML = ws.map(function (w) {
       return '<button class="w-row" data-wallet="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '</span><span class="amt">' + money(balance(w.id)) + '</span></button>';
@@ -259,6 +259,36 @@
 
     var pip = $('hSyncPip');
     pip.hidden = !S.review.length; pip.textContent = S.review.length;
+  }
+
+  // Spending donut: top category neon, second yellow, the rest striped.
+  function renderDonut() {
+    var m = ym(new Date()), sums = {}, total = 0;
+    S.tx.forEach(function (t) { if (t.type === 'expense' && t.date.slice(0, 7) === m && touches(t, 'all')) { sums[t.cat] = (sums[t.cat] || 0) + t.amount; total += t.amount; } });
+    var ids = Object.keys(sums).sort(function (a, b) { return sums[b] - sums[a]; });
+    var segs = ids.slice(0, 2).map(function (id) { return { id: id, v: sums[id] }; });
+    var rest = ids.slice(2).reduce(function (a, id) { return a + sums[id]; }, 0);
+    if (rest) segs.push({ id: '_other', v: rest });
+    var svg = $('donutSvg'), R = 58, C = 2 * Math.PI * R, GAP = segs.length > 1 ? 16 : 0;
+    var html = '<circle cx="80" cy="80" r="' + R + '" class="d-track"/>', off = 0;
+    var fills = ['var(--d1)', 'var(--d2)', 'url(#hatch)'];
+    segs.forEach(function (s, i) {
+      var len = Math.max(0, s.v / total * C - GAP);
+      var fill = s.id === '_other' ? fills[2] : fills[i];
+      html += '<circle cx="80" cy="80" r="' + R + '" class="d-seg' + (s.id === '_other' ? ' hatch' : '') + '" style="stroke:' + fill + ';--len:' + len.toFixed(1) + ';--off:' + (-off).toFixed(1) + ';--i:' + i + '" stroke-dasharray="0 ' + C.toFixed(1) + '"/>';
+      off += s.v / total * C;
+    });
+    if (!segs.length) html += '<circle cx="80" cy="80" r="' + R + '" class="d-seg hatch" style="stroke:url(#hatch);--len:' + C.toFixed(1) + ';--off:0;--i:0" stroke-dasharray="0 ' + C.toFixed(1) + '"/>';
+    svg.innerHTML = svg.querySelector('defs').outerHTML + html;
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      svg.querySelectorAll('.d-seg').forEach(function (c) { var cs = c.style; c.setAttribute('stroke-dasharray', cs.getPropertyValue('--len') + ' ' + C.toFixed(1)); c.setAttribute('stroke-dashoffset', cs.getPropertyValue('--off')); });
+    }); });
+    $('donutPct').textContent = segs.length ? Math.round(segs[0].v / total * 100) + '%' : '0%';
+    $('donutCap').textContent = segs.length ? cat(segs[0].id).name : 'No spending yet';
+    $('donutLegend').innerHTML = segs.map(function (s, i) {
+      var name = s.id === '_other' ? 'Other' : cat(s.id).name;
+      return '<span class="lg"><i class="lg-dot ' + (s.id === '_other' ? 'hatch' : 'd' + (i + 1)) + '"></i>' + esc(name) + ' <b>' + money(s.v, { rp: false }) + '</b></span>';
+    }).join('');
   }
 
   function renderCashflow(still) {
@@ -331,7 +361,7 @@
     var cls = t.type === 'income' ? 'pos' : t.type === 'expense' ? 'neg' : '';
     return '<div class="tx" data-id="' + esc(t.id) + '" style="--i:' + i + '">' + icon(c) + '<div class="tx-main"><div class="tx-cat">' + esc(c.name) +
       (t.src === 'bca' ? '<span class="badge">BCA</span>' : '') + '</div><div class="tx-note">' + esc(sub) + '</div></div>' +
-      '<div class="amt ' + cls + '">' + money(t.amount, { rp: false }) + '</div></div>';
+      '<div class="amt-col"><div class="amt ' + cls + '">' + money(t.amount, { rp: false }) + '</div><small>' + (t.type === 'income' ? 'Received' : t.type === 'expense' ? 'Spent' : 'Moved') + '</small></div></div>';
   }
 
   function renderReport() {
@@ -861,6 +891,7 @@
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
+    $('donutGo').onclick = function () { haptic(); cur = new Date(); cur.setDate(1); renderAll(); show('v-report'); };
     $('balDetails').onclick = function () { haptic(); walletPicker(); };
     $('hGroups').onclick = function (e) { if (e.target.closest('[data-group]')) { haptic(); walletPicker(); } };
     $('cfSeg').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; cfMonths = +b.dataset.n; cfSel = null; haptic(); renderCashflow(); };
