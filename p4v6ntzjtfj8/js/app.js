@@ -352,7 +352,7 @@
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
     $('hGreet').textContent = hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night';
-    renderUpcoming(); renderRealBtn(); renderKomisi(); renderBizCard(); renderInstCard();
+    renderUpcoming(); renderRealBtn(); renderKomisi(); renderWorldCard(); renderBizCard(); renderInstCard();
     var mStart = ym(new Date()) + '-01', open0 = balance('all', mStart), chg = total - open0;
     var chip = $('hChip');
     if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '▲ ' : '▼ ') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% this month'; }
@@ -1001,6 +1001,128 @@
     el.innerHTML = '<div class="km-top"><div><div class="eyebrow">Dad still owes</div><div class="mid-money">' + money(owe) + '</div><div class="muted small">This month ' + money(cur.earned, { rp: false }) + ' earned · ' + money(cur.paid, { rp: false }) + ' paid</div></div><span class="card-3d">' + sprite('komisi_out') + '</span></div>' +
       (last6.length ? '<div class="km-bars">' + last6.map(function (m, i) { var he = m.earned / max * 100, hp = m.paid / max * 100; return '<div class="km-col" style="--i:' + i + '"><div class="km-b"><i class="e" style="height:' + he.toFixed(1) + '%"></i><i class="p" style="height:' + hp.toFixed(1) + '%"></i></div><span>' + monthName(m.k).slice(0, 3) + '</span></div>'; }).join('') + '</div><div class="km-leg"><span><i class="e"></i>Earned</span><span><i class="p"></i>Paid by Dad</span><span class="muted">Total ' + money(total, { rp: false }) + '</span></div>'
         : '<div class="muted small" style="margin-top:10px">Tap + → Income → RESERVE TRANSFER to start.</div>');
+  }
+  // =================== INVEST TO THE WORLD ===================
+  var WORLD_DEF = ['giving', 'kasih', 'berkati_ortu'];
+  var WORLD_VERSES = [
+    ['Store up for yourselves treasures in heaven.', 'Matthew 6:20'],
+    ['Give, and it will be given to you.', 'Luke 6:38'],
+    ['It is more blessed to give than to receive.', 'Acts 20:35'],
+    ['God loves a cheerful giver.', '2 Corinthians 9:7'],
+    ['Whoever is generous to the poor lends to the LORD.', 'Proverbs 19:17'],
+    ['Honor the LORD with your wealth.', 'Proverbs 3:9']
+  ];
+  function worldCats() {
+    var ids = S.settings.worldCats || WORLD_DEF;
+    return ids.filter(function (id) { return S.cats.some(function (c) { return c.id === id; }); });
+  }
+  function worldTx() { var set = worldCats(); return S.tx.filter(function (t) { return t.type === 'expense' && set.indexOf(t.cat) !== -1; }); }
+  function worldStats() {
+    var tx = worldTx(), now = new Date(), m = ym(now), y = String(now.getFullYear());
+    var st = { all: 0, year: 0, month: 0, n: tx.length, byCat: {}, byMonth: {}, spentYear: 0 };
+    tx.forEach(function (t) {
+      st.all += t.amount; if (t.date.slice(0, 4) === y) st.year += t.amount; if (t.date.slice(0, 7) === m) st.month += t.amount;
+      st.byMonth[t.date.slice(0, 7)] = (st.byMonth[t.date.slice(0, 7)] || 0) + t.amount;
+    });
+    S.tx.forEach(function (t) { if (t.type === 'expense' && t.date.slice(0, 4) === y) st.spentYear += t.amount; });
+    return st;
+  }
+  function renderWorldCard() {
+    var el = $('hWorld'); if (!el) return;
+    var st = worldStats(), goal = S.settings.worldGoal || 0, pc = goal ? Math.min(100, st.year / goal * 100) : 0;
+    el.innerHTML = '<div class="wdc-glow"></div><div class="wdc-top"><div><div class="eyebrow">Invested this year</div><div class="mid-money">' + money(st.year) + '</div>' +
+      '<div class="small wdc-sub">This month ' + money(st.month, { rp: false }) + ' · All time ' + money(st.all, { rp: false }) + '</div></div><span class="wdc-globe"><i></i></span></div>' +
+      (goal ? '<div class="wdc-bar"><i style="width:' + pc.toFixed(1) + '%"></i></div><div class="small wdc-sub">' + Math.round(pc) + '% of your ' + money(goal, { rp: false }) + ' goal</div>' : '<div class="small wdc-sub" style="margin-top:8px">Tap to step into the world ✨</div>');
+  }
+  function countUp(el, to) {
+    if (S.settings.hide) { el.innerHTML = money(to); return; }
+    var t0 = performance.now(), D = 1400;
+    (function f(now) { var p = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - p, 4); el.textContent = 'Rp ' + fmt(Math.round(to * e)); if (p < 1) requestAnimationFrame(f); })(t0);
+  }
+  function worldOpen() {
+    haptic();
+    var ov = $('world'); if (!ov) { ov = document.createElement('div'); ov.id = 'world'; ov.className = 'world'; document.body.appendChild(ov); }
+    var range = 'all';
+    function paint(first) {
+      var st = worldStats(), cats = worldCats(), now = new Date(), y = String(now.getFullYear()), m = ym(now);
+      var inR = function (t) { return range === 'all' || (range === 'year' ? t.date.slice(0, 4) === y : t.date.slice(0, 7) === m); };
+      var tx = worldTx().filter(inR), tot = tx.reduce(function (a, t) { return a + t.amount; }, 0), by = {};
+      tx.forEach(function (t) { by[t.cat] = (by[t.cat] || 0) + t.amount; });
+      var rows = cats.map(function (id) { return { c: cat(id), v: by[id] || 0 }; }).sort(function (a, b) { return b.v - a.v; }), mx = Math.max.apply(null, rows.map(function (r) { return r.v; }).concat([1]));
+      var months = []; for (var i = 11; i >= 0; i--) { var d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push(ym(d)); }
+      var bm = Math.max.apply(null, months.map(function (k) { return st.byMonth[k] || 0; }).concat([1]));
+      var goal = S.settings.worldGoal || 0, gp = goal ? Math.min(1, st.year / goal) : 0, C = 2 * Math.PI * 34;
+      var share = st.spentYear ? Math.round(st.year / st.spentYear * 100) : 0;
+      var v = WORLD_VERSES[Math.floor(Date.now() / 864e5) % WORLD_VERSES.length];
+      var recent = tx.slice().sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); }).slice(0, 12);
+      ov.innerHTML = '<div class="wd-aur"><i></i><i></i><i></i></div><div class="wd-stars"></div>' +
+        '<div class="wd-in">' +
+        '<div class="wd-head"><button class="wd-x" id="wClose" aria-label="Close">‹</button><span>Invest to the World</span><button class="wd-x" id="wEdit" aria-label="Pick categories">⚙︎</button></div>' +
+        '<div class="wd-globe"><div class="wd-orb"><i></i></div><div class="wd-ring"></div><div class="wd-ring r2"></div></div>' +
+        '<div class="wd-lbl">' + (range === 'all' ? 'Invested into the world, all time' : range === 'year' ? 'Invested in ' + y : 'Invested in ' + monthName(m)) + '</div>' +
+        '<div class="wd-total" id="wTotal">' + money(tot) + '</div>' +
+        '<div class="wd-seg" id="wRange">' + [['month', 'Month'], ['year', 'Year'], ['all', 'All time']].map(function (r) { return '<button data-r="' + r[0] + '" class="' + (range === r[0] ? 'on' : '') + '">' + r[1] + '</button>'; }).join('') + '</div>' +
+        '<div class="wd-stats"><div><small>Times given</small><b>' + tx.length + '</b></div><div><small>Of spending ' + y + '</small><b>' + share + '%</b></div><div><small>This month</small><b>' + money(st.month, { rp: false }) + '</b></div></div>' +
+        '<div class="wd-card wd-goal" id="wGoal"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" class="g-tr"/><circle cx="40" cy="40" r="34" class="g-fg" style="stroke-dasharray:' + C.toFixed(1) + ';stroke-dashoffset:' + (C * (1 - gp)).toFixed(1) + '"/></svg><b class="g-pc">' + (goal ? Math.round(gp * 100) + '%' : '🎯') + '</b>' +
+          '<div class="grow"><b>' + (goal ? y + ' goal' : 'Set a yearly goal') + '</b><span>' + (goal ? money(st.year, { rp: false }) + ' of ' + money(goal, { rp: false }) + (st.year < goal ? ' · ' + money(goal - st.year, { rp: false }) + ' to go' : ' · reached 🎉') : 'How much do you want to sow this year?') + '</span></div><i>›</i></div>' +
+        '<div class="wd-sec">Last 12 months</div><div class="wd-card wd-bars">' + months.map(function (k, i) { var h = (st.byMonth[k] || 0) / bm * 100; return '<div class="wdb" style="--i:' + i + '"><div class="wdb-t"><i style="--h:' + h.toFixed(1) + '%"' + (k === m ? ' class="now"' : '') + '></i></div><span>' + monthName(k).slice(0, 1) + '</span></div>'; }).join('') + '</div>' +
+        '<div class="wd-sec">Where it went</div><div class="wd-card">' + (rows.length ? rows.map(function (r, i) { return '<div class="wd-row" style="--i:' + i + '">' + icon(r.c, 'sm') + '<div class="grow"><div class="wd-rt"><b>' + esc(r.c.name) + '</b><span>' + money(r.v) + '</span></div><div class="wd-rb"><i style="--w:' + (r.v / mx * 100).toFixed(1) + '%"></i></div></div></div>'; }).join('') : '<div class="wd-empty">No categories picked yet. Tap ⚙︎ to choose.</div>') + '</div>' +
+        '<div class="wd-sec">Recent seeds</div><div class="wd-card">' + (recent.length ? recent.map(function (t) { return '<div class="wd-row">' + icon(cat(t.cat), 'sm') + '<div class="grow"><div class="wd-rt"><b>' + esc(t.merchant || t.note || cat(t.cat).name) + '</b><span>' + money(t.amount, { rp: false }) + '</span></div><div class="wd-sub">' + fmtDate(t.date) + ' · ' + esc(cat(t.cat).name) + '</div></div></div>'; }).join('') : '<div class="wd-empty">Nothing here yet for this period. Every gift you log in these categories shows up here.</div>') + '</div>' +
+        '<div class="wd-verse">“' + esc(v[0]) + '”<span>' + esc(v[1]) + '</span></div>' +
+        '<button class="wd-pick" id="wPick">Pick categories · ' + cats.length + ' selected</button>' +
+        '</div>';
+      if (first !== false) countUp(ov.querySelector('#wTotal'), tot);
+      ov.querySelector('#wClose').onclick = worldClose;
+      ov.querySelector('#wEdit').onclick = ov.querySelector('#wPick').onclick = function () { worldPicker(function () { paint(); renderWorldCard(); }); };
+      ov.querySelector('#wGoal').onclick = function () { worldGoalSheet(function () { paint(false); renderWorldCard(); }); };
+      ov.querySelector('#wRange').onclick = function (e) { var b = e.target.closest('button'); if (!b || b.dataset.r === range) return; range = b.dataset.r; haptic(); paint(); };
+    }
+    paint();
+    ov.scrollTop = 0; ov.hidden = false; void ov.offsetWidth;
+    document.body.classList.add('world-mode'); ov.classList.add('show');
+    var tc = document.querySelector('meta[name=theme-color]'); if (tc) { ov.dataset.tc = tc.content; tc.content = '#12062b'; }
+    history.pushState({ world: 1 }, '');
+  }
+  function worldClose(fromPop) {
+    var ov = $('world'); if (!ov || !ov.classList.contains('show')) return;
+    ov.classList.remove('show'); document.body.classList.remove('world-mode');
+    var tc = document.querySelector('meta[name=theme-color]'); if (tc && ov.dataset.tc) tc.content = ov.dataset.tc;
+    setTimeout(function () { if (!ov.classList.contains('show')) ov.hidden = true; }, 500);
+    if (fromPop !== true && history.state && history.state.world) history.back();
+  }
+  window.addEventListener('popstate', function () { worldClose(true); });
+  function worldPicker(done) {
+    var sel = worldCats().slice();
+    var exp = S.cats.filter(function (c) { return c.type === 'expense'; });
+    var tops = exp.filter(function (c) { return !c.parent; });
+    function spentAll(id) { return S.tx.reduce(function (a, t) { return a + (t.type === 'expense' && t.cat === id ? t.amount : 0); }, 0); }
+    function row(c, kid) { return '<label class="wd-pk' + (kid ? ' kid' : '') + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '<span class="sub">' + money(spentAll(c.id), { rp: false }) + ' spent so far</span></span><input type="checkbox" class="switch" data-c="' + esc(c.id) + '"' + (sel.indexOf(c.id) !== -1 ? ' checked' : '') + '></label>'; }
+    openSheet('<h3>Pick categories</h3><p class="muted small" style="text-align:center;margin:-6px 0 12px">Everything you spend in these counts as investing into the world.</p>' +
+      '<input id="wpQ" placeholder="Search category" autocomplete="off" style="margin-bottom:10px">' +
+      '<div class="card list-card" id="wpList">' + tops.map(function (c) { return row(c) + exp.filter(function (k) { return k.parent === c.id; }).map(function (k) { return row(k, 1); }).join(''); }).join('') + '</div>' +
+      '<button class="btn primary block" id="wpSave" style="margin-top:12px">Save</button>',
+      function (r) {
+        r.querySelector('#wpList').addEventListener('change', function (e) {
+          var cb = e.target; if (!cb.dataset.c) return; haptic();
+          var kids = exp.filter(function (k) { return k.parent === cb.dataset.c; });
+          kids.forEach(function (k) { var x = r.querySelector('[data-c="' + k.id + '"]'); if (x) x.checked = cb.checked; });
+        });
+        r.querySelector('#wpQ').addEventListener('input', function () { var q = this.value.toLowerCase(); r.querySelectorAll('.wd-pk').forEach(function (l) { l.hidden = q && l.textContent.toLowerCase().indexOf(q) === -1; }); });
+        r.querySelector('#wpSave').onclick = function () {
+          S.settings.worldCats = [].map.call(r.querySelectorAll('[data-c]:checked'), function (x) { return x.dataset.c; });
+          save(); closeSheet(); toast('Saved ✓ ' + S.settings.worldCats.length + ' categories'); done && done();
+        };
+      });
+  }
+  function worldGoalSheet(done) {
+    openSheet('<h3>Yearly goal</h3><p class="muted small" style="text-align:center;margin:-6px 0 12px">How much do you want to invest into the world this year?</p>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="wgAmt" inputmode="numeric" placeholder="0" value="' + (S.settings.worldGoal ? S.settings.worldGoal.toLocaleString('id-ID') : '') + '"></div>' +
+      '<button class="btn primary block" id="wgSave">Save goal</button>' + (S.settings.worldGoal ? '<button class="btn block" id="wgClear">Remove goal</button>' : ''),
+      function (r) {
+        var a = r.querySelector('#wgAmt'); fmtInput(a); setTimeout(function () { a.focus(); }, 380);
+        r.querySelector('#wgSave').onclick = function () { S.settings.worldGoal = parseNum(a.value) || 0; save(); closeSheet(); toast('Goal saved 🎯'); done && done(); };
+        var c = r.querySelector('#wgClear'); if (c) c.onclick = function () { S.settings.worldGoal = 0; save(); closeSheet(); done && done(); };
+      });
   }
   function komisiSheet() {
     var ms = komisiByMonth(), owe = ms.reduce(function (a, m) { return a + m.earned - m.paid; }, 0), earned = ms.reduce(function (a, m) { return a + m.earned; }, 0);
@@ -1820,6 +1942,7 @@
     $('realBtn').onclick = function () { haptic(); realSheet(); };
     $('hKomisi').onclick = function () { haptic(); komisiSheet(); };
     $('kmOpen').onclick = function () { haptic(); komisiSheet(); };
+    $('hWorld').onclick = worldOpen; $('worldOpen').onclick = worldOpen; $('worldBtn').onclick = worldOpen;
     $('kmBtn').onclick = function () { haptic(); komisiSheet(); }; $('realBtn2').onclick = function () { haptic(); realSheet(); };
     $('hInst').onclick = function () { haptic(); instSheet(); }; $('instOpen').onclick = function () { haptic(); instSheet(); }; $('instBtn').onclick = function () { haptic(); instSheet(); };
     $('hBiz').onclick = function () { haptic(); bizSheet(); }; $('bizOpen').onclick = function () { haptic(); bizSheet(); }; $('bizBtn').onclick = function () { haptic(); bizSheet(); };
@@ -2542,11 +2665,12 @@
   }
 
   // ---------- customizable home ----------
-  var SEC_NAMES = { installments: 'Installments', business: 'Business', komisi: 'Komisi Noah', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
+  var SEC_NAMES = { installments: 'Installments', business: 'Business', komisi: 'Komisi Noah', world: 'Invest to the World', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
   function homeLayout() {
     // Calm default: daily things first, duplicate charts off (turn on in Customize Home).
-    var DEF = ['wallets', 'upcoming', 'komisi', 'business', 'installments', 'insights', 'goals', 'bills', 'cashflow', 'recent', 'allocation', 'spending', 'month'], OFF = { allocation: 1, spending: 1, month: 1 };
+    var DEF = ['wallets', 'upcoming', 'komisi', 'world', 'business', 'installments', 'insights', 'goals', 'bills', 'cashflow', 'recent', 'allocation', 'spending', 'month'], OFF = { allocation: 1, spending: 1, month: 1 };
     var L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
+    if (S.settings.home && !L.some(function (x) { return x.k === 'world'; })) { var ki = L.map(function (x) { return x.k; }).indexOf('komisi'); L.splice(ki + 1, 0, { k: 'world', on: true }); }
     DEF.concat(Object.keys(SEC_NAMES)).forEach(function (k) { if (SEC_NAMES[k] && !L.some(function (x) { return x.k === k; })) L.push({ k: k, on: !S.settings.home ? !OFF[k] : true }); });
     return L;
   }
@@ -2659,7 +2783,7 @@
   }
   function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
   function secIcons() {
-    var M = { komisi: 'komisi_out', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
+    var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
   load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
