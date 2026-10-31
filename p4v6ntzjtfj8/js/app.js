@@ -216,7 +216,7 @@
     var gt = {}; S.wallets.filter(included).forEach(function (w) { var g = groupOf(w); gt[g] = (gt[g] || 0) + balance(w.id); });
     $('hGroups').innerHTML = Object.keys(GROUPS).filter(function (g) { return g in gt; }).map(function (g, i) {
       var G = GROUPS[g], share = total ? Math.round(gt[g] / total * 100) : 0;
-      return '<div class="sum-card" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + img3d(G.icon) + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
+      return '<div class="sum-card g-' + g + '" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + img3d(G.icon) + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
         '<div class="sum-amt"><span class="mid-money" data-roll="g_' + g + '" data-v="' + gt[g] + '"></span><span class="chip soft">' + share + '% of total</span></div>' +
         '<button class="sum-foot" data-group="' + g + '"><span>View wallets</span><span>→</span></button></div>';
     }).join('');

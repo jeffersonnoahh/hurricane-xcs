@@ -364,3 +364,90 @@ pre:empty{display:none}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}
 }
+
+/* ================= VIVID LIQUID GLASS (final layer) ================= */
+:root{
+  --accent:#22c55e; --accent-d:#15803d; --pos:#3b8bff; --neg:#ff4d5e; --warn:#ffb020;
+  --bg:#05070a; --card:rgba(30,32,38,.42); --card2:rgba(255,255,255,.07); --line:rgba(255,255,255,.1);
+  --gcard:rgba(26,28,34,.38); --gcard-b:rgba(255,255,255,.14); --gcard-hi:rgba(255,255,255,.22);
+  --bar-soft:rgba(34,197,94,.18); --chip-on:rgba(34,197,94,.18); --sheet-card:rgba(255,255,255,.06);
+}
+:root[data-theme="light"]{
+  --accent:#16a34a; --accent-d:#14532d; --pos:#2563eb; --neg:#e5383b;
+  --bg:#e9f5ee; --card:rgba(255,255,255,.55); --card2:rgba(255,255,255,.6); --line:rgba(20,60,35,.09);
+  --gcard:rgba(255,255,255,.5); --gcard-b:rgba(255,255,255,.9); --gcard-hi:rgba(255,255,255,1);
+  --bar-soft:rgba(22,163,74,.16); --chip-on:rgba(22,163,74,.13); --sheet-card:rgba(255,255,255,.6);
+}
+
+/* colourful moving background so the glass has something to refract */
+.bg-mesh{position:fixed;inset:-20%;z-index:-1;pointer-events:none;overflow:hidden;background:var(--bg)}
+.bg-mesh i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform}
+.bg-mesh .b1{width:62vmax;height:62vmax;left:-8%;top:-6%;background:radial-gradient(circle,#16a34a,transparent 65%);animation:drift1 22s ease-in-out infinite alternate}
+.bg-mesh .b2{width:55vmax;height:55vmax;right:-12%;top:18%;background:radial-gradient(circle,#2563eb,transparent 65%);animation:drift2 26s ease-in-out infinite alternate}
+.bg-mesh .b3{width:50vmax;height:50vmax;left:10%;bottom:-10%;background:radial-gradient(circle,#a855f7,transparent 65%);animation:drift3 30s ease-in-out infinite alternate}
+.bg-mesh .b4{width:36vmax;height:36vmax;right:8%;bottom:12%;background:radial-gradient(circle,#f59e0b,transparent 65%);opacity:.35;animation:drift1 24s ease-in-out infinite alternate-reverse}
+:root[data-theme="light"] .bg-mesh i{opacity:.42}
+:root[data-theme="light"] .bg-mesh .b1{background:radial-gradient(circle,#4ade80,transparent 65%)}
+:root[data-theme="light"] .bg-mesh .b2{background:radial-gradient(circle,#60a5fa,transparent 65%)}
+:root[data-theme="light"] .bg-mesh .b3{background:radial-gradient(circle,#c084fc,transparent 65%);opacity:.3}
+:root[data-theme="light"] .bg-mesh .b4{background:radial-gradient(circle,#fde047,transparent 65%);opacity:.45}
+@keyframes drift1{to{transform:translate(18vw,14vh) scale(1.15)}}
+@keyframes drift2{to{transform:translate(-20vw,10vh) scale(.9)}}
+@keyframes drift3{to{transform:translate(14vw,-16vh) scale(1.1)}}
+html,body{background:transparent}
+html{background:var(--bg)}
+
+/* cards become liquid glass */
+.card,.day,.sum-card{background:var(--gcard)!important;-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--gcard-b)!important;box-shadow:inset 0 1px 1px var(--gcard-hi),inset 0 -1px 1px rgba(255,255,255,.04),0 12px 34px rgba(0,0,0,.22)!important;position:relative;isolation:isolate}
+.card::before,.day::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:linear-gradient(155deg,rgba(255,255,255,.16),rgba(255,255,255,0) 35%,rgba(255,255,255,0) 75%,rgba(255,255,255,.06))}
+:root[data-theme="light"] .card,:root[data-theme="light"] .day,:root[data-theme="light"] .sum-card{box-shadow:inset 0 1px 1px #fff,0 10px 30px rgba(22,90,50,.12)!important}
+.sheet .list-card{background:var(--sheet-card)!important;box-shadow:inset 0 1px 1px var(--gcard-hi)!important}
+
+/* balance card: vivid green mesh like the reference */
+.bal-card{background:
+  radial-gradient(70% 90% at 0% 0%,#4ade80 0%,transparent 60%),
+  radial-gradient(60% 80% at 100% 10%,#a3e635 0%,transparent 55%),
+  radial-gradient(80% 100% at 80% 100%,#047857 0%,transparent 60%),
+  radial-gradient(70% 90% at 10% 100%,#15803d 0%,transparent 65%),
+  linear-gradient(135deg,#16a34a,#065f46)!important;
+  background-size:160% 160%!important;animation:rise .5s var(--ease) backwards,mesh 14s ease-in-out infinite alternate!important;
+  border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 1px 1px rgba(255,255,255,.55),0 18px 40px rgba(22,163,74,.45)!important}
+@keyframes mesh{0%{background-position:0% 0%}100%{background-position:100% 100%}}
+.bal-foot{background:rgba(255,255,255,.12)!important;border-top:1px solid rgba(255,255,255,.28)!important}
+.bal-ico{background:rgba(255,255,255,.9);box-shadow:inset 0 1px 1px #fff,0 6px 14px rgba(0,0,0,.18)}
+
+/* summary cards: each group its own colour */
+.sum-card.g-cash,.sum-card.g-savings,.sum-card.g-invest{color:#fff;border-color:rgba(255,255,255,.35)!important}
+.sum-card.g-cash{background:radial-gradient(80% 90% at 0% 0%,#93c5fd,transparent 60%),radial-gradient(70% 90% at 100% 100%,#1d4ed8,transparent 65%),linear-gradient(135deg,#3b82f6,#1e40af)!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 14px 32px rgba(37,99,235,.4)!important}
+.sum-card.g-savings{background:radial-gradient(80% 90% at 0% 0%,#fbcfe8,transparent 60%),radial-gradient(70% 90% at 100% 100%,#be185d,transparent 65%),linear-gradient(135deg,#f472b6,#db2777)!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 14px 32px rgba(219,39,119,.38)!important}
+.sum-card.g-invest{background:radial-gradient(80% 90% at 0% 0%,#ddd6fe,transparent 60%),radial-gradient(70% 90% at 100% 100%,#6d28d9,transparent 65%),linear-gradient(135deg,#a78bfa,#7c3aed)!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 14px 32px rgba(124,58,237,.4)!important}
+.sum-card[class*="g-"] .sum-top small,.sum-card[class*="g-"] .sum-foot{color:rgba(255,255,255,.85)}
+.sum-card[class*="g-"] .sum-foot{border-top-color:rgba(255,255,255,.28)}
+.sum-card[class*="g-"] .sum-ico{background:rgba(255,255,255,.88);box-shadow:inset 0 1px 1px #fff,0 6px 12px rgba(0,0,0,.15)}
+.sum-card[class*="g-"] .chip.soft{background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.35)}
+.sum-card[class*="g-"]::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(155deg,rgba(255,255,255,.28),transparent 40%)}
+
+/* stronger icon colour */
+.ic.i3d{background:color-mix(in srgb,var(--c) 34%,transparent);box-shadow:inset 0 1px 1px rgba(255,255,255,.35),inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent)}
+
+/* accents */
+.link{color:var(--accent)}
+.btn{background:var(--card2);border:1px solid var(--gcard-b);box-shadow:inset 0 1px 1px var(--gcard-hi)}
+.btn.primary{background:linear-gradient(180deg,#4ade80,#16a34a);border-color:rgba(255,255,255,.35);box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 8px 20px rgba(22,163,74,.35)}
+.cf-seg button.on{background:linear-gradient(180deg,#4ade80,#16a34a);border-color:transparent;box-shadow:0 6px 14px rgba(22,163,74,.35)}
+.cf-bar.sel i{background:linear-gradient(180deg,#86efac,#22c55e 45%,rgba(22,163,74,.5))!important;box-shadow:0 8px 20px rgba(34,197,94,.35)}
+.ring-fg{stroke:url(#ringGrad)}
+.split-bar #hBarOut{background:linear-gradient(90deg,#ff7a85,#ff4d5e)} .split-bar #hBarIn{background:linear-gradient(90deg,#60a5fa,#3b8bff)}
+.hbar-fill,.bar i{background:linear-gradient(90deg,#4ade80,#16a34a)}
+.col{background:linear-gradient(180deg,#4ade80,#16a34a)}
+.nav-ind{background:linear-gradient(180deg,rgba(74,222,128,.28),rgba(22,163,74,.18))!important;border-color:rgba(134,239,172,.45)!important}
+.bottom-nav button.on{color:var(--accent)}
+.badge{background:linear-gradient(180deg,#3b82f6,#1d4ed8);box-shadow:inset 0 1px 1px rgba(255,255,255,.4)}
+.tx-head,.wallet-pill{z-index:1}
+.month-pill{color:var(--ink)}
+@media (prefers-reduced-motion: reduce){.bg-mesh i,.bal-card{animation:none!important}}
+.sum-row{padding:12px 16px 40px;margin:-10px -16px -18px}
+.bg-mesh i{opacity:.7}
+:root[data-theme="light"] .bg-mesh i{opacity:.42}
