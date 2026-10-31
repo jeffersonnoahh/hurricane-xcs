@@ -2,7 +2,7 @@
 
 A personal money tracker (wallets, categories, budgets, reports) that **adds your BCA transactions automatically from BCA's notification emails**.
 
-Not part of the sales dashboards. It lives in this folder only and shares no data with them.
+Not part of the sales dashboards. It lives in this folder only and shares no data with them. The folder name is random on purpose so the page is hard to find; search engines are told not to index it.
 
 ## How it works
 

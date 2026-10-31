@@ -3,3 +3,7 @@
 # 304 Not Modified keeps it cheap when nothing changed; updates arrive without hard-refresh.
 /*
   Cache-Control: no-cache, must-revalidate
+
+# Private personal app: keep out of search engines.
+/p4v6ntzjtfj8/*
+  X-Robots-Tag: noindex, nofollow
