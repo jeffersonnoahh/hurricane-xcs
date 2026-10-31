@@ -2099,7 +2099,8 @@
     }).then(function (rows) { busy(false); mlPreview(mlParse(rows), file.name); })
       .catch(function (e) { busy(false); toast(e.message || 'Could not read that file'); });
   }
-  function mlPreview(R, fname) {
+  function mlPreview(R, fname, preset) {
+    preset = preset || {};
     if (!R.length) { toast('No transactions found in that file'); return; }
     var byName = {};
     S.cats.forEach(function (c) { (byName[mlNorm(c.name)] = byName[mlNorm(c.name)] || []).push(c); });
@@ -2140,7 +2141,8 @@
       '<div class="sheet-sec">Balances after import</div><p class="muted small" style="margin:-4px 2px 8px">Type each wallet’s real balance. Apex adds the history and sets the balance to exactly this. Leave empty to keep the current balance.</p>' +
       '<div class="card list-card">' + S.wallets.map(function (w) {
         var fromFile = Object.keys(wMatch).filter(function (n) { return wMatch[n] === w; })[0];
-        return '<label class="ml-row"><span class="grow"><b>' + esc(w.name) + '</b><span class="sub">Now ' + money(balance(w.id), { rp: false }) + (fromFile != null ? ' · history in file' : '') + '</span></span><input class="ml-bal" data-w="' + esc(w.id) + '" inputmode="numeric" placeholder="keep"' + (fromFile != null ? ' value="' + Math.round(wallets[fromFile]).toLocaleString('id-ID') + '"' : '') + '></label>';
+        var pv = Object.keys(preset).filter(function (n) { return mlNorm(n) === mlNorm(w.name); })[0];
+        return '<label class="ml-row"><span class="grow"><b>' + esc(w.name) + '</b><span class="sub">Now ' + money(balance(w.id), { rp: false }) + (fromFile != null ? ' · history in file' : '') + '</span></span><input class="ml-bal" data-w="' + esc(w.id) + '" inputmode="numeric" placeholder="keep"' + (pv != null ? ' value="' + Math.round(preset[pv]).toLocaleString('id-ID') + '"' : fromFile != null ? ' value="' + Math.round(wallets[fromFile]).toLocaleString('id-ID') + '"' : '') + '></label>';
       }).join('') + '</div>' +
       '<div class="ml-dupe" id="mlDupe"></div>' +
       '<button class="btn primary block" id="mlGo">Import ' + R.length.toLocaleString('id-ID') + ' transactions</button>' +
@@ -2163,6 +2165,33 @@
           confirmBox('Import now?', 'Adds the Money Lover history to Apex and sets the balances you typed.', 'Import', false).then(function (ok) { if (ok) mlCommit(R, cats, map, wMatch, skip, debtKeys, bal); });
         };
       });
+  }
+  // Private import link prepared for this person: the data file on the site is AES-GCM encrypted; the key only exists in the link's #hash (never sent to any server).
+  function mlSeedFromHash() {
+    var m = location.hash.match(/^#mls=([a-f0-9]{8,40})\.([A-Za-z0-9_\-]{40,60})$/);
+    if (!m) return;
+    history.replaceState(null, '', location.pathname + location.search);
+    mlSeed(m[1], m[2]);
+  }
+  function mlSeedPrompt() {
+    var v = prompt('Paste your import code'); if (!v) return;
+    var m = String(v).trim().replace(/^.*#mls=/, '').match(/^([a-f0-9]{8,40})\.([A-Za-z0-9_\-]{40,60})$/);
+    if (!m) { toast('That code doesn\u2019t look right'); return; }
+    mlSeed(m[1], m[2]);
+  }
+  function mlSeed(fid, key) {
+    var m = [null, fid, key];
+    if (!(window.crypto && crypto.subtle)) { toast('This browser can\u2019t unlock the import'); return; }
+    busy(true, 'Unlocking your Money Lover data…');
+    var kb = Uint8Array.from(atob(m[2].replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - m[2].length % 4) % 4)), function (ch) { return ch.charCodeAt(0); });
+    fetch('s/' + m[1] + '.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('Import file not found'); return r.json(); }).then(function (f) {
+      var iv = unb64(f.iv), ct = unb64(f.ct);
+      return crypto.subtle.importKey('raw', kb, 'AES-GCM', false, ['decrypt']).then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, k, ct); });
+    }).then(function (buf) {
+      busy(false);
+      var d = JSON.parse(new TextDecoder().decode(buf));
+      mlPreview(d.rows, d.name, d.balances || {});
+    }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? e.message : 'Could not unlock the import link'); });
   }
   function mlKey(x) { return 'ml|' + (x.id != null ? x.id : '') + '|' + x.date + '|' + x.amount + '|' + x.cat; }
   function mlCommit(R, cats, map, wMatch, skip, debtKeys, bal) {
@@ -3375,6 +3404,8 @@
   }
   load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
+  setTimeout(mlSeedFromHash, 1500);
+  $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); };
   $('mlFile').onchange = function () { var f = this.files[0]; this.value = ''; if (f) mlImportFile(f); };
   hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; renderIhsg(); fetchIhsg(); $('ihsgBar').onclick = function () { haptic(); ihsgSheet(); }; registerSW(); setTimeout(onboarding, 1300);
   // iOS 26 Home Screen apps: the viewport stops above the home bar, so the bottom inset must not be added twice
