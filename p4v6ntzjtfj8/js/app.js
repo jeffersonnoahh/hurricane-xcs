@@ -2912,6 +2912,14 @@
   load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
+  // iOS 26 Home Screen apps: the viewport stops above the home bar, so the bottom inset must not be added twice
+  function vpCheck() {
+    var sa = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    var portrait = window.innerHeight > window.innerWidth;
+    var gap = (portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width)) - window.innerHeight;
+    document.documentElement.classList.toggle('vp-short', !!sa && gap > 20);
+  }
+  vpCheck(); window.addEventListener('resize', vpCheck); window.addEventListener('orientationchange', function () { setTimeout(vpCheck, 300); });
   // Native feel: block pinch / double tap zoom (iOS ignores user-scalable=no)
   ['gesturestart','gesturechange','gestureend'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
   document.addEventListener('touchmove', function (e) { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });

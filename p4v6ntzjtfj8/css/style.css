@@ -1338,3 +1338,31 @@ body.world-mode{--accent:#b4a5f5;--accent-2:#8b7cf0;--accent-soft:rgba(180,165,2
 .wdc-bar{background:rgba(255,255,255,.1)}
 .wdc-bar i{background:linear-gradient(90deg,#8b7cf0,#d9d2ff)}
 .wdc-globe{box-shadow:0 0 18px rgba(125,190,252,.35)}
+
+/* iOS 26 standalone: viewport already ends above the home indicator, so don't add the inset again */
+html.vp-short{background:#121214!important}
+html.vp-short[data-theme="light"]{background:#f9f9f9!important}
+html.vp-short .bottom-nav{height:calc(var(--tabh) + 4px)!important;padding-bottom:0!important}
+html.vp-short body{padding-bottom:calc(var(--tabh) + 28px)!important}
+html.vp-short .sheet{padding-bottom:20px}
+html.vp-short .fab{bottom:2px}
+
+/* ===== iOS polish: no black flash on press, native-styled form controls ===== */
+/* Scaling a frosted (backdrop-filter) element on press makes iOS Safari paint it black for a moment. Dim instead. */
+button.card:active,.card button:active,.stat-strip:active,.real-btn:active,.tile:active,.actions button:active,.lg-row:active,.wcard:active,.goal:active,.set-row:active,.w-row:active,.tx:active,.sheet-tools button:active,.wd-x:active,.wd-pick:active,.world-card:active{transform:none!important;opacity:.72}
+button.card,.card button,.stat-strip,.real-btn,.tile,.actions button,.lg-row,.wcard,.goal,.set-row,.w-row,.tx,.sheet-tools button,.world-card{transition:opacity .18s ease}
+select{-webkit-appearance:none;appearance:none;padding-right:36px!important;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238e8e93' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+  background-repeat:no-repeat!important;background-position:right 14px center!important;background-size:12px 8px!important}
+input[type=date],input[type=time],input[type=month]{-webkit-appearance:none;appearance:none;min-height:46px;text-align:left;line-height:1.2}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;margin:0}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{opacity:.55;filter:invert(.6)}
+input,select,textarea{-webkit-tap-highlight-color:transparent}
+.two>*,.two label{min-width:0}
+input[type=date],input[type=time]{min-width:0;max-width:100%;box-sizing:border-box}
+/* sheet: edge highlight must not scroll away; less see-through so text behind never bleeds */
+.sheet::after{display:none!important}
+.sheet{border-top:.5px solid rgba(255,255,255,.14)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 -20px 50px -20px rgba(0,0,0,.6)!important}
+:root{--glass-strong:rgba(22,22,26,.94)}
+:root[data-theme="light"]{--glass-strong:rgba(255,255,255,.95)}
+:root[data-theme="light"] .sheet{border-top-color:rgba(0,0,0,.08)!important}
