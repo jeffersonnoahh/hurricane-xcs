@@ -2930,6 +2930,57 @@
         r.querySelector('.ib-tabs').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; st.tab = b.dataset.t; this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); r.querySelector('.ib-chart').innerHTML = chart(); haptic(); };
       });
   }
+  // ---------- Live USD/IDR bar (real FX rate via our Cloudflare function; falls back to CoinGecko USDT) ----------
+  var FX = null;
+  try { FX = JSON.parse(localStorage.getItem('apex_fx') || 'null'); } catch (e) {}
+  function fxChg() { return FX && FX.prevClose ? { d: FX.price - FX.prevClose, pc: (FX.price - FX.prevClose) / FX.prevClose * 100 } : { d: 0, pc: FX && FX.chg24 || 0 }; }
+  function fmtFx(v) { return 'Rp ' + (+v).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+  function renderFx(flash) {
+    var el = $('fxBar'); if (!el) return;
+    if (!FX) { el.innerHTML = '<span class="ib-ic">' + sprite('usd') + '</span><div class="gb-main"><b>USD / IDR</b><small>Loading live rate…</small></div>'; return; }
+    var c = fxChg(), up = c.d >= 0 && c.pc >= 0, col = up ? '#22c55e' : '#ef4444';
+    el.innerHTML = '<span class="ib-ic">' + sprite('usd') + '</span>' +
+      '<div class="gb-main"><b>USD / IDR <i class="live"></i></b><small>1 US dollar · live</small></div>' +
+      '<div class="gb-spark">' + lineSpark((FX.day && FX.day.length > 1 ? FX.day : FX.week || []).filter(function (_, i, a) { return a.length < 50 || i % 2 === 0 || i === a.length - 1; }), 80, 28, col, FX.prevClose) + '</div>' +
+      '<div class="gb-right"><b class="gb-price' + (flash ? ' fl-' + flash : '') + '">' + fmtFx(FX.price) + '</b><span class="gb-chg ' + (up ? 'up' : 'dn') + '">' + (up ? '▲ ' : '▼ ') + Math.abs(c.pc).toFixed(2) + '%</span></div>';
+  }
+  var fxT = 0;
+  function fxSet(j) {
+    var prev = FX && FX.price; j.ts = Date.now(); FX = j;
+    try { localStorage.setItem('apex_fx', JSON.stringify(FX)); } catch (e) {}
+    PRICES.usd = FX.price;
+    renderFx(prev && prev !== j.price ? (j.price > prev ? 'up' : 'dn') : '');
+    if (prev && prev !== j.price && S.wallets.some(function (w) { return w.holding && w.holding.asset === 'usd'; })) renderAll();
+  }
+  function fetchFx() {
+    clearTimeout(fxT); fxT = setTimeout(fetchFx, 60e3);
+    if (document.hidden) return;
+    fetch('mkt?s=IDR%3DX').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) { if (!j || !j.price) throw 0; fxSet(j); })
+      .catch(function () {
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr&include_24hr_change=true').then(function (r) { return r.json(); }).then(function (j) {
+          var t = j && j.tether; if (!t || !t.idr) return;
+          fxSet({ name: 'USD/IDR', price: t.idr, chg24: t.idr_24h_change || 0, day: [], week: [], state: 'open', time: Date.now() / 1000, src: 'usdt' });
+        }).catch(function () {});
+      });
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && (!FX || Date.now() - (FX.ts || 0) > 50e3)) fetchFx(); });
+  function fxSheet() {
+    if (!FX) { fetchFx(); toast('Getting the live rate…'); return; }
+    var c = fxChg(), up = c.pc >= 0, col = up ? '#22c55e' : '#ef4444', wk = FX.week || [], wpc = wk.length ? (FX.price - wk[0][1]) / wk[0][1] * 100 : null;
+    var mine = S.wallets.filter(function (w) { return w.holding && w.holding.asset === 'usd'; }), usd = mine.reduce(function (a, w) { return a + (+w.holding.qty || 0); }, 0);
+    var st = { tab: 'day' };
+    function chart() { var pts = st.tab === 'day' ? FX.day : wk; return pts && pts.length > 1 ? lineSpark(pts, 320, 120, col, st.tab === 'day' ? FX.prevClose : null) : '<div class="muted small" style="text-align:center;padding:40px 0">No chart data yet.</div>'; }
+    openSheet('<h3>USD / IDR</h3>' +
+      '<div class="gs-hero"><span class="gs-ic">' + sprite('usd') + '</span><div class="gs-price">' + (+FX.price).toLocaleString('id-ID', { maximumFractionDigits: 2 }) + '<small>Rp per $1</small></div>' +
+      '<div class="gs-chg ' + (up ? 'up' : 'dn') + '">' + (up ? '▲ ' : '▼ ') + Math.abs(c.pc).toFixed(2) + '% today' + (wpc != null ? ' · ' + (wpc >= 0 ? '▲ ' : '▼ ') + Math.abs(wpc).toFixed(2) + '% 5 days' : '') + '</div>' +
+      '<div class="ib-state">' + (up ? 'Dollar stronger, rupiah weaker today' : 'Rupiah stronger today') + '</div></div>' +
+      (FX.day && FX.day.length ? '<div class="ib-tabs"><button type="button" data-t="day" class="on">Today</button><button type="button" data-t="week">5 days</button></div><div class="gs-chart ib-chart" style="color:var(--muted)">' + chart() + '</div>' : '') +
+      '<div class="dd-stats" style="margin-top:4px"><div><small>High</small><b>' + (FX.high ? fmt(Math.round(FX.high)) : '–') + '</b></div><div><small>Low</small><b>' + (FX.low ? fmt(Math.round(FX.low)) : '–') + '</b></div><div><small>Prev close</small><b>' + (FX.prevClose ? fmt(Math.round(FX.prevClose)) : '–') + '</b></div></div>' +
+      '<div class="dd-stats" style="margin-top:0;border-top:0"><div><small>$100</small><b>' + fmt(Math.round(FX.price * 100)) + '</b></div><div><small>$1.000</small><b>' + fmt(Math.round(FX.price * 1000)) + '</b></div><div><small>Rp 1 jt</small><b>$' + (1e6 / FX.price).toFixed(2) + '</b></div></div>' +
+      (usd ? '<div class="card gs-mine"><div><small>Your dollars</small><b>$' + usd.toLocaleString('id-ID', { maximumFractionDigits: 2 }) + '</b></div><div style="text-align:right"><small>Worth now</small><b>' + money(Math.round(usd * FX.price)) + '</b></div></div>' : '') +
+      '<p class="muted small" style="text-align:center;margin-top:10px">' + (FX.src === 'usdt' ? 'Backup source: USDT price from CoinGecko (very close to the real dollar rate).' : 'Market rate from Yahoo Finance. Bank and money changer rates differ slightly.') + '</p>',
+      function (r) { var tb = r.querySelector('.ib-tabs'); if (tb) tb.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; st.tab = b.dataset.t; this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); r.querySelector('.ib-chart').innerHTML = chart(); haptic(); }; });
+  }
   // ---------- cloud backup & sync (encrypted) ----------
   var FB = 'https://hurricane-scorecard-default-rtdb.firebaseio.com/apex/';
   function b64(buf) { var s = '', a = new Uint8Array(buf); for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
@@ -3407,7 +3458,7 @@
   setTimeout(mlSeedFromHash, 1500);
   $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); };
   $('mlFile').onchange = function () { var f = this.files[0]; this.value = ''; if (f) mlImportFile(f); };
-  hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; renderIhsg(); fetchIhsg(); $('ihsgBar').onclick = function () { haptic(); ihsgSheet(); }; registerSW(); setTimeout(onboarding, 1300);
+  hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; renderIhsg(); fetchIhsg(); $('ihsgBar').onclick = function () { haptic(); ihsgSheet(); }; renderFx(); fetchFx(); $('fxBar').onclick = function () { haptic(); fxSheet(); }; registerSW(); setTimeout(onboarding, 1300);
   // iOS 26 Home Screen apps: the viewport stops above the home bar, so the bottom inset must not be added twice
   function vpCheck() {
     var sa = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);

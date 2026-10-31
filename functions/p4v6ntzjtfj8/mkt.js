@@ -1,7 +1,8 @@
 // Apex market data proxy (Cloudflare Pages Function).
 // Browsers can't call Yahoo Finance directly (no CORS), so this fetches it server-side and caches for 60s.
 // Only allow-listed symbols, so it can't be used as an open proxy.
-const ALLOW = { '^JKSE': 'IHSG' };
+const ALLOW = { '^JKSE': 'IHSG', 'IDR=X': 'USD/IDR' };
+const STOOQ = { '^JKSE': '^jkse', 'IDR=X': 'usdidr' };
 
 function json(body, status = 200, maxAge = 0) {
   return new Response(JSON.stringify(body), {
@@ -29,7 +30,7 @@ async function yahoo(sym, range, interval) {
 }
 
 async function stooq(sym) {
-  const r = await fetch(`https://stooq.com/q/l/?s=${encodeURIComponent(sym.toLowerCase())}&f=sd2t2ohlc&h&e=csv`);
+  const r = await fetch(`https://stooq.com/q/l/?s=${encodeURIComponent(STOOQ[sym] || sym.toLowerCase())}&f=sd2t2ohlc&h&e=csv`);
   if (!r.ok) throw new Error('stooq ' + r.status);
   const lines = (await r.text()).trim().split('\n');
   const v = (lines[1] || '').split(',');
