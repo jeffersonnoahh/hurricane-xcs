@@ -242,6 +242,19 @@
     var t = $('toast'); t.hidden = true; void t.offsetWidth; t.textContent = msg; t.hidden = false;
     clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 2800);
   }
+  // Loading pill for slower work. Several jobs can overlap; it hides when all finish.
+  var busyN = 0, busyShowT = null;
+  function busy(on, label) {
+    var el = $('busy'); if (!el) return;
+    busyN = Math.max(0, busyN + (on ? 1 : -1));
+    if (on) { if (label) $('busyTxt').textContent = label; clearTimeout(busyShowT); busyShowT = setTimeout(function () { if (busyN) { el.hidden = false; void el.offsetWidth; el.classList.add('show'); document.body.classList.add('busy-on'); } }, 250); }
+    else if (!busyN) { clearTimeout(busyShowT); el.classList.remove('show'); document.body.classList.remove('busy-on'); setTimeout(function () { if (!busyN) el.hidden = true; }, 380); }
+  }
+  function hideSplash() {
+    var sp = document.getElementById('splash'); if (!sp) return;
+    var wait = Math.max(0, 1150 - (Date.now() - (window.__splashT0 || 0)));
+    setTimeout(function () { sp.classList.add('out'); document.body.classList.add('app-in'); setTimeout(function () { sp.remove(); }, 700); }, wait);
+  }
   function haptic() { try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {} }
 
   // ---------- state ----------
@@ -1112,7 +1125,7 @@
     var s = S.settings;
     if (!s.syncUrl || !s.token) { if (manual) { toast('Set up BCA sync in Account first'); } return Promise.resolve(); }
     if (syncing) return Promise.resolve();
-    syncing = true;
+    syncing = true; busy(true, 'Syncing BCA…');
     $('hSync').classList.add('spin');
     $('sStatus').textContent = 'Syncing…';
     // Only emails from the moment tracking started count (set on first connect or Start fresh).
@@ -1160,7 +1173,7 @@
         $('sStatus').textContent = 'Sync failed: ' + (e.name === 'AbortError' ? 'timed out' : e.message);
         if (manual) toast('Sync failed. Check URL and secret.');
       })
-      .then(function () { clearTimeout(timer); syncing = false; $('hSync').classList.remove('spin'); });
+      .then(function () { clearTimeout(timer); syncing = false; busy(false); $('hSync').classList.remove('spin'); });
   }
   function pruneSeen() {
     var cut = Date.now() - 120 * 864e5;
@@ -1690,7 +1703,8 @@
   function fetchPrices(force) {
     if (!force && PRICES.ts && Date.now() - PRICES.ts < 5 * 60e3) return Promise.resolve();
     if (!S.wallets.some(function (w) { return w.holding && w.holding.asset; }) && !force) return Promise.resolve();
-    return fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,pax-gold&vs_currencies=idr').then(function (r) { return r.json(); }).then(function (j) {
+    if (force) busy(true, 'Updating prices…');
+    return fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,pax-gold&vs_currencies=idr').then(function (r) { if (force) busy(false); return r.json(); }, function (e) { if (force) busy(false); throw e; }).then(function (j) {
       PRICES = { btc: j.bitcoin && j.bitcoin.idr, eth: j.ethereum && j.ethereum.idr, usd: j.tether && j.tether.idr, gold: j['pax-gold'] && j['pax-gold'].idr / 31.1034768, ts: Date.now() };
       try { localStorage.setItem('apex_prices', JSON.stringify(PRICES)); } catch (e) {}
       renderAll();
@@ -1718,15 +1732,16 @@
   function cloudQueue() { var c = S.settings && S.settings.cloud; if (!c || !c.on) return; clearTimeout(cloudT); cloudT = setTimeout(cloudPush, 3500); }
   function cloudPush() {
     var c = S.settings.cloud; if (!c || !c.on || cloudBusy) return Promise.resolve();
-    cloudBusy = true; setCloudStatus('Backing up…');
+    cloudBusy = true; setCloudStatus('Backing up…'); busy(true, 'Backing up…');
     var iv = crypto.getRandomValues(new Uint8Array(12)), at = S.updatedAt || Date.now();
     return deriveKey(c.pass, c.id).then(function (k) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, new TextEncoder().encode(JSON.stringify(cloudPayload()))); })
       .then(function (ct) { return fetch(FB + c.id + '.json?print=silent', { method: 'PUT', body: JSON.stringify({ v: 1, iv: b64(iv), ct: b64(ct), at: at }) }); })
       .then(function (r) { if (!r.ok) throw new Error(r.status); c.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); setCloudStatus(); })
-      .catch(function () { setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; });
+      .catch(function () { setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; busy(false); });
   }
   function cloudPull(id, pass, opts) {
-    opts = opts || {};
+    opts = opts || {}; busy(true, 'Syncing cloud…');
+    var done = function (x) { busy(false); return x; }, fail = function (e) { busy(false); throw e; };
     return fetch(FB + id + '.json').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ct) { if (opts.mustExist) throw new Error('No backup found for that code'); return null; }
       if (!opts.force && S.updatedAt && j.at <= S.updatedAt) return null;
@@ -1737,7 +1752,7 @@
       var cloud = { id: id, pass: pass, on: true, last: Date.now() };
       S = data; S.settings = S.settings || {}; S.settings.cloud = cloud;
       load2(); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); return true;
-    });
+    }).then(done, fail);
   }
   function load2() { var d = blank(); Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; }); Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; }); }
   function setCloudStatus(msg) {
@@ -1806,16 +1821,16 @@
     var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
     inp.onchange = function () {
       var f = inp.files[0]; if (!f) return;
-      var bar = root.querySelector('.scan-bar'); bar.hidden = false; bar.querySelector('i').style.width = '8%'; bar.querySelector('span').textContent = 'Loading scanner…';
+      var bar = root.querySelector('.scan-bar'); bar.hidden = false; bar.querySelector('i').style.width = '8%'; bar.querySelector('span').textContent = 'Loading scanner…'; busy(true, 'Reading receipt…');
       loadOCR().then(function () {
         return window.Tesseract.recognize(f, 'eng+ind', { logger: function (m) { if (m.status === 'recognizing text') { bar.querySelector('i').style.width = (10 + m.progress * 90) + '%'; bar.querySelector('span').textContent = 'Reading receipt… ' + Math.round(m.progress * 100) + '%'; } } });
       }).then(function (res) {
-        var r = parseReceipt(res.data.text || ''); bar.hidden = true;
+        var r = parseReceipt(res.data.text || ''); bar.hidden = true; busy(false);
         if (r.amount) { var a = root.querySelector('#fAmt'); a.value = r.amount.toLocaleString('id-ID'); a.classList.add('flash-up'); }
         if (r.merchant) root.querySelector('#fMerch').value = r.merchant;
         if (r.date) root.querySelector('#fDate').value = r.date;
         toast(r.amount ? 'Receipt read ✓ Check and save' : 'Couldn’t find the amount. Type it in.');
-      }).catch(function (e) { bar.hidden = true; toast(e.message || 'Scan failed'); });
+      }).catch(function (e) { bar.hidden = true; busy(false); toast(e.message || 'Scan failed'); });
     };
     inp.click();
   }
@@ -1952,7 +1967,7 @@
 
   load(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
-  fetchPrices(); registerSW(); setTimeout(onboarding, 400);
+  hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
   if (S.settings.pinHash) { delete S.settings.pinHash; save(); }
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
