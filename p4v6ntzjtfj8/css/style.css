@@ -752,3 +752,4 @@ body.sheet-open .fab{scale:0;transition:scale .35s var(--spring)}
 .actions button:active,.stat-strip:active{transform:scale(.95)}
 .lg-row:active{transform:scale(.98)}
 .card,.day{transition:transform .3s var(--spring)}
+.icon-pick button .sp{width:100%;height:100%}.icon-pick{grid-template-columns:repeat(7,1fr);max-height:240px}

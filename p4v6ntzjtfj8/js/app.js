@@ -135,6 +135,7 @@
     var acc = (S.settings.bcaAccounts || []).filter(function (a) { return a.wallet && maskMatch(a.mask, src); })[0];
     return acc && S.wallets.some(function (w) { return w.id === acc.wallet; }) ? acc.wallet : null;
   }
+  function useGenerated() { if (S.iconVer === 2) return; (S.cats || []).concat(S.wallets || []).forEach(function (o) { delete o.custom; }); S.iconVer = 2; }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(S)); }
     catch (e) { toast('Could not save. Storage full or blocked.'); }
@@ -169,7 +170,11 @@
   var SP = {"food":0,"bills":1,"phone_bill":2,"gas_bill":3,"internet_bill":4,"personal_expense":5,"shopping":6,"personal_items":7,"health":8,"tennis":9,"education":10,"fun":11,"streaming":12,"fun_money":13,"insurance":14,"investment":15,"digital_assets":16,"bitget":17,"ajaib_kripto":18,"pluang":19,"ajaib_essa":20,"bybit":21,"stocks":22,"ethereum":23,"gold_inv":24,"louis_hugo":25,"bren":26,"usd":27,"pokemon":28,"other_out":29,"transfer_out":30,"pay_interest":31,"uncat":32,"makan_team":33,"iklan_tokped":34,"giving":35,"spending":36,"kasih":37,"balance_adj":38,"utang":39,"komisi_out":40,"kas_kantor":41,"berkati_ortu":42,"sharss":43,"branding":44,"project":45,"gifts":46,"to_reserve":47,"bi":48,"gold_debit":49,"korea_loan":50,"wedding":51,"shanghai":52,"dvn":53,"my_home":54,"salary":55,"my_cash":56,"reserve_transfer":57,"other_in":58,"transfer_in":59,"interest":60,"uncat_in":61,"plus_crypto":62,"ajaib_kripto_plus":63,"bitget_plus":64,"mexc_plus":65,"bybit_plus":66,"stocks_plus":67,"gold_debit_in":68,"brpt_plus":69,"pokemon_plus":70,"sentaris":71,"loan":72,"repayment":73,"debt_collection":74,"debt":75,"w_reserve":76,"w_bank":77,"w_daytona":78,"w_jimney":79,"w_hulk":80,"w_ajaib":81,"w_goldputer":82,"w_cash":83,"g_savings":84};
   var SP_GROUP = { cash: 'w_bank', savings: 'g_savings', invest: 'stocks' };
   function spKey(obj) {
-    if (!obj || obj.custom) return null;
+    if (!obj) return null;
+    if (obj.sp && SP[obj.sp] != null) return obj.sp;
+    if (obj.custom) return null;
+    if (obj.id === 'transfer') return 'transfer_out';
+    if (obj.id === 'all') return 'w_goldputer';
     if (SP[obj.id] != null) return obj.id;
     var n = String(obj.name || '');
     if (obj.initial != null || obj.excluded != null) {
@@ -183,6 +188,7 @@
       if (/personal/i.test(n)) return 'personal_expense';
       if (/cash|tunai|dompet/i.test(n)) return 'w_cash';
       if (/bank|bca|mandiri|bri|bni|jago|seabank/i.test(n)) return 'w_bank';
+      return 'w_cash';
     }
     return null;
   }
@@ -193,7 +199,13 @@
   function icon(obj, cls) {
     var k = spKey(obj);
     if (k) return '<span class="ic ' + (cls || '') + ' i3d" style="--c:' + (obj.color || color(obj.id)) + '">' + sprite(k) + '</span>'; var has = !!ICONS[key3d(obj.icon)]; return '<span class="ic ' + (cls || '') + (has ? ' i3d' : '') + '" style="--c:' + (obj.color || color(obj.id)) + '">' + img3d(obj.icon) + '</span>'; }
-  function picker(cur) { return '<div class="icon-pick">' + Object.keys(ICONS).map(function (e) { return '<button type="button" data-e="' + e + '" class="' + (key3d(cur) === e ? 'on' : '') + '">' + img3d(e) + '</button>'; }).join('') + '</div>'; }
+  function picker(cur, curSp) {
+    return '<div class="icon-pick">' + Object.keys(SP).map(function (k) { return '<button type="button" data-sp="' + k + '" class="' + (curSp === k ? 'on' : '') + '">' + sprite(k) + '</button>'; }).join('') + '</div>';
+  }
+  function bindSpPicker(root, state) {
+    root.querySelector('.icon-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.sp = b.dataset.sp; root.querySelectorAll('.icon-pick button').forEach(function (x) { x.classList.toggle('on', x === b); }); var pv = root.querySelector('.ic.preview'); if (pv) pv.innerHTML = sprite(state.sp); haptic(); });
+  }
+  function pickerOld(cur) { return '<div class="icon-pick">' + Object.keys(ICONS).map(function (e) { return '<button type="button" data-e="' + e + '" class="' + (key3d(cur) === e ? 'on' : '') + '">' + img3d(e) + '</button>'; }).join('') + '</div>'; }
   function bindPicker(root, input, preview) { root.querySelector('.icon-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; input.value = b.dataset.e; root.querySelectorAll('.icon-pick button').forEach(function (x) { x.classList.toggle('on', x === b); }); if (preview) preview(); haptic(); }); }
   function included(w) { return !w.excluded; }
   function fmtInput(el) { el.addEventListener('input', function () { var n = parseNum(el.value); el.value = n ? n.toLocaleString('id-ID') : ''; }); }
@@ -1159,17 +1171,17 @@
     openSheet('<h3>' + (isNew ? 'New wallet' : 'Edit wallet') + '</h3>' +
       icon(w, 'preview') +
       '<label class="fld">Name<input id="wName" value="' + esc(w.name) + '"></label>' +
-      '<div class="fld">Icon' + picker(w.icon) + '</div><label class="fld">Or type any emoji<input id="wIcon" value="' + esc(w.icon) + '"></label>' +
+      '<div class="fld">Icon' + picker(w.icon, spKey(w)) + '</div>' +
       '<label class="fld">Current balance<input id="wBal" inputmode="numeric" value="' + (curBal ? Math.abs(curBal).toLocaleString('id-ID') : '') + '" placeholder="0"></label>' +
       '<label class="fld">Group<select id="wGroup">' + Object.keys(GROUPS).map(function (g) { return '<option value="' + g + '"' + (groupOf(w) === g ? ' selected' : '') + '>' + GROUPS[g].icon + ' ' + GROUPS[g].name + '</option>'; }).join('') + '</select></label>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
         fmtInput(r.querySelector('#wBal'));
-        bindPicker(r, r.querySelector('#wIcon'));
+        var wst = { sp: spKey(w) }; bindSpPicker(r, wst);
         r.querySelector('#wSave').onclick = function () {
           var n = r.querySelector('#wName').value.trim(); if (!n) { toast('Give it a name'); return; }
-          var ni = r.querySelector('#wIcon').value.trim() || '👛'; if (ni !== w.icon) w.custom = true; w.name = n; w.icon = ni;
+          w.name = n; if (wst.sp) { w.sp = wst.sp; delete w.custom; }
           w.excluded = !r.querySelector('#wInc').checked;
           w.group = r.querySelector('#wGroup').value;
           if (isNew) S.wallets.push(w);
@@ -1188,16 +1200,16 @@
   }
 
   function catSheet(c, type) {
-    var isNew = !c; c = c || { id: uid(), name: '', icon: '🏷️', type: type || 'expense' };
+    var isNew = !c; c = c || { id: uid(), name: '', icon: '🏷️', type: type || 'expense', sp: type === 'income' ? 'other_in' : type === 'debt' ? 'loan' : 'other_out' };
     openSheet('<h3>' + (isNew ? 'New category' : 'Edit category') + '</h3>' +
       '<label class="fld">Name<input id="cName" value="' + esc(c.name) + '"></label>' +
-      '<div class="fld">Icon' + picker(c.icon) + '</div><label class="fld">Or type any emoji<input id="cIcon" value="' + esc(c.icon) + '"></label>' +
+      '<div class="fld">Icon' + picker(c.icon, spKey(c)) + '</div>' +
       '<label class="fld">Type<select id="cType"><option value="expense">Expense</option><option value="income">Income</option><option value="debt">Debt/Loan</option></select></label>' +
       '<label class="fld" id="cParentL">Inside category (optional)<select id="cParent"></select></label>' +
       '<label class="fld" id="cFlowL">Money goes<select id="cFlow"><option value="out">Out of my wallet (lend, repay)</option><option value="in">Into my wallet (borrow, collect)</option></select></label>' +
       '<button class="btn primary block" id="cSave">Save</button>' + (isNew || LOCKED.indexOf(c.id) !== -1 ? (LOCKED.indexOf(c.id) !== -1 ? '<p class="muted small" style="text-align:center">🔒 Built in category: you can rename it, but not delete it.</p>' : '') : '<button class="btn danger block" id="cDel">Delete category</button>'),
       function (r) {
-        bindPicker(r, r.querySelector('#cIcon'));
+        var cst = { sp: spKey(c) }; bindSpPicker(r, cst);
         r.querySelector('#cType').value = c.type;
         r.querySelector('#cType').disabled = !isNew;
         function opts() {
@@ -1210,7 +1222,7 @@
         r.querySelector('#cFlow').value = c.flow || 'out';
         r.querySelector('#cSave').onclick = function () {
           var n = r.querySelector('#cName').value.trim(); if (!n) { toast('Give it a name'); return; }
-          var nci = r.querySelector('#cIcon').value.trim() || '🏷️'; if (nci !== c.icon) c.custom = true; c.name = n; c.icon = nci; c.type = r.querySelector('#cType').value;
+          c.name = n; c.type = r.querySelector('#cType').value; if (cst.sp) { c.sp = cst.sp; delete c.custom; }
           var pv = r.querySelector('#cParent').value; if (pv) c.parent = pv; else delete c.parent;
           if (c.type === 'debt') c.flow = r.querySelector('#cFlow').value; else delete c.flow;
           if (isNew) S.cats.push(c); save(); closeSheet(); renderAll();
@@ -1347,6 +1359,7 @@
       var tip = document.createElement('div'); tip.className = 'tip'; tip.textContent = col.dataset.tip; col.appendChild(tip);
     }
     // Static 3D icons in the page markup.
+    document.querySelectorAll('[data-sp]').forEach(function (el) { if (el.closest('.icon-pick')) return; el.innerHTML = sprite(el.dataset.sp); el.classList.add('i3d'); });
     document.querySelectorAll('[data-i3d]').forEach(function (el) { el.innerHTML = img3d(el.dataset.i3d); el.classList.add('i3d'); });
     $('repDaily').addEventListener('mouseover', showTip);
     $('repDaily').addEventListener('focusin', showTip);
@@ -1427,7 +1440,7 @@
   }
 
   document.documentElement.style.setProperty('--sheet', 'url("' + SHEET + '")');
-  load(); importFromHash(); bind(); renderAll();
+  load(); useGenerated(); save(); importFromHash(); bind(); renderAll();
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
   if (S.settings.autoSync) sync(false);
