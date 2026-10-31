@@ -2542,6 +2542,51 @@
     return '<span class="pl ' + (p ? (p.d >= 0 ? 'up' : 'dn') : '') + '"><i class="live"></i>' + q + (p ? ' · ' + (p.d >= 0 ? '▲ ' : '▼ ') + Math.abs(p.pc).toFixed(1) + '%' : '') + '</span>';
   }
 
+  // ---------- Live gold price bar (PAX Gold ≈ 1 troy oz of physical gold, via CoinGecko, in IDR) ----------
+  var OZ = 31.1034768, GOLD = null;
+  try { GOLD = JSON.parse(localStorage.getItem('apex_gold') || 'null'); } catch (e) {}
+  function goldSpark(pts, w, h) {
+    if (!pts || pts.length < 2) return '';
+    var mn = Math.min.apply(null, pts), mx = Math.max.apply(null, pts), rg = mx - mn || 1;
+    var d = pts.map(function (v, i) { return (i ? 'L' : 'M') + (i / (pts.length - 1) * w).toFixed(1) + ' ' + (h - 2 - (v - mn) / rg * (h - 4)).toFixed(1); }).join(' ');
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"><defs><linearGradient id="gsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5c451" stop-opacity=".35"/><stop offset="1" stop-color="#f5c451" stop-opacity="0"/></linearGradient></defs><path d="' + d + ' L' + w + ' ' + h + ' L0 ' + h + 'Z" fill="url(#gsg)"/><path d="' + d + '" fill="none" stroke="#f5c451" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+  function renderGold(flash) {
+    var el = $('goldBar'); if (!el) return;
+    if (!GOLD) { el.innerHTML = '<span class="gb-ic">' + sprite('gold_inv') + '</span><div class="gb-main"><b>Gold</b><small>Loading live price…</small></div>'; return; }
+    var up = GOLD.chg >= 0, g = GOLD.price / OZ, pts = (GOLD.spark || []).filter(function (_, i, a) { return i % 3 === 0 || i === a.length - 1; });
+    el.innerHTML = '<span class="gb-ic">' + sprite('gold_inv') + '</span>' +
+      '<div class="gb-main"><b>Gold <i class="live"></i></b><small>per gram · live</small></div>' +
+      '<div class="gb-spark">' + goldSpark(pts, 80, 28) + '</div>' +
+      '<div class="gb-right"><b class="gb-price' + (flash ? ' fl-' + flash : '') + '">' + money(Math.round(g)) + '</b><span class="gb-chg ' + (up ? 'up' : 'dn') + '">' + (up ? '▲ ' : '▼ ') + Math.abs(GOLD.chg).toFixed(2) + '%</span></div>';
+  }
+  var goldT = 0;
+  function fetchGold() {
+    clearTimeout(goldT); goldT = setTimeout(fetchGold, 60e3);
+    if (document.hidden) return;
+    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=idr&ids=pax-gold&sparkline=true&price_change_percentage=24h')
+      .then(function (r) { return r.json(); }).then(function (j) {
+        var c = j && j[0]; if (!c || !c.current_price) return;
+        var prev = GOLD && GOLD.price;
+        GOLD = { price: c.current_price, chg: c.price_change_percentage_24h || 0, hi: c.high_24h, lo: c.low_24h, spark: (c.sparkline_in_7d && c.sparkline_in_7d.price) || [], ts: Date.now() };
+        try { localStorage.setItem('apex_gold', JSON.stringify(GOLD)); } catch (e) {}
+        PRICES.gold = GOLD.price / OZ;
+        renderGold(prev && prev !== GOLD.price ? (GOLD.price > prev ? 'up' : 'dn') : '');
+      }).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && (!GOLD || Date.now() - GOLD.ts > 50e3)) fetchGold(); });
+  function goldSheet() {
+    if (!GOLD) { fetchGold(); toast('Getting the live gold price…'); return; }
+    var g = GOLD.price / OZ, mine = S.wallets.filter(function (w) { return w.holding && w.holding.asset === 'gold'; }), grams = mine.reduce(function (a, w) { return a + (+w.holding.qty || 0); }, 0);
+    var sp = GOLD.spark || [], wk = sp.length ? (GOLD.price - sp[0]) / sp[0] * 100 : 0, age = Math.max(0, Math.round((Date.now() - GOLD.ts) / 1000));
+    openSheet('<h3>Gold price</h3>' +
+      '<div class="gs-hero"><span class="gs-ic">' + sprite('gold_inv') + '</span><div class="gs-price">' + money(Math.round(g)) + '<small>/ gram</small></div>' +
+      '<div class="gs-chg ' + (GOLD.chg >= 0 ? 'up' : 'dn') + '">' + (GOLD.chg >= 0 ? '▲ ' : '▼ ') + Math.abs(GOLD.chg).toFixed(2) + '% today · ' + (wk >= 0 ? '▲ ' : '▼ ') + Math.abs(wk).toFixed(1) + '% this week</div></div>' +
+      '<div class="gs-chart">' + goldSpark(sp, 320, 110) + '<div class="gs-ax"><span>7 days ago</span><span>Now</span></div></div>' +
+      '<div class="dd-stats" style="margin-top:4px"><div><small>Today high</small><b>' + money(Math.round((GOLD.hi || GOLD.price) / OZ), { rp: false }) + '</b></div><div><small>Today low</small><b>' + money(Math.round((GOLD.lo || GOLD.price) / OZ), { rp: false }) + '</b></div><div><small>Per 10 g</small><b>' + money(Math.round(g * 10), { rp: false }) + '</b></div></div>' +
+      (grams ? '<div class="card gs-mine"><div><small>Your gold</small><b>' + grams.toLocaleString('id-ID', { maximumFractionDigits: 3 }) + ' g</b></div><div style="text-align:right"><small>Worth now</small><b>' + money(Math.round(grams * g)) + '</b></div></div>' : '<p class="muted small" style="text-align:center">Tip: give a gold wallet a holding (Edit wallet → grams) and Apex values it with this live price.</p>') +
+      '<p class="muted small" style="text-align:center;margin-top:10px">International spot price (PAX Gold, 1 token = 1 troy oz) converted to grams. Antam and Pegadaian prices are usually a bit higher. Updated ' + (age < 60 ? age + 's' : Math.round(age / 60) + ' min') + ' ago.</p>');
+  }
   // ---------- cloud backup & sync (encrypted) ----------
   var FB = 'https://hurricane-scorecard-default-rtdb.firebaseio.com/apex/';
   function b64(buf) { var s = '', a = new Uint8Array(buf); for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
@@ -3016,7 +3061,7 @@
   }
   load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
-  hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
+  hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; registerSW(); setTimeout(onboarding, 1300);
   // iOS 26 Home Screen apps: the viewport stops above the home bar, so the bottom inset must not be added twice
   function vpCheck() {
     var sa = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
