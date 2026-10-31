@@ -159,20 +159,40 @@
   }
   function nextMonthStart(d) { var n = new Date(d.getFullYear(), d.getMonth() + 1, 1); return ymd(n); }
 
-  // Count-up animation for headline numbers.
-  function setMoney(el, n, opt) {
-    if (S.settings.hide || matchMedia('(prefers-reduced-motion: reduce)').matches) { el.innerHTML = money(n, opt); el._v = n; return; }
-    var from = typeof el._v === 'number' ? el._v : 0, to = n, t0 = performance.now(), dur = 650;
-    el._v = n;
-    if (from === to) { el.innerHTML = money(n, opt); return; }
-    cancelAnimationFrame(el._raf);
-    (function step(now) {
-      var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      el.innerHTML = money(from + (to - from) * e, opt);
-      if (k < 1) el._raf = requestAnimationFrame(step);
-    })(t0);
+  // Rolling digits: each digit spins on its own column, overshoots, then settles.
+  var RS = {}, DH = 1.15, COL = (function () { var s = ''; for (var k = 0; k < 30; k++) s += '<span>' + (k % 10) + '</span>'; return s; })();
+  function ty(k) { return 'translateY(' + (-k * DH).toFixed(3) + 'em)'; }
+  function rollTo(el, n, opt, key) {
+    key = key || el.id; opt = opt || {};
+    if (S.settings.hide) { el.innerHTML = money(n, opt); RS[key] = null; el.removeAttribute('data-sig'); return; }
+    var text = money(n, opt), sig = text.replace(/\d/g, '0');
+    var digits = text.replace(/\D/g, '').split('').map(Number);
+    var st = RS[key], cols = el.querySelectorAll('.dg-col');
+    var spinAll = !st || st.sig !== sig, from;
+    if (!cols.length || el.dataset.sig !== sig) {
+      el.innerHTML = text.split('').map(function (c) { return /\d/.test(c) ? '<span class="dg"><span class="dg-col">' + COL + '</span></span>' : '<span class="dg-s">' + (c === ' ' ? '&nbsp;' : esc(c)) + '</span>'; }).join('');
+      el.dataset.sig = sig; cols = el.querySelectorAll('.dg-col');
+      from = (!spinAll) ? st.digits : digits.map(function () { return 0; });
+      cols.forEach(function (c, i) { c.style.transition = 'none'; c.style.transform = ty(10 + from[i]); });
+      void el.offsetWidth;
+    } else from = st ? st.digits : digits.map(function () { return 0; });
+    var dir = (!st || spinAll) ? 1 : (n >= st.v ? 1 : -1);
+    RS[key] = { sig: sig, digits: digits, v: n };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { cols.forEach(function (c, i) { c.style.transition = 'none'; c.style.transform = ty(10 + digits[i]); }); return; }
+    var tok = (el._tok || 0) + 1, end = 0, moved = false; el._tok = tok;
+    cols.forEach(function (c, i) {
+      var o = from[i], d = digits[i], t;
+      if (o === d && !spinAll) { c.style.transition = 'none'; c.style.transform = ty(10 + d); c._fin = null; return; }
+      if (dir > 0) t = (d > o && !spinAll) ? 10 + d : 20 + d; else t = d < o ? 10 + d : d;
+      var delay = i * 45, dur = 850 + Math.abs(t - (10 + o)) * 28;
+      c.style.transition = 'transform ' + dur + 'ms cubic-bezier(.18,1.3,.32,1) ' + delay + 'ms';
+      c.style.transform = ty(t); c._fin = 10 + d; moved = true;
+      end = Math.max(end, delay + dur);
+    });
+    setTimeout(function () { if (el._tok !== tok) return; cols.forEach(function (c) { if (c._fin != null) { c.style.transition = 'none'; c.style.transform = ty(c._fin); c._fin = null; } }); }, end + 40);
+    if (st && !spinAll && moved) { el.classList.remove('flash-up', 'flash-down'); void el.offsetWidth; el.classList.add(dir > 0 ? 'flash-up' : 'flash-down'); }
   }
-
+  function setMoney(el, n, opt) { rollTo(el, n, opt); }
   // ---------- render ----------
   function renderAll() {
     applyTheme(); renderEye();
@@ -197,9 +217,10 @@
     $('hGroups').innerHTML = Object.keys(GROUPS).filter(function (g) { return g in gt; }).map(function (g, i) {
       var G = GROUPS[g], share = total ? Math.round(gt[g] / total * 100) : 0;
       return '<div class="sum-card" style="--i:' + i + '"><div class="sum-top"><span class="sum-ico">' + img3d(G.icon) + '</span><span><b>' + G.name + '</b><small>' + G.sub + '</small></span></div>' +
-        '<div class="sum-amt"><span class="mid-money">' + money(gt[g]) + '</span><span class="chip soft">' + share + '% of total</span></div>' +
+        '<div class="sum-amt"><span class="mid-money" data-roll="g_' + g + '" data-v="' + gt[g] + '"></span><span class="chip soft">' + share + '% of total</span></div>' +
         '<button class="sum-foot" data-group="' + g + '"><span>View wallets</span><span>→</span></button></div>';
     }).join('');
+    $('hGroups').querySelectorAll('[data-roll]').forEach(function (el) { rollTo(el, +el.dataset.v, {}, el.dataset.roll); });
     renderCashflow();
     var ws = S.wallets.slice().sort(function (a, b) { return balance(b.id) - balance(a.id); }).slice(0, 3);
     $('hWallets').innerHTML = ws.map(function (w) {
@@ -249,7 +270,7 @@
       if (t.type === 'income') months[i].tin += t.amount; else months[i].tout += t.amount;
     });
     var net = months.reduce(function (a, m) { return a + m.tin - m.tout; }, 0);
-    $('cfNet').innerHTML = money(net, { sign: true });
+    rollTo($('cfNet'), net, { sign: true });
     $('cfNet').className = 'mid-money ' + (net > 0 ? 'pos' : net < 0 ? 'neg' : '');
     $('cfSub').textContent = 'Money in minus money out, last ' + (cfMonths === 12 ? '12 months' : cfMonths + ' months');
     document.querySelectorAll('#cfSeg button').forEach(function (b) { b.classList.toggle('on', +b.dataset.n === cfMonths); });
@@ -285,7 +306,7 @@
     var mKey = ym(cur), open = balance(w, mKey + '-01'), end = balance(w, nextMonthStart(cur));
     $('pOpen').innerHTML = money(open);
     $('pEnd').innerHTML = money(end, { sign: true });
-    $('pNet').innerHTML = money(end - open, { sign: true });
+    rollTo($('pNet'), end - open, { sign: true });
 
     var mt = txIn(mKey, w);
     if (!mt.length) { $('txList').innerHTML = '<div class="card empty"><span class="big-e">' + img3d('🧾') + '</span>No transactions in ' + MONTHS[cur.getMonth()] + '.</div>'; return; }
@@ -317,7 +338,7 @@
     var mKey = ym(cur), mt = txIn(mKey, 'all').filter(function (t) { return t.type !== 'transfer'; });
     var io = inOut(mt, 'all'), net = io.tin - io.tout;
     $('repMonth').textContent = MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
-    $('repNet').innerHTML = money(net, { sign: true });
+    rollTo($('repNet'), net, { sign: true });
     $('repNet').className = 'mid-money ' + (net >= 0 ? 'pos' : 'neg');
     var now = new Date(), daysIn = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
     var elapsed = ym(now) === mKey ? now.getDate() : daysIn;
@@ -413,14 +434,92 @@
     $('fab').classList.toggle('gone', id === 'v-account' || id === 'v-report');
     if (id === 'v-budget' || id === 'v-report') { growBars($(id)); }
     if (id === 'v-home') renderHome();
+    $('topTitle').textContent = TITLES[id] || ''; onScroll();
+  }
+  var TITLES = { 'v-home': 'Overview', 'v-tx': 'Transactions', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'Account' };
+  function onScroll() { $('topbar').classList.toggle('show', window.scrollY > 70); }
+
+  // ---------- extra motion ----------
+  // Coin burst (used when income is added).
+  function burst(x, y) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || !document.body.animate) return;
+    for (var k = 0; k < 14; k++) (function (k) {
+      var im = document.createElement('img'); im.src = 'img/3d/coin.webp'; im.className = 'coin-fx';
+      im.style.left = (x - 17) + 'px'; im.style.top = (y - 17) + 'px'; document.body.appendChild(im);
+      var a = -Math.PI / 2 + (Math.random() - .5) * 2.2, v = 140 + Math.random() * 160, dx = Math.cos(a) * v, dy = Math.sin(a) * v;
+      var rot = (Math.random() - .5) * 720, sc = .6 + Math.random() * .6;
+      im.animate([
+        { transform: 'translate(0,0) scale(.2) rotate(0)', opacity: 0 },
+        { transform: 'translate(' + dx * .6 + 'px,' + dy * .6 + 'px) scale(' + sc + ') rotate(' + rot * .5 + 'deg)', opacity: 1, offset: .35 },
+        { transform: 'translate(' + dx + 'px,' + (dy + 260) + 'px) scale(' + sc * .8 + ') rotate(' + rot + 'deg)', opacity: 0 }
+      ], { duration: 1100 + Math.random() * 400, easing: 'cubic-bezier(.2,.7,.4,1)', delay: k * 18 }).onfinish = function () { im.remove(); };
+    })(k);
+  }
+  // 3D tilt + glare on the balance card.
+  function bindTilt() {
+    var card = document.querySelector('.bal-card'); if (!card) return;
+    var glare = document.createElement('div'); glare.className = 'bal-glare'; card.appendChild(glare);
+    function move(cx, cy) {
+      var r = card.getBoundingClientRect(), px = (cx - r.left) / r.width, py = (cy - r.top) / r.height;
+      if (px < 0 || px > 1 || py < 0 || py > 1) return;
+      card.classList.add('tilting');
+      card.style.transform = 'perspective(900px) rotateX(' + ((.5 - py) * 10).toFixed(2) + 'deg) rotateY(' + ((px - .5) * 12).toFixed(2) + 'deg) scale(1.015)';
+      card.style.setProperty('--gx', (px * 100) + '%'); card.style.setProperty('--gy', (py * 100) + '%');
+    }
+    function reset() { card.classList.remove('tilting'); card.style.transform = ''; }
+    card.addEventListener('touchmove', function (e) { move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    card.addEventListener('touchstart', function (e) { move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    card.addEventListener('touchend', reset); card.addEventListener('touchcancel', reset);
+    card.addEventListener('mousemove', function (e) { move(e.clientX, e.clientY); });
+    card.addEventListener('mouseleave', reset);
+  }
+  // Light on glass follows the finger.
+  function bindSpecular() {
+    function upd(e) {
+      var p = e.touches ? e.touches[0] : e; if (!p) return;
+      var el = document.elementFromPoint(p.clientX, p.clientY); el = el && el.closest('.bottom-nav,.round-btn,.wallet-pill,.sheet,.fab');
+      if (!el) return; var r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', ((p.clientX - r.left) / r.width * 100) + '%'); el.style.setProperty('--my', ((p.clientY - r.top) / r.height * 100) + '%');
+    }
+    document.addEventListener('touchstart', upd, { passive: true }); document.addEventListener('touchmove', upd, { passive: true }); document.addEventListener('mousemove', upd);
+  }
+  // Pull down on Home to sync BCA.
+  function bindPull() {
+    var y0 = null, dy = 0, el, ptr = $('ptr'), txt = $('ptrTxt');
+    document.addEventListener('touchstart', function (e) {
+      if (sheetOpen || view !== 'v-home' || window.scrollY > 2 || e.target.closest('.bal-card,.sum-row,.cf-plot')) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0; el = $('v-home');
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (y0 == null) return; dy = e.touches[0].clientY - y0; if (dy <= 0) return;
+      var pull = Math.min(120, dy * .45);
+      el.style.transition = 'none'; el.style.translate = '0 ' + pull + 'px';
+      ptr.style.transition = 'none'; ptr.style.opacity = Math.min(1, pull / 50);
+      ptr.style.transform = 'translate(-50%,' + (pull - 60) + 'px)';
+      ptr.querySelector('.ptr-ic').style.transform = 'rotate(' + pull * 4 + 'deg)';
+      var ready = pull > 72; ptr.classList.toggle('ready', ready); txt.textContent = ready ? 'Release to sync' : 'Pull to sync';
+      if (ready && !ptr._h) { haptic(); ptr._h = 1; } if (!ready) ptr._h = 0;
+    }, { passive: true });
+    document.addEventListener('touchend', function () {
+      if (y0 == null) return; var pull = Math.min(120, dy * .45); y0 = null;
+      el.style.transition = 'translate .55s var(--spring)'; el.style.translate = '0 0';
+      ptr.style.transition = 'transform .55s var(--spring),opacity .4s';
+      if (pull > 72) {
+        ptr.classList.add('busy'); txt.textContent = 'Syncing…'; ptr.style.transform = 'translate(-50%,0)';
+        Promise.resolve(sync(true)).then(function () { ptr.classList.remove('busy', 'ready'); ptr.style.transform = 'translate(-50%,-140%)'; ptr.style.opacity = 0; });
+      } else { ptr.style.transform = 'translate(-50%,-140%)'; ptr.style.opacity = 0; }
+    });
   }
   var repFrom = 'v-home';
   function moveInd() {
     var on = document.querySelector('.bottom-nav button.on'), ind = $('navInd'), nav = $('nav');
     if (!on) return;
     var r = on.getBoundingClientRect(), nr = nav.getBoundingClientRect();
+    var x = r.left - nr.left, dist = Math.abs(x - (ind._x == null ? x : ind._x));
+    ind._x = x;
     ind.style.width = r.width + 'px';
-    ind.style.transform = 'translateX(' + (r.left - nr.left) + 'px)';
+    ind.style.transform = 'translateX(' + x + 'px)';
+    if (dist > 4) { ind.style.scale = (1 + Math.min(.35, dist / 500)) + ' .82'; clearTimeout(ind._t); ind._t = setTimeout(function () { ind.style.scale = '1 1'; }, 190); }
   }
 
   // ---------- sheet (bottom modal) ----------
@@ -537,6 +636,7 @@
           if (rem && rem.checked && t.merchant && t.cat && t.cat !== oldCat) learnRule(t.merchant, t.cat);
           if (isNew) S.tx.push(t);
           haptic(); save(); closeSheet(); renderAll(); toast(isNew ? 'Added ✓' : 'Saved ✓');
+          if (isNew && t.type === 'income') { var fr = $('fab').getBoundingClientRect(); burst(fr.left + fr.width / 2, fr.top); }
         };
         var del = root.querySelector('#fDel');
         if (del) del.onclick = function () {
@@ -860,6 +960,7 @@
   }
 
   load(); importFromHash(); bind(); renderAll();
+  bindTilt(); bindSpecular(); bindPull(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
   if (S.settings.autoSync) sync(false);
 })();
