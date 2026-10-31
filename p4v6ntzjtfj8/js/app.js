@@ -347,7 +347,7 @@
   function renderHome() {
     var total = balance('all');
     var liquid = S.wallets.filter(function (w) { return included(w) && groupOf(w) !== 'invest'; }).reduce(function (a, w) { return a + balance(w.id); }, 0);
-    var recv = dSum('in', 'remain'), pay = dSum('out', 'remain'), net = total + recv - pay;
+    var recv = dSum('in', 'remain'), pay = dSum('out', 'remain'), net = total + recvNet() - pay;
     setMoney($('hNet'), net);
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
@@ -479,7 +479,7 @@
       '<circle class="sp-dot" cx="' + end[0].toFixed(1) + '" cy="' + end[1].toFixed(1) + '" r="3.5" fill="' + col + '"/>' +
       '<g class="sp-scrub" hidden><line y1="0" y2="' + H + '" stroke="var(--ink2)" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"/><circle r="5" fill="' + col + '" stroke="var(--bg)" stroke-width="2" vector-effect="non-scaling-stroke"/></g>';
     var dates = []; for (var k2 = n; k2 >= 0; k2 -= step) dates.push(new Date(now.getFullYear(), now.getMonth(), now.getDate() - k2));
-    SPK = { pts: pts, xy: xy, dates: dates, W: W, offset: (balance('all') + dSum('in', 'remain') - dSum('out', 'remain')) - last };
+    SPK = { pts: pts, xy: xy, dates: dates, W: W, offset: (balance('all') + recvNet() - dSum('out', 'remain')) - last };
     var chip = $('hChip'), lbl = { 7: '1W', 30: '1M', 90: '3M', 365: '1Y' }[n];
     chip.hidden = false; chip.className = 'chip' + (up ? '' : ' dn');
     var pc = first ? Math.abs(diff / first * 100) : 0;
@@ -667,6 +667,7 @@
     return paid > 0 ? 'partial' : 'unpaid';
   }
   function dOpen(d) { var s2 = dStatus(d); return s2 !== 'paid' && s2 !== 'cancelled' && s2 !== 'writtenoff'; }
+  function recvNet() { return S.debts.filter(function (d) { return d.dir === 'in' && !d.closed && !d.prebooked && dOpen(d); }).reduce(function (a, d) { return a + dRemain(d); }, 0); }
   function dSum(dir, what) {
     return S.debts.filter(function (d) { return d.dir === dir && !d.closed; }).reduce(function (a, d) {
       return a + (what === 'remain' ? (dOpen(d) ? dRemain(d) : 0) : what === 'paid' ? dPaid(d) : what === 'over' ? (dStatus(d) === 'overdue' ? dRemain(d) : 0) : d.amount);
@@ -777,6 +778,7 @@
     if (!d) return;
     var rem = dRemain(d), inn = d.dir === 'in';
     openSheet('<h3>' + (inn ? 'Record payment' : 'Record repayment') + '</h3>' +
+      (d.prebooked ? '<p class="muted small" style="text-align:center;margin:-6px 0 10px">This money is already counted in ' + esc(wallet(d.wallet).name) + '. Recording it only lowers what ' + esc(d.person) + ' still owes.</p>' : '') +
       '<div class="d-top" style="margin-bottom:10px">' + avatar(d.person) + '<div class="grow"><div class="d-name">' + esc(d.person) + '</div><div class="d-title">Remaining ' + money(rem) + '</div></div></div>' +
       '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="pAmt" inputmode="numeric" placeholder="0"></div>' +
       '<div class="quick-amts"><button type="button" data-a="' + rem + '">Full ' + money(rem, { rp: false }) + '</button><button type="button" data-a="' + Math.round(rem / 2) + '">50%</button><button type="button" data-a="' + Math.round(rem / 4) + '">25%</button></div>' +
@@ -791,7 +793,7 @@
           var a = parseNum(amt.value); if (!a) { toast('Enter the amount'); return; }
           if (a > rem && !confirm('This is more than the remaining ' + 'Rp ' + fmt(rem) + '. Save anyway?')) return;
           var date = r.querySelector('#pDate').value || today(), w = r.querySelector('#pWallet').value, note = r.querySelector('#pNote').value.trim();
-          var t = addTx({ type: d.earned ? 'income' : 'debt', cat: d.earned ? (d.incomeCat || 'other_in') : inn ? 'debt_collection' : 'repayment', amount: a, wallet: w, date: date, merchant: d.person, note: note || d.title, debtId: d.id });
+          var t = d.prebooked ? { id: null } : addTx({ type: d.earned ? 'income' : 'debt', cat: d.earned ? (d.incomeCat || 'other_in') : inn ? 'debt_collection' : 'repayment', amount: a, wallet: w, date: date, merchant: d.person, note: note || d.title, debtId: d.id });
           d.payments = d.payments || []; d.payments.push({ id: uid(), amount: a, date: date, wallet: w, note: note, txId: t.id });
           var done = dPaid(d) >= d.amount;
           haptic(); save(); closeSheet(); renderAll();
@@ -801,6 +803,7 @@
       });
   }
 
+  function unbook(d, why) { var r = dRemain(d); if (d.prebooked && r > 0) addTx({ type: 'expense', cat: 'balance_adj', amount: r, wallet: d.wallet, date: today(), merchant: d.person, note: why + ': ' + (d.title || ''), debtId: d.id }); }
   function debtDetail(d) {
     if (!d) return;
     var st = dStatus(d), p = dPaid(d), pc = d.amount ? Math.min(100, Math.round(p / d.amount * 100)) : 0, inn = d.dir === 'in';
@@ -828,12 +831,12 @@
         if ((b = r.querySelector('#ddPay'))) b.onclick = function () { paySheet(d); };
         if ((b = r.querySelector('#ddWa'))) b.onclick = function () { haptic(); waRemind(d); };
         r.querySelector('#ddEdit').onclick = function () { debtSheet(d); };
-        if ((b = r.querySelector('#ddCancel'))) b.onclick = function () { if (!confirm('Mark as cancelled? It will no longer count as outstanding.')) return; d.closed = 'cancelled'; save(); closeSheet(); renderAll(); toast('Cancelled'); };
-        if ((b = r.querySelector('#ddWrite'))) b.onclick = function () { if (!confirm('Write off the remaining Rp ' + fmt(dRemain(d)) + '? It will no longer count in your net worth.')) return; d.closed = 'writtenoff'; save(); closeSheet(); renderAll(); toast('Written off'); };
+        if ((b = r.querySelector('#ddCancel'))) b.onclick = function () { if (!confirm('Mark as cancelled? It will no longer count as outstanding.')) return; unbook(d, 'Cancelled'); d.closed = 'cancelled'; save(); closeSheet(); renderAll(); toast('Cancelled'); };
+        if ((b = r.querySelector('#ddWrite'))) b.onclick = function () { if (!confirm('Write off the remaining Rp ' + fmt(dRemain(d)) + '? It will no longer count in your net worth.')) return; unbook(d, 'Not received'); d.closed = 'writtenoff'; save(); closeSheet(); renderAll(); toast('Written off'); };
         if ((b = r.querySelector('#ddReopen'))) b.onclick = function () { delete d.closed; save(); closeSheet(); renderAll(); toast('Reopened'); };
         r.querySelector('#ddDel').onclick = function () {
           if (!confirm('Delete this record and its ' + (d.payments || []).length + ' payment(s)? Linked wallet transactions are removed too.')) return;
-          var ids = (d.payments || []).map(function (x) { return x.txId; }).concat(d.startTx ? [d.startTx] : []);
+          var ids = (d.payments || []).map(function (x) { return x.txId; }).concat(d.startTx ? [d.startTx] : []).concat(d.bookTx ? [d.bookTx] : []);
           S.tx = S.tx.filter(function (t) { return ids.indexOf(t.id) === -1; });
           S.debts = S.debts.filter(function (x) { return x.id !== d.id; });
           save(); closeSheet(); renderAll(); toast('Deleted');
@@ -1028,7 +1031,7 @@
       '<label class="fld" id="fWalletL"><span>Wallet</span><select id="fWallet">' + wOpts(t.wallet) + '</select></label>' +
       '<label class="fld" id="fToL">To wallet<select id="fTo">' + wOpts(t.toWallet || (S.wallets[1] && S.wallets[1].id)) + '</select></label>' +
       '<div class="two"><label class="fld">Date<input id="fDate" type="date" value="' + esc(t.date) + '"></label><label class="fld">Time<input id="fTime" type="time" value="' + esc(t.time || '') + '"></label></div>' +
-      (isNew ? '<div class="unpaid" id="fUnpaidBox"><label class="set-row plain"><span class="grow"><b>Not received yet</b><span class="sub">Count the full amount now and remind me to collect it</span></span><input type="checkbox" class="switch" id="fUnpaid"></label>' +
+      (isNew ? '<div class="unpaid" id="fUnpaidBox"><label class="set-row plain"><span class="grow"><b>Not received yet</b><span class="sub">Add the full amount to the wallet now and remind me to collect it</span></span><input type="checkbox" class="switch" id="fUnpaid"></label>' +
         '<div id="fUnpaidF" hidden><div class="two"><label class="fld">Who pays you<input id="fPayer" placeholder="e.g. Dad"></label><label class="fld">Remind me on<input id="fDue" type="date"></label></div>' +
         '<label class="fld">Already received (optional)<input id="fPaidNow" inputmode="numeric" placeholder="0"></label></div></div>' : '') +
       '<label class="fld">Merchant / person<input id="fMerch" value="' + esc(t.merchant || '') + '"></label>' +
@@ -1079,11 +1082,12 @@
             var payer = root.querySelector('#fPayer').value.trim(); if (!payer) { toast('Who will pay you?'); root.querySelector('#fPayer').focus(); return; }
             var dd = { id: uid(), dir: 'in', earned: true, incomeCat: st.cat, person: payer, title: cat(st.cat).name + (root.querySelector('#fNote').value.trim() ? ' · ' + root.querySelector('#fNote').value.trim() : ''), amount: a,
               created: root.querySelector('#fDate').value || today(), due: root.querySelector('#fDue').value, wallet: w, tags: 'income', notes: '', payments: [], ts: Date.now() };
-            S.debts.push(dd);
+            dd.prebooked = true; S.debts.push(dd);
+            var bt = addTx({ type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id }); dd.bookTx = bt.id;
             var pn = parseNum(root.querySelector('#fPaidNow').value);
-            if (pn) { var pt = addTx({ type: 'income', cat: st.cat, amount: pn, wallet: w, date: dd.created, merchant: payer, note: dd.title, debtId: dd.id }); dd.payments.push({ id: uid(), amount: pn, date: dd.created, wallet: w, note: 'First payment', txId: pt.id }); }
+            if (pn) dd.payments.push({ id: uid(), amount: Math.min(pn, a), date: dd.created, wallet: w, note: 'Already received', txId: null });
             haptic(); save(); closeSheet(); renderAll();
-            toast(payer + ' owes you ' + money(a - pn, { rp: true }) + ' · reminder set');
+            toast(money(a, { rp: true }) + ' added to ' + wallet(w).name + ' · ' + payer + ' still owes ' + money(a - Math.min(pn, a), { rp: true }));
             return;
           }
           var oldCat = t.cat;
