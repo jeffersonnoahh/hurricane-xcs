@@ -352,7 +352,7 @@
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
     $('hGreet').textContent = hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night';
-    renderUpcoming();
+    renderUpcoming(); renderRealBtn();
     var mStart = ym(new Date()) + '-01', open0 = balance('all', mStart), chg = total - open0;
     var chip = $('hChip');
     if (open0 > 0 && chg !== 0) { var pc = chg / open0 * 100; chip.hidden = false; chip.className = 'chip' + (chg < 0 ? ' dn' : ''); chip.textContent = (chg > 0 ? '▲ ' : '▼ ') + Math.abs(pc).toFixed(Math.abs(pc) < 10 ? 1 : 0) + '% this month'; }
@@ -803,6 +803,35 @@
       });
   }
 
+  // Money booked into a wallet that has not actually arrived yet ("Not received yet" income).
+  function unpaidIn(walletId) { return S.debts.filter(function (d) { return d.prebooked && !d.closed && dOpen(d) && (walletId == null || d.wallet === walletId); }).reduce(function (a, d) { return a + dRemain(d); }, 0); }
+  function realBalance(walletId) { return balance(walletId) - unpaidIn(walletId === 'all' ? null : walletId); }
+  function renderRealBtn() {
+    var el = $('realBtn'); if (!el) return;
+    var u = unpaidIn(null), owing = S.debts.filter(function (d) { return d.dir === 'in' && dOpen(d); }).length;
+    el.hidden = !u && !owing;
+    $('realAmt').innerHTML = money(realBalance('all'), { rp: true });
+  }
+  function realSheet() {
+    var tot = balance('all'), unp = unpaidIn(null), real = tot - unp;
+    var rows = S.wallets.filter(function (w) { return !w.excluded && (balance(w.id) || unpaidIn(w.id)); }).map(function (w) {
+      var b = balance(w.id), u = unpaidIn(w.id);
+      return '<div class="rw">' + icon(w, 'sm') + '<div class="grow"><b>' + esc(w.name) + '</b>' + (u ? '<span class="sub">' + money(b, { rp: false }) + ' booked · ' + money(u, { rp: false }) + ' not received</span>' : '') + '</div><span class="amt">' + money(b - u) + '</span></div>';
+    }).join('');
+    var owers = S.debts.filter(function (d) { return d.dir === 'in' && dOpen(d); }).sort(function (a, b) { return dRemain(b) - dRemain(a); });
+    var oweTot = owers.reduce(function (a, d) { return a + dRemain(d); }, 0);
+    openSheet('<h3>Real money</h3>' +
+      '<div class="card real-hero"><div class="eyebrow">Actually in your accounts</div><div class="mid-money xl">' + money(real) + '</div>' +
+      '<div class="real-bar"><i class="r" style="--w:' + (tot > 0 ? Math.max(0, real / tot * 100) : 100).toFixed(1) + '%"></i><i class="u" style="--w:' + (tot > 0 ? Math.min(100, unp / tot * 100) : 0).toFixed(1) + '%"></i></div>' +
+      '<div class="real-legend"><span><i class="r"></i>Received ' + money(real, { rp: false }) + '</span><span><i class="u"></i>Not received yet ' + money(unp, { rp: false }) + '</span></div></div>' +
+      '<div class="sheet-sec">By wallet</div><div class="card list-card">' + (rows || '<p class="muted small pad" style="padding-bottom:12px">All wallets are at 0.</p>') + '</div>' +
+      '<div class="sheet-sec">Who owes you · ' + money(oweTot, { rp: true }) + '</div><div class="card list-card">' +
+      (owers.length ? owers.map(function (d) {
+        var st = dStatus(d), pc = d.amount ? Math.round(dPaid(d) / d.amount * 100) : 0;
+        return '<button class="w-row" data-owe="' + esc(d.id) + '">' + avatar(d.person) + '<span class="grow">' + esc(d.person) + '<span class="sub">' + esc(d.title || 'Owes you') + (d.prebooked ? ' · in ' + esc(wallet(d.wallet).name) : '') + ' · ' + (st === 'overdue' ? '<em class="neg">' + dueText(d) + '</em>' : dueText(d)) + '</span><span class="bill-bar"><i style="--w:' + pc + '%"></i></span></span><span class="amt pos">' + money(dRemain(d), { rp: false }) + '</span></button>';
+      }).join('') : '<p class="muted small pad" style="padding-bottom:12px">Nobody owes you money right now.</p>') + '</div>',
+      function (r) { r.addEventListener('click', function (e) { var b = e.target.closest('[data-owe]'); if (b) debtDetail(debtById(b.dataset.owe)); }); });
+  }
   function unbook(d, why) { var r = dRemain(d); if (d.prebooked && r > 0) addTx({ type: 'expense', cat: 'balance_adj', amount: r, wallet: d.wallet, date: today(), merchant: d.person, note: why + ': ' + (d.title || ''), debtId: d.id }); }
   function debtDetail(d) {
     if (!d) return;
@@ -1377,6 +1406,7 @@
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
+    $('realBtn').onclick = function () { haptic(); realSheet(); };
     $('hRange').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; sparkDays = +b.dataset.r; haptic(); renderSpark(); };
     $('allocLegend').onclick = function (e) { if (e.target.closest('[data-group]')) walletPicker(); };
     $('donutGo').onclick = function () { haptic(); cur = new Date(); cur.setDate(1); renderAll(); show('v-report'); };
