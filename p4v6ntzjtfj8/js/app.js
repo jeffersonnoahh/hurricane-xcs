@@ -2505,6 +2505,22 @@
   load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
+  // Native feel: block pinch / double tap zoom (iOS ignores user-scalable=no)
+  ['gesturestart','gesturechange','gestureend'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+  document.addEventListener('touchmove', function (e) { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  // One time hint: Add to Home Screen removes the Safari bars
+  (function () {
+    var standalone = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var seen; try { seen = localStorage.getItem('apex_a2hs'); } catch (e) {}
+    if (standalone || !ios || seen) return;
+    setTimeout(function () {
+      var d = document.createElement('div'); d.className = 'a2hs';
+      d.innerHTML = '<span style="font-size:22px">\u{1F4F2}</span><span>For the full app feel: tap <b>Share</b> then <b>Add to Home Screen</b>.</span><button class="a2x" aria-label="Close">✕</button>';
+      document.body.appendChild(d);
+      d.querySelector('.a2x').onclick = function () { try { localStorage.setItem('apex_a2hs', '1'); } catch (e) {} d.remove(); };
+    }, 2500);
+  })();
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
   if (S.settings.pinHash) { delete S.settings.pinHash; save(); }
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
