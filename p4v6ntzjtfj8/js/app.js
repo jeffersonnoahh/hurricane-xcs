@@ -1154,7 +1154,7 @@
     el.innerHTML = '<div class="wdc-glow"></div><div class="wdc-top"><div><div class="eyebrow">Invested this year</div><div class="mid-money">' + money(st.year) + '</div>' +
       '<div class="small wdc-sub">This month ' + money(st.month, { rp: false }) + ' · All time ' + money(st.all, { rp: false }) + '</div></div><span class="wdc-globe"><canvas class="earth" data-s="56"></canvas></span></div>' +
       (goal ? '<div class="wdc-bar"><i style="width:' + pc.toFixed(1) + '%"></i></div><div class="small wdc-sub">' + Math.round(pc) + '% of your ' + money(goal, { rp: false }) + ' goal</div>' : '<div class="small wdc-sub" style="margin-top:8px">Tap to step into the world ✨</div>');
-    mountEarth(el.querySelector('.earth'), 0.01, true);
+    mountEarth(el.querySelector('.earth'), 0.01, false);
   }
   function countUp(el, to) {
     if (S.settings.hide) { el.innerHTML = money(to); return; }
@@ -1194,7 +1194,7 @@
         '<button class="wd-pick" id="wPick">Pick categories · ' + cats.length + ' selected</button>' +
         '</div>';
       if (first !== false) countUp(ov.querySelector('#wTotal'), tot);
-      mountEarth(ov.querySelector('.wd-earth'), 0.012, true);
+      mountEarth(ov.querySelector('.wd-earth'), 0.012, false);
       ov.querySelector('#wClose').onclick = worldClose;
       ov.querySelector('#wEdit').onclick = ov.querySelector('#wPick').onclick = function () { worldPicker(function () { paint(); renderWorldCard(); }); };
       ov.querySelector('#wGoal').onclick = function () { worldGoalSheet(function () { paint(false); renderWorldCard(); }); };
