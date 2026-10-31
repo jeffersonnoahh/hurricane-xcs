@@ -1468,7 +1468,7 @@
         var ub = root.querySelector('#fUnpaid');
         if (ub) { fmtInput(root.querySelector('#fPaidNow')); ub.onchange = function () { root.querySelector('#fUnpaidF').hidden = !ub.checked; haptic(); if (ub.checked) setTimeout(function () { root.querySelector('#fPayer').focus(); }, 200); }; }
         root.querySelector('#fScan').onclick = function () { haptic(); scanInto(root); };
-        root.querySelector('#fSplit').onclick = function () { var a = parseNum(amt.value); if (!a) { toast('Enter the bill amount first'); amt.focus(); return; } splitSheet(a, root.querySelector('#fMerch').value.trim(), root.querySelector('#fDate').value, root.querySelector('#fWallet').value); };
+        root.querySelector('#fSplit').onclick = function () { haptic(); splitSheet({ total: parseNum(amt.value), merchant: root.querySelector('#fMerch').value.trim(), date: root.querySelector('#fDate').value, wallet: root.querySelector('#fWallet').value, cat: st.type === 'expense' ? st.cat : '' }); };
         var ind = root.querySelector('#fType .seg-ind');
         function paint() {
           var idx = ['expense', 'income', 'debt', 'transfer'].indexOf(st.type);
@@ -2150,7 +2150,7 @@
   function bindFeatures() {
     $('goalAdd').onclick = function () { goalSheet(); };
     $('hGoals').addEventListener('click', function (e) { if (e.target.closest('#goalAdd2')) { goalSheet(); return; } var g = e.target.closest('[data-goal]'); if (g) goalDetail(S.goals.filter(function (x) { return x.id === g.dataset.goal; })[0]); });
-    $('billManage').onclick = recList; $('recBtn').onclick = recList;
+    $('billManage').onclick = recList; $('recBtn').onclick = recList; $('splitBtn').onclick = splitHub;
     $('hBills').addEventListener('click', function (e) { if (e.target.closest('#billEmpty')) { recSheet(); return; } var b = e.target.closest('[data-rec]'); if (b) recSheet(S.recurring.filter(function (x) { return x.id === b.dataset.rec; })[0]); });
     $('txQ').addEventListener('input', function () { if (!this.value) renderTx(); renderTxExtras(); });
     $('txMode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; txMode = b.dataset.m; haptic(); renderTxExtras(); };
@@ -2309,23 +2309,183 @@
     inp.click();
   }
 
-  // ---------- split bill + WhatsApp ----------
-  function splitSheet(total, merchant, date, walletId) {
-    openSheet('<h3>Split bill</h3><div class="muted small" style="text-align:center">' + money(total) + (merchant ? ' · ' + esc(merchant) : '') + '</div>' +
-      '<label class="fld">Friends (comma separated)<input id="spNames" placeholder="Bren, Louis, Hugo"></label>' +
-      '<label class="set-row plain"><span class="grow">Include me in the split</span><input type="checkbox" class="switch" id="spMe" checked></label>' +
-      '<div class="card" id="spPrev"></div><button class="btn primary block" id="spGo">Create money owed</button>',
+  // ---------- split bill ----------
+  // opts: {total, merchant, date, wallet, cat}
+  function splitPeopleRecent() {
+    var seen = {}, out = [];
+    S.debts.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); }).forEach(function (d) { var n = String(d.person || '').trim(), k = n.toLowerCase(); if (n && !seen[k]) { seen[k] = 1; out.push(n); } });
+    return out.slice(0, 10);
+  }
+  function splitSheet(opts) {
+    opts = opts || {};
+    var st = { people: [], me: true, payer: 'me', mode: 'equal', custom: {} };
+    var expCats = S.cats.filter(function (c) { return c.type === 'expense'; });
+    var catSel = opts.cat && cat(opts.cat).type === 'expense' ? opts.cat : (expCats[0] || {}).id;
+    openSheet('<h3>Split bill</h3>' +
+      '<div class="amt-wrap"><span>Rp</span><input class="amt-input" id="spAmt" inputmode="numeric" placeholder="0" value="' + (opts.total ? opts.total.toLocaleString('id-ID') : '') + '"></div>' +
+      '<label class="fld">What for<input id="spTitle" placeholder="e.g. Dinner at Sushi Tei" value="' + esc(opts.merchant || '') + '"></label>' +
+      '<div class="fld">Split with<div class="sp-people" id="spPeople"></div>' +
+        '<div class="sp-add"><input id="spName" placeholder="Add a name" autocomplete="off" enterkeyhint="done"><button type="button" class="btn" id="spAddBtn">Add</button></div>' +
+        '<div class="sp-recent" id="spRecent"></div></div>' +
+      '<div class="fld">Who paid the bill?<div class="sp-payer" id="spPayer"></div></div>' +
+      '<div class="seg d-seg" id="spMode" style="--x:0%"><button data-m="equal" class="on">Split equally</button><button data-m="custom">Custom amounts</button><i class="seg-ind"></i></div>' +
+      '<div class="card sp-break" id="spBreak"></div>' +
+      '<div id="spMeF"><div class="two"><label class="fld">Category<select id="spCat">' + expCats.map(function (c) { return '<option value="' + esc(c.id) + '"' + (c.id === catSel ? ' selected' : '') + '>' + esc(c.icon + ' ' + c.name) + '</option>'; }).join('') + '</select></label>' +
+        '<label class="fld">Paid from<select id="spWallet">' + walletOpts(opts.wallet || S.settings.bcaWallet || (S.wallets[0] || {}).id) + '</select></label></div></div>' +
+      '<label class="fld">Date<input id="spDate" type="date" value="' + esc(opts.date || today()) + '"></label>' +
+      '<p class="muted small" id="spHint"></p>' +
+      '<button class="btn primary block" id="spGo">Save split</button>',
       function (r) {
-        function names() { return r.querySelector('#spNames').value.split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
-        function share() { var n = names().length + (r.querySelector('#spMe').checked ? 1 : 0); return n ? Math.round(total / n) : 0; }
-        function prev() { var ns = names(), s = share(); r.querySelector('#spPrev').innerHTML = ns.length ? ns.map(function (n) { return '<div class="sp-row">' + avatar(n) + '<span class="grow">' + esc(n) + '</span><b>' + money(s, { rp: false }) + '</b></div>'; }).join('') : '<div class="muted small">Type names to see each share.</div>'; }
-        r.querySelector('#spNames').addEventListener('input', prev); r.querySelector('#spMe').onchange = prev; prev();
-        setTimeout(function () { r.querySelector('#spNames').focus(); }, 380);
-        r.querySelector('#spGo').onclick = function () {
-          var ns = names(), s = share(); if (!ns.length) { toast('Add at least one friend'); return; }
-          ns.forEach(function (n) { S.debts.push({ id: uid(), dir: 'in', person: n, title: 'Split: ' + (merchant || 'bill'), amount: s, created: date || today(), due: '', wallet: walletId, tags: 'split', notes: '', payments: [], ts: Date.now() }); });
-          save(); closeSheet(); renderAll(); toast(ns.length + ' friend' + (ns.length > 1 ? 's' : '') + ' now owe you ' + money(s, { rp: true }) + ' each');
+        var amtEl = r.querySelector('#spAmt'); fmtInput(amtEl);
+        function total() { return parseNum(amtEl.value) || 0; }
+        function members() { return (st.me ? ['me'] : []).concat(st.people); }
+        function label(p) { return p === 'me' ? 'Me' : p; }
+        function shares() {
+          var ms = members(), T = total(), out = {};
+          if (st.mode === 'custom') { ms.forEach(function (p) { out[p] = st.custom[p] || 0; }); return out; }
+          if (!ms.length) return out;
+          var each = Math.floor(T / ms.length), rem = T - each * ms.length;
+          ms.forEach(function (p) { out[p] = each; });
+          var who = ms.indexOf(st.payer) !== -1 ? st.payer : ms[0]; out[who] += rem;
+          return out;
+        }
+        function addPerson(n) {
+          n = String(n || '').trim(); if (!n) return;
+          if (/^me$/i.test(n)) { st.me = true; paint(); return; }
+          if (st.people.some(function (p) { return p.toLowerCase() === n.toLowerCase(); })) { toast(n + ' is already in'); return; }
+          st.people.push(n); haptic(); paint();
+        }
+        function paint() {
+          if (st.payer !== 'me' && st.people.indexOf(st.payer) === -1) st.payer = 'me';
+          r.querySelector('#spPeople').innerHTML =
+            '<button type="button" class="sp-chip me' + (st.me ? ' on' : '') + '" data-me="1">' + avatar('Me') + '<span>Me</span><i>' + (st.me ? '✓' : '+') + '</i></button>' +
+            st.people.map(function (p, i) { return '<button type="button" class="sp-chip on" data-rm="' + i + '">' + avatar(p) + '<span>' + esc(p) + '</span><i>✕</i></button>'; }).join('');
+          var rec = splitPeopleRecent().filter(function (n) { return st.people.map(function (p) { return p.toLowerCase(); }).indexOf(n.toLowerCase()) === -1; });
+          r.querySelector('#spRecent').innerHTML = rec.length ? '<span class="muted small">Recent</span>' + rec.map(function (n) { return '<button type="button" data-add="' + esc(n) + '">+ ' + esc(n) + '</button>'; }).join('') : '';
+          r.querySelector('#spPayer').innerHTML = ['me'].concat(st.people).map(function (p) { return '<button type="button" data-pay="' + esc(p) + '" class="' + (st.payer === p ? 'on' : '') + '">' + esc(label(p)) + '</button>'; }).join('');
+          var sh = shares(), ms = members(), T = total(), sum = ms.reduce(function (a, p) { return a + (sh[p] || 0); }, 0);
+          r.querySelector('#spBreak').innerHTML = ms.length ? ms.map(function (p) {
+            var owes = p !== st.payer && (st.payer === 'me' || p === 'me');
+            var tag = p === st.payer ? 'Paid the bill' : owes ? (p === 'me' ? 'You owe ' + esc(st.payer) : 'Owes you') : 'Owes ' + esc(st.payer);
+            return '<div class="sp-row">' + avatar(label(p)) + '<span class="grow"><b>' + esc(label(p)) + '</b><span class="sub">' + tag + '</span></span>' +
+              (st.mode === 'custom' ? '<input class="sp-in" inputmode="numeric" data-p="' + esc(p) + '" placeholder="0" value="' + (st.custom[p] ? st.custom[p].toLocaleString('id-ID') : '') + '">' : '<b class="sp-amt">' + money(sh[p] || 0) + '</b>') + '</div>';
+          }).join('') + (st.mode === 'custom' ? '<div class="sp-left ' + (sum === T ? 'ok' : 'bad') + '" id="spLeft">' + (sum === T ? 'All assigned ✓' : (T - sum > 0 ? 'Left to assign ' : 'Over by ') + money(Math.abs(T - sum))) + '</div>' : '') :
+            '<div class="muted small">Add the people who shared this bill.</div>';
+          r.querySelectorAll('.sp-in').forEach(function (inp) {
+            fmtInput(inp);
+            inp.addEventListener('input', function () { st.custom[inp.dataset.p] = parseNum(inp.value) || 0; var s2 = members().reduce(function (a, p) { return a + (st.custom[p] || 0); }, 0), T2 = total(), el = r.querySelector('#spLeft'); el.className = 'sp-left ' + (s2 === T2 ? 'ok' : 'bad'); el.textContent = s2 === T2 ? 'All assigned ✓' : (T2 - s2 > 0 ? 'Left to assign ' : 'Over by ') + 'Rp ' + fmt(Math.abs(T2 - s2)); });
+          });
+          r.querySelector('#spMeF').hidden = st.payer !== 'me';
+          r.querySelector('#spHint').textContent = st.payer === 'me'
+            ? 'The full bill is recorded as your expense. Each friend’s share goes to Owed so you can track who paid you back.'
+            : 'Nothing leaves your wallet now. Your share is saved as money you owe ' + st.payer + ' and is recorded when you pay them back.';
+        }
+        r.querySelector('#spPeople').onclick = function (e) {
+          var b = e.target.closest('button'); if (!b) return; haptic();
+          if (b.dataset.me) { st.me = !st.me; } else { var p = st.people[+b.dataset.rm]; st.people.splice(+b.dataset.rm, 1); delete st.custom[p]; }
+          paint();
         };
+        r.querySelector('#spRecent').onclick = function (e) { var b = e.target.closest('button'); if (b) addPerson(b.dataset.add); };
+        r.querySelector('#spPayer').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; st.payer = b.dataset.pay; if (st.payer === 'me') st.me = true; haptic(); paint(); };
+        var nameEl = r.querySelector('#spName');
+        r.querySelector('#spAddBtn').onclick = function () { addPerson(nameEl.value); nameEl.value = ''; nameEl.focus(); };
+        nameEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addPerson(nameEl.value); nameEl.value = ''; } });
+        r.querySelector('#spMode').onclick = function (e) {
+          var b = e.target.closest('button'); if (!b) return; st.mode = b.dataset.m;
+          if (st.mode === 'custom') { var sh = shares(); st.mode = 'equal'; var eq = shares(); st.mode = 'custom'; members().forEach(function (p) { if (!st.custom[p]) st.custom[p] = eq[p] || 0; }); }
+          this.style.setProperty('--x', st.mode === 'equal' ? '0%' : '100%');
+          this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); haptic(); paint();
+        };
+        amtEl.addEventListener('input', function () { if (st.mode === 'equal') paint(); else { var el = r.querySelector('#spLeft'); if (el) { var s2 = members().reduce(function (a, p) { return a + (st.custom[p] || 0); }, 0), T2 = total(); el.className = 'sp-left ' + (s2 === T2 ? 'ok' : 'bad'); el.textContent = s2 === T2 ? 'All assigned ✓' : (T2 - s2 > 0 ? 'Left to assign ' : 'Over by ') + 'Rp ' + fmt(Math.abs(T2 - s2)); } } });
+        paint();
+        if (!opts.total) setTimeout(function () { amtEl.focus(); }, 380);
+        r.querySelector('#spGo').onclick = function () {
+          var T = total(), ms = members(), sh = shares();
+          if (!T) { toast('Enter the bill amount'); amtEl.focus(); return; }
+          if (!st.people.length) { toast('Add at least one person'); nameEl.focus(); return; }
+          var sum = ms.reduce(function (a, p) { return a + (sh[p] || 0); }, 0);
+          if (sum !== T) { toast('Shares must add up to ' + 'Rp ' + fmt(T)); return; }
+          var title = r.querySelector('#spTitle').value.trim() || 'Bill', date = r.querySelector('#spDate').value || today();
+          var w = r.querySelector('#spWallet').value, sid = uid(), rec = { id: sid, title: title, total: T, date: date, payer: st.payer, wallet: w, people: [], ts: Date.now() };
+          if (st.payer === 'me') {
+            var t = addTx({ type: 'expense', cat: r.querySelector('#spCat').value, amount: T, wallet: w, date: date, merchant: title, note: 'Split with ' + st.people.join(', '), splitId: sid });
+            rec.txId = t.id;
+            st.people.forEach(function (p) {
+              var d = sh[p] > 0 ? { id: uid(), dir: 'in', person: p, title: 'Split: ' + title, amount: sh[p], created: date, due: '', wallet: w, tags: 'split', notes: '', payments: [], splitId: sid, ts: Date.now() } : null;
+              if (d) S.debts.push(d);
+              rec.people.push({ name: p, amount: sh[p] || 0, debtId: d ? d.id : '' });
+            });
+            if (st.me) rec.people.unshift({ name: 'Me', amount: sh.me || 0, me: true });
+          } else {
+            var mine = st.me ? (sh.me || 0) : 0, dOut = null;
+            if (mine > 0) { dOut = { id: uid(), dir: 'out', person: st.payer, title: 'Split: ' + title, amount: mine, created: date, due: '', wallet: w, tags: 'split', notes: '', payments: [], splitId: sid, ts: Date.now() }; S.debts.push(dOut); }
+            ms.forEach(function (p) { rec.people.push({ name: label(p), amount: sh[p] || 0, me: p === 'me', debtId: p === 'me' && dOut ? dOut.id : '' }); });
+          }
+          (S.splits || (S.splits = [])).push(rec);
+          haptic(); save(); renderAll(); splitDetail(sid, true);
+          var fr = $('fab').getBoundingClientRect(); burst(fr.left + fr.width / 2, fr.top);
+        };
+      });
+  }
+  function splitStatus(s) {
+    var open = 0, owed = 0;
+    s.people.forEach(function (p) { var d = p.debtId && S.debts.filter(function (x) { return x.id === p.debtId; })[0]; if (d && dOpen(d)) { open++; owed += dRemain(d); } });
+    return { open: open, owed: owed };
+  }
+  function splitMsg(s, p) { return 'Hi ' + p.name + '! Your share for ' + s.title + ' (' + fmtDate(s.date) + ') is Rp ' + fmt(p.amount) + '. Thank you! 🙏'; }
+  function splitDetail(sid, fresh) {
+    var s = (S.splits || []).filter(function (x) { return x.id === sid; })[0]; if (!s) return;
+    var payer = s.payer === 'me' ? 'You' : s.payer, ss = splitStatus(s);
+    openSheet('<h3>' + (fresh ? 'Split saved 🎉' : esc(s.title)) + '</h3>' +
+      '<div class="sp-hero"><div class="sp-total">' + money(s.total) + '</div><div class="muted small">' + (fresh ? esc(s.title) + ' · ' : '') + fmtDate(s.date) + ' · ' + esc(payer) + ' paid</div>' +
+      (s.payer === 'me' ? '<div class="sp-status ' + (ss.open ? '' : 'ok') + '">' + (ss.open ? ss.open + ' still owe you ' + money(ss.owed) : 'Everyone paid you back ✓') + '</div>' : '') + '</div>' +
+      '<div class="card sp-break">' + s.people.map(function (p, i) {
+        var d = p.debtId && S.debts.filter(function (x) { return x.id === p.debtId; })[0], rem = d ? dRemain(d) : 0, done = d && !dOpen(d);
+        var sub = p.me ? (s.payer === 'me' ? 'Your share' : d ? (done ? 'You paid ' + esc(s.payer) + ' back ✓' : 'You owe ' + esc(s.payer) + ' ' + money(rem)) : 'Your share') :
+          (s.payer === 'me' ? (d ? (done ? 'Paid you back ✓' : rem < p.amount ? money(rem) + ' left' : 'Not paid yet') : 'Settled') : (p.name === s.payer ? 'Paid the bill' : 'Owes ' + esc(s.payer)));
+        var acts = d && !done ? '<span class="sp-acts">' + (!p.me ? '<button type="button" class="sp-wa" data-wa="' + i + '" aria-label="WhatsApp">💬</button>' : '') + '<button type="button" class="sp-pay" data-pay="' + i + '">' + (p.me ? 'Pay' : 'Paid') + '</button></span>' : '';
+        return '<div class="sp-row' + (done ? ' done' : '') + '">' + avatar(p.name) + '<span class="grow"><b>' + esc(p.name) + '</b><span class="sub">' + sub + '</span></span><b class="sp-amt">' + money(p.amount) + '</b>' + acts + '</div>';
+      }).join('') + '</div>' +
+      (s.payer === 'me' && ss.open ? '<button class="btn block" id="spShare">Share all shares on WhatsApp</button>' : '') +
+      '<button class="btn primary block" id="spDone">Done</button>' +
+      '<button class="btn danger block" id="spDel">Delete split</button>',
+      function (r) {
+        r.querySelector('.sp-break').onclick = function (e) {
+          var b = e.target.closest('button'); if (!b) return;
+          if (b.dataset.wa != null) { var p = s.people[+b.dataset.wa]; window.open('https://wa.me/?text=' + encodeURIComponent(splitMsg(s, p)), '_blank'); return; }
+          if (b.dataset.pay != null) { var d = S.debts.filter(function (x) { return x.id === s.people[+b.dataset.pay].debtId; })[0]; if (d) paySheet(d); }
+        };
+        var sh = r.querySelector('#spShare');
+        if (sh) sh.onclick = function () {
+          var lines = s.people.filter(function (p) { var d = p.debtId && S.debts.filter(function (x) { return x.id === p.debtId; })[0]; return d && dOpen(d); }).map(function (p) { return '• ' + p.name + ': Rp ' + fmt(p.amount); });
+          window.open('https://wa.me/?text=' + encodeURIComponent('Split for ' + s.title + ' (' + fmtDate(s.date) + ')\nTotal Rp ' + fmt(s.total) + '\n\n' + lines.join('\n') + '\n\nThank you! 🙏'), '_blank');
+        };
+        r.querySelector('#spDone').onclick = closeSheet;
+        r.querySelector('#spDel').onclick = function () {
+          confirmBox('Delete this split?', 'This removes the bill expense and every unpaid share linked to it. Payments already recorded stay.', 'Delete', true).then(function (yes) {
+            if (!yes) return;
+            S.debts = S.debts.filter(function (d) { return d.splitId !== sid || (d.payments || []).length; });
+            if (s.txId) S.tx = S.tx.filter(function (t) { return t.id !== s.txId; });
+            S.splits = S.splits.filter(function (x) { return x.id !== sid; });
+            save(); renderAll(); closeSheet(); toast('Split deleted');
+          });
+        };
+      });
+  }
+  function splitHub() {
+    var list = (S.splits || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || b.ts - a.ts; });
+    var owedAll = list.reduce(function (a, s) { return a + (s.payer === 'me' ? splitStatus(s).owed : 0); }, 0);
+    openSheet('<h3>Split bill</h3>' +
+      '<div class="sp-hero"><div class="muted small">Friends owe you from splits</div><div class="sp-total">' + money(owedAll) + '</div></div>' +
+      '<button class="btn primary block" id="spNew">＋ New split</button>' +
+      (list.length ? '<div class="section-h" style="margin-top:14px">History</div><div class="card list-card">' + list.map(function (s) {
+        var ss = splitStatus(s);
+        return '<button class="set-row" data-sid="' + esc(s.id) + '"><span class="ic sm">' + sprite('makan_team') + '</span><span class="grow">' + esc(s.title) + '<span class="sub">' + fmtDate(s.date) + ' · ' + s.people.length + ' people · ' + (s.payer === 'me' ? 'you paid' : esc(s.payer) + ' paid') + '</span></span>' +
+          '<span class="sp-st ' + (ss.open ? '' : 'ok') + '">' + (ss.open ? money(ss.owed, { rp: false }) + ' left' : 'Settled') + '</span></button>';
+      }).join('') + '</div>' : '<p class="muted small" style="text-align:center;margin-top:14px">No splits yet. Paid for dinner with friends? Split it here and track who paid you back.</p>'),
+      function (r) {
+        r.querySelector('#spNew').onclick = function () { splitSheet({}); };
+        r.querySelectorAll('[data-sid]').forEach(function (b) { b.onclick = function () { splitDetail(b.dataset.sid); }; });
       });
   }
   function waRemind(d) {
