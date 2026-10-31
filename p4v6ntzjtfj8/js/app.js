@@ -944,6 +944,7 @@
       });
   }
   // ---------- Business: income & expense per business ----------
+  function bizForCat(c) { var b = (S.businesses || []).filter(function (x) { return (x.cats || []).indexOf(c) !== -1; })[0]; return b ? b.id : ''; }
   function bizTx(id, m) { return S.tx.filter(function (t) { return t.biz === id && (t.type === 'income' || t.type === 'expense') && (!m || t.date.slice(0, 7) === m); }); }
   function bizIO(id, m) { var r = { i: 0, e: 0 }; bizTx(id, m).forEach(function (t) { if (t.type === 'income') r.i += t.amount; else r.e += t.amount; }); return r; }
   var BCOL = ['#34d399', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#2dd4bf'];
@@ -960,7 +961,7 @@
       '<div class="muted small" style="text-align:center;margin:-8px 0 12px">' + MONTHS[new Date().getMonth()] + ' ' + new Date().getFullYear() + '</div>' +
       '<div class="card list-card stagger">' + bs.map(function (b, i) {
         var r = bizIO(b.id, m), net = r.i - r.e, mx = Math.max(r.i, r.e, 1);
-        return '<button class="w-row biz-row" data-biz="' + esc(b.id) + '" style="--i:' + i + '">' + bizIcon(b, i) + '<span class="grow"><b>' + esc(b.name) + '</b><span class="sub">In ' + money(r.i, { rp: false }) + ' · Out ' + money(r.e, { rp: false }) + '</span><span class="biz-mini"><i class="in" style="--w:' + (r.i / mx * 100).toFixed(0) + '%"></i><i class="out" style="--w:' + (r.e / mx * 100).toFixed(0) + '%"></i></span></span><span class="amt ' + (net < 0 ? 'neg' : 'pos') + '">' + money(net, { rp: false, sign: true }) + '</span></button>';
+        return '<button class="w-row biz-row" data-biz="' + esc(b.id) + '" style="--i:' + i + '">' + bizIcon(b, i) + '<span class="grow"><b>' + esc(b.name) + '</b><span class="sub">In ' + money(r.i, { rp: false }) + ' · Out ' + money(r.e, { rp: false }) + ((b.cats || []).length ? ' · ' + b.cats.map(function (c) { return cat(c).name; }).join(', ') : '') + '</span><span class="biz-mini"><i class="in" style="--w:' + (r.i / mx * 100).toFixed(0) + '%"></i><i class="out" style="--w:' + (r.e / mx * 100).toFixed(0) + '%"></i></span></span><span class="amt ' + (net < 0 ? 'neg' : 'pos') + '">' + money(net, { rp: false, sign: true }) + '</span></button>';
       }).join('') + '<button class="w-row" id="bizAdd"><span class="biz-ic add">＋</span><span class="grow"><b>Add business</b><span class="sub">Track another business</span></span></button></div>',
       function (r) {
         r.addEventListener('click', function (e) { var b = e.target.closest('[data-biz]'); if (b) { haptic(); bizDetail(bs.filter(function (x) { return x.id === b.dataset.biz; })[0]); } });
@@ -971,11 +972,13 @@
     var isNew = !b; b = b || { id: uid(), name: '', sp: 'kas_kantor' }; var st = { sp: b.sp };
     openSheet('<h3>' + (isNew ? 'Add business' : 'Edit business') + '</h3><span class="ic preview i3d">' + sprite(st.sp) + '</span>' +
       '<label class="fld">Business name<input id="bzName" value="' + esc(b.name) + '" placeholder="e.g. HURRICANE"></label>' +
+      '<div class="fld">Categories that go to this business<span class="sub">Pick a category on + and the business is chosen for you</span><div class="chips wrap" id="bzCats">' + S.cats.filter(function (c) { return c.type !== 'debt'; }).map(function (c) { return '<button type="button" data-c="' + esc(c.id) + '" class="' + ((b.cats || []).indexOf(c.id) !== -1 ? 'on' : '') + '">' + esc(c.name) + '</button>'; }).join('') + '</div></div>' +
       '<div class="fld">Icon' + picker(null, st.sp) + '</div>' +
       '<button class="btn primary block" id="bzSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="bzDel">Delete business</button>'),
       function (r) {
+        var cs = (b.cats || []).slice(); r.querySelector('#bzCats').onclick = function (e) { var x = e.target.closest('button'); if (!x) return; var i = cs.indexOf(x.dataset.c); if (i === -1) cs.push(x.dataset.c); else cs.splice(i, 1); x.classList.toggle('on'); haptic(); };
         bindSpPicker(r, st); if (isNew) setTimeout(function () { r.querySelector('#bzName').focus(); }, 380);
-        r.querySelector('#bzSave').onclick = function () { var n = r.querySelector('#bzName').value.trim(); if (!n) { toast('Name it'); return; } b.name = n; b.sp = st.sp; if (isNew) (S.businesses = S.businesses || []).push(b); save(); renderAll(); bizSheet(); toast('Saved ✓'); };
+        r.querySelector('#bzSave').onclick = function () { var n = r.querySelector('#bzName').value.trim(); if (!n) { toast('Name it'); return; } b.name = n; b.sp = st.sp; (S.businesses || []).forEach(function (o) { if (o !== b) o.cats = (o.cats || []).filter(function (c) { return cs.indexOf(c) === -1; }); }); b.cats = cs; S.tx.forEach(function (t) { if (!t.biz && cs.indexOf(t.cat) !== -1) t.biz = b.id; }); if (isNew) (S.businesses = S.businesses || []).push(b); save(); renderAll(); bizSheet(); toast('Saved ✓'); };
         var d = r.querySelector('#bzDel'); if (d) d.onclick = function () { if (!confirm('Delete ' + b.name + '? Its transactions stay, just without a business.')) return; S.tx.forEach(function (t) { if (t.biz === b.id) delete t.biz; }); S.businesses = S.businesses.filter(function (x) { return x !== b; }); save(); renderAll(); bizSheet(); };
       });
   }
@@ -1307,6 +1310,7 @@
       (isNew ? '' : '<button class="btn danger block" id="fDel">Delete</button>'),
       function (root) {
         var amt = root.querySelector('#fAmt'); fmtInput(amt);
+        root.querySelector('#fBiz').addEventListener('change', function () { this.dataset.manual = 1; });
         var files = (t.files || []).slice(); attachUI(root.querySelector('#fFiles'), files);
         var ub = root.querySelector('#fUnpaid');
         if (ub) { fmtInput(root.querySelector('#fPaidNow')); ub.onchange = function () { root.querySelector('#fUnpaidF').hidden = !ub.checked; haptic(); if (ub.checked) setTimeout(function () { root.querySelector('#fPayer').focus(); }, 200); }; }
@@ -1320,7 +1324,7 @@
           root.querySelector('#fCatWrap').hidden = st.type === 'transfer';
           root.querySelector('#fToL').hidden = st.type !== 'transfer';
           root.querySelector('#fBizL').hidden = st.type === 'transfer';
-          var bz = root.querySelector('#fBiz'); if (isNew && !bz.value) { var cn = cat(st.cat).name.toLowerCase(); (S.businesses || []).forEach(function (b) { if (cn === b.name.toLowerCase()) bz.value = b.id; }); }
+          var bz = root.querySelector('#fBiz'); if (isNew && !bz.dataset.manual) { var lb = bizForCat(st.cat); if (!lb) { var cn = cat(st.cat).name.toLowerCase(); (S.businesses || []).forEach(function (b) { if (cn === b.name.toLowerCase()) lb = b.id; }); } bz.value = lb || (prefill && prefill.biz) || ''; }
           var upb = root.querySelector('#fUnpaidBox'); if (upb) upb.hidden = st.type !== 'income';
           root.querySelector('#fWalletL span').textContent = st.type === 'transfer' ? 'From wallet' : 'Wallet';
           var cats = S.cats.filter(function (c) { return c.type === st.type; });
@@ -1458,7 +1462,7 @@
           S.tx.push({
             id: uid(), type: p.type, amount: p.amount, cat: guessCat(p.merchant, p.type),
             wallet: walletForSrc(p.src) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || '',
-            toWallet: '', date: ymd(d), time: hm(d), merchant: p.merchant, note: '', src: 'bca', srcId: em.id, ref: p.ref || '', created: Date.now()
+            toWallet: '', biz: bizForCat(guessCat(p.merchant, p.type)) || undefined, date: ymd(d), time: hm(d), merchant: p.merchant, note: '', src: 'bca', srcId: em.id, ref: p.ref || '', created: Date.now()
           });
           added++;
         });
@@ -2326,8 +2330,16 @@
     S.wallets.forEach(function (w) { if (w.sp) return; for (var i = 0; i < M.length; i++) if (M[i][0].test(w.name)) { w.sp = M[i][1]; break; } });
     S.wIconVer = 1;
   }
+  function linkBiz() {
+    if (S.bizLinkVer === 1) return;
+    var D = { hurricane: ['reserve_transfer', 'komisi_in'], sentaris: ['sentaris'] };
+    (S.businesses || []).forEach(function (b) { if (D[b.id] && !b.cats) b.cats = D[b.id]; });
+    S.tx.forEach(function (t) { if (!t.biz) { var b = bizForCat(t.cat); if (b) t.biz = b; } });
+    S.debts.forEach(function (d) { if (d.earned && !d.biz) { var b = bizForCat(d.incomeCat); if (b) d.biz = b; } });
+    S.bizLinkVer = 1;
+  }
   function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
-  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
+  load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   hideSplash(); fetchPrices(); registerSW(); setTimeout(onboarding, 1300);
   (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
