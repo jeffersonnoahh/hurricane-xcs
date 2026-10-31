@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="css/style.css?v=20261031-2">
+<link rel="stylesheet" href="css/style.css?v=20261031-3">
 </head>
 <body>
 <header class="top">
@@ -112,6 +112,13 @@
     </div>
 
     <div class="card">
+      <h3>Start fresh</h3>
+      <p class="muted">Delete all transactions and set every wallet to Rp 0. After this, only new BCA transactions are added; older emails are ignored.</p>
+      <p class="muted small" id="startFromLine"></p>
+      <button class="btn danger" id="resetBtn">Start fresh</button>
+    </div>
+
+    <div class="card">
       <h3>Backup</h3>
       <p class="muted">Your data lives only on this phone. Export a backup now and then.</p>
       <div class="btn-row">
@@ -140,6 +147,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-1"></script>
-<script src="js/app.js?v=20261031-1"></script>
+<script src="js/app.js?v=20261031-3"></script>
 </body>
 </html>

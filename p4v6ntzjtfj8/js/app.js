@@ -32,7 +32,7 @@
       cats: DEFAULT_CATS.map(function (c) { return { id: c[0], name: c[1], icon: c[2], type: c[3] }; }),
       tx: [], budgets: {},
       rules: DEFAULT_RULES.map(function (r) { return { kw: r[0], cat: r[1] }; }),
-      settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', lastSync: 0 },
+      settings: { syncUrl: '', token: '', autoSync: true, bcaWallet: 'bca', lastSync: 0, startFrom: 0 },
       seen: {}, review: []
     };
   }
@@ -194,6 +194,7 @@
     if (document.activeElement !== $('sUrl')) $('sUrl').value = s.syncUrl;
     if (document.activeElement !== $('sToken')) $('sToken').value = s.token;
     $('sAuto').checked = !!s.autoSync;
+    $('startFromLine').textContent = s.startFrom ? 'Tracking BCA emails since ' + new Date(s.startFrom).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '';
     $('sWallet').innerHTML = S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '">' + esc(w.icon + ' ' + w.name) + '</option>'; }).join('');
     $('sWallet').value = s.bcaWallet;
 
@@ -313,7 +314,9 @@
     syncing = true;
     $('sStatus').textContent = 'Syncing…';
     // Look back 2 days before the last sync so late arriving emails are not missed; seen ids stop duplicates.
-    var since = s.lastSync ? s.lastSync - 2 * 864e5 : Date.now() - 7 * 864e5;
+    // Only emails from the moment tracking started count (set on first connect or Start fresh).
+    if (!s.startFrom) { s.startFrom = Date.now(); save(); }
+    var since = Math.max(s.startFrom, s.lastSync ? s.lastSync - 2 * 864e5 : 0);
     var url = s.syncUrl + (s.syncUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(s.token) + '&since=' + since;
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
@@ -324,6 +327,7 @@
         var added = 0, review = 0, emails = data.emails || [];
         emails.forEach(function (em) {
           if (!em || !em.id || S.seen[em.id]) return;
+          if (em.date < s.startFrom) return;
           S.seen[em.id] = Date.now();
           var p = window.BcaParser.parseBcaEmail(em);
           if (!p) {
@@ -514,6 +518,13 @@
       }
     });
 
+    $('resetBtn').onclick = function () {
+      if (!confirm('Start fresh? This deletes ALL transactions, sets every wallet to Rp 0, and only BCA transactions from now on will be added.')) return;
+      S.tx = []; S.seen = {}; S.review = [];
+      S.wallets.forEach(function (w) { w.initial = 0; });
+      S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now();
+      save(); renderAll(); toast('Fresh start. Waiting for your next BCA transaction.');
+    };
     $('exportBtn').onclick = function () {
       var blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arus-backup-' + ymd(new Date()) + '.json';
