@@ -581,7 +581,19 @@
     }
     cards.forEach(function (c, i) { applyView(i); });
     window.__deckLive = function () { cards.forEach(function (c, i) { applyView(i); }); if (sel >= 0) paintInfo(sel); };
-    function pick(i) { haptic(); if (i === sel || i < 0) { sel = -1; } else { sel = i; paintInfo(i); inEl.scrollTo({ top: 0, behavior: 'smooth' }); } layout(); }
+    // Opening a card adds one history step, so Back (‹ or the phone gesture) returns to the stack first.
+    var skipPop = false;
+    function pick(i, fromPop) {
+      haptic();
+      if (i === sel || i < 0) {
+        if (sel < 0) return;
+        sel = -1; layout();
+        if (fromPop !== true && history.state && history.state.deckPick) { skipPop = true; history.back(); }
+        return;
+      }
+      var was = sel; sel = i; paintInfo(i); inEl.scrollTo({ top: 0, behavior: 'smooth' }); layout();
+      if (was < 0) history.pushState({ deck: 1, deckPick: 1 }, '');
+    }
     // open: cards rise from the Home stack and fan into place
     // First layout with CSS transitions off, so only one animation (the fly-in) moves the cards.
     cards.forEach(function (c) { c.style.transition = 'none'; }); stack.style.transition = 'none';
@@ -606,11 +618,11 @@
       cards.forEach(function (c, i) { c.style.transitionDelay = (i * 15) + 'ms'; c.style.transform = 'translateY(' + (inEl.clientHeight + 40) + 'px)'; });
       setTimeout(function () { ov.remove(); }, 460);
       if (homeStack) setTimeout(function () { homeStack.style.visibility = ''; }, 260);
-      if (fromPop !== true && history.state && history.state.deck) history.back();
+      if (fromPop !== true && history.state && history.state.deck) history.go(history.state.deckPick ? -2 : -1);
     }
-    function pop() { close(true); }
+    function pop() { if (skipPop) { skipPop = false; return; } if (sel >= 0) pick(-1, true); else close(true); }
     window.addEventListener('popstate', pop);
-    ov.querySelector('.dw-x').onclick = function () { close(); };
+    ov.querySelector('.dw-x').onclick = function () { if (sel >= 0) pick(-1); else close(); };
     ov.querySelector('.dw-man').onclick = function () { close(); show('v-account'); setTimeout(function () { var l = $('walletList'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); };
     inEl.addEventListener('click', function (e) {
       var c = e.target.closest('.dw-card');
