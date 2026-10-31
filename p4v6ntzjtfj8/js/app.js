@@ -2059,6 +2059,137 @@
 
   // ---------- small edit sheets ----------
   // Set a wallet so that its balance today equals `target`.
+  // ---------- Import from Money Lover (Excel/CSV export). Runs fully on the phone: the file never leaves it. ----------
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = function () { res(window.XLSX); }; s.onerror = function () { rej(new Error('Could not load the Excel reader. Check your connection.')); }; document.head.appendChild(s); });
+  }
+  function mlNorm(x) { return String(x || '').toLowerCase().replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').replace(/[^a-z0-9]/g, ''); }
+  function mlParse(rows) {
+    // rows: arrays, first row = header. Money Lover columns: Id, Date, Category, Amount, Currency, Wallet, Note, With, Event, Exclude from report
+    var H = rows[0].map(function (h) { return mlNorm(h); }), col = function (n) { return H.indexOf(n); };
+    var iD = col('date'), iC = col('category'), iA = col('amount'), iW = col('wallet'), iN = col('note'), iI = col('id'), iCur = col('currency');
+    if (iD < 0 || iC < 0 || iA < 0) throw new Error('This doesn’t look like a Money Lover export (no Date / Category / Amount columns).');
+    var data = rows.slice(1).filter(function (r) { return r && r[iA] != null && r[iA] !== '' && r[iD] != null && r[iD] !== ''; });
+    // Google Sheets turned some dd/mm dates into real dates with day and month swapped. If the file mixes text dates and real dates, swap the real ones back.
+    var hasText = data.some(function (r) { return typeof r[iD] === 'string'; }), hasReal = data.some(function (r) { return r[iD] instanceof Date || typeof r[iD] === 'number'; });
+    function toDate(v) {
+      if (typeof v === 'string') { var m = v.trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/); if (m) return m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]); var m2 = v.match(/^(\d{4})-(\d{2})-(\d{2})/); return m2 ? m2[0] : null; }
+      var d = v instanceof Date ? v : new Date(Math.round((v - 25569) * 864e5));
+      var y = d.getUTCFullYear(), mo = d.getUTCMonth() + 1, da = d.getUTCDate();
+      if (v instanceof Date) { y = d.getFullYear(); mo = d.getMonth() + 1; da = d.getDate(); if (d.getHours() >= 12) { var n2 = new Date(d.getTime() + 12 * 36e5); y = n2.getFullYear(); mo = n2.getMonth() + 1; da = n2.getDate(); } }
+      if (hasText && hasReal && da <= 12) { var t = mo; mo = da; da = t; }
+      return y + '-' + pad(mo) + '-' + pad(da);
+    }
+    return data.map(function (r) {
+      var amt = typeof r[iA] === 'number' ? r[iA] : parseFloat(String(r[iA]).replace(/[^\d\-.,]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+      return { id: iI >= 0 ? r[iI] : null, date: toDate(r[iD]), cat: String(r[iC] || '').trim(), amount: amt || 0, wallet: iW >= 0 ? String(r[iW] || '').trim() : '', note: iN >= 0 && r[iN] != null ? String(r[iN]).trim() : '', cur: iCur >= 0 ? r[iCur] : 'IDR' };
+    }).filter(function (x) { return x.date && x.amount; });
+  }
+  function mlImportFile(file) {
+    busy(true, 'Reading ' + file.name + '…');
+    var isCsv = /\.csv$/i.test(file.name);
+    loadXLSX().then(function (X) {
+      return file.arrayBuffer().then(function (buf) {
+        var wb = isCsv ? X.read(new TextDecoder().decode(buf), { type: 'string', raw: true }) : X.read(buf, { type: 'array', cellDates: true });
+        var ws = wb.Sheets[wb.SheetNames.filter(function (n) { return /transaction/i.test(n); })[0] || wb.SheetNames[0]];
+        return X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+      });
+    }).then(function (rows) { busy(false); mlPreview(mlParse(rows), file.name); })
+      .catch(function (e) { busy(false); toast(e.message || 'Could not read that file'); });
+  }
+  function mlPreview(R, fname) {
+    if (!R.length) { toast('No transactions found in that file'); return; }
+    var byName = {};
+    S.cats.forEach(function (c) { (byName[mlNorm(c.name)] = byName[mlNorm(c.name)] || []).push(c); });
+    function matchCat(name, amt) {
+      var list = byName[mlNorm(name)]; if (!list) return null;
+      var want = amt >= 0 ? 'income' : 'expense';
+      return list.filter(function (c) { return c.type === want; })[0] || list[0];
+    }
+    var cats = {}, wallets = {}, dates = R.map(function (r) { return r.date; }).sort();
+    R.forEach(function (r) {
+      var k = r.cat + (r.amount >= 0 ? '|in' : '|out');
+      if (!cats[k]) cats[k] = { name: r.cat, dir: r.amount >= 0 ? 'in' : 'out', n: 0, sum: 0, c: matchCat(r.cat, r.amount) };
+      cats[k].n++; cats[k].sum += r.amount;
+      wallets[r.wallet] = (wallets[r.wallet] || 0) + r.amount;
+    });
+    var unmatched = Object.keys(cats).filter(function (k) { return !cats[k].c; });
+    var debtKeys = Object.keys(cats).filter(function (k) { return cats[k].c && cats[k].c.type === 'debt'; });
+    var expOpts = S.cats.filter(function (c) { return c.type === 'expense'; }), incOpts = S.cats.filter(function (c) { return c.type === 'income'; });
+    var wMatch = {}; Object.keys(wallets).forEach(function (n) { wMatch[n] = S.wallets.filter(function (w) { return mlNorm(w.name) === mlNorm(n); })[0] || null; });
+    var st = { skipDebt: true, map: {} };
+    function catSelect(k) {
+      var c = cats[k], opts = c.dir === 'in' ? incOpts : expOpts;
+      return '<select data-map="' + esc(k) + '"><option value="__new">＋ New category "' + esc(c.name) + '"</option>' + opts.map(function (o) { return '<option value="' + esc(o.id) + '">' + esc(o.icon + ' ' + o.name) + '</option>'; }).join('') + '</select>';
+    }
+    openSheet('<h3>Import from Money Lover</h3>' +
+      '<div class="ml-sum"><b>' + R.length.toLocaleString('id-ID') + '</b><em>transactions in the file</em><span>' + fmtDate(dates[0]) + ' → ' + fmtDate(dates[dates.length - 1]) + '</span></div>' +
+      '<div class="sheet-sec">Wallets in the file</div><div class="card list-card">' + Object.keys(wallets).map(function (n) {
+        return '<div class="ml-row"><span class="grow"><b>' + esc(n || '(no wallet)') + '</b><span class="sub">' + (wMatch[n] ? '→ ' + esc(wMatch[n].name) + ' in Apex' : '⚠️ No Apex wallet with this name, will be created') + '</span></span><span>' + money(wallets[n], { rp: false }) + '</span></div>';
+      }).join('') + '</div>' +
+      (unmatched.length ? '<div class="sheet-sec">Categories to choose</div><div class="card list-card">' + unmatched.map(function (k) {
+        return '<div class="ml-row ml-col"><span><b>' + esc(cats[k].name) + '</b><span class="sub">' + cats[k].n + ' transactions · ' + money(Math.abs(cats[k].sum), { rp: false }) + (cats[k].dir === 'in' ? ' in' : ' out') + '</span></span>' + catSelect(k) + '</div>';
+      }).join('') + '</div>' : '') +
+      '<div class="sheet-sec">Matched automatically</div><div class="ml-chips">' + Object.keys(cats).filter(function (k) { return cats[k].c && cats[k].c.type !== 'debt'; }).map(function (k) { return '<span>' + esc(cats[k].name) + ' → ' + esc(cats[k].c.name) + ' <i>' + cats[k].n + '</i></span>'; }).join('') + '</div>' +
+      (debtKeys.length ? '<label class="set-row plain"><span class="grow"><b>Skip loans & debt entries</b><span class="sub">' + debtKeys.map(function (k) { return esc(cats[k].name) + ' (' + cats[k].n + ')'; }).join(', ') + '</span></span><input type="checkbox" class="switch" id="mlSkip" checked></label>' : '') +
+      '<div class="sheet-sec">Balances after import</div><p class="muted small" style="margin:-4px 2px 8px">Type each wallet’s real balance. Apex adds the history and sets the balance to exactly this. Leave empty to keep the current balance.</p>' +
+      '<div class="card list-card">' + S.wallets.map(function (w) {
+        var fromFile = Object.keys(wMatch).filter(function (n) { return wMatch[n] === w; })[0];
+        return '<label class="ml-row"><span class="grow"><b>' + esc(w.name) + '</b><span class="sub">Now ' + money(balance(w.id), { rp: false }) + (fromFile != null ? ' · history in file' : '') + '</span></span><input class="ml-bal" data-w="' + esc(w.id) + '" inputmode="numeric" placeholder="keep"' + (fromFile != null ? ' value="' + Math.round(wallets[fromFile]).toLocaleString('id-ID') + '"' : '') + '></label>';
+      }).join('') + '</div>' +
+      '<div class="ml-dupe" id="mlDupe"></div>' +
+      '<button class="btn primary block" id="mlGo">Import ' + R.length.toLocaleString('id-ID') + ' transactions</button>' +
+      '<p class="muted small" style="text-align:center">Read on your phone only. Nothing is uploaded. Already-imported rows are skipped, so running it twice won’t double anything.</p>',
+      function (r) {
+        r.querySelectorAll('.ml-bal').forEach(fmtInput);
+        function count() {
+          var skip = r.querySelector('#mlSkip') ? r.querySelector('#mlSkip').checked : false;
+          var have = {}; S.tx.forEach(function (t) { if (t.mlKey) have[t.mlKey] = 1; });
+          var n = 0, dup = 0;
+          R.forEach(function (x) { var k = x.cat + (x.amount >= 0 ? '|in' : '|out'); if (skip && debtKeys.indexOf(k) !== -1) return; if (have[mlKey(x)]) dup++; else n++; });
+          r.querySelector('#mlGo').textContent = 'Import ' + n.toLocaleString('id-ID') + ' transactions';
+          r.querySelector('#mlDupe').textContent = dup ? dup.toLocaleString('id-ID') + ' already in Apex will be skipped.' : '';
+        }
+        var sk = r.querySelector('#mlSkip'); if (sk) sk.onchange = count; count();
+        r.querySelector('#mlGo').onclick = function () {
+          var skip = sk ? sk.checked : false, map = {};
+          r.querySelectorAll('[data-map]').forEach(function (s) { map[s.dataset.map] = s.value; });
+          var bal = {}; r.querySelectorAll('.ml-bal').forEach(function (i) { if (String(i.value).trim() !== '') bal[i.dataset.w] = parseNum(i.value); });
+          confirmBox('Import now?', 'Adds the Money Lover history to Apex and sets the balances you typed.', 'Import', false).then(function (ok) { if (ok) mlCommit(R, cats, map, wMatch, skip, debtKeys, bal); });
+        };
+      });
+  }
+  function mlKey(x) { return 'ml|' + (x.id != null ? x.id : '') + '|' + x.date + '|' + x.amount + '|' + x.cat; }
+  function mlCommit(R, cats, map, wMatch, skip, debtKeys, bal) {
+    busy(true, 'Importing…');
+    var made = {};
+    Object.keys(map).forEach(function (k) {
+      if (map[k] !== '__new') { cats[k].c = cat(map[k]); return; }
+      var c = cats[k], nc = { id: 'ml_' + mlNorm(c.name) + '_' + c.dir, name: c.name, icon: c.dir === 'in' ? '💰' : '🏷️', type: c.dir === 'in' ? 'income' : 'expense' };
+      if (!S.cats.some(function (x) { return x.id === nc.id; })) S.cats.push(nc);
+      c.c = nc; made[nc.id] = 1;
+    });
+    Object.keys(wMatch).forEach(function (n) {
+      if (wMatch[n]) return;
+      var w = { id: uid(), name: n || 'Money Lover', icon: '👛', initial: 0 }; S.wallets.push(w); wMatch[n] = w;
+    });
+    var have = {}; S.tx.forEach(function (t) { if (t.mlKey) have[t.mlKey] = 1; });
+    var added = 0;
+    R.forEach(function (x) {
+      var k = x.cat + (x.amount >= 0 ? '|in' : '|out'), c = cats[k].c, key = mlKey(x);
+      if (!c || have[key]) return;
+      if (debtKeys.indexOf(k) !== -1 && skip) return;
+      var type = c.type === 'debt' ? 'debt' : (x.amount >= 0 ? 'income' : 'expense');
+      var t = { id: uid(), type: type, cat: c.id, amount: Math.abs(x.amount), wallet: wMatch[x.wallet].id, toWallet: '', date: x.date, time: '', note: x.note || '', merchant: '', src: 'ml', mlKey: key, created: Date.now() };
+      var b = bizForCat(c.id); if (b) t.biz = b;
+      S.tx.push(t); have[key] = 1; added++;
+    });
+    Object.keys(bal).forEach(function (id) { var w = S.wallets.filter(function (x) { return x.id === id; })[0]; if (w) setBalance(w, bal[id]); });
+    S.settings.mlImported = { at: Date.now(), n: added };
+    save(); busy(false); closeSheet(); renderAll();
+    toast('Imported ' + added.toLocaleString('id-ID') + ' transactions ✓');
+  }
   function setBalance(w, target) {
     var txSum = S.tx.reduce(function (a, t) { return a + delta(t, w.id); }, 0);
     w.initial = target - txSum;
@@ -3200,6 +3331,7 @@
   }
   load(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
+  $('mlFile').onchange = function () { var f = this.files[0]; this.value = ''; if (f) mlImportFile(f); };
   hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; renderIhsg(); fetchIhsg(); $('ihsgBar').onclick = function () { haptic(); ihsgSheet(); }; registerSW(); setTimeout(onboarding, 1300);
   // iOS 26 Home Screen apps: the viewport stops above the home bar, so the bottom inset must not be added twice
   function vpCheck() {
