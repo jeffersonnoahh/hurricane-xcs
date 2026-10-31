@@ -2913,8 +2913,8 @@
   var ASSETS = { gold: { name: 'Gold (gram)', unit: 'g' }, btc: { name: 'Bitcoin', unit: 'BTC' }, eth: { name: 'Ethereum', unit: 'ETH' }, usd: { name: 'US Dollar', unit: 'USD' } };
   var PRICES = (function () { try { return JSON.parse(localStorage.getItem('apex_prices')) || {}; } catch (e) { return {}; } })();
   function fmtG(g) { return (+g).toLocaleString('id-ID', { maximumFractionDigits: g < 10 ? 3 : 2 }) + ' g'; }
-  // What a holding counts for in balances and net worth. Gold and USD count at the money invested (not the live price); other assets use the live price.
-  function bookValue(w) { var h = w && w.holding; if (h && INV[h.asset] && +h.qty && +h.cost) return +h.cost; return liveValue(w); }
+  // Net worth never includes live profit: every tracked holding counts at the money invested. No invested amount recorded = use the wallet's normal balance.
+  function bookValue(w) { var h = w && w.holding; if (!h || !h.asset || !(+h.qty)) return null; return +h.cost > 0 ? +h.cost : null; }
   // Rupiah part of a wallet that also holds dollars/gold (initial + its transactions).
   function cashPart(w) { if (!w || !(w.holding && w.holding.withCash)) return 0; return (+w.initial || 0) + S.tx.reduce(function (a, t) { return a + delta(t, w.id); }, 0); }
   function parseDec(v) { v = String(v || '').trim().replace(/[^\d.,\-]/g, ''); if (!v) return 0; if (v.indexOf(',') !== -1) v = v.replace(/\./g, '').replace(',', '.'); else if ((v.match(/\./g) || []).length > 1) v = v.replace(/\./g, ''); return parseFloat(v) || 0; }
