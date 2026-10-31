@@ -9,29 +9,47 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Arus">
 <title>Arus Money</title>
+<script>try{var _s=(JSON.parse(localStorage.getItem('arus_v1')||'{}')||{}).settings;if(_s&&_s.theme==='light'){document.documentElement.setAttribute('data-theme','light');document.querySelector('meta[name=theme-color]').setAttribute('content','#f3f5f1');}}catch(e){}</script>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="css/style.css?v=20261031-5">
+<link rel="stylesheet" href="css/style.css?v=20261031-7">
 </head>
 <body>
 
 <!-- HOME -->
 <section class="view active" id="v-home">
-  <header class="home-head">
-    <div>
-      <div class="total-row">
-        <span class="big-money" id="hTotal">Rp 0</span>
-        <button class="eye" id="eyeBtn" aria-label="Hide or show amounts"></button>
-      </div>
-      <div class="lbl">Total balance</div>
-    </div>
+  <header class="ov-head">
+    <div><h1>Overview</h1><div class="muted" id="hGreet">Here is the summary of your money</div></div>
     <button class="round-btn" id="hSync" aria-label="Sync BCA"><span class="sync-ic">⟳</span><span class="pip" id="hSyncPip" hidden></span></button>
   </header>
+
+  <div class="bal-card">
+    <div class="bal-in">
+      <div class="bal-top">
+        <span class="bal-ico">👛</span>
+        <span class="t"><b>My balance</b><small>All wallets in total</small></span>
+        <button class="eye" id="eyeBtn" aria-label="Hide or show amounts"></button>
+      </div>
+      <div class="bal-amt"><span class="big-money" id="hTotal">Rp 0</span><span class="chip" id="hChip"></span></div>
+    </div>
+    <button class="bal-foot" id="balDetails"><span>See details</span><span class="arr">→</span></button>
+  </div>
+
+  <div class="sum-row" id="hGroups"></div>
 
   <div class="card list-card">
     <div class="card-h"><h2>My Wallets</h2><button class="link" id="seeAllWallets">See all</button></div>
     <div id="hWallets"></div>
+  </div>
+
+  <div class="card">
+    <div class="cf-head">
+      <h2>Cash flow</h2>
+      <div class="cf-seg" id="cfSeg"><button data-n="6" class="on">6 months</button><button data-n="12">1 year</button></div>
+    </div>
+    <div class="mid-money" id="cfNet">Rp 0</div><div class="muted small" id="cfSub"></div>
+    <div id="cfChart"></div>
   </div>
 
   <div class="section-h">Spending insight</div>
@@ -119,6 +137,7 @@
   <header class="page-head"><h1>Account</h1></header>
 
   <div class="card list-card">
+    <div class="set-row" style="cursor:default"><span class="ic sm" style="--c:#2f7a4a">🎨</span><span class="grow">Theme</span><span class="theme-seg" id="themeSeg"><button data-t="dark">Dark</button><button data-t="light">Light</button></span></div>
     <label class="set-row"><span class="ic sm" style="--c:#4f7cff">👁️</span><span class="grow">Hide amounts</span><input type="checkbox" class="switch" id="hideToggle"></label>
   </div>
 
@@ -190,6 +209,6 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/bca-parser.js?v=20261031-1"></script>
-<script src="js/app.js?v=20261031-4"></script>
+<script src="js/app.js?v=20261031-7"></script>
 </body>
 </html>
