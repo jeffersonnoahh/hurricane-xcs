@@ -39,10 +39,12 @@
     ['bitget_plus', 'BITGET PLUS', '🚀', 'income'], ['mexc_plus', 'MEXC PLUS', '📈', 'income'], ['bybit_plus', 'BYBIT PLUS', '🎯', 'income'],
     ['stocks_plus', 'STOCKS PLUS', '📊', 'income'], ['gold_debit_in', 'GOLD DEBIT', '💳', 'income'], ['brpt_plus', 'BRPT PLUS', '♟', 'income'],
     ['pokemon_plus', 'Pokemon plus', '👾', 'income'], ['sentaris', 'SENTARIS', '🏙', 'income'],
-    ['debt', 'Debt', '📥', 'debt', '', 'in'], ['loan', 'Loan', '💸', 'debt', '', 'out'],
-    ['debt_collection', 'Debt Collection', '🪙', 'debt', '', 'in'], ['repayment', 'Repayment', '🧾', 'debt', '', 'out']
+    ['loan', 'Loan', '💸', 'debt', '', 'out'], ['repayment', 'Repayment', '🧾', 'debt', '', 'out'],
+    ['debt_collection', 'Debt Collection', '🪙', 'debt', '', 'in'], ['debt', 'Debt', '📥', 'debt', '', 'in']
   ];
-  var CAT_VER = 3;
+  var CAT_VER = 4;
+  // Built-in categories (shown with a lock, cannot be deleted).
+  var LOCKED = ['loan', 'repayment', 'debt_collection', 'debt', 'other_out', 'transfer_out', 'pay_interest', 'uncat', 'other_in', 'transfer_in', 'interest', 'uncat_in'];
   var CAT_MAP = { transport: 'other_out', phone: 'phone_bill', family: 'my_home', loan_out: 'loan' };
   var OLD_DEFAULT_IDS = ['food', 'transport', 'shopping', 'bills', 'phone', 'health', 'fun', 'family', 'giving', 'education', 'loan_out', 'transfer_out', 'other_out', 'salary', 'bonus', 'interest', 'transfer_in', 'other_in'];
   var DEFAULT_RULES = [
@@ -87,6 +89,13 @@
       S.cats.forEach(function (c) { var d3 = DEFAULT_CATS.filter(function (x) { return x[0] === c.id; })[0]; if (d3 && c.type === 'income') { c.icon = d3[2]; c.name = d3[1]; } });
       var at = S.cats.map(function (c) { return c.type; }).lastIndexOf('income') + 1 || S.cats.length;
       DEFAULT_CATS.forEach(function (x) { if (x[3] === 'income' && !S.cats.some(function (c) { return c.id === x[0]; })) S.cats.splice(at++, 0, mkCat(x)); });
+      S.catVer = CAT_VER;
+    }
+    if ((S.catVer || 1) === 3) {
+      // Version 4: Debt/Loan in the user's order.
+      var order = ['loan', 'repayment', 'debt_collection', 'debt'];
+      var debts = order.map(function (id) { return S.cats.filter(function (c) { return c.id === id; })[0]; }).filter(Boolean);
+      S.cats = S.cats.filter(function (c) { return order.indexOf(c.id) === -1; }).concat(debts);
       S.catVer = CAT_VER;
     }
     if ((S.catVer || 1) < CAT_VER) {
@@ -486,7 +495,7 @@
     document.querySelectorAll('#catSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === catTab); });
     $('catSeg').style.setProperty('--x', ['expense', 'income', 'debt'].indexOf(catTab) * 100 + '%');
     $('catList').innerHTML = catTree(catTab).map(function (c) {
-      return '<button class="w-row' + (c.parent ? ' child' : '') + '" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + (c.flow ? '<span class="sub">' + (c.flow === 'in' ? 'Money in' : 'Money out') + '</span>' : '') + '</span><span class="muted">›</span></button>';
+      return '<button class="w-row' + (c.parent ? ' child' : '') + '" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + (c.flow ? '<span class="sub">' + (c.flow === 'in' ? 'Money in' : 'Money out') + '</span>' : '') + '</span>' + (LOCKED.indexOf(c.id) !== -1 ? '<span class="lock" title="Built in">🔒</span>' : '') + '<span class="muted">›</span></button>';
     }).join('');
     $('ruleList').innerHTML = S.rules.length ? S.rules.map(function (r, i) {
       var c = cat(r.cat);
@@ -872,7 +881,7 @@
       '<label class="fld">Type<select id="cType"><option value="expense">Expense</option><option value="income">Income</option><option value="debt">Debt/Loan</option></select></label>' +
       '<label class="fld" id="cParentL">Inside category (optional)<select id="cParent"></select></label>' +
       '<label class="fld" id="cFlowL">Money goes<select id="cFlow"><option value="out">Out of my wallet (lend, repay)</option><option value="in">Into my wallet (borrow, collect)</option></select></label>' +
-      '<button class="btn primary block" id="cSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="cDel">Delete category</button>'),
+      '<button class="btn primary block" id="cSave">Save</button>' + (isNew || LOCKED.indexOf(c.id) !== -1 ? (LOCKED.indexOf(c.id) !== -1 ? '<p class="muted small" style="text-align:center">🔒 Built in category: you can rename it, but not delete it.</p>' : '') : '<button class="btn danger block" id="cDel">Delete category</button>'),
       function (r) {
         bindPicker(r, r.querySelector('#cIcon'));
         r.querySelector('#cType').value = c.type;

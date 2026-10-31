@@ -555,3 +555,5 @@ html{background:var(--bg)}
 .cat-row.on{background:var(--chip-on);font-weight:700}
 .cat-row:active{transform:scale(.98)}
 .type-seg button{font-size:13px;padding:9px 2px}
+
+.lock{font-size:15px;opacity:.6;margin-right:4px;filter:grayscale(1)}
