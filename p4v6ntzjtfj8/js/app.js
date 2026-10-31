@@ -1443,7 +1443,8 @@
       S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now();
       save(); renderAll(); toast('Fresh start. Waiting for your next BCA transaction.');
     };
-    var rb = $('restoreZero'); if (rb) { rb.hidden = !localStorage.getItem('apex_backup_before_zero'); rb.onclick = function () { if (!confirm('Bring back the balances and transactions from before the reset to 0?')) return; var old = JSON.parse(localStorage.getItem('apex_backup_before_zero')); old.zeroVer = 1; localStorage.setItem(KEY, JSON.stringify(old)); load(); renderAll(); toast('Old data restored'); }; }
+    $('zeroBtn').onclick = function () { if (!confirm('Set every wallet to Rp 0 and remove all transactions and money owed? A backup is kept so you can undo.')) return; zeroAll(); save(); renderAll(); toast('Everything is at 0 now'); var r2 = $('restoreZero'); if (r2) r2.hidden = false; };
+    var rb = $('restoreZero'); if (rb) { rb.hidden = !localStorage.getItem('apex_backup_before_zero'); rb.onclick = function () { if (!confirm('Bring back the balances and transactions from before the reset to 0?')) return; var old = JSON.parse(localStorage.getItem('apex_backup_before_zero')); old.zeroVer = 2; localStorage.setItem(KEY, JSON.stringify(old)); load(); renderAll(); toast('Old data restored'); }; }
     $('exportBtn').onclick = function () {
       var blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arus-backup-' + ymd(new Date()) + '.json';
@@ -1967,8 +1968,17 @@
   }
 
   // One-time reset requested by the owner: net worth starts at 0 and they enter everything themselves.
+  function zeroAll() {
+    try { localStorage.setItem('apex_backup_before_zero', JSON.stringify(S)); } catch (e) {}
+    S.wallets.forEach(function (w) { w.initial = 0; delete w.holding; });
+    S.tx = []; S.debts = []; S.seen = {}; S.review = [];
+    (S.goals || []).forEach(function (g) { g.history = []; });
+    (S.recurring || []).forEach(function (r) { var t = new Date(); t.setDate(t.getDate() + 1); if (r.next <= today()) r.next = ymd(t); });
+    S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now();
+  }
   function zeroStart() {
-    if (S.zeroVer === 1) return;
+    if (S.zeroVer === 2) return;
+    zeroAll(); S.settings.autoSync = false; S.zeroVer = 2; return;
     try { localStorage.setItem('apex_backup_before_zero', JSON.stringify(S)); } catch (e) {}
     S.wallets.forEach(function (w) { w.initial = 0; delete w.holding; });
     S.tx = []; S.debts = []; S.seen = {}; S.review = [];
