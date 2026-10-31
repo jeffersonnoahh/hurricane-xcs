@@ -1303,3 +1303,38 @@ body.world-mode{--accent:#a78bfa;--accent-2:#7c3aed;--accent-ink:#1a0938;--accen
 @keyframes wBounce{0%,100%{transform:translateY(0) scale(1,1)}45%{transform:translateY(-8px) scale(.985,1.015)}55%{transform:translateY(-8px) scale(.985,1.015)}}
 .wd-atm{box-shadow:0 0 30px 6px rgba(125,211,252,.45),0 0 80px 20px rgba(192,132,252,.35)}
 .wdc-globe{background:transparent;overflow:visible;box-shadow:0 0 22px rgba(125,211,252,.5)}
+
+/* ===== WORLD: refined premium palette (midnight + soft violet) ===== */
+body.world-mode{--accent:#b4a5f5;--accent-2:#8b7cf0;--accent-soft:rgba(180,165,245,.14)}
+.world{background:#0a0912;color:#efeefa}
+.wd-aur{background:linear-gradient(180deg,#0b0a14 0%,#0d0b1a 38%,#08070f 100%)}
+.wd-aur i{filter:blur(70px)}
+.wd-aur i:nth-child(1){background:#4b3a8f;opacity:.42;top:-24%;left:-20%}
+.wd-aur i:nth-child(2){background:#2a3f7a;opacity:.28;right:-38%}
+.wd-aur i:nth-child(3){background:#5a3a6e;opacity:.18}
+.wd-stars{opacity:.45}
+.wd-lbl,.wd-stats small,.wd-sub,.wd-goal .grow span,.wdb span,.wd-empty{color:rgba(225,222,245,.55)}
+.wd-sec{color:rgba(225,222,245,.42)}
+.wd-total{background:linear-gradient(180deg,#ffffff 20%,#cfc8ef 100%);-webkit-background-clip:text;background-clip:text;text-shadow:none}
+.wd-seg{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+.wd-seg button{color:rgba(225,222,245,.55)}
+.wd-seg button.on{background:rgba(255,255,255,.1);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 16px -10px rgba(0,0,0,.8)}
+.wd-stats>div,.wd-card{background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));border-color:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 30px -20px rgba(0,0,0,.9)}
+.wd-x{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09)}
+.wd-goal .g-fg{stroke:#b4a5f5;filter:drop-shadow(0 0 4px rgba(180,165,245,.5))}
+.wdb-t i{background:linear-gradient(180deg,#c9bff7,#6d5fc7);opacity:.55}
+.wdb-t i.now{opacity:1;box-shadow:0 0 12px rgba(180,165,245,.5)}
+.wd-rb i{background:linear-gradient(90deg,#6d5fc7,#c9bff7)}
+.wd-verse{color:#e4e1f5}
+.wd-verse span{color:#a99fd9}
+.wd-pick{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 16px 30px -18px rgba(0,0,0,.9)}
+.wd-ring{border-color:rgba(200,190,240,.22)}
+.wd-ring::after{background:#e8e3ff;box-shadow:0 0 8px #b4a5f5}
+.wd-atm{box-shadow:0 0 30px 4px rgba(125,190,252,.35),0 0 80px 18px rgba(120,100,220,.22)}
+/* home card */
+.world-card{background:radial-gradient(120% 140% at 100% 0%,rgba(150,130,240,.38) 0%,transparent 55%),linear-gradient(150deg,#16132a 0%,#1d1838 50%,#251b42 100%)!important;border:1px solid rgba(255,255,255,.09)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 36px -22px rgba(40,25,90,.9)!important}
+.world-card .eyebrow,.world-card .wdc-sub{color:rgba(225,222,245,.6)}
+.wdc-glow{background:radial-gradient(circle,rgba(160,190,255,.22),transparent 70%)}
+.wdc-bar{background:rgba(255,255,255,.1)}
+.wdc-bar i{background:linear-gradient(90deg,#8b7cf0,#d9d2ff)}
+.wdc-globe{box-shadow:0 0 18px rgba(125,190,252,.35)}

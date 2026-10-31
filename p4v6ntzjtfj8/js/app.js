@@ -1203,7 +1203,7 @@
     paint();
     ov.scrollTop = 0; ov.hidden = false; void ov.offsetWidth;
     document.body.classList.add('world-mode'); ov.classList.add('show');
-    var tc = document.querySelector('meta[name=theme-color]'); if (tc) { ov.dataset.tc = tc.content; tc.content = '#12062b'; }
+    var tc = document.querySelector('meta[name=theme-color]'); if (tc) { ov.dataset.tc = tc.content; tc.content = '#0b0a14'; }
     history.pushState({ world: 1 }, '');
   }
   function worldClose(fromPop) {
