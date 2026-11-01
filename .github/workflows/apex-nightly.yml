@@ -1,0 +1,15 @@
+name: Apex nightly backup copy
+on:
+  schedule:
+    - cron: "0 18 * * *"   # 01:00 WIB (UTC+7)
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy encrypted backups into tonight's snapshot
+        run: python3 .github/scripts/apex_nightly.py
