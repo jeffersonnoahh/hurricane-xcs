@@ -77,6 +77,7 @@
   var S;
   function load() {
     try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+    if (S && typeof S === 'object' && S.settings) LAST_SAVED = dataSig();
     var d = blank();
     if (!S || typeof S !== 'object') S = d;
     Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; });
@@ -136,8 +137,13 @@
     return acc && S.wallets.some(function (w) { return w.id === acc.wallet; }) ? acc.wallet : null;
   }
   function useGenerated() { if (S.iconVer === 2) return; (S.cats || []).concat(S.wallets || []).forEach(function (o) { delete o.custom; }); S.iconVer = 2; }
+  // Save only when something really changed; only real changes bump the timestamp and trigger a cloud backup.
+  var LAST_SAVED = null;
+  function dataSig() { var u = S.updatedAt, c = S.settings && S.settings.cloud, cl = c && c.last, pr = c && c.pruned; delete S.updatedAt; if (c) { delete c.last; delete c.pruned; } var str = JSON.stringify(S); S.updatedAt = u; if (c) { if (cl != null) c.last = cl; if (pr != null) c.pruned = pr; } return str; }
   function save() {
-    S.updatedAt = Date.now();
+    var sig = dataSig();
+    if (sig === LAST_SAVED) return;
+    LAST_SAVED = sig; S.updatedAt = Date.now();
     try { localStorage.setItem(KEY, JSON.stringify(S)); cloudQueue(); }
     catch (e) { toast('Could not save. Storage full or blocked.'); }
   }
@@ -3509,9 +3515,9 @@
   function cloudPayload() { var c = JSON.parse(JSON.stringify(S)); delete c.settings.cloud; return c; }
   var cloudT = null, cloudBusy = false;
   function cloudQueue() { var c = S.settings && S.settings.cloud; if (!c || !c.on) return; clearTimeout(cloudT); cloudT = setTimeout(cloudPush, 3500); }
-  function cloudPush() {
+  function cloudPush(manual) {
     var c = S.settings.cloud; if (!c || !c.on || cloudBusy) return Promise.resolve();
-    cloudBusy = true; setCloudStatus('Backing up…'); busy(true, 'Backing up…');
+    cloudBusy = true; setCloudStatus('Backing up…'); if (manual === true) busy(true, 'Backing up…');
     var body;
     return cloudEncode(c).then(function (b) { body = b; return fetch(FB + c.id + '.json?print=silent', { method: 'PUT', body: body }); })
       .then(function (r) { if (!r.ok) throw new Error(r.status); c.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); setCloudStatus();
@@ -3520,11 +3526,11 @@
         fetch(FB + c.id + '_h/' + day + '.json?print=silent', { method: 'PUT', body: body }).catch(function () {});
         if (c.pruned !== day) { c.pruned = day; snapList(c).then(function (ks) { var cut = ymd(new Date(Date.now() - 30 * 864e5)); ks.filter(function (k) { return k < cut; }).forEach(function (k) { fetch(FB + c.id + '_h/' + k + '.json', { method: 'DELETE' }).catch(function () {}); }); }).catch(function () {}); }
       })
-      .catch(function () { setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; busy(false); });
+      .catch(function () { setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; if (manual === true) busy(false); });
   }
   function cloudPull(id, pass, opts) {
-    opts = opts || {}; busy(true, 'Syncing cloud…');
-    var done = function (x) { busy(false); return x; }, fail = function (e) { busy(false); throw e; };
+    opts = opts || {}; var loud = !!opts.force; if (loud) busy(true, 'Syncing cloud…');
+    var done = function (x) { if (loud) busy(false); return x; }, fail = function (e) { if (loud) busy(false); throw e; };
     return fetch(FB + id + '.json').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ct) { if (opts.mustExist) throw new Error('No backup found for that code'); return null; }
       if (!opts.force && S.updatedAt && j.at <= S.updatedAt) return null;
@@ -3533,7 +3539,7 @@
       if (!data) return false;
       var cloud = { id: id, pass: pass, on: true, last: Date.now() };
       S = data; S.settings = S.settings || {}; S.settings.cloud = cloud;
-      load2(); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); return true;
+      load2(); LAST_SAVED = dataSig(); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); return true;
     }).then(done, fail);
   }
   function load2() { var d = blank(); Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; }); Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; }); }
@@ -3624,7 +3630,7 @@
         '<button class="btn primary block" id="cNow">Back up now</button><button class="btn block" id="cSnap">🕘 Restore an earlier version</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
         function (r) {
           r.querySelector('#copyCode').onclick = function () { try { navigator.clipboard.writeText(c.id); toast('Code copied'); } catch (e) { toast(c.id); } };
-          r.querySelector('#cNow').onclick = function () { cloudPush().then(function () { toast('Backed up ✓'); closeSheet(); }); };
+          r.querySelector('#cNow').onclick = function () { cloudPush(true).then(function () { toast('Backed up ✓'); closeSheet(); }); };
           r.querySelector('#cSnap').onclick = function () { haptic(); snapSheet(); };
           r.querySelector('#cOff').onclick = function () { if (!confirm('Stop backing up from this device? Your cloud copy stays.')) return; c.on = false; save(); closeSheet(); setCloudStatus(); };
         });
