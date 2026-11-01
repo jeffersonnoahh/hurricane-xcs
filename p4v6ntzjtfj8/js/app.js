@@ -1646,10 +1646,16 @@
         '<div class="km-bars" style="height:90px">' + months.map(function (x, j) { return '<div class="km-col" style="--i:' + j + '"><div class="km-b biz-b"><i class="bi" style="height:' + (x.io.i / mx * 100).toFixed(1) + '%"></i><i class="be" style="height:' + (x.io.e / mx * 100).toFixed(1) + '%"></i></div><span' + (x.k === m ? ' style="color:var(--ink);font-weight:600"' : '') + '>' + x.l + '</span></div>'; }).join('') + '</div>' +
         '<div class="km-leg" style="justify-content:center"><span><i style="background:var(--pos)"></i>Income</span><span><i style="background:var(--neg)"></i>Expense</span></div></div>' +
         '<div class="two"><button class="btn primary" id="bzIn">＋ Income</button><button class="btn" id="bzOut">＋ Expense</button></div>' +
+        (function () { var by = {}; bizTx(b.id).forEach(function (t) { var k = t.date.slice(0, 7), x = by[k] = by[k] || { i: 0, e: 0 }; if (t.type === 'income') x.i += t.amount; else x.e += t.amount; });
+          var ks = Object.keys(by).sort().reverse(); if (!ks.length) return '';
+          var all = ks.reduce(function (a, k) { return a + by[k].i - by[k].e; }, 0), yr = String(new Date().getFullYear()), ytd = ks.filter(function (k) { return k.slice(0, 4) === yr; }).reduce(function (a, k) { return a + by[k].i - by[k].e; }, 0);
+          return '<div class="sheet-sec">Net profit by month</div><div class="bz-tot"><div><small>This year</small><b class="pos">' + money(ytd, { rp: false }) + '</b></div><div><small>All time</small><b class="pos">' + money(all, { rp: false }) + '</b></div></div>' +
+            '<div class="card list-card bz-months">' + ks.map(function (k) { var x = by[k], n = x.i - x.e; return '<button class="bz-m' + (k === m ? ' on' : '') + '" data-bzm="' + k + '"><span class="grow"><b>' + monthName(k) + '</b><span class="sub">In ' + money(x.i, { rp: false }) + (x.e ? ' · Out ' + money(x.e, { rp: false }) : '') + '</span></span><b class="' + (n < 0 ? 'neg' : 'pos') + '">' + money(n, { rp: false, sign: true }) + '</b></button>'; }).join('') + '</div>'; })() +
         '<div class="sheet-sec">Transactions</div>' + (list.length ? '<div class="card list-card stagger">' + list.map(function (t, j) { return txRow(t, j, true); }).join('') + '</div>' : '<div class="empty">' + dinoImg('empty-dino') + 'No ' + esc(b.name) + ' transactions this month.</div>'),
         function (el) {
           el.querySelector('#bzBack').onclick = bizSheet; el.querySelector('#bzEdit').onclick = function () { bizEdit(b); };
           el.querySelector('#bzPrev').onclick = function () { mDate.setMonth(mDate.getMonth() - 1); haptic(); draw(); };
+          el.querySelectorAll('[data-bzm]').forEach(function (x) { x.onclick = function () { mDate = new Date(x.dataset.bzm + '-01T00:00:00'); haptic(); draw(); $('sheet').scrollTop = 0; }; });
           el.querySelector('#bzNext').onclick = function () { mDate.setMonth(mDate.getMonth() + 1); haptic(); draw(); };
           el.querySelector('#bzIn').onclick = function () { txSheet(null, { type: 'income', cat: 'other_in', biz: b.id }); };
           el.querySelector('#bzOut').onclick = function () { txSheet(null, { type: 'expense', cat: 'other_out', biz: b.id }); };
@@ -2520,10 +2526,11 @@
       if (debtKeys.indexOf(k) !== -1 && skip) return;
       var type = c.type === 'debt' ? 'debt' : (x.amount >= 0 ? 'income' : 'expense');
       var t = { id: uid(), type: type, cat: c.id, amount: Math.abs(x.amount), wallet: wMatch[x.wallet].id, toWallet: '', date: x.date, time: '', note: x.note || '', merchant: '', src: 'ml', mlKey: key, created: Date.now() };
-      var b = bizForCat(c.id); if (b) t.biz = b;
+      var b = c.id === 'komisi_out' ? '' : bizForCat(c.id); if (b) t.biz = b;
       S.tx.push(t); have[key] = 1; added++;
     });
     Object.keys(bal).forEach(function (id) { var w = S.wallets.filter(function (x) { return x.id === id; })[0]; if (w) setBalance(w, bal[id]); });
+    hurLink();
     S.settings.mlImported = { at: Date.now(), n: added };
     save(); busy(false); closeSheet(); renderAll();
     toast('Imported ' + added.toLocaleString('id-ID') + ' transactions ✓');
@@ -3798,12 +3805,19 @@
     S.debts.forEach(function (d) { if (d.earned && !d.biz) { var b = bizForCat(d.incomeCat); if (b) d.biz = b; } });
     S.bizLinkVer = 1;
   }
+  // HURRICANE net profit: KOMISI paid on the same day as a RESERVE TRANSFER is a HURRICANE cost.
+  function hurLink() {
+    var h = (S.businesses || []).filter(function (b) { return b.id === 'hurricane'; })[0]; if (!h) return;
+    h.cats = h.cats || []; if (h.cats.indexOf('komisi_out') === -1) h.cats.push('komisi_out');
+    var rtDays = {}; S.tx.forEach(function (t) { if (t.type === 'income' && t.cat === 'reserve_transfer') { if (!t.biz) t.biz = 'hurricane'; if (t.biz === 'hurricane') rtDays[t.date + '|' + t.wallet] = 1; } });
+    S.tx.forEach(function (t) { if (t.type === 'expense' && t.cat === 'komisi_out' && !t.biz && rtDays[t.date + '|' + t.wallet]) t.biz = 'hurricane'; });
+  }
   function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
   function secIcons() {
     var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
-  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
+  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   setTimeout(mlSeedFromHash, 1500);
   $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); }; $('codeBtn').onclick = function () { haptic(); codeSheet(); }; setTimeout(function () { mountEarth(document.querySelector('.tile-earth .earth'), 0.012, false); }, 600);
