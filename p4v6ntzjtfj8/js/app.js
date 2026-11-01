@@ -3483,16 +3483,39 @@
       return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc.encode('apex-' + id), iterations: 150000, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
     });
   }
+  function gz(str) {
+    var bytes = new TextEncoder().encode(str);
+    if (typeof CompressionStream === 'undefined') return Promise.resolve({ z: 0, b: bytes });
+    return new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer().then(function (ab) { return { z: 1, b: new Uint8Array(ab) }; });
+  }
+  function ungz(buf, z) {
+    if (!z) return Promise.resolve(new TextDecoder().decode(buf));
+    return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+  function cloudEncode(c) {
+    var iv = crypto.getRandomValues(new Uint8Array(12)), at = S.updatedAt || Date.now(), z = 0;
+    return gz(JSON.stringify(cloudPayload())).then(function (g) { z = g.z; return deriveKey(c.pass, c.id).then(function (k) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, g.b); }); })
+      .then(function (ct) { return JSON.stringify({ v: 2, z: z, iv: b64(iv), ct: b64(ct), at: at }); });
+  }
+  function cloudDecode(j, id, pass) {
+    return deriveKey(pass, id).then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(j.iv) }, k, unb64(j.ct)); })
+      .then(function (pt) { return ungz(pt, j.z); }, function () { throw new Error('Wrong passphrase'); })
+      .then(function (txt) { return JSON.parse(txt); });
+  }
   function cloudPayload() { var c = JSON.parse(JSON.stringify(S)); delete c.settings.cloud; return c; }
   var cloudT = null, cloudBusy = false;
   function cloudQueue() { var c = S.settings && S.settings.cloud; if (!c || !c.on) return; clearTimeout(cloudT); cloudT = setTimeout(cloudPush, 3500); }
   function cloudPush() {
     var c = S.settings.cloud; if (!c || !c.on || cloudBusy) return Promise.resolve();
     cloudBusy = true; setCloudStatus('Backing up…'); busy(true, 'Backing up…');
-    var iv = crypto.getRandomValues(new Uint8Array(12)), at = S.updatedAt || Date.now();
-    return deriveKey(c.pass, c.id).then(function (k) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, new TextEncoder().encode(JSON.stringify(cloudPayload()))); })
-      .then(function (ct) { return fetch(FB + c.id + '.json?print=silent', { method: 'PUT', body: JSON.stringify({ v: 1, iv: b64(iv), ct: b64(ct), at: at }) }); })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); c.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); setCloudStatus(); })
+    var body;
+    return cloudEncode(c).then(function (b) { body = b; return fetch(FB + c.id + '.json?print=silent', { method: 'PUT', body: body }); })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); c.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); setCloudStatus();
+        // daily snapshot (one per day, overwritten during the day), keep 30 days
+        var day = ymd(new Date());
+        fetch(FB + c.id + '_h/' + day + '.json?print=silent', { method: 'PUT', body: body }).catch(function () {});
+        if (c.pruned !== day) { c.pruned = day; snapList(c).then(function (ks) { var cut = ymd(new Date(Date.now() - 30 * 864e5)); ks.filter(function (k) { return k < cut; }).forEach(function (k) { fetch(FB + c.id + '_h/' + k + '.json', { method: 'DELETE' }).catch(function () {}); }); }).catch(function () {}); }
+      })
       .catch(function () { setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; busy(false); });
   }
   function cloudPull(id, pass, opts) {
@@ -3501,8 +3524,7 @@
     return fetch(FB + id + '.json').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ct) { if (opts.mustExist) throw new Error('No backup found for that code'); return null; }
       if (!opts.force && S.updatedAt && j.at <= S.updatedAt) return null;
-      return deriveKey(pass, id).then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(j.iv) }, k, unb64(j.ct)); })
-        .then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); }, function () { throw new Error('Wrong passphrase'); });
+      return cloudDecode(j, id, pass);
     }).then(function (data) {
       if (!data) return false;
       var cloud = { id: id, pass: pass, on: true, last: Date.now() };
@@ -3516,16 +3538,38 @@
     el.textContent = msg || (c && c.on ? 'On · last backup ' + (c.last ? new Date(c.last).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : 'pending') : 'Off · your data is only on this device');
     $('cloudBtn').textContent = c && c.on ? 'Manage' : 'Turn on';
   }
+  function snapList(c) { return fetch(FB + c.id + '_h.json?shallow=true').then(function (r) { return r.json(); }).then(function (j) { return j ? Object.keys(j).sort().reverse() : []; }); }
+  function snapSheet() {
+    var c = S.settings.cloud; busy(true, 'Loading snapshots…');
+    snapList(c).then(function (ks) {
+      busy(false);
+      openSheet('<h3>Earlier versions</h3><p class="muted small" style="text-align:center;margin:-6px 0 12px">One encrypted copy per day, kept for 30 days. Restoring replaces what\u2019s on this phone (and the cloud) with that day.</p>' +
+        (ks.length ? '<div class="card list-card">' + ks.map(function (k, i) { return '<button class="w-row" data-snap="' + k + '"><span class="ic sm i3d">' + sprite('insurance') + '</span><span class="grow">' + fmtDate(k) + '<span class="sub">' + (i === 0 ? 'Latest' : (Math.round((Date.now() - new Date(k + 'T12:00:00')) / 864e5)) + ' days ago') + '</span></span><span class="muted">›</span></button>'; }).join('') + '</div>' : '<div class="empty">No snapshots yet. The first one is made at your next backup.</div>'),
+        function (r) {
+          r.querySelectorAll('[data-snap]').forEach(function (b) { b.onclick = function () {
+            var k = b.dataset.snap;
+            confirmBox('Restore ' + fmtDate(k) + '?', 'Everything on this phone goes back to how it was that day. Today\u2019s snapshot is kept, so you can switch back.', 'Restore', true).then(function (ok) {
+              if (!ok) return; busy(true, 'Restoring…');
+              fetch(FB + c.id + '_h/' + k + '.json').then(function (x) { return x.json(); }).then(function (j) { return cloudDecode(j, c.id, c.pass); }).then(function (data) {
+                var cloud = S.settings.cloud; S = data; S.settings = S.settings || {}; S.settings.cloud = cloud; load2(); S.updatedAt = Date.now();
+                localStorage.setItem(KEY, JSON.stringify(S)); busy(false); closeSheet(); renderAll(); toast('Restored ' + fmtDate(k) + ' ✓'); cloudPush();
+              }).catch(function (e) { busy(false); toast(e.message || 'Restore failed'); });
+            });
+          }; });
+        });
+    }).catch(function () { busy(false); toast('Could not load snapshots'); });
+  }
   function cloudSheet() {
     var c = S.settings.cloud;
     if (c && c.on) {
       openSheet('<h3>Cloud backup</h3><span class="ic preview i3d">' + sprite('insurance') + '</span>' +
         '<p class="muted small" style="text-align:center">Encrypted on this phone with your passphrase before upload. Nobody else can read it.</p>' +
         '<div class="card"><div class="eyebrow">Your sync code</div><div class="sync-code" id="syncCode">' + esc(c.id) + '</div><div class="muted small">Use this code + your passphrase to open your data on another device.</div><button class="btn block" id="copyCode">Copy code</button></div>' +
-        '<button class="btn primary block" id="cNow">Back up now</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
+        '<button class="btn primary block" id="cNow">Back up now</button><button class="btn block" id="cSnap">🕘 Restore an earlier version</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
         function (r) {
           r.querySelector('#copyCode').onclick = function () { try { navigator.clipboard.writeText(c.id); toast('Code copied'); } catch (e) { toast(c.id); } };
           r.querySelector('#cNow').onclick = function () { cloudPush().then(function () { toast('Backed up ✓'); closeSheet(); }); };
+          r.querySelector('#cSnap').onclick = function () { haptic(); snapSheet(); };
           r.querySelector('#cOff').onclick = function () { if (!confirm('Stop backing up from this device? Your cloud copy stays.')) return; c.on = false; save(); closeSheet(); setCloudStatus(); };
         });
       return;
@@ -3549,8 +3593,10 @@
             S.settings.cloud = { id: id, pass: p, on: true }; save(); cloudPush().then(function () { closeSheet(); setCloudStatus(); toast('Cloud backup on ☁️'); setTimeout(cloudSheet, 500); });
           } else {
             var code = r.querySelector('#cCode').value.trim().toLowerCase(); if (!code) { toast('Enter your sync code'); btn.disabled = false; return; }
-            if (!confirm('Replace the data on this device with your cloud backup?')) { btn.disabled = false; return; }
-            cloudPull(code, p, { force: true, mustExist: true }).then(function () { closeSheet(); toast('Restored from cloud ✓'); }).catch(function (e) { toast(e.message); btn.disabled = false; });
+            confirmBox('Restore from cloud?', 'The data on this phone is replaced with your cloud backup.', 'Restore', true).then(function (ok) {
+              if (!ok) { btn.disabled = false; return; }
+              cloudPull(code, p, { force: true, mustExist: true }).then(function () { closeSheet(); toast('Restored from cloud ✓'); }).catch(function (e) { toast(e.message); btn.disabled = false; });
+            });
           }
         };
       });
