@@ -141,6 +141,7 @@
   var LAST_SAVED = null;
   function dataSig() { var u = S.updatedAt, c = S.settings && S.settings.cloud, cl = c && c.last, pr = c && c.pruned; delete S.updatedAt; if (c) { delete c.last; delete c.pruned; } var str = JSON.stringify(S); S.updatedAt = u; if (c) { if (cl != null) c.last = cl; if (pr != null) c.pruned = pr; } return str; }
   function save() {
+    BAL = {};
     var sig = dataSig();
     if (sig === LAST_SAVED) return;
     LAST_SAVED = sig; S.updatedAt = Date.now();
@@ -283,7 +284,10 @@
   function walletIds(w) { return w === 'all' ? S.wallets.filter(included).map(function (x) { return x.id; }) : [w]; }
   function deltaSel(t, w) { return walletIds(w).reduce(function (a, id) { return a + delta(t, id); }, 0); }
   // Balance of a wallet (or the total) counting only transactions dated before `before` (yyyy-mm-dd), or all.
-  function balance(w, before) {
+  // Balances are remembered until data changes (save / renderAll clear this), instead of re-adding 4,000+ transactions every time.
+  var BAL = {};
+  function balance(w, before) { var k = w + '|' + (before || ''); if (k in BAL) return BAL[k]; return (BAL[k] = balance0(w, before)); }
+  function balance0(w, before) {
     var ids = walletIds(w), live = 0, manual = [];
     ids.forEach(function (id) { var wo = wallet(id), lv = bookValue(wo); if (lv != null) { live += lv; if (wo.holding && wo.holding.withCash) manual.push(id); } else manual.push(id); });
     if (!manual.length) return live;
@@ -343,6 +347,7 @@
   }
   // ---------- render ----------
   function renderAll() {
+    BAL = {};
     applyTheme(); renderEye();
     renderHome(); renderTx(); renderBudgets(); renderReport(); renderAccount(); renderDebts(); renderFeatures();
   }
@@ -2082,10 +2087,10 @@
     if (!root || S.settings.hide || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
     var els = [], vh = window.innerHeight + 200;
     root.querySelectorAll('b, span, small, em, div, i, strong').forEach(function (el) {
-      if (els.length > 60 || el.children.length || el.closest('input,textarea,select,.dg,.masked,[data-nocount]')) return;
-      var t = el.textContent.trim(), m = t.match(NUM_RE); if (!m) return;
+      if (els.length >= 24 || el.children.length) return;
+      var t = el.textContent; if (t.length > 24) return; t = t.trim(); var m = t.match(NUM_RE); if (!m) return;
       var v = +m[2].replace(/\./g, ''); if (v < 100) return;
-      var r = el.getBoundingClientRect(); if (r.top > vh || r.bottom < -50) return;
+      if (el.closest('input,textarea,select,.dg,.masked,[data-nocount]')) return;
       els.push({ el: el, pre: m[1], suf: m[3] || '', v: v, txt: t });
     });
     if (!els.length) return;
