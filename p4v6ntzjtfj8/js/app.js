@@ -314,15 +314,15 @@
       void el.offsetWidth;
     } else from = st ? st.digits : digits.map(function () { return 0; });
     var dir = (!st || spinAll) ? 1 : (n >= st.v ? 1 : -1);
-    RS[key] = { sig: sig, digits: digits, v: n };
+    RS[key] = { sig: sig, digits: digits, v: n, opt: opt };
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { cols.forEach(function (c, i) { c.style.transition = 'none'; c.style.transform = ty(10 + digits[i]); }); return; }
     var tok = (el._tok || 0) + 1, end = 0, moved = false; el._tok = tok;
     cols.forEach(function (c, i) {
       var o = from[i], d = digits[i], t;
       if (o === d && !spinAll) { c.style.transition = 'none'; c.style.transform = ty(10 + d); c._fin = null; return; }
       if (dir > 0) t = (d > o && !spinAll) ? 10 + d : 20 + d; else t = d < o ? 10 + d : d;
-      var delay = i * 45, dur = 850 + Math.abs(t - (10 + o)) * 28;
-      c.style.transition = 'transform ' + dur + 'ms cubic-bezier(.18,1.3,.32,1) ' + delay + 'ms';
+      var delay = i * 70, dur = 1400 + Math.abs(t - (10 + o)) * 35;
+      c.style.transition = 'transform ' + dur + 'ms cubic-bezier(.16,1.12,.3,1) ' + delay + 'ms';
       c.style.transform = ty(t); c._fin = 10 + d; moved = true;
       end = Math.max(end, delay + dur);
     });
@@ -330,6 +330,11 @@
     if (st && !spinAll && moved) { el.classList.remove('flash-up', 'flash-down'); void el.offsetWidth; el.classList.add(dir > 0 ? 'flash-up' : 'flash-down'); }
   }
   function setMoney(el, n, opt) { rollTo(el, n, opt); }
+  // Roll every rolling number in a page up from 0 again (when the page is opened).
+  function replayRolls(root) {
+    if (!root || S.settings.hide) return;
+    root.querySelectorAll('[id]').forEach(function (el) { var st = RS[el.id]; if (!st || !el.querySelector('.dg-col') || el.offsetParent === null) return; RS[el.id] = null; el.removeAttribute('data-sig'); rollTo(el, st.v, st.opt); });
+  }
   // ---------- render ----------
   function renderAll() {
     applyTheme(); renderEye();
@@ -1919,7 +1924,7 @@
     var el = $(id); void el.offsetWidth;
     el.classList.add('active'); if (back) el.classList.add('back');
     window.scrollTo(0, scrollMem[id] || 0);
-    requestAnimationFrame(function () { countUpAll(el, true); });
+    requestAnimationFrame(function () { replayRolls(el); countUpAll(el, true); });
     var navId = id === 'v-report' ? (prev === 'v-tx' ? 'v-tx' : prev === 'v-account' ? 'v-account' : 'v-home') : id === 'v-budget' ? (prev === 'v-home' ? 'v-home' : 'v-account') : id;
     if (id === 'v-budget') budFrom = prev;
     if (id === 'v-report') repFrom = prev;
@@ -2034,9 +2039,9 @@
       els.push({ el: el, pre: m[1], suf: m[3] || '', v: v, txt: t });
     });
     if (!els.length) return;
-    var t0 = performance.now(), D = quick ? 420 : 750;
+    var t0 = performance.now(), D = quick ? 1100 : 1300;
     (function f(now) {
-      var p = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - p, 3);
+      var p = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - p, 4);
       els.forEach(function (x) { if (!x.el.isConnected) return; x.el.textContent = p >= 1 ? x.txt : x.pre + Math.round(x.v * e).toLocaleString('id-ID') + x.suf; });
       if (p < 1) requestAnimationFrame(f);
     })(t0);
