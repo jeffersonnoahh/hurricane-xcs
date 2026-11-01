@@ -2103,14 +2103,19 @@
           root.querySelector('#fCatSel').innerHTML = icon(sc) + '<span class="grow"><small>Category</small>' + esc(sc.name) + '</span><span class="chev2">' + (pickOpen ? '▴' : '▾') + '</span>';
           root.querySelector('#fCatPick').classList.toggle('open', pickOpen);
           var q = root.querySelector('#fCatQ').value.trim().toLowerCase();
-          root.querySelector('#fCats').innerHTML = catTree(st.type).filter(function (c) { return (!c.hidden || c.id === st.cat) && (!q || c.name.toLowerCase().indexOf(q) !== -1); }).map(function (c, i) {
+          var allC = catTree(st.type).filter(function (c) { return (!c.hidden || c.id === st.cat) && (!q || c.name.toLowerCase().indexOf(q) !== -1); }), moreN = 0;
+          if (!q && !st.showAll) { // only the most used (last 6 months, else all time), most used first
+            var use = catUse(st.type), top = allC.filter(function (c) { return use[c.id]; }).sort(function (a, b) { return use[b.id] - use[a.id]; }).slice(0, 8);
+            if (top.length >= 3) { if (st.cat && !top.some(function (c) { return c.id === st.cat; }) && allC.some(function (c) { return c.id === st.cat; })) top.unshift(cat(st.cat)); moreN = allC.length - top.length; allC = top.map(function (c) { var x = Object.assign({}, c); delete x.parent; return x; }); }
+          }
+          root.querySelector('#fCats').innerHTML = allC.map(function (c, i) {
             return '<div class="sw" data-cid="' + esc(c.id) + '"><button class="sw-del" type="button" data-delcat="' + esc(c.id) + '"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete</button><button type="button" data-c="' + esc(c.id) + '" class="cat-row' + (c.parent ? ' child' : '') + (c.id === st.cat ? ' on' : '') + '" style="--i:' + Math.min(i, 14) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '</span>' + (c.id === st.cat ? '<span class="check">✓</span>' : '') + '</button></div>';
-          }).join('') || '<p class="muted small" style="text-align:center">No category found</p>';
+          }).join('') + (moreN > 0 ? '<button type="button" class="cat-more" data-showall="1">Show all categories · ' + moreN + ' more</button>' : '') || '<p class="muted small" style="text-align:center">No category found</p>';
         }
         var pickOpen = isNew;
         root.querySelector('#fCatSel').onclick = function () { pickOpen = !pickOpen; haptic(); paint(); };
         root.querySelector('#fCatQ').addEventListener('input', paint);
-        root.querySelector('#fType').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.type = b.dataset.t; haptic(); paint(); } });
+        root.querySelector('#fType').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { st.type = b.dataset.t; st.showAll = false; haptic(); paint(); } });
         function autoOwed() {
           var payer = (S.settings.autoOwed || {})[st.cat];
           if (!ub || st.type !== 'income' || !payer) return;
@@ -2123,7 +2128,7 @@
         }
         bindSwipe(root.querySelector('#fCats'));
         var onDel = function () { if (!document.body.contains(root)) { document.removeEventListener('catdeleted', onDel); return; } paint(); }; document.addEventListener('catdeleted', onDel);
-        root.querySelector('#fCats').addEventListener('click', function (e) { var b = e.target.closest('button[data-c]'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); autoOwed(); } });
+        root.querySelector('#fCats').addEventListener('click', function (e) { if (e.target.closest('[data-showall]')) { st.showAll = true; haptic(); paint(); return; } var b = e.target.closest('button[data-c]'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); autoOwed(); } });
         paint(); if (isNew && prefill && prefill.cat) autoOwed();
         if (isNew) setTimeout(function () { amt.focus(); }, 380);
 
@@ -2612,6 +2617,12 @@
   }
 
   // ---------- Category page: how much went into this category (month / year / all time, chart, transactions) ----------
+  function catUse(type) {
+    var since = ymd(new Date(Date.now() - 183 * 864e5)), u = {}, any = false;
+    S.tx.forEach(function (t) { if (t.date >= since && cat(t.cat).type === type) { u[t.cat] = (u[t.cat] || 0) + 1; any = true; } });
+    if (!any) S.tx.forEach(function (t) { if (cat(t.cat).type === type) u[t.cat] = (u[t.cat] || 0) + 1; });
+    return u;
+  }
   function catDetail(c) {
     if (!c) return;
     var kids = S.cats.filter(function (k) { return k.parent === c.id; }), ids = [c.id].concat(kids.map(function (k) { return k.id; }));
