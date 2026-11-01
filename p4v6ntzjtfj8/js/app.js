@@ -1633,6 +1633,86 @@
         var d = r.querySelector('#bzDel'); if (d) d.onclick = function () { if (!confirm('Delete ' + b.name + '? Its transactions stay, just without a business.')) return; S.tx.forEach(function (t) { if (t.biz === b.id) delete t.biz; }); S.businesses = S.businesses.filter(function (x) { return x !== b; }); save(); renderAll(); bizSheet(); };
       });
   }
+  // ---------- Business clients & projects (separate from wallets / net worth; ticked by hand) ----------
+  function clMonths(c) {
+    if (c.kind === 'project') return (c.plan || []).map(function (x) { return { k: x.k, a: x.a }; });
+    var out = [], now = ym(new Date()), end = c.active === false && c.stoppedAt ? c.stoppedAt : now, y = +c.start.slice(0, 4), m = +c.start.slice(5, 7) - 1;
+    for (var i = 0; i < 240; i++) { var k = ym(new Date(y, m + i, 1)); if (k > end) break; out.push({ k: k, a: c.amount }); }
+    return out;
+  }
+  function clShare(c) { return 1 - ((c.partner && c.partner.pct) || 0) / 100; }
+  function clStats(b, mk) {
+    var r = { mine: 0, owe: 0, todo: 0, mineAll: 0 };
+    (b.clients || []).forEach(function (c) {
+      var sh = clShare(c);
+      clMonths(c).forEach(function (x) {
+        var got = (c.recv || {})[x.k];
+        if (got) { r.mineAll += x.a * sh; if (x.k === mk) r.mine += x.a * sh; if (c.partner && !(c.settled || {})[x.k]) r.owe += x.a * (1 - sh); }
+        else if (x.k <= mk || c.kind === 'project') r.todo += x.a;
+      });
+    });
+    return r;
+  }
+  function clientsHtml(b) {
+    var mk = ym(new Date()), st = clStats(b, mk), cs = b.clients || [];
+    return '<div class="sheet-sec">Clients & projects</div>' +
+      (cs.length ? '<div class="cl-sum"><div><small>My profit · ' + MONTHS[new Date().getMonth()].slice(0, 3) + '</small><b class="pos">' + money(st.mine, { rp: false }) + '</b></div><div><small>Still to collect</small><b>' + money(st.todo, { rp: false }) + '</b></div><div><small>Owe partners</small><b class="neg">' + money(st.owe, { rp: false }) + '</b></div></div>' : '') +
+      cs.map(function (c) {
+        var ms = clMonths(c), sh = clShare(c), got = ms.filter(function (x) { return (c.recv || {})[x.k]; }).reduce(function (a, x) { return a + x.a; }, 0);
+        var sub = c.kind === 'project' ? 'Project ' + money(c.total || 0, { rp: false }) + ' · received ' + money(got, { rp: false }) : 'Monthly ' + money(c.amount, { rp: false }) + (c.active === false ? ' · stopped' : '');
+        if (c.partner) sub += ' · ' + c.partner.pct + '% to ' + esc(c.partner.name);
+        var rows = ms.slice().reverse().slice(0, c.kind === 'project' ? 99 : 4).map(function (x) {
+          var rc = (c.recv || {})[x.k], se = (c.settled || {})[x.k];
+          return '<div class="cl-m"><span class="grow">' + monthName(x.k) + '<span class="sub">' + money(x.a, { rp: false }) + (c.partner ? ' · mine ' + money(x.a * sh, { rp: false }) : '') + '</span></span>' +
+            '<button type="button" class="cl-t' + (rc ? ' on' : '') + '" data-cl="' + esc(c.id) + '" data-k="' + x.k + '" data-f="recv">' + (rc ? '✓ Paid' : 'Not paid') + '</button>' +
+            (c.partner ? '<button type="button" class="cl-t p' + (se ? ' on' : '') + (rc ? '' : ' dim') + '" data-cl="' + esc(c.id) + '" data-k="' + x.k + '" data-f="settled">' + (se ? '✓ ' : '') + esc(c.partner.name) + '</button>' : '') + '</div>';
+        }).join('');
+        return '<div class="cl-card' + (c.active === false ? ' off' : '') + '"><div class="cl-h"><span class="grow"><b>' + esc(c.name) + '</b><span class="sub">' + sub + '</span></span>' +
+          (c.kind === 'monthly' ? '<label class="cl-sw"><input type="checkbox" class="switch" data-clact="' + esc(c.id) + '"' + (c.active === false ? '' : ' checked') + '></label>' : '') + '</div>' + rows +
+          (c.kind === 'project' && (c.total || 0) > ms.reduce(function (a, x) { return a + x.a; }, 0) ? '<div class="cl-note">' + money(c.total - ms.reduce(function (a, x) { return a + x.a; }, 0), { rp: false }) + ' not scheduled yet</div>' : '') + '</div>';
+      }).join('') +
+      '<button class="btn block" id="clAdd" style="margin-top:8px">＋ Add client or project</button>' +
+      '<p class="muted small" style="text-align:center;margin-top:6px">Tracked here only. Doesn’t change wallets or net worth.</p>';
+  }
+  function bindClients(el, b, redraw) {
+    el.querySelectorAll('[data-cl]').forEach(function (x) { x.onclick = function () {
+      var c = (b.clients || []).filter(function (y) { return y.id === x.dataset.cl; })[0]; if (!c) return;
+      var f = x.dataset.f, k = x.dataset.k; c[f] = c[f] || {};
+      if (c[f][k]) delete c[f][k]; else c[f][k] = Date.now();
+      haptic(); save(); renderAll(); redraw();
+    }; });
+    el.querySelectorAll('[data-clact]').forEach(function (x) { x.onchange = function () {
+      var c = (b.clients || []).filter(function (y) { return y.id === x.dataset.clact; })[0]; if (!c) return;
+      if (x.checked) { c.active = true; delete c.stoppedAt; } else { c.active = false; c.stoppedAt = ym(new Date()); }
+      haptic(); save(); renderAll(); toast(c.name + (c.active ? ' active again' : ' stopped')); redraw();
+    }; });
+    var add = el.querySelector('#clAdd'); if (add) add.onclick = function () { clientSheet(b, redraw); };
+  }
+  function clientSheet(b, done) {
+    openSheet('<h3>New client or project</h3><div class="seg d-seg" id="clKind" style="--x:0%"><button data-k="monthly" class="on">Monthly</button><button data-k="project">Project</button><i class="seg-ind"></i></div>' +
+      '<label class="fld">Name<input id="clName" placeholder="e.g. Pak Sapto"></label>' +
+      '<label class="fld" id="clAmtL">Amount per month<input id="clAmt" inputmode="numeric" placeholder="2.000.000"></label>' +
+      '<div class="two"><label class="fld">Split with (optional)<input id="clPN" placeholder="e.g. Richard"></label><label class="fld">Their %<input id="clPP" inputmode="numeric" placeholder="50"></label></div>' +
+      '<button class="btn primary block" id="clSave">Add</button>',
+      function (r) {
+        var kind = 'monthly'; fmtInput(r.querySelector('#clAmt'));
+        r.querySelector('#clKind').onclick = function (e) { var x = e.target.closest('button'); if (!x) return; kind = x.dataset.k; this.style.setProperty('--x', kind === 'monthly' ? '0%' : '100%'); this.querySelectorAll('button').forEach(function (y) { y.classList.toggle('on', y === x); }); r.querySelector('#clAmtL').firstChild.textContent = kind === 'monthly' ? 'Amount per month' : 'Payment per month (3 months)'; };
+        r.querySelector('#clSave').onclick = function () {
+          var n = r.querySelector('#clName').value.trim(), a = parseNum(r.querySelector('#clAmt').value); if (!n || !a) { toast('Enter a name and amount'); return; }
+          var c = { id: uid(), name: n, kind: kind, recv: {}, settled: {} }, now = ym(new Date());
+          if (kind === 'monthly') { c.amount = a; c.start = now; c.active = true; } else { c.plan = [0, 1, 2].map(function (i) { var d = new Date(); return { k: ym(new Date(d.getFullYear(), d.getMonth() + i, 1)), a: a }; }); c.total = a * 3; }
+          var pn = r.querySelector('#clPN').value.trim(), pp = parseNum(r.querySelector('#clPP').value); if (pn && pp) c.partner = { name: pn, pct: pp };
+          (b.clients = b.clients || []).push(c); save(); renderAll(); toast(n + ' added'); bizDetail(b);
+        };
+      });
+  }
+  function clientsImport(d) {
+    var b = (S.businesses || []).filter(function (x) { return x.id === d.biz || new RegExp(d.match || '^$', 'i').test(x.name); })[0];
+    if (!b) { toast('Business not found'); return; }
+    b.clients = b.clients || [];
+    d.list.forEach(function (c) { if (!b.clients.some(function (y) { return y.key === c.key; })) b.clients.push(Object.assign({ id: uid(), recv: {}, settled: {} }, c)); });
+    save(); renderAll(); toast(d.list.length + ' clients added to ' + b.name + ' ✓'); setTimeout(function () { bizDetail(b); }, 300);
+  }
   function bizDetail(b) {
     var i0 = S.businesses.indexOf(b), col = BCOL[i0 % BCOL.length], mDate = new Date(); mDate.setDate(1);
     function draw() {
@@ -1645,6 +1725,7 @@
         '<div class="dd-stats"><div><small>Income</small><b class="pos">' + money(r.i, { rp: false }) + '</b></div><div><small>Expense</small><b class="neg">' + money(r.e, { rp: false }) + '</b></div><div><small>Margin</small><b>' + (r.i ? Math.round(net / r.i * 100) + '%' : '–') + '</b></div></div>' +
         '<div class="km-bars" style="height:90px">' + months.map(function (x, j) { return '<div class="km-col" style="--i:' + j + '"><div class="km-b biz-b"><i class="bi" style="height:' + (x.io.i / mx * 100).toFixed(1) + '%"></i><i class="be" style="height:' + (x.io.e / mx * 100).toFixed(1) + '%"></i></div><span' + (x.k === m ? ' style="color:var(--ink);font-weight:600"' : '') + '>' + x.l + '</span></div>'; }).join('') + '</div>' +
         '<div class="km-leg" style="justify-content:center"><span><i style="background:var(--pos)"></i>Income</span><span><i style="background:var(--neg)"></i>Expense</span></div></div>' +
+        (b.clients && b.clients.length || b.id === 'sentaris' ? clientsHtml(b) : '') +
         '<div class="two"><button class="btn primary" id="bzIn">＋ Income</button><button class="btn" id="bzOut">＋ Expense</button></div>' +
         (function () { var by = {}; bizTx(b.id).forEach(function (t) { var k = t.date.slice(0, 7), x = by[k] = by[k] || { i: 0, e: 0 }; if (t.type === 'income') x.i += t.amount; else x.e += t.amount; });
           var ks = Object.keys(by).sort().reverse(); if (!ks.length) return '';
@@ -1657,6 +1738,7 @@
           el.querySelector('#bzPrev').onclick = function () { mDate.setMonth(mDate.getMonth() - 1); haptic(); draw(); };
           el.querySelectorAll('[data-bzm]').forEach(function (x) { x.onclick = function () { mDate = new Date(x.dataset.bzm + '-01T00:00:00'); haptic(); draw(); $('sheet').scrollTop = 0; }; });
           el.querySelector('#bzNext').onclick = function () { mDate.setMonth(mDate.getMonth() + 1); haptic(); draw(); };
+          bindClients(el, b, function () { var top = $('sheet').scrollTop; draw(); $('sheet').scrollTop = top; });
           el.querySelector('#bzIn').onclick = function () { txSheet(null, { type: 'income', cat: 'other_in', biz: b.id }); };
           el.querySelector('#bzOut').onclick = function () { txSheet(null, { type: 'expense', cat: 'other_out', biz: b.id }); };
           el.addEventListener('click', function (e) { var rw = e.target.closest('.tx'); if (rw) { var t = S.tx.filter(function (x) { return x.id === rw.dataset.id; })[0]; if (t) txSheet(t); } });
@@ -2390,6 +2472,7 @@
   function codeItems(d) {
     if (d.kind === 'multi') return [].concat.apply([], (d.items || []).map(codeItems));
     if (d.kind === 'plan') { var acc = d.plan.account ? ' · account ••' + String(d.plan.account).replace(/\D/g, '').slice(-4) : ''; return [{ ic: /wedding/i.test(d.name || d.match || '') ? 'wedding' : 'my_home', t: (d.name || 'Plan'), s: d.plan.months + ' months · ' + money(d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0), { rp: false }) + '/mo' + acc }]; }
+    if (d.kind === 'clients') return d.list.map(function (c) { return { ic: 'sentaris', t: c.name, s: (c.kind === 'project' ? 'Project ' + money(c.total, { rp: false }) : 'Monthly ' + money(c.amount, { rp: false })) + (c.partner ? ' · ' + c.partner.pct + '% ' + c.partner.name : '') }; });
     if (d.kind === 'komisi') return [{ ic: 'komisi_out', t: 'Commission history', s: d.list.length + ' months' }];
     if (d.kind === 'owed') return [{ ic: 'debt_collection', t: 'Owed to me', s: d.list.length + ' records · ' + money(d.list.reduce(function (a, x) { return a + x.amount; }, 0), { rp: false }) }];
     if (d.rows) return [{ ic: 'reserve_transfer', t: d.name || 'Transactions', s: d.rows.length.toLocaleString('id-ID') + ' transactions' }];
@@ -2449,7 +2532,7 @@
   // Money owed to me, added from a private code (no wallet change: just records to collect).
   function seedApply(d) {
     if (d.kind === 'multi') { (d.items || []).forEach(function (x, i) { if (x.kind === 'plan') planImport(x, i < d.items.length - 1); else seedApply(x); }); return; }
-    if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
+    if (d.kind === 'clients') clientsImport(d); else if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
   }
   function planImport(d, quiet) {
     var p = (S.inst || []).filter(function (x) { return x.id === d.instId; })[0] || (d.match ? (S.inst || []).filter(function (x) { return new RegExp(d.match, 'i').test(x.name); })[0] : null);
