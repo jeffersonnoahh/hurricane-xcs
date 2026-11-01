@@ -16,8 +16,8 @@
 // Change this. The app must send the same value, so strangers who find the URL get nothing.
 var SECRET = 'CHANGE-ME-to-a-long-random-text';
 
-// Which emails count as BCA notifications. Adjust if your BCA emails come from another address.
-var SEARCH = 'from:(bca.co.id OR klikbca.com OR mybca)';
+// Which emails count as bank notifications (BCA and Mandiri). Adjust if your BCA emails come from another address.
+var SEARCH = 'from:(bca.co.id OR klikbca.com OR mybca OR bankmandiri.co.id)';
 
 // Never send more than this many emails per request.
 var MAX_MESSAGES = 200;

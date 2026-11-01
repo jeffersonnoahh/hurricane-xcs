@@ -132,6 +132,13 @@
     var n = Math.min(pa.length, pb.length), m = Math.min(sa.length, sb.length);
     return n >= 2 && m >= 2 && pa.slice(0, n) === pb.slice(0, n) && sa.slice(-m) === sb.slice(-m);
   }
+  // Wallet for Mandiri emails: chosen in Account, else a wallet named Spending.
+  function mandiriWalletId() {
+    var id = S.settings.mandiriWallet; if (id && S.wallets.some(function (w) { return w.id === id; })) return id;
+    var w = S.wallets.filter(function (x) { return /spend/i.test(x.name); })[0] || S.wallets.filter(function (x) { return /mandiri/i.test(x.name); })[0];
+    return w ? w.id : null;
+  }
+  function isMandiriEmail(em) { return /mandiri/i.test((em.from || '') + ' ' + (em.subject || '')) || /bankmandiri|livin/i.test(em.body || ''); }
   function walletForSrc(src) {
     var acc = (S.settings.bcaAccounts || []).filter(function (a) { return a.wallet && maskMatch(a.mask, src); })[0];
     return acc && S.wallets.some(function (w) { return w.id === acc.wallet; }) ? acc.wallet : null;
@@ -1049,7 +1056,7 @@
     else if (t.time) sub = t.time + ' · ' + sub;
     var cls = t.type === 'transfer' ? '' : flowIn(t) ? 'pos' : 'neg';
     return '<div class="tx" data-id="' + esc(t.id) + '" style="--i:' + i + '">' + icon(c) + '<div class="tx-main"><div class="tx-cat">' + esc(c.name) +
-      (t.src === 'bca' ? '<span class="badge">BCA</span>' : '') + (t.files && t.files.length ? '<span class="clip" title="Attachments">📎' + (t.files.length > 1 ? t.files.length : '') + '</span>' : '') + '</div><div class="tx-note">' + esc(sub) + '</div></div>' +
+      (t.src === 'bca' ? '<span class="badge">BCA</span>' : t.src === 'mandiri' ? '<span class="badge">Mandiri</span>' : '') + (t.files && t.files.length ? '<span class="clip" title="Attachments">📎' + (t.files.length > 1 ? t.files.length : '') + '</span>' : '') + '</div><div class="tx-note">' + esc(sub) + '</div></div>' +
       '<div class="amt-col"><div class="amt ' + cls + '">' + money(t.amount, { rp: false }) + '</div><small>' + (t.type === 'income' ? 'Received' : t.type === 'expense' ? 'Spent' : t.type === 'debt' ? (flowIn(t) ? 'Money in' : 'Money out') : 'Moved') + '</small></div></div>';
   }
 
@@ -1120,6 +1127,7 @@
     $('startFromLine').textContent = s.startFrom ? 'Tracking BCA emails since ' + new Date(s.startFrom).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '';
     $('sWallet').innerHTML = S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '">' + esc(w.icon + ' ' + w.name) + '</option>'; }).join('');
     $('sWallet').value = s.bcaWallet;
+    $('sMWallet').innerHTML = $('sWallet').innerHTML; $('sMWallet').value = mandiriWalletId() || s.bcaWallet;
     ensureAccounts();
     $('acctList').innerHTML = s.bcaAccounts.map(function (a, i) {
       return '<div class="acct-row"><div class="grow"><b>' + esc(a.mask) + '</b><span class="sub">' + esc(a.label || '') + '</span></div><select data-acct="' + i + '"><option value="">Default wallet</option>' + S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === a.wallet ? ' selected' : '') + '>' + esc(w.icon + ' ' + w.name) + '</option>'; }).join('') + '</select><button class="x" data-delacct="' + i + '" aria-label="Remove">×</button></div>';
@@ -2292,8 +2300,8 @@
       '<label class="fld">Merchant / person<input id="fMerch" value="' + esc(t.merchant || '') + '"></label>' +
       '<label class="fld">Note<input id="fNote" value="' + esc(t.note || '') + '"></label>' +
       '<div class="fld">Attachments<div id="fFiles"></div></div>' +
-      (t.src === 'bca' ? '<p class="muted small">Imported from a BCA email' + (t.ref ? ' · ref ' + esc(t.ref) : '') + '.</p>' : '') +
-      (t.src === 'bca' && !isNew ? '<label class="set-row plain"><span class="grow small">Always use this category for "' + esc(t.merchant || '') + '"</span><input type="checkbox" class="switch" id="fRemember" checked></label>' : '') +
+      (t.src === 'bca' || t.src === 'mandiri' ? '<p class="muted small">Imported from a ' + (t.src === 'mandiri' ? 'Mandiri' : 'BCA') + ' email' + (t.ref ? ' · ref ' + esc(t.ref) : '') + '.</p>' : '') +
+      ((t.src === 'bca' || t.src === 'mandiri') && !isNew ? '<label class="set-row plain"><span class="grow small">Always use this category for "' + esc(t.merchant || '') + '"</span><input type="checkbox" class="switch" id="fRemember" checked></label>' : '') +
       '<button class="btn primary block" id="fSave">Save</button>' +
       (isNew ? '' : '<button class="btn danger block" id="fDel">Delete</button>'),
       function (root) {
@@ -2427,7 +2435,7 @@
     var s = S.settings;
     if (!s.syncUrl || !s.token) { if (manual) { toast('Set up BCA sync in Account first'); } return Promise.resolve(); }
     if (syncing) return Promise.resolve();
-    syncing = true; busy(true, 'Syncing BCA…');
+    syncing = true; busy(true, 'Syncing bank emails…');
     $('hSync').classList.add('spin');
     $('sStatus').textContent = 'Syncing…';
     // Only emails from the moment tracking started count (set on first connect or Start fresh).
@@ -2453,12 +2461,13 @@
             }
             return;
           }
-          if (p.ref && S.tx.some(function (t) { return t.src === 'bca' && t.ref === p.ref && t.amount === p.amount; })) return;
+          var bank = isMandiriEmail(em) ? 'mandiri' : 'bca';
+          if (p.ref && S.tx.some(function (t) { return t.src === bank && t.ref === p.ref && t.amount === p.amount; })) return;
           var d = new Date(em.date);
           S.tx.push({
             id: uid(), type: p.type, amount: p.amount, cat: guessCat(p.merchant, p.type),
-            wallet: walletForSrc(p.src) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || '',
-            toWallet: '', biz: bizForCat(guessCat(p.merchant, p.type)) || undefined, date: ymd(d), time: hm(d), merchant: p.merchant, note: '', src: 'bca', srcId: em.id, ref: p.ref || '', created: Date.now()
+            wallet: (bank === 'mandiri' ? mandiriWalletId() : walletForSrc(p.src)) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || '',
+            toWallet: '', biz: bizForCat(guessCat(p.merchant, p.type)) || undefined, date: ymd(d), time: hm(d), merchant: p.merchant, note: '', src: bank, srcId: em.id, ref: p.ref || '', created: Date.now()
           });
           added++;
         });
@@ -2466,7 +2475,7 @@
         pruneSeen();
         s.lastSync = data.now || Date.now();
         save(); renderAll();
-        var msg = added ? added + ' BCA transaction' + (added > 1 ? 's' : '') + ' added' : 'No new BCA transactions';
+        var msg = added ? added + ' bank transaction' + (added > 1 ? 's' : '') + ' added' : 'No new bank transactions';
         if (review) msg += ' · ' + review + ' to review';
         $('sStatus').textContent = msg + ' (' + emails.length + ' emails checked, ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ')';
         if (manual || added || review) toast(msg);
@@ -3105,7 +3114,7 @@
       if (url && !/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { toast('That does not look like an Apps Script web app URL'); return false; }
       S.settings.syncUrl = url; S.settings.token = $('sToken').value.trim();
       var wasOn = !!S.settings.autoSync;
-      S.settings.autoSync = $('sAuto').checked; S.settings.bcaWallet = $('sWallet').value;
+      S.settings.autoSync = $('sAuto').checked; S.settings.bcaWallet = $('sWallet').value; S.settings.mandiriWallet = $('sMWallet').value;
       // Turning live sync back on: only take BCA emails from now on (older history is already imported), so nothing doubles.
       if (!wasOn && S.settings.autoSync) { S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now(); }
       save(); renderAll(); toast(!wasOn && S.settings.autoSync ? 'Live BCA sync on ✓ New transactions from now on' : 'Saved ✓'); return true;

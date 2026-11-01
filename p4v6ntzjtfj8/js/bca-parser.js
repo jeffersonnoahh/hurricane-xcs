@@ -7,6 +7,7 @@
 
   // Labels BCA uses in front of the amount (Indonesian + English variants).
   var AMOUNT_LABELS = [
+    'total\\s*transaction', 'total\\s*transaksi',
     'total\\s*(?:amount|bayar|pembayaran|transaksi|transfer)?',
     'nominal(?:\\s*transaksi|\\s*transfer)?',
     'jumlah(?:\\s*transfer|\\s*pembayaran|\\s*transaksi|\\s*dana)?',
@@ -21,7 +22,7 @@
 
   var MERCHANT_LABELS_OUT = [
     'nama\\s*merchant', 'merchant\\s*name', 'merchant', 'nama\\s*toko',
-    'nama\\s*penerima', 'penerima', 'beneficiary\\s*name', 'beneficiary', 'receiver\\s*name', 'receiver',
+    'nama\\s*penerima', 'penerima', 'recipient\\s*name', 'recipient', 'destination\\s*name', 'beneficiary\\s*name', 'beneficiary', 'receiver\\s*name', 'receiver',
     'rekening\\s*tujuan', 'tujuan', 'pembayaran\\s*ke', 'payment\\s*to', 'transfer\\s*ke', 'transfer\\s*to',
     'nama\\s*pelanggan', 'company\\s*name', 'nama\\s*perusahaan', 'biller', 'keterangan', 'description', 'berita'
   ];
@@ -31,6 +32,7 @@
   // Which of my accounts the money left (or entered). BCA masks it, e.g. 6275****46.
   var SRC_LABELS = ['source\\s*of\\s*funds?', 'sumber\\s*dana', 'rekening\\s*sumber', 'from\\s*account', 'dari\\s*rekening', 'no\\.?\\s*rekening', 'account\\s*number'];
   var REF_LABELS = [
+    'bi\\s*fast\\s*ref\\.?\\s*no\\.?', 
     'no\\.?\\s*referensi', 'nomor\\s*referensi', 'reference\\s*(?:no\\.?|number)?', 'no\\.?\\s*ref\\.?',
     'ref\\.?\\s*no\\.?', 'no\\.?\\s*transaksi', 'transaction\\s*(?:id|no\\.?)'
   ];
@@ -75,6 +77,12 @@
       var re2 = new RegExp('\\b' + labels[j] + '\\s*[:=]\\s*' + valueRe, 'i');
       var m2 = text.match(re2);
       if (m2 && m2[1] && m2[1].trim()) return m2[1].trim();
+    }
+    // Mandiri style: label on one line, value on the next.
+    for (var k = 0; k < labels.length; k++) {
+      var re3 = new RegExp('(?:^|\\n)\\s*' + labels[k] + '\\s*\\n\\s*' + valueRe, 'i');
+      var m3 = text.match(re3);
+      if (m3 && m3[1] && m3[1].trim()) return m3[1].trim();
     }
     return '';
   }
