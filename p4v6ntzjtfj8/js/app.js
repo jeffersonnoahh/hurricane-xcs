@@ -576,10 +576,14 @@
       var tx = S.tx.filter(function (t) { return t.wallet === w.id || t.toWallet === w.id; }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
       var m = ym(new Date()), inM = 0, outM = 0, u = unpaidIn(w.id);
       tx.forEach(function (t) { if (t.date.slice(0, 7) !== m) return; var d = delta(t, w.id); if (d > 0) inM += d; else outM -= d; });
-      info.innerHTML = holdPanel(w) + '<button type="button" class="dw-notes' + (w.notes ? '' : ' empty') + '" data-a="edit">' + (w.notes ? '<span class="dw-n-h">📝 Notes</span><span class="dw-n-t">' + esc(w.notes).replace(/\n/g, '<br>') + '</span>' : '📝 Add a note') + '</button>' + '<div class="dw-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
+      var wf = w.files || [], hasN = w.notes || wf.length;
+      info.innerHTML = holdPanel(w) + '<div class="dw-notes' + (hasN ? '' : ' empty') + '">' + (hasN ? '<button type="button" class="dw-n-h" data-a="edit">📝 Notes <i>Edit</i></button>' + (w.notes ? '<span class="dw-n-t">' + esc(w.notes).replace(/\n/g, '<br>') + '</span>' : '') +
+        (wf.length ? '<div class="dw-files">' + wf.map(function (m, k) { return '<button type="button" class="dw-f" data-wf="' + k + '">' + (fileKind(m) === 'img' ? '<img data-wimg="' + esc(m.id) + '" alt="">' : '<span>' + (fileKind(m) === 'pdf' ? 'PDF' : 'FILE') + '</span>') + '</button>'; }).join('') + '</div>' : '') : '<button type="button" class="dw-n-add" data-a="edit">📝 Add a note or picture</button>') + '</div>' + '<div class="dw-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
         '<div class="dw-acts"><button type="button" data-a="add"><span>＋</span>Add</button><button type="button" data-a="move"><span>⇄</span>Transfer</button><button type="button" data-a="hist"><span>☰</span>History</button><button type="button" data-a="edit"><span>✎</span>Edit</button></div>' +
         '<div class="dw-sec">Recent</div><div class="dw-list">' + (tx.length ? tx.slice(0, 4).map(function (t, k) { return txRow(t, k, true); }).join('') : '<div class="dw-empty">No transactions in this wallet yet.</div>') + '</div>';
       bindHold(info, w, function () { paintInfo(i); applyView(i); });
+      info.querySelectorAll('[data-wimg]').forEach(function (im) { fileGet(im.dataset.wimg).then(function (b) { if (b) im.src = URL.createObjectURL(b); }); });
+      info.querySelectorAll('[data-wf]').forEach(function (bt) { bt.onclick = function (e) { e.stopPropagation(); openFile(wf[+bt.dataset.wf]); }; });
     }
     function wView(w) { return wViewOf(w); }
     function holdPanel(w) { return holdHtml(w); }
@@ -2157,7 +2161,7 @@
       }); }).catch(function () { return null; });
   }
   function fsDelete(id) { var c = fsCloud(); if (!c) return; fsToken(c).then(function (tk) { fetch(FS + c.id + '/' + id, { method: 'DELETE', headers: { 'x-apex-token': tk } }).catch(function () {}); }); }
-  function fsAllIds() { var ids = {}; (S.tx || []).concat(S.debts || []).forEach(function (x) { (x.files || []).forEach(function (m) { if (m && m.id) ids[m.id] = 1; }); }); return Object.keys(ids); }
+  function fsAllIds() { var ids = {}; (S.tx || []).concat(S.debts || [], S.wallets || []).forEach(function (x) { (x.files || []).forEach(function (m) { if (m && m.id) ids[m.id] = 1; }); }); return Object.keys(ids); }
   // Upload anything not synced yet, and download anything this phone is missing. Runs quietly in the background.
   function fsSync() {
     var c = fsCloud(); if (!c || fsSync.busy) return; fsSync.busy = true;
@@ -2729,10 +2733,12 @@
         '<div class="gl-prev" id="wLiveV"></div></div>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
       '<label class="fld">Notes<textarea id="wNotes" rows="3" placeholder="e.g. account number, branch, who it\u2019s for">' + esc(w.notes || '') + '</textarea></label>' +
+      '<div class="fld">Pictures & files<div id="wFiles"></div></div>' +
       '<label class="set-row plain"><span class="grow">Show in wallet lists<span class="sub">Off = hidden from Home, the wallet cards and pickers</span></span><input type="checkbox" class="switch" id="wShow"' + (w.hidden ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
         fmtInput(r.querySelector('#wBal')); fmtInput(r.querySelector('#wCost'));
+        var wFiles = (w.files || []).slice(); attachUI(r.querySelector('#wFiles'), wFiles);
         fmtInput(r.querySelector('#wInv')); fmtInput(r.querySelector('#wAvg')); fmtInput(r.querySelector('#wUsdAvg')); fmtInput(r.querySelector('#wUsdCash'));
         function liveUi() {
           var a = r.querySelector('#wAsset').value, gold = !!INV[a], q = parseFloat(String(r.querySelector('#wQty').value).replace(',', '.')) || 0, out = '';
@@ -2766,6 +2772,7 @@
           w.excluded = !r.querySelector('#wInc').checked;
           if (r.querySelector('#wShow').checked) delete w.hidden; else w.hidden = true;
           var wn = r.querySelector('#wNotes').value.trim(); if (wn) w.notes = wn; else delete w.notes;
+          if (wFiles.length) w.files = wFiles; else delete w.files;
           var wa = r.querySelector('#wAsset').value;
           var usdCash = null;
           if (wa === 'usd') { var uq = parseDec(r.querySelector('#wUsdQ').value), ua = parseNum(r.querySelector('#wUsdAvg').value); if (!uq || !ua) { toast('Enter your dollars and average rate'); return; } var wc = r.querySelector('#wUsdCashOn').checked; w.holding = { asset: 'usd', qty: uq, cost: uq * ua, avg: ua, withCash: wc || undefined }; if (wc) usdCash = parseNum(r.querySelector('#wUsdCash').value); }
