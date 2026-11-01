@@ -1072,7 +1072,7 @@
     document.querySelectorAll('#catSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === catTab); });
     $('catSeg').style.setProperty('--x', ['expense', 'income', 'debt'].indexOf(catTab) * 100 + '%');
     $('catList').innerHTML = catTree(catTab).map(function (c) {
-      return '<div class="sw" data-cid="' + esc(c.id) + '"><button class="sw-del" type="button" data-delcat="' + esc(c.id) + '"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete</button><button class="w-row' + (c.parent ? ' child' : '') + '" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + (c.flow ? '<span class="sub">' + (c.flow === 'in' ? 'Money in' : 'Money out') + '</span>' : '') + '</span>' + (LOCKED.indexOf(c.id) !== -1 ? '<span class="lock" title="Built in">🔒</span>' : '') + '<span class="muted">›</span></button></div>';
+      return '<div class="sw' + (c.hidden ? ' cat-hidden' : '') + '" data-cid="' + esc(c.id) + '"><button class="sw-del" type="button" data-delcat="' + esc(c.id) + '"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete</button><button class="w-row' + (c.parent ? ' child' : '') + '" data-edit-cat="' + esc(c.id) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + (c.flow ? '<span class="sub">' + (c.flow === 'in' ? 'Money in' : 'Money out') + '</span>' : '') + '</span>' + (LOCKED.indexOf(c.id) !== -1 ? '<span class="lock" title="Built in">🔒</span>' : '') + '<span class="muted">›</span></button></div>';
     }).join('');
     if (!$('catList').dataset.swipe) { $('catList').dataset.swipe = 1; bindSwipe($('catList')); }
     $('ruleList').innerHTML = S.rules.length ? S.rules.map(function (r, i) {
@@ -2097,13 +2097,13 @@
           var bz = root.querySelector('#fBiz'); if (isNew && !bz.dataset.manual) { var lb = bizForCat(st.cat); if (!lb) { var cn = cat(st.cat).name.toLowerCase(); (S.businesses || []).forEach(function (b) { if (cn === b.name.toLowerCase()) lb = b.id; }); } bz.value = lb || (prefill && prefill.biz) || ''; }
           var upb = root.querySelector('#fUnpaidBox'); if (upb) upb.hidden = st.type !== 'income';
           root.querySelector('#fWalletL span').textContent = st.type === 'transfer' ? 'From wallet' : 'Wallet';
-          var cats = S.cats.filter(function (c) { return c.type === st.type; });
+          var cats = S.cats.filter(function (c) { return c.type === st.type && (!c.hidden || c.id === st.cat); });
           if (st.type !== 'transfer' && !cats.some(function (c) { return c.id === st.cat; })) st.cat = cats[0] ? cats[0].id : '';
           var sc = cat(st.cat);
           root.querySelector('#fCatSel').innerHTML = icon(sc) + '<span class="grow"><small>Category</small>' + esc(sc.name) + '</span><span class="chev2">' + (pickOpen ? '▴' : '▾') + '</span>';
           root.querySelector('#fCatPick').classList.toggle('open', pickOpen);
           var q = root.querySelector('#fCatQ').value.trim().toLowerCase();
-          root.querySelector('#fCats').innerHTML = catTree(st.type).filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(function (c, i) {
+          root.querySelector('#fCats').innerHTML = catTree(st.type).filter(function (c) { return (!c.hidden || c.id === st.cat) && (!q || c.name.toLowerCase().indexOf(q) !== -1); }).map(function (c, i) {
             return '<div class="sw" data-cid="' + esc(c.id) + '"><button class="sw-del" type="button" data-delcat="' + esc(c.id) + '"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete</button><button type="button" data-c="' + esc(c.id) + '" class="cat-row' + (c.parent ? ' child' : '') + (c.id === st.cat ? ' on' : '') + '" style="--i:' + Math.min(i, 14) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '</span>' + (c.id === st.cat ? '<span class="check">✓</span>' : '') + '</button></div>';
           }).join('') || '<p class="muted small" style="text-align:center">No category found</p>';
         }
@@ -2634,7 +2634,8 @@
         return '<div class="ml-row">' + icon(k, 'sm') + '<span class="grow">' + esc(k.id === c.id ? c.name + ' (itself)' : k.name) + '</span><b>' + money(byKid[k.id], { rp: false }) + '</b></div>'; }).join('') + '</div>' : '') +
       '<div class="cd-sec">Transactions</div><div class="dw-list" id="cdList">' + list(shown) + '</div>' +
       (tx.length > shown ? '<button class="btn block" id="cdMore" style="margin-top:8px">Show more</button>' : '') +
-      '<div class="two" style="margin-top:12px"><button class="btn" id="cdAdd">＋ Add</button><button class="btn" id="cdEdit">Edit category</button></div>',
+      '<div class="two" style="margin-top:12px"><button class="btn" id="cdAdd">＋ Add</button><button class="btn" id="cdEdit">Edit category</button></div>' +
+      '<button class="btn block" id="cdHide" style="margin-top:8px">' + (c.hidden ? '👁 Show in + picker again' : '🙈 Hide from + picker') + '</button>',
       function (r) {
         r.querySelector('#cdBars').onclick = function (e) {
           var b = e.target.closest('.cd-b'); if (!b) return; haptic();
@@ -2646,6 +2647,7 @@
         r.querySelector('#cdList').onclick = function (e) { var t = e.target.closest('.tx'); if (!t) return; var tt = S.tx.filter(function (x) { return x.id === t.dataset.id; })[0]; if (tt) txSheet(tt); };
         r.querySelector('#cdAdd').onclick = function () { txSheet(null, { type: inc ? 'income' : 'expense', cat: c.id }); };
         r.querySelector('#cdEdit').onclick = function () { catSheet(c); };
+        r.querySelector('#cdHide').onclick = function () { if (c.hidden) delete c.hidden; else c.hidden = true; haptic(); save(); renderAll(); toast(c.hidden ? c.name + ' hidden' : c.name + ' visible again'); catDetail(c); };
       });
   }
   // "Bl" from Money Lover is billiard: give it a proper name and icon.
@@ -2658,6 +2660,7 @@
       '<label class="fld">Type<select id="cType"><option value="expense">Expense</option><option value="income">Income</option><option value="debt">Debt/Loan</option></select></label>' +
       '<label class="fld" id="cParentL">Inside category (optional)<select id="cParent"></select></label>' +
       '<label class="fld" id="cFlowL">Money goes<select id="cFlow"><option value="out">Out of my wallet (lend, repay)</option><option value="in">Into my wallet (borrow, collect)</option></select></label>' +
+      '<label class="set-row plain"><span class="grow">Show when adding a transaction<span class="sub">Off = hidden from the + picker. History stays in reports.</span></span><input type="checkbox" class="switch" id="cShow"' + (c.hidden ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="cSave">Save</button>' + (isNew || LOCKED.indexOf(c.id) !== -1 ? (LOCKED.indexOf(c.id) !== -1 ? '<p class="muted small" style="text-align:center">🔒 Built in category: you can rename it, but not delete it.</p>' : '') : '<button class="btn danger block" id="cDel">Delete category</button>'),
       function (r) {
         var cst = { sp: spKey(c) }; bindSpPicker(r, cst);
@@ -2676,6 +2679,7 @@
           c.name = n; c.type = r.querySelector('#cType').value; if (cst.sp) { c.sp = cst.sp; delete c.custom; }
           var pv = r.querySelector('#cParent').value; if (pv) c.parent = pv; else delete c.parent;
           if (c.type === 'debt') c.flow = r.querySelector('#cFlow').value; else delete c.flow;
+          if (r.querySelector('#cShow').checked) delete c.hidden; else c.hidden = true;
           if (isNew) S.cats.push(c); save(); closeSheet(); renderAll();
         };
         var d = r.querySelector('#cDel');
@@ -3824,12 +3828,18 @@
     S.tx.forEach(function (t) { if (t.type === 'expense' && t.cat === 'komisi_out' && !t.biz && rtDays[t.date + '|' + t.wallet]) t.biz = 'hurricane'; });
     S.hurVer = 2;
   }
+  function hideOldCats() {
+    if (S.hideVer === 1) return; S.hideVer = 1;
+    var N = ['GOLD DEBIT', 'GOLD', 'AJAIB ESSA', 'Shanghai', 'BILLIARD', 'Bl', 'Education', 'UTANG', 'USD', 'STOCKS PLUS', 'Korea loan', 'DIGITAL ASSETS', 'LOUIS AND HUGO', 'MY CASH', 'Investment', 'BREN', 'ETHERIUM', 'STOCKS', 'Salary', 'GOLD DEBIT CARD', 'PLUS CRYPTO', 'BITGET', 'AJAIB KRIPTO', 'PERSONAL BRANDING', 'Phone Bill', 'BYBIT', 'Uang kas kantor', 'Other Expense', 'IKLAN TOKOPEDIA',
+      'Gas Bill', 'Internet Bill', 'Entertainment', 'Streaming Service', 'Fun Money', 'Insurances', 'PLUANG', 'Outgoing transfer', 'Pay Interest', 'TRANSFER TO RESERVE', 'BI', 'AJAIB KRIPTO PLUS', 'BITGET PLUS', 'MEXC PLUS', 'BYBIT PLUS', 'BRPT PLUS'].map(mlNorm);
+    S.cats.forEach(function (c) { if (N.indexOf(mlNorm(c.name)) !== -1 && c.type !== 'debt') c.hidden = true; });
+  }
   function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
   function secIcons() {
     var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
-  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
+  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); hideOldCats(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   setTimeout(mlSeedFromHash, 1500);
   $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); }; $('codeBtn').onclick = function () { haptic(); codeSheet(); }; setTimeout(function () { mountEarth(document.querySelector('.tile-earth .earth'), 0.012, false); }, 600);
