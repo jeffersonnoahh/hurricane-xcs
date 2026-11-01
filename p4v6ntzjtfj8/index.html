@@ -19,7 +19,7 @@
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" href="css/style.css?v=20261101-66">
+<link rel="stylesheet" href="css/style.css?v=20261101-69">
 </head>
 <body>
 <style>
@@ -81,6 +81,7 @@
     <div class="scrub-lbl" id="hScrubLbl" hidden></div>
     <svg class="spark" id="hSpark" viewBox="0 0 360 96" preserveAspectRatio="none" aria-hidden="true"></svg>
     <div class="range" id="hRange"><button data-r="7">1W</button><button data-r="30" class="on">1M</button><button data-r="90">3M</button><button data-r="365">1Y</button></div>
+    <button class="tm-btn" id="tmBtn" type="button"><span>⏱</span> Time machine</button>
   </div>
 
   <div class="actions">
@@ -101,6 +102,10 @@
   </button>
 
 <div id="homeSecs">
+<div class="sec" data-sec="widgets">
+  <div class="wg-row" id="hWidgets"></div>
+</div>
+
 <div class="sec" data-sec="installments">
   <div class="section-h"><span>Installments</span><button class="link" id="instOpen">Open</button></div>
   <button class="card km" id="hInst" type="button"></button>
@@ -272,8 +277,18 @@
     <div class="muted small" id="repAvg"></div>
   </div>
   <div class="card">
+    <h2>Money flow</h2>
+    <p class="muted small viz-sub">Where this month's money came from and where it went. Tap a stream to open it.</p>
+    <div id="repFlow"></div>
+  </div>
+  <div class="card">
     <div class="seg" id="repSeg"><button data-k="expense" class="on">Expense</button><button data-k="income">Income</button><i class="seg-ind"></i></div>
     <div id="repBars"></div>
+  </div>
+  <div class="card">
+    <h2>Spending bubbles</h2>
+    <p class="muted small viz-sub">Bigger bubble, bigger spend. Tap one to pop it open.</p>
+    <div id="repBubbles"></div>
   </div>
   <div class="card">
     <h2>Daily spending</h2>
@@ -399,6 +414,6 @@
 
 
 <script src="js/bca-parser.js?v=20261101-4"></script>
-<script src="js/app.js?v=20261101-102"></script>
+<script src="js/app.js?v=20261101-105"></script>
 </body>
 </html>
