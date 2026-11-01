@@ -366,7 +366,7 @@
   if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function (v) { uvAvail = v; }, function () { uvAvail = false; });
   document.addEventListener('visibilitychange', function () { if (document.hidden) faceOk = false; });
   function faceGate() {
-    if (faceOk || S.settings.revealFaceId === false || !window.PublicKeyCredential || !navigator.credentials || uvAvail === false) return Promise.resolve(true);
+    if (faceOk || S.settings.revealFaceId !== true || !window.PublicKeyCredential || !navigator.credentials || uvAvail === false) return Promise.resolve(true);
     var ch = crypto.getRandomValues(new Uint8Array(32)), id = S.settings.unlockCred, pr;
     try {
       pr = id ? navigator.credentials.get({ publicKey: { challenge: ch, rpId: location.hostname, userVerification: 'required', timeout: 60000, allowCredentials: [{ type: 'public-key', id: unb64(id), transports: ['internal', 'hybrid'] }] } })
@@ -3010,7 +3010,7 @@
     $('sheetBg').onclick = closeSheet;
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
 
-    $('faceRevealToggle').checked = S.settings.revealFaceId !== false; $('faceRevealToggle').onchange = function () { var on = this.checked, el = this; if (on) { S.settings.revealFaceId = true; save(); toast('Face ID will be asked to show amounts'); return; } faceGate().then(function (ok) { if (!ok) { el.checked = true; return; } S.settings.revealFaceId = false; save(); toast('Face ID off for showing amounts'); }); };
+    $('faceRevealToggle').checked = S.settings.revealFaceId === true; $('faceRevealToggle').onchange = function () { var on = this.checked, el = this; if (on) { S.settings.revealFaceId = true; save(); toast('Face ID will be asked to show amounts (iPhone shows a passkey sheet)'); return; } faceGate().then(function (ok) { if (!ok) { el.checked = true; return; } S.settings.revealFaceId = false; save(); toast('Face ID off for showing amounts'); }); };
     $('eyeBtnWrap').onclick = toggleNet; $('txBal').onclick = function () { if (walletSel !== 'all' && isRes(walletSel)) toggleNet(); };
     $('hideToggle').onchange = function () { if (this.checked) { S.settings.hide = true; netHidden = true; save(); renderAll(); paintNetEye(); } else { this.checked = true; revealAll(); } };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
