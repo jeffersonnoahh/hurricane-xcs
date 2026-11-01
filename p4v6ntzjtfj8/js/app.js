@@ -353,13 +353,13 @@
     var h = !!S.settings.hide;
     $('eyeBtn').innerHTML = h ? EYE_OFF : EYE_OPEN; $('hideToggle').checked = h;
     document.documentElement.classList.toggle('privacy', h);
-    document.querySelectorAll('[data-priv]').forEach(function (b) { b.innerHTML = h ? EYE_OFF : EYE_OPEN; b.classList.toggle('on', h); b.setAttribute('aria-pressed', h); });
+    document.querySelectorAll('[data-priv]').forEach(function (b) { var hh = h || netHidden; b.innerHTML = hh ? EYE_OFF : EYE_OPEN; b.classList.toggle('on', hh); b.setAttribute('aria-pressed', hh); });
   }
   // Net worth starts hidden every time Apex opens; tap the eye next to "Net worth" to show it.
   var netHidden = true;
   function isRes(id) { var w = S.wallets.filter(function (x) { return x.id === id; })[0]; return !!(w && /^reserve$/i.test(String(w.name).trim())); }
   function resMoney(id, html) { return netHidden && !S.settings.hide && isRes(id) ? '<span class="masked">Rp ••••••</span>' : html; }
-  function paintNetEye() { var e = $('eyeBtn'); if (e) e.innerHTML = (S.settings.hide || netHidden) ? EYE_OFF : EYE_OPEN; }
+  function paintNetEye() { var hh = S.settings.hide || netHidden, e = $('eyeBtn'); if (e) e.innerHTML = hh ? EYE_OFF : EYE_OPEN; document.querySelectorAll('[data-priv]').forEach(function (b) { b.innerHTML = hh ? EYE_OFF : EYE_OPEN; b.classList.toggle('on', hh); }); }
   // Face ID before showing hidden amounts (uses the Apex passkey; creates an unlock-only passkey the first time).
   // Face ID once per visit before showing hidden amounts. The passkey call must start right inside the tap (iPhone rule), so nothing async runs before it.
   var uvAvail = null, faceOk = false;
@@ -381,16 +381,19 @@
       return false;
     });
   }
-  function toggleNet() {
-    if (S.settings.hide) { togglePrivacy(); return; }
-    if (netHidden) { faceGate().then(function (ok) { if (!ok) { toast('Face ID needed to show amounts'); return; } netHidden = false; haptic(); renderAll(); paintNetEye(); onScroll && onScroll(); }); return; }
-    netHidden = true; haptic();
-    var el = $('hNet');
-    renderAll();
-    paintNetEye(); onScroll && onScroll();
+  // One rule for every eye button: if anything is hidden, Face ID (once per visit) then show everything; otherwise hide.
+  function revealAll() {
+    faceGate().then(function (ok) {
+      if (!ok) { toast('Face ID needed to show amounts'); return; }
+      var was = S.settings.hide; netHidden = false; S.settings.hide = false; if (was) save();
+      haptic(); renderAll(); paintNetEye(); if (typeof onScroll === 'function') onScroll();
+    });
   }
-  document.addEventListener('visibilitychange', function () { if (document.hidden && !netHidden) { netHidden = true; renderAll(); paintNetEye(); } });
-  function togglePrivacy() { S.settings.hide = !S.settings.hide; haptic(); save(); renderAll(); toast(S.settings.hide ? 'Privacy on: all amounts hidden' : 'Amounts visible'); }
+  function toggleNet() {
+    if (S.settings.hide || netHidden) { revealAll(); return; }
+    netHidden = true; haptic(); renderAll(); paintNetEye(); if (typeof onScroll === 'function') onScroll();
+  }
+  function togglePrivacy() { if (S.settings.hide || netHidden) { revealAll(); return; } S.settings.hide = true; netHidden = true; haptic(); save(); renderAll(); paintNetEye(); toast('All amounts hidden'); }
 
   function renderHome() {
     renderSignInBanner();
@@ -3009,7 +3012,7 @@
 
     $('faceRevealToggle').checked = S.settings.revealFaceId !== false; $('faceRevealToggle').onchange = function () { var on = this.checked, el = this; if (on) { S.settings.revealFaceId = true; save(); toast('Face ID will be asked to show amounts'); return; } faceGate().then(function (ok) { if (!ok) { el.checked = true; return; } S.settings.revealFaceId = false; save(); toast('Face ID off for showing amounts'); }); };
     $('eyeBtnWrap').onclick = toggleNet; $('txBal').onclick = function () { if (walletSel !== 'all' && isRes(walletSel)) toggleNet(); };
-    $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
+    $('hideToggle').onchange = function () { if (this.checked) { S.settings.hide = true; netHidden = true; save(); renderAll(); paintNetEye(); } else { this.checked = true; revealAll(); } };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
     $('realBtn').onclick = function () { haptic(); realSheet(); }; $('txReal').onclick = function () { haptic(); realSheet(); };
