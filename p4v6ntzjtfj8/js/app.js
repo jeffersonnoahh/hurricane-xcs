@@ -1983,6 +1983,28 @@
   // ---------- navigation ----------
   var scrollMem = {};
   function show(id, back) {
+    if (id !== view && document.startViewTransition && !noMotion() && !show.busy) {
+      var src = tapSource(), hero = src && !src.el.closest('.sheet') ? src.el : null;
+      if (hero) hero.style.viewTransitionName = 'hero';
+      document.documentElement.classList.add('vt'); show.busy = true;
+      var vt;
+      try {
+        vt = document.startViewTransition(function () {
+          if (hero) hero.style.viewTransitionName = '';
+          show0(id, back);
+          if (hero) $(id).style.viewTransitionName = 'hero';
+        });
+      } catch (e) { vt = null; }
+      if (vt) {
+        var done = function () { document.documentElement.classList.remove('vt'); show.busy = false; $(id).style.viewTransitionName = ''; if (hero) hero.style.viewTransitionName = ''; };
+        vt.finished.then(done, done);
+        return;
+      }
+      document.documentElement.classList.remove('vt'); show.busy = false; if (hero) hero.style.viewTransitionName = '';
+    }
+    show0(id, back);
+  }
+  function show0(id, back) {
     if (id === view) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     scrollMem[view] = window.scrollY;
     var prev = view; view = id;
@@ -2112,19 +2134,62 @@
       if (p < 1) requestAnimationFrame(f);
     })(t0);
   }
+  // ---------- morph: panels grow out of the card you tapped ----------
+  var lastTap = { el: null, t: 0 }, MORPH_EASE = 'cubic-bezier(.2,.9,.25,1)';
+  function noteTap(e) {
+    var tg = e.target && e.target.closest ? e.target : null; if (!tg) return;
+    var el = tg.closest('.bottom-nav,.range,[data-priv],#eyeBtnWrap') ? null : tg.closest('.tile,.w-row,.tx,.pk-row,.real-btn,.chip-btn,button,[data-id],[data-kt],li,a,.card');
+    lastTap = { el: el, t: Date.now() };
+  }
+  document.addEventListener('pointerdown', noteTap, true); document.addEventListener('touchstart', noteTap, { capture: true, passive: true });
+  function noMotion() { return !document.body.animate || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  function tapSource() {
+    var el = lastTap.el; if (!el || Date.now() - lastTap.t > 800 || !el.isConnected) return null;
+    var r = el.getBoundingClientRect(); if (r.width < 8 || r.height < 8 || r.bottom < 0 || r.top > window.innerHeight) return null;
+    return { el: el, r: r, rad: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 14 };
+  }
+  function morphFrames(sh, m) {
+    var R = sh.getBoundingClientRect(), dy = Math.min(0, m.r.top - R.top);
+    var t = Math.max(0, m.r.top - (R.top + dy)), b = Math.max(0, R.bottom + dy - m.r.bottom), l = Math.max(0, m.r.left - R.left), rr = Math.max(0, R.right - m.r.right);
+    return [{ transform: 'translateY(' + dy + 'px)', clipPath: 'inset(' + t + 'px ' + rr + 'px ' + b + 'px ' + l + 'px round ' + m.rad + 'px)' },
+            { transform: 'translateY(0px)', clipPath: 'inset(0px 0px 0px 0px round 28px 28px 0px 0px)' }];
+  }
+  var morphSrc = null;
   function openSheet(html, onMount) {
+    var m = openSheet.quiet || noMotion() ? null : tapSource();
     var ob = $('sheetBody'), nb = ob.cloneNode(false); ob.parentNode.replaceChild(nb, ob);
     nb.innerHTML = html;
-    $('sheet').hidden = false; $('sheetBg').hidden = false; $('sheet').scrollTop = 0;
-    void $('sheet').offsetWidth;
-    $('sheet').classList.add('show'); $('sheetBg').classList.add('show'); document.body.classList.add('sheet-open');
+    var sh = $('sheet');
+    sh.hidden = false; $('sheetBg').hidden = false; sh.scrollTop = 0;
+    if (m) sh.style.transition = 'none';
+    void sh.offsetWidth;
+    sh.classList.add('show'); $('sheetBg').classList.add('show'); document.body.classList.add('sheet-open');
     sheetOpen = true;
     if (onMount) onMount($('sheetBody'));
+    morphSrc = null;
+    if (m) {
+      void sh.offsetWidth;
+      var a = sh.animate(morphFrames(sh, m), { duration: 520, easing: MORPH_EASE });
+      a.onfinish = a.oncancel = function () { sh.style.transition = ''; };
+      $('sheetBody').animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 360, delay: 90, easing: 'ease-out', fill: 'backwards' });
+      morphSrc = m.el;
+    }
     if (!openSheet.quiet) requestAnimationFrame(function () { countUpAll($('sheetBody')); });
   }
   function closeSheet() {
     if (!sheetOpen) return;
     sheetOpen = false;
+    var sh = $('sheet'), src = morphSrc; morphSrc = null;
+    if (src && src.isConnected && !sh.style.transform && !noMotion() && !document.querySelector('.sorting')) {
+      var r = src.getBoundingClientRect();
+      if (r.width > 8 && r.bottom > 0 && r.top < window.innerHeight) {
+        var f = morphFrames(sh, { r: r, rad: parseFloat(getComputedStyle(src).borderTopLeftRadius) || 14 }).reverse();
+        sh.style.transition = 'none';
+        var a = sh.animate(f, { duration: 380, easing: MORPH_EASE, fill: 'forwards' });
+        $('sheetBody').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-in', fill: 'forwards' });
+        a.onfinish = function () { if (!sheetOpen) sh.hidden = true; a.cancel(); sh.getAnimations && $('sheetBody').getAnimations().forEach(function (x) { x.cancel(); }); sh.style.transition = ''; };
+      }
+    }
     $('sheet').classList.remove('show'); $('sheetBg').classList.remove('show'); $('fab').classList.remove('open'); document.body.classList.remove('sheet-open');
     setTimeout(function () { if (!sheetOpen) { $('sheet').hidden = true; $('sheetBg').hidden = true; $('sheetBody').innerHTML = ''; } }, 420);
   }

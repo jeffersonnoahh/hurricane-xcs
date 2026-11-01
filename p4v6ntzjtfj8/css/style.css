@@ -1744,3 +1744,18 @@ body.sheet-open .view.active{scale:1!important}
 /* no accidental text selection on long press */
 .view,.card,.sheet,h1,h2,h3,.sheet-sec{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,[contenteditable],.view input,.sheet input,.sheet textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+
+/* morph transitions: tabs crossfade, tapped tiles grow into their page */
+.bottom-nav{view-transition-name:nav}
+.fab{view-transition-name:fab}
+html.vt .view.active,html.vt .view.active > *{animation:none!important}
+::view-transition-old(root){animation:vtOut .2s ease-in both}
+::view-transition-new(root){animation:vtIn .34s cubic-bezier(.2,.9,.25,1) both}
+@keyframes vtOut{to{opacity:0;transform:scale(.985)}}
+@keyframes vtIn{from{opacity:0;transform:scale(1.012)}}
+::view-transition-group(hero){animation-duration:.5s;animation-timing-function:cubic-bezier(.2,.9,.25,1);overflow:clip;border-radius:22px}
+::view-transition-old(hero){animation:vtHeroOut .25s ease-in both}
+::view-transition-new(hero){animation:vtHeroIn .4s ease-out both}
+@keyframes vtHeroOut{to{opacity:0}}
+@keyframes vtHeroIn{from{opacity:0}}
+::view-transition-old(hero),::view-transition-new(hero){height:auto;width:100%;object-fit:none;object-position:top center}
