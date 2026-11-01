@@ -361,16 +361,25 @@
   function resMoney(id, html) { return netHidden && !S.settings.hide && isRes(id) ? '<span class="masked">Rp ••••••</span>' : html; }
   function paintNetEye() { var e = $('eyeBtn'); if (e) e.innerHTML = (S.settings.hide || netHidden) ? EYE_OFF : EYE_OPEN; }
   // Face ID before showing hidden amounts (uses the Apex passkey; creates an unlock-only passkey the first time).
+  // Face ID once per visit before showing hidden amounts. The passkey call must start right inside the tap (iPhone rule), so nothing async runs before it.
+  var uvAvail = null, faceOk = false;
+  if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function (v) { uvAvail = v; }, function () { uvAvail = false; });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) faceOk = false; });
   function faceGate() {
-    if (S.settings.revealFaceId === false || !window.PublicKeyCredential || !navigator.credentials) return Promise.resolve(true);
-    return (PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable ? PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() : Promise.resolve(false)).then(function (avail) {
-      if (!avail) return true; // no Face ID / Touch ID on this device
-      var ch = crypto.getRandomValues(new Uint8Array(32)), id = S.settings.unlockCred;
-      if (id) return navigator.credentials.get({ publicKey: { challenge: ch, rpId: location.hostname, userVerification: 'required', timeout: 60000, allowCredentials: [{ type: 'public-key', id: unb64(id) }] } }).then(function () { return true; });
-      return navigator.credentials.create({ publicKey: { rp: { name: 'Apex', id: location.hostname }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'Apex unlock', displayName: 'Apex unlock' }, challenge: ch,
-        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }], authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'preferred', userVerification: 'required' }, timeout: 60000 } })
-        .then(function (cred) { S.settings.unlockCred = b64(cred.rawId); save(); return true; });
-    }).catch(function () { return false; });
+    if (faceOk || S.settings.revealFaceId === false || !window.PublicKeyCredential || !navigator.credentials || uvAvail === false) return Promise.resolve(true);
+    var ch = crypto.getRandomValues(new Uint8Array(32)), id = S.settings.unlockCred, pr;
+    try {
+      pr = id ? navigator.credentials.get({ publicKey: { challenge: ch, rpId: location.hostname, userVerification: 'required', timeout: 60000, allowCredentials: [{ type: 'public-key', id: unb64(id), transports: ['internal', 'hybrid'] }] } })
+        : navigator.credentials.create({ publicKey: { rp: { name: 'Apex', id: location.hostname }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'Apex unlock', displayName: 'Apex unlock' }, challenge: ch,
+            pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }], authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'preferred', userVerification: 'required' }, timeout: 60000 } })
+          .then(function (cred) { S.settings.unlockCred = b64(cred.rawId); save(); return cred; });
+    } catch (e) { return Promise.resolve(false); }
+    return pr.then(function () { faceOk = true; return true; }, function (e) {
+      // saved passkey not on this device any more: forget it so the next tap sets up a fresh one
+      if (id && e && e.name === 'NotAllowedError' && !faceGate.tried) { faceGate.tried = true; }
+      else if (id && e && (e.name === 'InvalidStateError' || e.name === 'NotFoundError')) delete S.settings.unlockCred;
+      return false;
+    });
   }
   function toggleNet() {
     if (S.settings.hide) { togglePrivacy(); return; }
