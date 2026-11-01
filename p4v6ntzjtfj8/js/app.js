@@ -2398,9 +2398,14 @@
   function planImport(d, quiet) {
     var p = (S.inst || []).filter(function (x) { return x.id === d.instId; })[0] || (d.match ? (S.inst || []).filter(function (x) { return new RegExp(d.match, 'i').test(x.name); })[0] : null);
     if (!p) { p = { id: d.instId || uid(), name: d.name || 'WEDDING', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }; (S.inst = S.inst || []).push(p); }
-    var per = d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0);
-    p.plan = d.plan; p.monthly = per; p.total = per * d.plan.months;
-    if (d.plan.spends) p.plan.spends = d.plan.spends.map(function (x) { return Object.assign({ id: uid() }, x); });
+    var per = d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0), old = p.plan;
+    var np = JSON.parse(JSON.stringify(d.plan));
+    if (np.spends) np.spends = np.spends.map(function (x) { return Object.assign({ id: uid() }, x); });
+    if (old) { // keep what's already on the phone: ticks and expenses added since
+      np.ticks = Object.assign({}, np.ticks || {}); Object.keys(old.ticks || {}).forEach(function (k) { np.ticks[k] = Object.assign({}, np.ticks[k] || {}, old.ticks[k]); });
+      if (old.spends) np.spends = old.spends;
+    }
+    p.plan = np; p.monthly = per; p.total = per * np.months;
     save(); renderAll(); if (quiet) return; toast('Plans added ✓'); setTimeout(function () { if (S.inst.length > 1) instSheet(); else instDetail(p); }, 300);
   }
   function owedImportPreview(list) {
