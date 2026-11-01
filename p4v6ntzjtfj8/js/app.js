@@ -2498,7 +2498,7 @@
             var dd = { id: uid(), dir: 'in', earned: true, incomeCat: t ? t.cat : 'reserve_transfer', person: 'Dad', title: 'Komisi ' + monthName(k.month), amount: amt, created: date, forMonth: k.month, due: '', wallet: t ? t.wallet : (S.wallets[0] || {}).id, tags: 'income', notes: k.note || '', prebooked: true, bookTx: t ? t.id : undefined, payments: pays, ts: Date.now() };
             S.debts.push(dd); if (t) t.debtId = dd.id;
           });
-          haptic(); save(); closeSheet(); renderAll(); toast(todo.length + ' months of commission added ✓');
+          hurLink(); haptic(); save(); closeSheet(); renderAll(); toast(todo.length + ' months of commission added ✓');
           setTimeout(komisiSheet, 400);
         };
       });
@@ -2526,7 +2526,7 @@
       if (debtKeys.indexOf(k) !== -1 && skip) return;
       var type = c.type === 'debt' ? 'debt' : (x.amount >= 0 ? 'income' : 'expense');
       var t = { id: uid(), type: type, cat: c.id, amount: Math.abs(x.amount), wallet: wMatch[x.wallet].id, toWallet: '', date: x.date, time: '', note: x.note || '', merchant: '', src: 'ml', mlKey: key, created: Date.now() };
-      var b = c.id === 'komisi_out' ? '' : bizForCat(c.id); if (b) t.biz = b;
+      var b = c.id === 'komisi_out' || c.id === 'reserve_transfer' ? '' : bizForCat(c.id); if (b) t.biz = b;
       S.tx.push(t); have[key] = 1; added++;
     });
     Object.keys(bal).forEach(function (id) { var w = S.wallets.filter(function (x) { return x.id === id; })[0]; if (w) setBalance(w, bal[id]); });
@@ -3809,8 +3809,20 @@
   function hurLink() {
     var h = (S.businesses || []).filter(function (b) { return b.id === 'hurricane'; })[0]; if (!h) return;
     h.cats = h.cats || []; if (h.cats.indexOf('komisi_out') === -1) h.cats.push('komisi_out');
-    var rtDays = {}; S.tx.forEach(function (t) { if (t.type === 'income' && t.cat === 'reserve_transfer') { if (!t.biz) t.biz = 'hurricane'; if (t.biz === 'hurricane') rtDays[t.date + '|' + t.wallet] = 1; } });
+    // A RESERVE TRANSFER is a monthly commission when KOMISI was paid the same day, or it's linked to a Komisi month.
+    var komDays = {}, kmTx = {};
+    S.tx.forEach(function (t) { if (t.type === 'expense' && t.cat === 'komisi_out') komDays[t.date + '|' + t.wallet] = 1; });
+    (S.debts || []).forEach(function (d) { if (d.earned && d.forMonth && d.bookTx) kmTx[d.bookTx] = 1; });
+    var clean = S.hurVer !== 2, rtDays = {};
+    S.tx.forEach(function (t) {
+      if (t.type !== 'income' || t.cat !== 'reserve_transfer') return;
+      var isCom = komDays[t.date + '|' + t.wallet] || kmTx[t.id];
+      if (isCom && !t.biz) t.biz = 'hurricane';
+      else if (!isCom && clean && t.biz === 'hurricane') delete t.biz;
+      if (t.biz === 'hurricane') rtDays[t.date + '|' + t.wallet] = 1;
+    });
     S.tx.forEach(function (t) { if (t.type === 'expense' && t.cat === 'komisi_out' && !t.biz && rtDays[t.date + '|' + t.wallet]) t.biz = 'hurricane'; });
+    S.hurVer = 2;
   }
   function defBiz() { if (S.businesses) return; S.businesses = [{ id: 'hurricane', name: 'HURRICANE', sp: 'bi' }, { id: 'sentaris', name: 'SENTARIS', sp: 'sentaris' }, { id: 'others', name: 'OTHERS', sp: 'other_out' }]; }
   function secIcons() {
