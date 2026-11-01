@@ -4323,6 +4323,7 @@
       tick.appendChild(el); setTimeout(function () { el.remove(); }, 1400);
     }
     (function frame(now) {
+      if (!clock.isConnected) return; // panel closed mid-replay
       var p = Math.min(1, (now - t0) / DUR); if (stop) p = 1;
       var e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2, dNow = e * days;
       var shown = pts.filter(function (q) { return q.d <= dNow; }), head = shown[shown.length - 1] || pts[0];
