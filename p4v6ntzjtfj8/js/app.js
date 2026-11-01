@@ -1606,13 +1606,15 @@
     el.innerHTML = '<div class="km-top"><span class="card-3d">' + sprite('bi') + '</span><div><div class="eyebrow">Business profit · ' + MONTHS[new Date().getMonth()] + '</div><div class="mid-money ' + (tot.i - tot.e < 0 ? 'neg' : '') + '">' + money(tot.i - tot.e, { sign: true }) + '</div><div class="muted small">In ' + money(tot.i, { rp: false }) + ' · Out ' + money(tot.e, { rp: false }) + '</div></div></div>' +
       '<div class="biz-chips">' + bs.map(function (b, i) { var r = bizIO(b.id, m); return '<span class="biz-chip">' + bizIcon(b, i) + '<b>' + esc(b.name) + '</b><em class="' + (r.i - r.e < 0 ? 'neg' : 'pos') + '">' + money(r.i - r.e, { rp: false, sign: true }) + '</em></span>'; }).join('') + '</div>';
   }
+  // Total profit of a business: all its income minus expenses, plus my share of client payments (after partners).
+  function bizTotal(b) { var t = bizTx(b.id).reduce(function (a, x) { return a + (x.type === 'income' ? x.amount : -x.amount); }, 0); return t + (b.clients ? clStats(b, ym(new Date())).mineAll : 0); }
   function bizSheet() {
     var m = ym(new Date()), bs = S.businesses || [];
     openSheet('<div class="sheet-top"><span style="width:36px"></span><h3>Business</h3><span style="width:36px"></span></div>' +
-      '<div class="muted small" style="text-align:center;margin:-8px 0 12px">' + MONTHS[new Date().getMonth()] + ' ' + new Date().getFullYear() + '</div>' +
+      '<div class="biz-grand"><small>Total profit · all businesses</small><b class="pos">' + money(bs.reduce(function (a, b) { return a + bizTotal(b); }, 0)) + '</b></div>' +
       '<div class="card list-card stagger">' + bs.map(function (b, i) {
-        var r = bizIO(b.id, m), net = r.i - r.e, mx = Math.max(r.i, r.e, 1);
-        return '<button class="w-row biz-row" data-biz="' + esc(b.id) + '" style="--i:' + i + '">' + bizIcon(b, i) + '<span class="grow"><b>' + esc(b.name) + '</b><span class="sub">In ' + money(r.i, { rp: false }) + ' · Out ' + money(r.e, { rp: false }) + ((b.cats || []).length ? ' · ' + b.cats.map(function (c) { return cat(c).name; }).join(', ') : '') + '</span><span class="biz-mini"><i class="in" style="--w:' + (r.i / mx * 100).toFixed(0) + '%"></i><i class="out" style="--w:' + (r.e / mx * 100).toFixed(0) + '%"></i></span></span><span class="amt ' + (net < 0 ? 'neg' : 'pos') + '">' + money(net, { rp: false, sign: true }) + '</span></button>';
+        var r = bizIO(b.id, m), mon = r.i - r.e + (b.clients ? clStats(b, m).mine : 0), tot = bizTotal(b), share = (b.clients || []).some(function (c) { return c.partner; });
+        return '<button class="w-row biz-row" data-biz="' + esc(b.id) + '" style="--i:' + i + '">' + bizIcon(b, i) + '<span class="grow"><b>' + esc(b.name) + '</b><span class="sub">' + (share ? 'After partners · ' : 'Total · ') + 'this month ' + money(mon, { rp: false, sign: true }) + '</span></span><span class="amt ' + (tot < 0 ? 'neg' : 'pos') + '">' + money(tot, { rp: false }) + '</span></button>';
       }).join('') + '<button class="w-row" id="bizAdd"><span class="biz-ic add">＋</span><span class="grow"><b>Add business</b><span class="sub">Track another business</span></span></button></div>',
       function (r) {
         r.addEventListener('click', function (e) { var b = e.target.closest('[data-biz]'); if (b) { haptic(); bizDetail(bs.filter(function (x) { return x.id === b.dataset.biz; })[0]); } });

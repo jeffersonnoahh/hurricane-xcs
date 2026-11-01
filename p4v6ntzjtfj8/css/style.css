@@ -1710,3 +1710,7 @@ body.sheet-open .view.active{scale:1!important}
 .cl-t.p.on{background:rgba(96,165,250,.15);color:#60a5fa}
 .cl-t.dim{opacity:.4}
 .cl-note{font-size:11.5px;color:#f59e0b;padding-top:6px;border-top:.5px solid var(--line)}
+.biz-grand{text-align:center;margin:-6px 0 12px}
+.biz-grand small{display:block;font-size:12px;color:var(--muted)}
+.biz-grand b{font-size:28px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.biz-row .amt{font-size:15px;font-weight:700;white-space:nowrap}
