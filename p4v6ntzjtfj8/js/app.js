@@ -3544,7 +3544,7 @@
     snapList(c).then(function (ks) {
       busy(false);
       openSheet('<h3>Earlier versions</h3><p class="muted small" style="text-align:center;margin:-6px 0 12px">One encrypted copy per day, kept for 30 days. Restoring replaces what\u2019s on this phone (and the cloud) with that day.</p>' +
-        (ks.length ? '<div class="card list-card">' + ks.map(function (k, i) { return '<button class="w-row" data-snap="' + k + '"><span class="ic sm i3d">' + sprite('insurance') + '</span><span class="grow">' + fmtDate(k) + '<span class="sub">' + (i === 0 ? 'Latest' : (Math.round((Date.now() - new Date(k + 'T12:00:00')) / 864e5)) + ' days ago') + '</span></span><span class="muted">›</span></button>'; }).join('') + '</div>' : '<div class="empty">No snapshots yet. The first one is made at your next backup.</div>'),
+        (ks.length ? '<div class="card list-card">' + ks.map(function (k, i) { return '<button class="w-row" data-snap="' + k + '"><span class="ic sm i3d">' + sprite('insurance') + '</span><span class="grow">' + fmtDate(k) + '<span class="sub">' + (i === 0 ? 'Latest' : (function (n) { return n <= 1 ? 'Yesterday' : n + ' days ago'; })(Math.round((Date.now() - new Date(k + 'T12:00:00')) / 864e5))) + '</span></span><span class="muted">›</span></button>'; }).join('') + '</div>' : '<div class="empty">No snapshots yet. The first one is made at your next backup.</div>'),
         function (r) {
           r.querySelectorAll('[data-snap]').forEach(function (b) { b.onclick = function () {
             var k = b.dataset.snap;
