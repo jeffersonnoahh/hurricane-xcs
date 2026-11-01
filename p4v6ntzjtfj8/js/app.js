@@ -3095,8 +3095,11 @@
       var url = $('sUrl').value.trim();
       if (url && !/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { toast('That does not look like an Apps Script web app URL'); return false; }
       S.settings.syncUrl = url; S.settings.token = $('sToken').value.trim();
+      var wasOn = !!S.settings.autoSync;
       S.settings.autoSync = $('sAuto').checked; S.settings.bcaWallet = $('sWallet').value;
-      save(); renderAll(); toast('Saved ✓'); return true;
+      // Turning live sync back on: only take BCA emails from now on (older history is already imported), so nothing doubles.
+      if (!wasOn && S.settings.autoSync) { S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now(); }
+      save(); renderAll(); toast(!wasOn && S.settings.autoSync ? 'Live BCA sync on ✓ New transactions from now on' : 'Saved ✓'); return true;
     };
     $('sSync').onclick = function () { if ($('sSave').onclick() !== false) sync(true); };
 
