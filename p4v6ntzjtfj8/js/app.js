@@ -901,7 +901,7 @@
       haptic(); save(); renderAll(); onChange(); toast((ia === 'usd' ? 'Dollars' : 'Gold') + ' now tracked live ✓');
     };
   }
-  var txAll = true, txLimit = 80, txCat = '';
+  var txAll = true, txLimit = 80, txCat = '', TXF = null;
   function renderTx() {
     var w = walletSel;
     if (w !== 'all' && !S.wallets.some(function (x) { return x.id === w; })) w = walletSel = 'all';
@@ -961,20 +961,16 @@
     var ms = Object.keys(byM).sort().reverse(), curK = ym(cur);
     if (!txAll && ms.indexOf(curK) === -1) { ms.push(curK); ms.sort().reverse(); }
     var allOut = allW.reduce(function (a, t) { return a + (t.type === 'expense' ? t.amount : 0); }, 0);
-    var mChips = '<button type="button" class="tf-m' + (txAll ? ' on' : '') + '" data-tfm="all"><b>All time</b><span>' + money(allOut, { rp: false }) + '</span></button>' +
-      ms.map(function (k) { var m = byM[k] || { out: 0 }; return '<button type="button" class="tf-m' + (!txAll && k === curK ? ' on' : '') + '" data-tfm="' + k + '"><b>' + MONTHS[+k.slice(5, 7) - 1].slice(0, 3) + ' ' + k.slice(2, 4) + '</b><span>' + money(m.out, { rp: false }) + '</span></button>'; }).join('');
     var agg = {}, spent = 0, recv = 0;
     mt.forEach(function (t) { if (t.type !== 'expense' && t.type !== 'income') return; var a = agg[t.cat] = agg[t.cat] || { v: 0, n: 0, inc: t.type === 'income' }; a.v += t.amount; a.n++; });
     var cats = Object.keys(agg).sort(function (a, b) { return (agg[a].inc - agg[b].inc) || agg[b].v - agg[a].v; });
     if (txCat && !agg[txCat]) txCat = '';
-    var cChips = '<button type="button" class="tf-c' + (!txCat ? ' on' : '') + '" data-tfc="">All categories</button>' + cats.map(function (id) { var c = cat(id), a = agg[id];
-      return '<button type="button" class="tf-c' + (txCat === id ? ' on' : '') + (a.inc ? ' inc' : '') + '" data-tfc="' + esc(id) + '">' + icon(c, 'xs') + '<span>' + esc(c.name) + '</span><b>' + money(a.v, { rp: false }) + '</b></button>'; }).join('');
     var shown = txCat ? mt.filter(function (t) { return t.cat === txCat; }) : mt;
     shown.forEach(function (t) { if (t.type === 'expense') spent += t.amount; else if (t.type === 'income') recv += t.amount; });
-    var period = txAll ? 'all time' : monthName(curK);
-    box.innerHTML = '<div class="tf-row" id="tfMonths">' + mChips + '</div><div class="tf-row tf-cats">' + cChips + '</div>' +
-      '<div class="tf-sum"><div><small>Spent' + (txCat ? ' on ' + esc(cat(txCat).name) : '') + ' · ' + period + '</small><b class="neg">' + money(spent) + '</b></div><div><small>Received</small><b class="pos">' + money(recv) + '</b></div><div><small>Transactions</small><b>' + shown.length.toLocaleString('id-ID') + '</b></div></div>';
-    box.querySelectorAll('.tf-m.on,.tf-c.on').forEach(function (on) { var row = on.parentNode; row.style.scrollBehavior = 'auto'; row.scrollLeft = on.offsetLeft - row.clientWidth / 2 + on.offsetWidth / 2; row.style.scrollBehavior = ''; });
+    TXF = { ms: ms, byM: byM, allOut: allOut, cats: cats, agg: agg, curK: curK };
+    box.innerHTML = '<div class="tf-bar"><button type="button" class="tf-btn' + (txAll ? '' : ' set') + '" data-tf="m">📅 <span>' + (txAll ? 'All time' : monthName(curK)) + '</span><i>⌄</i></button>' +
+      '<button type="button" class="tf-btn' + (txCat ? ' set' : '') + '" data-tf="c">' + (txCat ? icon(cat(txCat), 'xs') : '🏷️') + ' <span>' + (txCat ? esc(cat(txCat).name) : 'All categories') + '</span><i>⌄</i></button></div>' +
+      '<div class="tf-line">Spent <b class="neg">' + money(spent) + '</b>' + (recv ? ' · Received <b class="pos">' + money(recv) + '</b>' : '') + ' · ' + shown.length.toLocaleString('id-ID') + ' tx</div>';
     return shown;
   }
   function monthsBetween(a, b) { return (+a.slice(0, 4) - +b.slice(0, 4)) * 12 + (+a.slice(5, 7) - +b.slice(5, 7)); }
@@ -2658,9 +2654,19 @@
     $('txNext').onclick = function () { if (txAll) txAll = false; else cur.setMonth(cur.getMonth() + 1); haptic(); renderAll(); };
     $('monthLabel').onclick = function () { txAll = !txAll; txLimit = 80; haptic(); renderTx(); };
     $('txFilt').onclick = function (e) {
-      var m = e.target.closest('[data-tfm]'), c = e.target.closest('[data-tfc]');
-      if (m) { if (m.dataset.tfm === 'all') txAll = true; else { txAll = false; cur = new Date(m.dataset.tfm + '-01T00:00:00'); } txLimit = 80; haptic(); renderAll(); return; }
-      if (c) { txCat = c.dataset.tfc; txLimit = 80; haptic(); renderTx(); }
+      var b = e.target.closest('[data-tf]'); if (!b || !TXF) return; haptic();
+      var F = TXF, mode = b.dataset.tf;
+      var rows = mode === 'm'
+        ? '<button class="tf-opt' + (txAll ? ' on' : '') + '" data-o="all"><span class="grow">All time</span><b class="neg">' + money(F.allOut, { rp: false }) + '</b></button>' + F.ms.map(function (k) { var m = F.byM[k] || { out: 0 }; return '<button class="tf-opt' + (!txAll && k === F.curK ? ' on' : '') + '" data-o="' + k + '"><span class="grow">' + monthName(k) + '</span><b class="neg">' + money(m.out, { rp: false }) + '</b></button>'; }).join('')
+        : '<button class="tf-opt' + (!txCat ? ' on' : '') + '" data-o=""><span class="grow">All categories</span></button>' + F.cats.map(function (id) { var a = F.agg[id]; return '<button class="tf-opt' + (txCat === id ? ' on' : '') + '" data-o="' + esc(id) + '">' + icon(cat(id), 'sm') + '<span class="grow">' + esc(cat(id).name) + '<span class="sub">' + a.n + ' transactions</span></span><b class="' + (a.inc ? 'pos' : 'neg') + '">' + money(a.v, { rp: false }) + '</b></button>'; }).join('');
+      openSheet('<h3>' + (mode === 'm' ? 'Choose month' : 'Choose category') + '</h3><div class="card list-card tf-list">' + rows + '</div>', function (r) {
+        r.querySelector('.tf-list').onclick = function (ev) {
+          var o = ev.target.closest('[data-o]'); if (!o) return; haptic(); closeSheet(); txLimit = 80;
+          if (mode === 'm') { if (o.dataset.o === 'all') txAll = true; else { txAll = false; cur = new Date(o.dataset.o + '-01T00:00:00'); } renderAll(); }
+          else { txCat = o.dataset.o; renderTx(); }
+        };
+        var on = r.querySelector('.tf-opt.on'); if (on) setTimeout(function () { on.scrollIntoView({ block: 'center' }); }, 50);
+      });
     };
 
     function openTx(e) { var row = e.target.closest('.tx'); if (!row) return; var t = S.tx.filter(function (x) { return x.id === row.dataset.id; })[0]; if (t) txSheet(t); }
