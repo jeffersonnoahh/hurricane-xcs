@@ -1,11 +1,12 @@
 // Apex offline support: app shell works without signal; live data always goes to the network.
-var CACHE = 'apex-v1';
+var CACHE = 'apex-v2';
 self.addEventListener('install', function (e) { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(['./', './index.html', './manifest.json']); })); });
 self.addEventListener('activate', function (e) { e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); })); });
 self.addEventListener('fetch', function (e) {
   var req = e.request, url = new URL(req.url);
   if (req.method !== 'GET') return;
   if (/\/mkt$/.test(url.pathname)) return; // live market data: never serve from cache
+  if (/\/s\/[a-f0-9]+\.json$/.test(url.pathname)) return; // private import files: always from the network
   if (/firebaseio\.com|coingecko\.com|script\.google|googleusercontent|tessdata|jsdelivr/.test(url.host + url.pathname) && !/cloudfront/.test(url.host)) return;
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(function (r) { var c = r.clone(); caches.open(CACHE).then(function (ca) { ca.put('./index.html', c); }); return r; }).catch(function () { return caches.match('./index.html'); }));

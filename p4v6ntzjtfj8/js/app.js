@@ -2371,14 +2371,14 @@
     if (!(window.crypto && crypto.subtle)) { toast('This browser can\u2019t unlock the import'); return; }
     busy(true, 'Unlocking your Money Lover data…');
     var kb = Uint8Array.from(atob(m[2].replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - m[2].length % 4) % 4)), function (ch) { return ch.charCodeAt(0); });
-    fetch('s/' + m[1] + '.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('Import file not found'); return r.json(); }).then(function (f) {
+    fetch('s/' + m[1] + '.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok || !/json/.test(r.headers.get('content-type') || '')) throw new Error('Import file not found'); return r.json(); }).then(function (f) {
       var iv = unb64(f.iv), ct = unb64(f.ct);
       return crypto.subtle.importKey('raw', kb, 'AES-GCM', false, ['decrypt']).then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, k, ct); });
     }).then(function (buf) {
       busy(false);
       var d = JSON.parse(new TextDecoder().decode(buf));
       if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
-    }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? e.message : 'Could not unlock the import link'); });
+    }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? 'Not ready yet. Wait a minute, close Apex fully and try again.' : 'Could not unlock. Check the code was copied completely.'); });
   }
   // Commission history: one record per month, linked to its RESERVE TRANSFER (money already in RESERVE), with Dad's payments.
   // Money owed to me, added from a private code (no wallet change: just records to collect).
