@@ -2346,10 +2346,25 @@
     }).then(function (buf) {
       busy(false);
       var d = JSON.parse(new TextDecoder().decode(buf));
-      if (d.kind === 'komisi') kmImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
+      if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
     }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? e.message : 'Could not unlock the import link'); });
   }
   // Commission history: one record per month, linked to its RESERVE TRANSFER (money already in RESERVE), with Dad's payments.
+  // Money owed to me, added from a private code (no wallet change: just records to collect).
+  function owedImportPreview(list) {
+    var todo = list.filter(function (o) { return !S.debts.some(function (d) { return d.seedKey === o.key; }); });
+    var tot = todo.reduce(function (a, o) { return a + o.amount; }, 0);
+    openSheet('<h3>Owed to me</h3><div class="kt-hero"><small>' + todo.length + ' records</small><b>' + money(tot) + '</b></div>' +
+      '<div class="card list-card">' + todo.map(function (o) { return '<div class="ml-row">' + avatar(o.person) + '<span class="grow"><b>' + esc(o.person) + '</b><span class="sub">' + esc(o.title) + ' · due ' + fmtDate(o.due) + '</span></span><span>' + money(o.amount, { rp: false }) + '</span></div>'; }).join('') + '</div>' +
+      (todo.length ? '<button class="btn primary block" id="owImp" style="margin-top:12px">Add ' + todo.length + ' records</button>' : '<p class="muted" style="text-align:center">Already added ✓</p>'),
+      function (r) {
+        var b = r.querySelector('#owImp'); if (!b) return;
+        b.onclick = function () {
+          todo.forEach(function (o) { S.debts.push({ id: uid(), dir: 'in', person: o.person, title: o.title, amount: o.amount, created: o.created, due: o.due, wallet: (S.wallets.filter(function (w) { return /^reserve$/i.test(w.name); })[0] || S.wallets[0] || {}).id, tags: o.tags || '', notes: o.notes || '', payments: [], seedKey: o.key, ts: Date.now() }); });
+          haptic(); save(); closeSheet(); renderAll(); toast(todo.length + ' records added to Owed ✓'); show('v-debts');
+        };
+      });
+  }
   function kmFindTx(amount, month) {
     var cs = kmCats(), best = null;
     S.tx.forEach(function (t) { if (t.type !== 'income' || cs.indexOf(t.cat) === -1 || t.debtId) return; var d = Math.abs(t.amount - amount); if (d <= 1000000 && t.date > month && (!best || d < best.d)) best = { t: t, d: d }; });
