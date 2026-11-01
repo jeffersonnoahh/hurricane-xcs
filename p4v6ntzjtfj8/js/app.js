@@ -1659,9 +1659,34 @@
     draw();
   }
   // ---------- INSTALLMENTS: tracked separately, never counted in wallets or net worth ----------
-  function iPaid(p) { return (p.pays || []).reduce(function (a, x) { return a + x.amount; }, 0); }
+  // Savings plan: fixed months, each party ticks their monthly transfer (e.g. wedding account: Noah ✅ + Dad ✝️).
+  function planMonths(pl) { var out = [], y = +pl.start.slice(0, 4), m = +pl.start.slice(5, 7) - 1; for (var i = 0; i < pl.months; i++) { var d = new Date(y, m + i, 1); out.push(ym(d)); } return out; }
+  function planPaid(p) { var pl = p.plan; if (!pl) return 0; var t = 0; Object.keys(pl.ticks || {}).forEach(function (k) { pl.parties.forEach(function (pa) { if (pl.ticks[k][pa.k]) t += pa.amt; }); }); return t; }
+  function iPaid(p) { return (p.pays || []).reduce(function (a, x) { return a + x.amount; }, 0) + planPaid(p); }
+  function planHtml(p) {
+    var pl = p.plan, ms = planMonths(pl), now = ym(new Date()), byY = {};
+    ms.forEach(function (k) { (byY[k.slice(0, 4)] = byY[k.slice(0, 4)] || []).push(k); });
+    var doneN = ms.filter(function (k) { var t = (pl.ticks || {})[k] || {}; return pl.parties.every(function (pa) { return t[pa.k]; }); }).length;
+    return (pl.account ? '<div class="pl-acct"><div><small>' + esc(pl.bank || 'Account') + ' · ' + esc(pl.holder || '') + '</small><b>' + esc(pl.account) + '</b></div><button type="button" class="btn" id="plCopy">Copy</button></div>' : '') +
+      '<div class="pl-legend">' + pl.parties.map(function (pa) { return '<span>' + pa.mark + ' ' + esc(pa.name) + ' · ' + money(pa.amt, { rp: false }) + '/mo</span>'; }).join('') + '</div>' +
+      '<div class="pl-prog">' + doneN + ' of ' + ms.length + ' months complete · tap to tick</div>' +
+      Object.keys(byY).map(function (y) { return '<div class="sheet-sec">' + y + '</div><div class="pl-grid">' + byY[y].map(function (k) {
+        var t = (pl.ticks || {})[k] || {}, full = pl.parties.every(function (pa) { return t[pa.k]; });
+        return '<div class="pl-m' + (full ? ' full' : '') + (k === now ? ' now' : '') + '"><span>' + MONTHS[+k.slice(5, 7) - 1].slice(0, 3) + '</span><div>' + pl.parties.map(function (pa) { return '<button type="button" class="pl-t' + (t[pa.k] ? ' on' : '') + '" data-pm="' + k + '" data-pp="' + pa.k + '" aria-label="' + esc(pa.name) + ' ' + k + '">' + (t[pa.k] ? pa.mark : '') + '</button>'; }).join('') + '</div></div>';
+      }).join('') + '</div>'; }).join('') +
+      '<p class="muted small" style="text-align:center;margin-top:10px">Ticking doesn\u2019t move money in any wallet.</p>';
+  }
+  function bindPlan(r, p) {
+    var c = r.querySelector('#plCopy'); if (c) c.onclick = function () { var v = p.plan.account.replace(/\D/g, ''); (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(function () { toast('Account number copied'); }, function () { toast(p.plan.account); }); };
+    r.querySelectorAll('[data-pm]').forEach(function (b) { b.onclick = function () {
+      var pl = p.plan, k = b.dataset.pm, who = b.dataset.pp; pl.ticks = pl.ticks || {}; var t = pl.ticks[k] = pl.ticks[k] || {};
+      t[who] = t[who] ? 0 : Date.now(); haptic(); save(); renderAll();
+      var sc = r.closest('.sheet') || $('sheet'), top = sc.scrollTop; instDetail(p); $('sheet').scrollTop = top;
+    }; });
+  }
   function iLeft(p) { return Math.max(0, (p.total || 0) - iPaid(p)); }
   function iNext(p) {
+    if (p.plan) { var pl = p.plan, nm = planMonths(pl).filter(function (k) { var t = (pl.ticks || {})[k] || {}; return !pl.parties.every(function (pa) { return t[pa.k]; }); })[0]; return nm ? nm + '-' + pad(Math.min(28, p.dueDay || 1)) : null; }
     if (!p.monthly || !iLeft(p)) return null;
     var now = new Date(), day = Math.min(28, p.dueDay || 1), d = new Date(now.getFullYear(), now.getMonth(), day);
     var paidThis = (p.pays || []).some(function (x) { return x.date.slice(0, 7) === ym(now); });
@@ -1713,19 +1738,21 @@
   function instDetail(p) {
     if (!p) return; var i = S.inst.indexOf(p), col = ICOL[i % ICOL.length], pd = iPaid(p), pct = p.total ? pd / p.total : 0, left = iLeft(p), nx = iNext(p);
     var monthsLeft = p.monthly ? Math.ceil(left / p.monthly) : null, fin = monthsLeft ? new Date(new Date().getFullYear(), new Date().getMonth() + monthsLeft, 1) : null;
+    if (p.plan) { var lm = planMonths(p.plan).slice(-1)[0]; fin = new Date(lm + '-01T00:00:00'); }
     var pays = (p.pays || []).slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
     openSheet('<div class="sheet-top"><button class="icon-btn" id="iBack" aria-label="Back">‹</button><h3>' + esc(p.name) + '</h3><button class="icon-btn" id="iEdit" aria-label="Edit">✎</button></div>' +
       '<div class="gd-hero"><div class="g-vis big">' + ringSvg(pct, col, 132) + '<span class="g-ic">' + sprite(p.sp || 'my_home') + '</span></div><div class="gd-pct">' + Math.round(pct * 100) + '%</div><div class="muted small">' + money(pd) + ' of ' + money(p.total || 0) + '</div></div>' +
       '<div class="dd-stats"><div><small>Remaining</small><b>' + money(left, { rp: false }) + '</b></div><div><small>Per month</small><b>' + (p.monthly ? money(p.monthly, { rp: false }) : '–') + '</b></div><div><small>' + (fin ? 'Finished' : 'Months left') + '</small><b>' + (fin ? MONTHS[fin.getMonth()].slice(0, 3) + ' ' + fin.getFullYear() : '–') + '</b></div></div>' +
       (nx ? '<div class="inst-next"><span>Next payment</span><b>' + money(p.monthly) + ' · ' + fmtDate(nx) + '</b></div>' : '') +
-      (left ? '<div class="amt-wrap" style="margin-top:14px"><span>Rp</span><input class="amt-input" id="iAmt" inputmode="numeric" placeholder="Payment" value="' + (p.monthly ? Math.min(p.monthly, left).toLocaleString('id-ID') : '') + '"></div>' +
+      (p.plan ? planHtml(p) : left ? '<div class="amt-wrap" style="margin-top:14px"><span>Rp</span><input class="amt-input" id="iAmt" inputmode="numeric" placeholder="Payment" value="' + (p.monthly ? Math.min(p.monthly, left).toLocaleString('id-ID') : '') + '"></div>' +
         '<label class="fld">Date<input id="iDate" type="date" value="' + today() + '"></label><button class="btn primary block" id="iPay">＋ Record payment</button>' : '<div class="empty">Fully paid 🎉</div>') +
-      '<p class="muted small" style="text-align:center">Recording here does not take money from any wallet.</p>' +
+      (p.plan ? '' : '<p class="muted small" style="text-align:center">Recording here does not take money from any wallet.</p>') +
       (pays.length ? '<div class="sheet-sec">Payments</div><div class="timeline">' + pays.map(function (x) { return '<div class="tl"><div><b class="pos">+ ' + money(x.amount) + '</b><small>' + fmtDate(x.date) + '</small></div><button class="x" data-ipdel="' + esc(x.id) + '" aria-label="Delete">×</button></div>'; }).join('') + '</div>' : ''),
       function (r) {
         requestAnimationFrame(function () { requestAnimationFrame(function () { r.querySelectorAll('.g-fill').forEach(function (c) { c.classList.add('go'); }); }); });
         r.querySelector('#iBack').onclick = instSheet; r.querySelector('#iEdit').onclick = function () { instEdit(p); };
         var a = r.querySelector('#iAmt'); if (a) fmtInput(a);
+        if (p.plan) bindPlan(r, p);
         var b = r.querySelector('#iPay'); if (b) b.onclick = function () {
           var v = parseNum(a.value); if (!v) { toast('Enter the amount'); return; }
           (p.pays = p.pays || []).push({ id: uid(), amount: v, date: r.querySelector('#iDate').value || today() });
@@ -2350,11 +2377,18 @@
     }).then(function (buf) {
       busy(false);
       var d = JSON.parse(new TextDecoder().decode(buf));
-      if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
+      if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
     }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? e.message : 'Could not unlock the import link'); });
   }
   // Commission history: one record per month, linked to its RESERVE TRANSFER (money already in RESERVE), with Dad's payments.
   // Money owed to me, added from a private code (no wallet change: just records to collect).
+  function planImport(d) {
+    var p = (S.inst || []).filter(function (x) { return x.id === d.instId || /wedding/i.test(x.name); })[0];
+    if (!p) { p = { id: d.instId || uid(), name: d.name || 'WEDDING', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }; (S.inst = S.inst || []).push(p); }
+    var per = d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0);
+    p.plan = d.plan; p.monthly = per; p.total = per * d.plan.months;
+    save(); renderAll(); toast('Wedding plan added ✓'); setTimeout(function () { instDetail(p); }, 300);
+  }
   function owedImportPreview(list) {
     var todo = list.filter(function (o) { return !S.debts.some(function (d) { return d.seedKey === o.key; }); });
     var tot = todo.reduce(function (a, o) { return a + o.amount; }, 0);
