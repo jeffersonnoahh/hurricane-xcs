@@ -1728,3 +1728,4 @@ body.sheet-open .view.active{scale:1!important}
 .sb-ic{width:32px;height:32px;flex:none}.sb-ic .sp{width:100%;height:100%}
 .fid{margin-bottom:6px}.fid .btn{margin-top:8px}
 .fid-on{margin-bottom:10px}.fid-on b{display:block;margin-bottom:4px}
+.fs-st{text-align:center;font-size:12.5px;color:var(--muted);margin:2px 0 10px}

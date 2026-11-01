@@ -2123,9 +2123,52 @@
     fdb = new Promise(function (ok, no) { var r = indexedDB.open('apex_files', 1); r.onupgradeneeded = function () { r.result.createObjectStore('f'); }; r.onsuccess = function () { ok(r.result); }; r.onerror = function () { no(r.error); }; });
     return fdb;
   }
-  function filePut(id, blob) { return fileDB().then(function (db) { return new Promise(function (ok, no) { var tx = db.transaction('f', 'readwrite'); tx.objectStore('f').put(blob, id); tx.oncomplete = ok; tx.onerror = function () { no(tx.error); }; }); }); }
-  function fileGet(id) { return fileDB().then(function (db) { return new Promise(function (ok) { var q = db.transaction('f').objectStore('f').get(id); q.onsuccess = function () { ok(q.result); }; q.onerror = function () { ok(null); }; }); }); }
-  function fileDel(id) { return fileDB().then(function (db) { db.transaction('f', 'readwrite').objectStore('f').delete(id); }).catch(function () {}); }
+  function fileLocalPut(id, blob) { return fileDB().then(function (db) { return new Promise(function (ok, no) { var tx = db.transaction('f', 'readwrite'); tx.objectStore('f').put(blob, id); tx.oncomplete = ok; tx.onerror = function () { no(tx.error); }; }); }); }
+  function fileLocalGet(id) { return fileDB().then(function (db) { return new Promise(function (ok) { var q = db.transaction('f').objectStore('f').get(id); q.onsuccess = function () { ok(q.result); }; q.onerror = function () { ok(null); }; }); }); }
+  function filePut(id, blob) { return fileLocalPut(id, blob).then(function () { fsUpload(id, blob); }); }
+  // Local first; if this phone doesn't have it yet (new phone), fetch the encrypted copy from the cloud.
+  function fileGet(id) { return fileLocalGet(id).then(function (b) { return b || fsDownload(id); }); }
+  function fileDel(id) { fsDelete(id); return fileDB().then(function (db) { db.transaction('f', 'readwrite').objectStore('f').delete(id); }).catch(function () {}); }
+
+  // ---------- Photo & PDF sync: encrypted on the phone, stored in Cloudflare R2 ----------
+  var FS = 'files/', FS_STATE = { ok: null, up: 0, todo: 0 };
+  function fsCloud() { var c = S.settings && S.settings.cloud; return c && c.on ? c : null; }
+  function fsToken(c) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('apex-files|' + c.id + '|' + c.pass)).then(hex); }
+  function fsDone() { try { return JSON.parse(localStorage.getItem('apex_fup') || '{}'); } catch (e) { return {}; } }
+  function fsMark(id) { var d = fsDone(); d[id] = 1; try { localStorage.setItem('apex_fup', JSON.stringify(d)); } catch (e) {} }
+  function fsUpload(id, blob) {
+    var c = fsCloud(); if (!c || !blob) return Promise.resolve(false);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return Promise.all([deriveKey(c.pass, c.id), fsToken(c), blob.arrayBuffer()]).then(function (r) {
+      return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, r[0], r[2]).then(function (ct) {
+        var meta = new TextEncoder().encode(JSON.stringify({ t: blob.type || '' })), head = new Uint8Array(14); head.set(iv, 0); head[12] = meta.length >> 8; head[13] = meta.length & 255;
+        return fetch(FS + c.id + '/' + id, { method: 'PUT', headers: { 'x-apex-token': r[1] }, body: new Blob([head, meta, ct]) });
+      });
+    }).then(function (res) { FS_STATE.ok = res.status !== 503; if (res.ok) { fsMark(id); return true; } return false; }).catch(function () { return false; });
+  }
+  function fsDownload(id) {
+    var c = fsCloud(); if (!c) return Promise.resolve(null);
+    return fsToken(c).then(function (tk) { return fetch(FS + c.id + '/' + id, { headers: { 'x-apex-token': tk }, cache: 'no-store' }); })
+      .then(function (res) { if (!res.ok) return null; return res.arrayBuffer().then(function (ab) {
+        var u = new Uint8Array(ab), iv = u.slice(0, 12), ml = (u[12] << 8) | u[13], meta = JSON.parse(new TextDecoder().decode(u.slice(14, 14 + ml)) || '{}');
+        return deriveKey(c.pass, c.id).then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, k, u.slice(14 + ml)); }).then(function (pt) {
+          var b = new Blob([pt], { type: meta.t || '' }); fsMark(id); return fileLocalPut(id, b).then(function () { return b; });
+        });
+      }); }).catch(function () { return null; });
+  }
+  function fsDelete(id) { var c = fsCloud(); if (!c) return; fsToken(c).then(function (tk) { fetch(FS + c.id + '/' + id, { method: 'DELETE', headers: { 'x-apex-token': tk } }).catch(function () {}); }); }
+  function fsAllIds() { var ids = {}; (S.tx || []).concat(S.debts || []).forEach(function (x) { (x.files || []).forEach(function (m) { if (m && m.id) ids[m.id] = 1; }); }); return Object.keys(ids); }
+  // Upload anything not synced yet, and download anything this phone is missing. Runs quietly in the background.
+  function fsSync() {
+    var c = fsCloud(); if (!c || fsSync.busy) return; fsSync.busy = true;
+    var ids = fsAllIds(), done = fsDone(), i = 0; FS_STATE.todo = ids.length;
+    (function next() {
+      if (i >= ids.length) { fsSync.busy = false; FS_STATE.up = ids.filter(function (x) { return fsDone()[x]; }).length; return; }
+      var id = ids[i++];
+      if (done[id]) return next();
+      fileLocalGet(id).then(function (b) { return b ? fsUpload(id, b) : fsDownload(id); }).then(function () { if (FS_STATE.ok === false) { fsSync.busy = false; return; } next(); }, next);
+    })();
+  }
   // Shrink photos so many receipts fit on the phone; PDFs and other files are kept as they are.
   function prepFile(f) {
     if (!/^image\//.test(f.type) || /gif|svg/.test(f.type)) return Promise.resolve(f);
@@ -3539,7 +3582,7 @@
       if (!data) return false;
       var cloud = { id: id, pass: pass, on: true, last: Date.now() };
       S = data; S.settings = S.settings || {}; S.settings.cloud = cloud;
-      load2(); LAST_SAVED = dataSig(); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); return true;
+      load2(); LAST_SAVED = dataSig(); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); setTimeout(fsSync, 1500); return true;
     }).then(done, fail);
   }
   function load2() { var d = blank(); Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; }); Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; }); }
@@ -3582,7 +3625,7 @@
     if (!pkSupported()) { toast('Face ID sign-in isn’t available on this browser'); return; }
     pkCreate().then(function (k) {
       S.settings.cloud = { id: k.id, pass: k.pass, on: true, mode: 'passkey' }; save();
-      return cloudPush().then(function () { closeSheet(); setCloudStatus(); toast('Face ID sync on ☁️'); haptic(); renderAll(); });
+      return cloudPush().then(function () { closeSheet(); setCloudStatus(); toast('Face ID sync on ☁️'); haptic(); renderAll(); setTimeout(fsSync, 1500); });
     }).catch(function (e) { if (e && e.name === 'NotAllowedError') return; toast((e && e.message) || 'Could not turn on Face ID sync'); });
   }
   function faceIdSignIn() {
@@ -3627,11 +3670,17 @@
       openSheet('<h3>Cloud backup</h3><span class="ic preview i3d">' + sprite('insurance') + '</span>' +
         '<p class="muted small" style="text-align:center">Encrypted on this phone with your passphrase before upload. Nobody else can read it.</p>' +
         (c.mode === 'passkey' ? '<div class="card fid-on"><b>🔐 Face ID sync is on</b><div class="muted small">On another iPhone, iPad or Mac with your Apple account: open the Apex link → More → Encrypted cloud backup → Sign in with Face ID.</div></div>' : '') + '<div class="card"' + (c.mode === 'passkey' ? ' hidden' : '') + '><div class="eyebrow">Your sync code</div><div class="sync-code" id="syncCode">' + esc(c.id) + '</div><div class="muted small">Use this code + your passphrase to open your data on another device.</div><button class="btn block" id="copyCode">Copy code</button></div>' +
+        '<div class="fs-st" id="fsSt">Photos & PDFs: checking…</div>' +
         '<button class="btn primary block" id="cNow">Back up now</button><button class="btn block" id="cSnap">🕘 Restore an earlier version</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
         function (r) {
           r.querySelector('#copyCode').onclick = function () { try { navigator.clipboard.writeText(c.id); toast('Code copied'); } catch (e) { toast(c.id); } };
           r.querySelector('#cNow').onclick = function () { cloudPush(true).then(function () { toast('Backed up ✓'); closeSheet(); }); };
           r.querySelector('#cSnap').onclick = function () { haptic(); snapSheet(); };
+          var ids = fsAllIds(), up = ids.filter(function (x) { return fsDone()[x]; }).length, st = r.querySelector('#fsSt');
+          fsToken(c).then(function (tk) { return fetch(FS + c.id, { headers: { 'x-apex-token': tk }, cache: 'no-store' }); }).then(function (res) {
+            st.textContent = res.status === 503 ? 'Photos & PDFs: cloud storage not set up yet' : !ids.length ? 'Photos & PDFs: none attached yet' : '📎 Photos & PDFs: ' + up + ' of ' + ids.length + ' synced' + (up < ids.length ? ' (syncing…)' : ' ✓');
+            if (res.status !== 503 && up < ids.length) fsSync();
+          }).catch(function () { st.textContent = 'Photos & PDFs: offline'; });
           r.querySelector('#cOff').onclick = function () { if (!confirm('Stop backing up from this device? Your cloud copy stays.')) return; c.on = false; save(); closeSheet(); setCloudStatus(); };
         });
       return;
@@ -4110,7 +4159,7 @@
       d.querySelector('.a2x').onclick = function () { try { localStorage.setItem('apex_a2hs', '1'); } catch (e) {} d.remove(); };
     }, 2500);
   })();
-  (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}); })();
+  (function () { var c = S.settings.cloud; if (c && c.on) cloudPull(c.id, c.pass).then(function (ch) { if (ch) { applyHome(); toast('Synced from cloud ☁️'); } }).catch(function () {}).then(function () { setTimeout(fsSync, 4000); }); })();
   if (S.settings.pinHash) { delete S.settings.pinHash; save(); }
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
