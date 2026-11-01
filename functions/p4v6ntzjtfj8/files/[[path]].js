@@ -1,6 +1,6 @@
 // Apex attachment storage (photos / PDFs) on Cloudflare R2.
 // Files arrive already encrypted on the phone; this only stores bytes.
-// Each sync id is claimed by its first uploader: later requests must send the same token (only the owner's devices can derive it).
+// Stored under sha256(token|id); the token is derived on the owner's devices from their encryption key.
 const MAX = 30 * 1024 * 1024;
 const ok = (body, status = 200, type = 'application/json') => new Response(body, { status, headers: { 'content-type': type, 'cache-control': 'no-store' } });
 const err = (msg, status) => ok(JSON.stringify({ error: msg }), status);
@@ -18,24 +18,21 @@ export async function onRequest({ request, env, params }) {
   if (!/^[a-f0-9]{16,64}$/.test(id)) return err('bad id', 400);
   const token = request.headers.get('x-apex-token') || '';
   if (!/^[a-f0-9]{64}$/.test(token)) return err('no token', 401);
-  const th = await sha(token);
-  const own = await B.get(id + '/.owner');
-  if (own) { if ((await own.text()) !== th) return err('forbidden', 403); }
-  else if (request.method === 'PUT') await B.put(id + '/.owner', th);
-  else return err('not found', 404);
-
+  // Files live under a hash of the owner's token: only devices that can derive the token can reach them, and nobody can claim someone else's space.
+  const th = await sha(token + '|' + id);
   if (!fid) { // list file ids
     if (request.method !== 'GET') return err('method', 405);
     const out = []; let cursor;
-    do { const l = await B.list({ prefix: id + '/f', cursor }); l.objects.forEach((o) => out.push(o.key.slice(id.length + 1))); cursor = l.truncated ? l.cursor : null; } while (cursor);
+    do { const l = await B.list({ prefix: th + '/f', cursor }); l.objects.forEach((o) => out.push(o.key.slice(th.length + 1))); cursor = l.truncated ? l.cursor : null; } while (cursor);
     return ok(JSON.stringify(out));
   }
   if (!/^f[a-z0-9]{4,40}$/.test(fid)) return err('bad file', 400);
-  const key = id + '/' + fid;
+  const key = th + '/' + fid;
   if (request.method === 'PUT') {
-    const len = +(request.headers.get('content-length') || 0);
-    if (len > MAX) return err('too big', 413);
-    await B.put(key, request.body);
+    const buf = await request.arrayBuffer();
+    if (!buf.byteLength) return err('empty', 400);
+    if (buf.byteLength > MAX) return err('too big', 413);
+    await B.put(key, buf);
     return ok('{"ok":true}');
   }
   if (request.method === 'GET') {

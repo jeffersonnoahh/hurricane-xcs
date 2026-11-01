@@ -139,7 +139,7 @@
   function useGenerated() { if (S.iconVer === 2) return; (S.cats || []).concat(S.wallets || []).forEach(function (o) { delete o.custom; }); S.iconVer = 2; }
   // Save only when something really changed; only real changes bump the timestamp and trigger a cloud backup.
   var LAST_SAVED = null;
-  function dataSig() { var u = S.updatedAt, c = S.settings && S.settings.cloud, cl = c && c.last, pr = c && c.pruned; delete S.updatedAt; if (c) { delete c.last; delete c.pruned; } var str = JSON.stringify(S); S.updatedAt = u; if (c) { if (cl != null) c.last = cl; if (pr != null) c.pruned = pr; } return str; }
+  function dataSig() { var u = S.updatedAt, c = S.settings && S.settings.cloud, cl = c && c.last, pr = c && c.pruned, sy = c && c.syncedAt; delete S.updatedAt; if (c) { delete c.last; delete c.pruned; delete c.syncedAt; } var str = JSON.stringify(S); S.updatedAt = u; if (c) { if (cl != null) c.last = cl; if (pr != null) c.pruned = pr; if (sy != null) c.syncedAt = sy; } return str; }
   function save() {
     BAL = {};
     var sig = dataSig();
@@ -507,7 +507,7 @@
       if (!S.settings.hide && !netHidden) RS.hNet = { sig: txt.replace(/\d/g, '0'), digits: txt.replace(/\D/g, '').split('').map(Number), v: v };
       var d = SPK.dates[i]; lbl.textContent = d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear(); lbl.style.left = (f * 100) + '%'; lbl.hidden = false;
     }
-    function end() { if (!scrubbing) return; scrubbing = false; document.body.classList.remove('scrubbing'); lbl.hidden = true; var g = svg.querySelector('.sp-scrub'); if (g) g.setAttribute('hidden', ''); at.last = -1; if (SPK) rollTo($('hNet'), SPK.pts[SPK.pts.length - 1] + SPK.offset); }
+    function end() { if (!scrubbing) return; scrubbing = false; document.body.classList.remove('scrubbing'); lbl.hidden = true; var g = svg.querySelector('.sp-scrub'); if (g) g.setAttribute('hidden', ''); at.last = -1; if (netHidden && !S.settings.hide) { $('hNet').innerHTML = '<span class="masked">Rp ••••••</span>'; RS.hNet = null; return; } if (SPK) rollTo($('hNet'), SPK.pts[SPK.pts.length - 1] + SPK.offset); }
     svg.addEventListener('touchstart', function (e) { scrubbing = true; document.body.classList.add('scrubbing'); at(e.touches[0].clientX); }, { passive: true });
     svg.addEventListener('touchmove', function (e) { if (scrubbing) { e.preventDefault(); at(e.touches[0].clientX); } }, { passive: false });
     svg.addEventListener('touchend', end); svg.addEventListener('touchcancel', end);
@@ -1264,6 +1264,7 @@
           var person = r.querySelector('#nPerson').value.trim(), a = parseNum(amt.value);
           if (!person) { toast('Who is it?'); return; } if (!a) { toast('Enter the amount'); return; }
           Object.assign(d, { dir: dirNow, person: person, title: r.querySelector('#nTitle').value.trim(), amount: a, created: r.querySelector('#nDate').value || today(), due: r.querySelector('#nDue').value, wallet: r.querySelector('#nWallet').value, tags: r.querySelector('#nTags').value.trim(), notes: r.querySelector('#nNotes').value.trim(), phone: r.querySelector('#nPhone').value.trim() });
+          if (!isNew && d.startTx) S.tx.forEach(function (t) { if (t.id === d.startTx) { t.amount = a; t.wallet = d.wallet; t.date = d.created; t.merchant = person; } });
           if (isNew) {
             S.debts.push(d);
             var mv = r.querySelector('#nMove');
@@ -1337,7 +1338,7 @@
   function komisiRecs() { var cs = kmCats(); return S.debts.filter(function (d) { return d.earned && cs.indexOf(d.incomeCat) !== -1 && d.closed !== 'cancelled'; }); }
   function komisiByMonth() {
     var by = {};
-    komisiRecs().forEach(function (d) { var k = d.forMonth || d.created.slice(0, 7); var m = by[k] = by[k] || { k: k, earned: 0, paid: 0, recs: [] }; m.earned += d.amount; m.paid += Math.min(d.amount, dPaid(d)); m.recs.push(d); });
+    komisiRecs().forEach(function (d) { var k = d.forMonth || d.created.slice(0, 7); var m = by[k] = by[k] || { k: k, earned: 0, paid: 0, recs: [] }; m.earned += d.amount; m.paid += dStatus(d) === 'writtenoff' ? d.amount : Math.min(d.amount, dPaid(d)); m.recs.push(d); });
     return Object.keys(by).sort().reverse().map(function (k) { return by[k]; });
   }
   function monthName(k) { var d = new Date(k + '-01T00:00:00'); return MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
@@ -1918,7 +1919,7 @@
         r.addEventListener('click', function (e) { var x = e.target.closest('[data-ipdel]'); if (!x) return; confirmBox('Delete this payment?', 'It will be removed from ' + esc(p.name) + '.', 'Delete').then(function (ok) { if (!ok) return; p.pays = p.pays.filter(function (y) { return y.id !== x.dataset.ipdel; }); save(); renderAll(); instDetail(p); }); });
       });
   }
-  function unbook(d, why) { var r = dRemain(d); if (d.prebooked && r > 0) addTx({ type: 'expense', cat: 'balance_adj', amount: r, wallet: d.wallet, date: today(), merchant: d.person, note: why + ': ' + (d.title || ''), debtId: d.id }); }
+  function unbook(d, why) { var r = dRemain(d); if (d.prebooked && r > 0) { var t = addTx({ type: 'expense', cat: 'balance_adj', amount: r, wallet: d.wallet, date: today(), merchant: d.person, note: why + ': ' + (d.title || ''), debtId: d.id }); d.unbookTx = t.id; } }
   function debtDetail(d) {
     if (!d) return;
     var st = dStatus(d), p = dPaid(d), pc = d.amount ? Math.min(100, Math.round(p / d.amount * 100)) : 0, inn = d.dir === 'in';
@@ -1950,10 +1951,11 @@
         r.querySelector('#ddEdit').onclick = function () { debtSheet(d); };
         if ((b = r.querySelector('#ddCancel'))) b.onclick = function () { if (!confirm('Mark as cancelled? It will no longer count as outstanding.')) return; unbook(d, 'Cancelled'); d.closed = 'cancelled'; save(); closeSheet(); renderAll(); toast('Cancelled'); };
         if ((b = r.querySelector('#ddWrite'))) b.onclick = function () { if (!confirm('Write off the remaining Rp ' + fmt(dRemain(d)) + '? It will no longer count in your net worth.')) return; unbook(d, 'Not received'); d.closed = 'writtenoff'; save(); closeSheet(); renderAll(); toast('Written off'); };
-        if ((b = r.querySelector('#ddReopen'))) b.onclick = function () { delete d.closed; save(); closeSheet(); renderAll(); toast('Reopened'); };
+        if ((b = r.querySelector('#ddReopen'))) b.onclick = function () { delete d.closed; if (d.unbookTx) { S.tx = S.tx.filter(function (t) { return t.id !== d.unbookTx; }); delete d.unbookTx; } save(); closeSheet(); renderAll(); toast('Reopened'); };
         r.querySelector('#ddDel').onclick = function () {
           if (!confirm('Delete this record and its ' + (d.payments || []).length + ' payment(s)? Linked wallet transactions are removed too.')) return;
-          var ids = (d.payments || []).map(function (x) { return x.txId; }).concat(d.startTx ? [d.startTx] : []).concat(d.bookTx ? [d.bookTx] : []);
+          var ids = (d.payments || []).map(function (x) { return x.txId; }).concat(d.startTx ? [d.startTx] : []).concat(d.bookTx && d.ownBook ? [d.bookTx] : []).concat(d.unbookTx ? [d.unbookTx] : []);
+          if (d.bookTx && !d.ownBook) S.tx.forEach(function (t) { if (t.id === d.bookTx) delete t.debtId; });
           S.tx = S.tx.filter(function (t) { return ids.indexOf(t.id) === -1; });
           S.debts = S.debts.filter(function (x) { return x.id !== d.id; });
           save(); closeSheet(); renderAll(); toast('Deleted');
@@ -2102,7 +2104,8 @@
     })(t0);
   }
   function openSheet(html, onMount) {
-    $('sheetBody').innerHTML = html;
+    var ob = $('sheetBody'), nb = ob.cloneNode(false); ob.parentNode.replaceChild(nb, ob);
+    nb.innerHTML = html;
     $('sheet').hidden = false; $('sheetBg').hidden = false; $('sheet').scrollTop = 0;
     void $('sheet').offsetWidth;
     $('sheet').classList.add('show'); $('sheetBg').classList.add('show'); document.body.classList.add('sheet-open');
@@ -2357,7 +2360,7 @@
             var dd = { id: uid(), dir: 'in', earned: true, incomeCat: st.cat, person: payer, title: cat(st.cat).name + (root.querySelector('#fNote').value.trim() ? ' · ' + root.querySelector('#fNote').value.trim() : ''), amount: a,
               created: root.querySelector('#fDate').value || today(), due: root.querySelector('#fDue').value, wallet: w, tags: 'income', notes: '', payments: [], ts: Date.now() };
             dd.prebooked = true; dd.files = files; S.debts.push(dd);
-            dd.biz = root.querySelector('#fBiz').value || undefined; var bt = addTx({ biz: dd.biz, type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id, files: files }); dd.bookTx = bt.id;
+            dd.biz = root.querySelector('#fBiz').value || undefined; var bt = addTx({ biz: dd.biz, type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id, files: files }); dd.bookTx = bt.id; dd.ownBook = true;
             var pn = parseNum(root.querySelector('#fPaidNow').value);
             if (pn) dd.payments.push({ id: uid(), amount: Math.min(pn, a), date: dd.created, wallet: w, note: 'Already received', txId: null });
             haptic(); save(); closeSheet(); renderAll();
@@ -2375,7 +2378,7 @@
           t.files = files; if (!files.length) delete t.files;
           if (t.debtId) S.debts.forEach(function (d) { if (d.bookTx === t.id) d.files = files; });
           if (isNew) S.tx.push(t);
-          if (t.debtId) S.debts.forEach(function (d) { (d.payments || []).forEach(function (p) { if (p.txId === t.id) { p.amount = t.amount; p.date = t.date; p.wallet = t.wallet; } }); });
+          if (t.debtId) S.debts.forEach(function (d) { (d.payments || []).forEach(function (p) { if (p.txId === t.id) { p.amount = t.amount; p.date = t.date; p.wallet = t.wallet; } }); if (d.bookTx === t.id && d.ownBook) { d.amount = t.amount; d.wallet = t.wallet; } });
           haptic(); save(); closeSheet(); renderAll(); toast(isNew ? 'Added ✓' : 'Saved ✓');
           if (isNew && t.type === 'income') { var fr = $('fab').getBoundingClientRect(); burst(fr.left + fr.width / 2, fr.top); }
         };
@@ -2384,7 +2387,8 @@
           if (!confirm('Delete this transaction?')) return;
           (t.files || []).forEach(function (m) { if (!S.debts.some(function (d) { return (d.files || []).some(function (x) { return x.id === m.id; }) && d.bookTx !== t.id; })) fileDel(m.id); });
           S.tx = S.tx.filter(function (x) { return x.id !== t.id; });
-          S.debts.forEach(function (d) { d.payments = (d.payments || []).filter(function (p) { return p.txId !== t.id; }); if (d.startTx === t.id) delete d.startTx; });
+          S.debts.forEach(function (d) { d.payments = (d.payments || []).filter(function (p) { return p.txId !== t.id; }); if (d.startTx === t.id) delete d.startTx; if (d.bookTx === t.id) { delete d.bookTx; delete d.prebooked; } });
+          S.debts = S.debts.filter(function (d) { return !(d.ownBook && !d.bookTx && !(d.payments || []).length); });
           save(); closeSheet(); renderAll(); toast('Deleted');
         };
       });
@@ -2624,7 +2628,7 @@
           if (!cur) { prev.innerHTML = ''; return; }
           if (cur.type === 'bad') { prev.innerHTML = '<div class="cd-msg bad">This doesn\u2019t look like a full code. Copy the whole code and paste again.</div>'; return; }
           var items = cur.type === 'data' ? codeItems(cur.d) : [{ ic: 'insurance', t: 'Private data file', s: 'Unlocked on your phone after you tap Add' }];
-          prev.innerHTML = '<div class="cd-msg">This code adds:</div><div class="card list-card cd-items">' + items.map(function (it) { return '<div class="ml-row"><span class="cd-it">' + sprite(it.ic) + '</span><span class="grow"><b>' + esc(it.t) + '</b><span class="sub">' + it.s + '</span></span></div>'; }).join('') + '</div>';
+          prev.innerHTML = '<div class="cd-msg">This code adds:</div><div class="card list-card cd-items">' + items.map(function (it) { return '<div class="ml-row"><span class="cd-it">' + sprite(it.ic) + '</span><span class="grow"><b>' + esc(it.t) + '</b><span class="sub">' + esc(it.s) + '</span></span></div>'; }).join('') + '</div>';
           go.textContent = 'Add ' + (items.length > 1 ? items.length + ' items' : 'to Apex');
         }
         inp.addEventListener('input', check);
@@ -3145,7 +3149,8 @@
     $('zeroBtn').onclick = function () { if (!confirm('Set every wallet to Rp 0 and remove all transactions and money owed? A backup is kept so you can undo.')) return; zeroAll(); save(); renderAll(); toast('Everything is at 0 now'); var r2 = $('restoreZero'); if (r2) r2.hidden = false; };
     var rb = $('restoreZero'); if (rb) { rb.hidden = !localStorage.getItem('apex_backup_before_zero'); rb.onclick = function () { if (!confirm('Bring back the balances and transactions from before the reset to 0?')) return; var old = JSON.parse(localStorage.getItem('apex_backup_before_zero')); old.zeroVer = 2; localStorage.setItem(KEY, JSON.stringify(old)); load(); renderAll(); toast('Old data restored'); }; }
     $('exportBtn').onclick = function () {
-      var blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+      var ex = JSON.parse(JSON.stringify(S)); if (ex.settings) delete ex.settings.cloud;
+      var blob = new Blob([JSON.stringify(ex, null, 1)], { type: 'application/json' });
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arus-backup-' + ymd(new Date()) + '.json';
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
     };
@@ -3157,7 +3162,8 @@
           var d = JSON.parse(rd.result);
           if (!d || !Array.isArray(d.tx) || !Array.isArray(d.wallets)) throw new Error('not an Arus backup');
           if (!confirm('Replace all data on this phone with this backup (' + d.tx.length + ' transactions)?')) return;
-          localStorage.setItem(KEY, JSON.stringify(d)); load(); renderAll(); toast('Backup restored');
+          d.zeroVer = 2; d.settings = d.settings || {}; d.settings.cloud = S.settings.cloud; // keep this phone's sync settings
+          localStorage.setItem(KEY, JSON.stringify(d)); load(); S.updatedAt = Date.now(); LAST_SAVED = null; BAL = {}; save(); renderAll(); toast('Backup restored');
         } catch (e) { toast('Import failed: ' + e.message); }
       };
       rd.readAsText(f); this.value = '';
@@ -3170,7 +3176,7 @@
   document.documentElement.style.setProperty('--sheet', 'url("' + SHEET + '")');
   // =================== FEATURES: insights, goals, bills, calendar, search, CSV ===================
   function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5); }
-  function addPeriod(d, f) { var x = new Date(d + 'T00:00:00'); if (f === 'weekly') x.setDate(x.getDate() + 7); else if (f === 'yearly') x.setFullYear(x.getFullYear() + 1); else x.setMonth(x.getMonth() + 1); return ymd(x); }
+  function addPeriod(d, f, day) { var x = new Date(d + 'T00:00:00'); if (f === 'weekly') { x.setDate(x.getDate() + 7); return ymd(x); } var want = day || x.getDate(), y = x.getFullYear(), m = x.getMonth() + (f === 'yearly' ? 12 : 1); var last = new Date(y, m + 1, 0).getDate(); return ymd(new Date(y, m, Math.min(want, last))); }
   function monthlyOf(r) { return r.freq === 'weekly' ? r.amount * 52 / 12 : r.freq === 'yearly' ? r.amount / 12 : r.amount; }
 
   // ---- recurring: post everything that is due ----
@@ -3180,7 +3186,7 @@
       var guard = 0;
       while (r.active !== false && r.next && r.next <= t && guard++ < 60) {
         addTx({ type: r.type, cat: r.cat, amount: r.amount, wallet: r.wallet, date: r.next, merchant: r.name, note: 'Recurring', recId: r.id });
-        r.next = addPeriod(r.next, r.freq); n++;
+        r.day = r.day || +r.next.slice(8, 10); r.next = addPeriod(r.next, r.freq, r.day); n++;
       }
     });
     if (n) { save(); setTimeout(function () { toast(n + ' recurring payment' + (n > 1 ? 's' : '') + ' added'); }, 900); }
@@ -3202,10 +3208,10 @@
     var moves = Object.keys(cur).map(function (k) { return { k: k, c: cur[k], p: prev[k] || 0 }; }).filter(function (x) { return x.p > 0; })
       .sort(function (a, b) { return Math.abs(b.c - b.p) - Math.abs(a.c - a.p); });
     if (moves[0]) { var mv = moves[0], pc = Math.round((mv.c - mv.p) / mv.p * 100), upm = pc > 0;
-      cards.push({ sp: spKey(cat(mv.k)) || 'stocks', tone: upm ? 'neg' : 'pos', title: cat(mv.k).name + ' ' + (upm ? 'up ' : 'down ') + Math.abs(pc) + '%', body: 'vs the same days last month', bar: Math.min(100, mv.c / Math.max(mv.c, mv.p) * 100), bar2: Math.min(100, mv.p / Math.max(mv.c, mv.p) * 100) }); }
+      cards.push({ sp: spKey(cat(mv.k)) || 'stocks', tone: upm ? 'neg' : 'pos', title: esc(cat(mv.k).name) + ' ' + (upm ? 'up ' : 'down ') + Math.abs(pc) + '%', body: 'vs the same days last month', bar: Math.min(100, mv.c / Math.max(mv.c, mv.p) * 100), bar2: Math.min(100, mv.p / Math.max(mv.c, mv.p) * 100) }); }
     if (spent) { var proj = spent / day * dim;
       cards.push({ sp: 'ajaib_essa', tone: lastFull && proj > lastFull ? 'neg' : 'pos', title: 'On track for ' + money(proj, { rp: true }), body: lastFull ? (proj > lastFull ? 'More than' : 'Less than') + ' last month (' + money(lastFull, { rp: false }) + ')' : 'Month-end spending forecast', bar: Math.min(100, day / dim * 100) }); }
-    if (biggest) cards.push({ sp: spKey(cat(biggest.cat)) || 'other_out', tone: '', title: 'Biggest: ' + money(biggest.amount, { rp: true }), body: (biggest.merchant || cat(biggest.cat).name) + ' · ' + fmtDate(biggest.date) });
+    if (biggest) cards.push({ sp: spKey(cat(biggest.cat)) || 'other_out', tone: '', title: 'Biggest: ' + money(biggest.amount, { rp: true }), body: esc(biggest.merchant || cat(biggest.cat).name) + ' · ' + fmtDate(biggest.date) });
     var subs = (S.recurring || []).filter(function (r) { return r.active !== false && r.type === 'expense'; });
     if (subs.length) { var mt = subs.reduce(function (a, r) { return a + monthlyOf(r); }, 0);
       cards.push({ sp: 'streaming', tone: '', title: money(mt, { rp: true }) + ' / month', body: subs.length + ' bill' + (subs.length > 1 ? 's' : '') + ' & subscriptions · ' + money(mt * 12, { rp: false }) + ' a year' }); }
@@ -3619,25 +3625,31 @@
     var c = S.settings.cloud; if (!c || !c.on || cloudBusy) return Promise.resolve();
     cloudBusy = true; setCloudStatus('Backing up…'); if (manual === true) busy(true, 'Backing up…');
     var body;
-    return cloudEncode(c).then(function (b) { body = b; return fetch(FB + c.id + '.json?print=silent', { method: 'PUT', body: body }); })
+    // If another device saved after our last sync, take its version first instead of overwriting it.
+    return fetch(FB + c.id + '/at.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (cloudAt) {
+      if (cloudAt && c.syncedAt && cloudAt > c.syncedAt) { cloudBusy = false; if (manual === true) busy(false); return cloudPull(c.id, c.pass).then(function () { throw 'pulled'; }); }
+      return cloudEncode(c);
+    }).then(function (b) { body = b; c.syncedAt = JSON.parse(b).at; return fetch(FB + c.id + '.json?print=silent', { method: 'PUT', body: body }); })
       .then(function (r) { if (!r.ok) throw new Error(r.status); c.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(S)); setCloudStatus();
         // daily snapshot (one per day, overwritten during the day), keep 30 days
         var day = ymd(new Date());
         fetch(FB + c.id + '_h/' + day + '.json?print=silent', { method: 'PUT', body: body }).catch(function () {});
         if (c.pruned !== day) { c.pruned = day; snapList(c).then(function (ks) { var cut = ymd(new Date(Date.now() - 30 * 864e5)); ks.filter(function (k) { return k < cut; }).forEach(function (k) { fetch(FB + c.id + '_h/' + k + '.json', { method: 'DELETE' }).catch(function () {}); }); }).catch(function () {}); }
       })
-      .catch(function () { setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; if (manual === true) busy(false); });
+      .catch(function (e) { if (e === 'pulled') { toast('Synced newer changes from your other device ☁️'); return; } setCloudStatus('Backup failed. Will retry.'); }).then(function () { cloudBusy = false; if (manual === true) busy(false); });
   }
   function cloudPull(id, pass, opts) {
     opts = opts || {}; var loud = !!opts.force; if (loud) busy(true, 'Syncing cloud…');
     var done = function (x) { if (loud) busy(false); return x; }, fail = function (e) { if (loud) busy(false); throw e; };
     return fetch(FB + id + '.json').then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ct) { if (opts.mustExist) throw new Error('No backup found for that code'); return null; }
-      if (!opts.force && S.updatedAt && j.at <= S.updatedAt) return null;
+      var cc = S.settings.cloud, base = cc && cc.id === id && cc.syncedAt;
+      if (!opts.force && (base ? j.at <= base : (S.updatedAt && j.at <= S.updatedAt))) return null;
+      opts.at = j.at;
       return cloudDecode(j, id, pass);
     }).then(function (data) {
       if (!data) return false;
-      var cloud = { id: id, pass: pass, on: true, last: Date.now() };
+      var old = S.settings.cloud || {}, cloud = { id: id, pass: pass, on: true, last: Date.now(), syncedAt: opts.at, mode: old.id === id ? old.mode : undefined };
       S = data; S.settings = S.settings || {}; S.settings.cloud = cloud;
       load2(); LAST_SAVED = dataSig(); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); setTimeout(fsSync, 1500); return true;
     }).then(done, fail);
@@ -4114,6 +4126,7 @@
   }
   function zeroStart() {
     if (S.zeroVer === 2) return;
+    if ((S.tx || []).length || (S.debts || []).length) { S.zeroVer = 2; return; } // never wipe real data
     zeroAll(); S.settings.autoSync = false; S.zeroVer = 2; return;
     try { localStorage.setItem('apex_backup_before_zero', JSON.stringify(S)); } catch (e) {}
     S.wallets.forEach(function (w) { w.initial = 0; delete w.holding; });
