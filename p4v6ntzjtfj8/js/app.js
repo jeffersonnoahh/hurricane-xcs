@@ -408,11 +408,12 @@
   }
   function togglePrivacy() { if (S.settings.hide || netHidden) { revealAll(); return; } S.settings.hide = true; netHidden = true; haptic(); save(); renderAll(); paintNetEye(); toast('All amounts hidden'); }
 
+  var NET_LAST = 0;
   function renderHome() {
     renderSignInBanner();
     var total = balance('all');
     var liquid = S.wallets.filter(function (w) { return included(w) && groupOf(w) !== 'invest'; }).reduce(function (a, w) { return a + balance(w.id); }, 0);
-    var recv = dSum('in', 'remain'), pay = dSum('out', 'remain'), net = total + recvNet() - pay;
+    var recv = dSum('in', 'remain'), pay = dSum('out', 'remain'), net = total + recvNet() - pay; NET_LAST = net;
     if (netHidden && !S.settings.hide) { $('hNet').innerHTML = '<span class="masked">Rp ••••••</span>'; RS.hNet = null; $('hNet').removeAttribute('data-sig'); } else setMoney($('hNet'), net);
     paintNetEye();
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
@@ -1982,35 +1983,32 @@
 
   // ---------- navigation ----------
   var scrollMem = {};
+  // Tab switch: the new page slides in on the very next frame, and parts both pages share
+  // (net worth / balance, Real money) fly from their old spot into the new one.
   function show(id, back) {
-    if (id !== view && document.startViewTransition && !noMotion() && !show.busy) {
-      var src = tapSource();
-      var hero = src && !src.el.closest('.sheet') ? src.el : null;
-      // Parts that exist on both pages fly from one to the other.
-      var pairOld = MORPH_PAIRS[view] || {}, pairNew = MORPH_PAIRS[id] || {}, named = [];
-      var nameIt = function (el, n) { if (el) { el.style.viewTransitionName = n; named.push(el); } };
-      var shared = Object.keys(pairOld).filter(function (k) { return pairNew[k] && inView($(pairOld[k])); });
-      if (shared.length) hero = null;
-      shared.forEach(function (k) { nameIt($(pairOld[k]), 'm-' + k); });
-      if (hero) nameIt(hero, 'hero');
-      var oi = TAB_ORDER.indexOf(view), ni = TAB_ORDER.indexOf(id);
-      document.documentElement.dataset.vtDir = back || (oi > -1 && ni > -1 && ni < oi) ? 'back' : 'fwd';
-      show.busy = true;
-      var vt;
-      try {
-        vt = document.startViewTransition(function () {
-          named.forEach(function (el) { el.style.viewTransitionName = ''; }); named = [];
-          show0(id, back);
-          $(id).classList.add('vt-in');
-          shared.forEach(function (k) { var el = $(pairNew[k]); if (inView(el)) nameIt(el, 'm-' + k); });
-          if (hero) nameIt($(id), 'hero');
-        });
-      } catch (e) { vt = null; }
-      var done = function () { show.busy = false; named.forEach(function (el) { el.style.viewTransitionName = ''; }); named = []; };
-      if (vt) { vt.finished.then(done, done); return; }
-      done();
-    }
+    if (id === view || noMotion()) { show0(id, back); return; }
+    var pairOld = MORPH_PAIRS[view] || {}, pairNew = MORPH_PAIRS[id] || {}, fly = [];
+    Object.keys(pairOld).forEach(function (k) {
+      var el = $(pairOld[k]); if (!pairNew[k] || !inView(el)) return;
+      var cs = getComputedStyle(el);
+      fly.push({ k: k, el: el, r: el.getBoundingClientRect(), st: { font: cs.font, color: cs.color, letterSpacing: cs.letterSpacing, textAlign: cs.textAlign, whiteSpace: 'nowrap' } });
+    });
+    var oi = TAB_ORDER.indexOf(view), ni = TAB_ORDER.indexOf(id), dir = back || (oi > -1 && ni > -1 && ni < oi) ? -1 : 1;
     show0(id, back);
+    var el = $(id); el.classList.add('vt-in');
+    el.animate([{ opacity: 0.2, transform: 'translateX(' + (dir * 22) + 'px)' }, { opacity: 1, transform: 'none' }], { duration: 340, easing: MORPH_EASE });
+    fly.forEach(function (f) {
+      var to = $(pairNew[f.k]); if (!inView(to)) return;
+      var tr = to.getBoundingClientRect(); if (!tr.width || !tr.height) return;
+      var cl = f.el.cloneNode(true); cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
+      Object.assign(cl.style, f.st, { position: 'fixed', left: f.r.left + 'px', top: f.r.top + 'px', width: f.r.width + 'px', height: f.r.height + 'px', margin: '0', zIndex: '45', pointerEvents: 'none', transformOrigin: '0 0', boxSizing: 'border-box' });
+      document.body.appendChild(cl);
+      var sx = tr.width / f.r.width, sy = tr.height / f.r.height, sc = f.k === 'bal' ? sy : null;
+      var end = 'translate(' + (tr.left - f.r.left) + 'px,' + (tr.top - f.r.top) + 'px) scale(' + (sc || sx) + ',' + (sc || sy) + ')';
+      to.style.opacity = '0';
+      var a = cl.animate([{ transform: 'none' }, { transform: end }], { duration: 440, easing: MORPH_EASE, fill: 'forwards' });
+      a.onfinish = a.oncancel = function () { cl.remove(); to.style.opacity = ''; };
+    });
   }
   var TAB_ORDER = ['v-home', 'v-tx', 'v-debts', 'v-account'];
   var MORPH_PAIRS = { 'v-home': { bal: 'hNet', real: 'realBtn' }, 'v-tx': { bal: 'txBal', real: 'txReal' } };
@@ -2020,7 +2018,7 @@
     scrollMem[view] = window.scrollY;
     var prev = view; view = id;
     document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active', 'back', 'vt-in'); });
-    var el = $(id); void el.offsetWidth;
+    var el = $(id);
     el.classList.add('active'); if (back) el.classList.add('back');
     window.scrollTo(0, scrollMem[id] || 0);
     requestAnimationFrame(function () { replayRolls(el); countUpAll(el, true); });
@@ -2032,13 +2030,12 @@
     $('fab').classList.toggle('gone', id === 'v-account' || id === 'v-report');
     if (id === 'v-debts') renderDebts();
     if (id === 'v-budget' || id === 'v-report') { growBars($(id)); }
-    if (id === 'v-home') renderHome();
     $('topTitle').textContent = TITLES[id] || ''; onScroll();
   }
   var budFrom = 'v-account';
   var TITLES = { 'v-home': 'Apex', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
   function onScroll() { var y = window.scrollY; $('topbar').classList.toggle('show', y > 120);
-    if (view === 'v-home') { var nv = $('hNet'); $('topTitle').innerHTML = '<span class="tb-l">Net worth</span> ' + (S.settings.hide || netHidden ? 'Rp ••••••' : money(balance('all') + recvNet() - dSum('out', 'remain'))); } document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
+    if (view === 'v-home') { var nv = $('hNet'); $('topTitle').innerHTML = '<span class="tb-l">Net worth</span> ' + (S.settings.hide || netHidden ? 'Rp ••••••' : money(NET_LAST)); } document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
 
   // ---------- extra motion ----------
   // Coin burst (used when income is added).
