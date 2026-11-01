@@ -1104,8 +1104,10 @@
   }
   function dOpen(d) { var s2 = dStatus(d); return s2 !== 'paid' && s2 !== 'cancelled' && s2 !== 'writtenoff'; }
   function recvNet() { return S.debts.filter(function (d) { return d.dir === 'in' && !d.closed && !d.prebooked && dOpen(d); }).reduce(function (a, d) { return a + dRemain(d); }, 0); }
+  // Commission records live in the Komisi panel only, never on the Owed page.
+  function isKm(d) { return !!(d && d.earned && kmCats().indexOf(d.incomeCat) !== -1); }
   function dSum(dir, what) {
-    return S.debts.filter(function (d) { return d.dir === dir && !d.closed; }).reduce(function (a, d) {
+    return S.debts.filter(function (d) { return d.dir === dir && !d.closed && !isKm(d); }).reduce(function (a, d) {
       return a + (what === 'remain' ? (dOpen(d) ? dRemain(d) : 0) : what === 'paid' ? dPaid(d) : what === 'over' ? (dStatus(d) === 'overdue' ? dRemain(d) : 0) : d.amount);
     }, 0);
   }
@@ -1120,7 +1122,7 @@
   function fmtDate(s) { var x = new Date(s + 'T00:00:00'); return x.getDate() + ' ' + MONTHS[x.getMonth()].slice(0, 3) + ' ' + x.getFullYear(); }
 
   function renderDebts() {
-    var dir = dDir, list = S.debts.filter(function (d) { return d.dir === dir; });
+    var dir = dDir, list = S.debts.filter(function (d) { return d.dir === dir && !isKm(d); });
     document.querySelectorAll('#dSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.d === dir); });
     $('dSeg').style.setProperty('--x', dir === 'in' ? '0%' : '100%');
     document.querySelectorAll('#dFilter button').forEach(function (b) { b.classList.toggle('on', b.dataset.f === dFilter); });
@@ -1150,6 +1152,8 @@
       if (so === 'name') return a.person.localeCompare(b.person);
       return dRemain(b) - dRemain(a);
     });
+    var kmOwe = dir === 'in' ? komisiRecs().reduce(function (a, d) { return a + (dOpen(d) ? dRemain(d) : 0); }, 0) : 0;
+    $('dKm').innerHTML = kmOwe ? '<button class="d-km" type="button"><span class="rb-3d">' + sprite('komisi_out') + '</span><span class="grow">Komisi<span class="sub">Dad still owes</span></span><b>' + money(kmOwe) + '</b><i>›</i></button>' : '';
     $('dList').innerHTML = list.length ? '<div class="stagger">' + list.map(function (d, i) {
       var st = dStatus(d), p = dPaid(d), pc = d.amount ? Math.min(100, Math.round(p / d.amount * 100)) : 0;
       return '<div class="d-card" style="--i:' + i + '"><div class="d-top">' + avatar(d.person) + '<div class="grow"><div class="d-name">' + esc(d.person) + '</div><div class="d-title">' + esc(d.title || (dir === 'in' ? 'Owes me' : 'I owe')) + '</div></div><span class="st ' + st + '">' + ST_LABEL[st] + '</span></div>' +
@@ -2659,6 +2663,7 @@
     $('dQ').addEventListener('input', renderDebts);
     $('dSort').onchange = renderDebts;
     $('dAdd').onclick = function () { haptic(); debtSheet(null, dDir); };
+    $('dKm').onclick = function () { haptic(); komisiSheet(); };
     $('dList').addEventListener('click', function (e) {
       var p = e.target.closest('[data-pay]'); if (p) { haptic(); paySheet(debtById(p.dataset.pay)); return; }
       var v = e.target.closest('[data-view]'); if (v) { haptic(); debtDetail(debtById(v.dataset.view)); }
