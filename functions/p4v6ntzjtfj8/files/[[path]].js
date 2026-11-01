@@ -11,7 +11,7 @@ async function sha(s) {
 }
 
 export async function onRequest({ request, env, params }) {
-  const B = env.APEX_FILES;
+  const B = env.APEX_FILES || env.Apex_files || env.apex_files;
   if (!B) return err('storage not set up', 503);
   const parts = [].concat(params.path || []);
   const id = parts[0] || '', fid = parts[1] || '';
