@@ -576,7 +576,7 @@
       var tx = S.tx.filter(function (t) { return t.wallet === w.id || t.toWallet === w.id; }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
       var m = ym(new Date()), inM = 0, outM = 0, u = unpaidIn(w.id);
       tx.forEach(function (t) { if (t.date.slice(0, 7) !== m) return; var d = delta(t, w.id); if (d > 0) inM += d; else outM -= d; });
-      info.innerHTML = holdPanel(w) + '<div class="dw-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
+      info.innerHTML = holdPanel(w) + '<button type="button" class="dw-notes' + (w.notes ? '' : ' empty') + '" data-a="edit">' + (w.notes ? '<span class="dw-n-h">📝 Notes</span><span class="dw-n-t">' + esc(w.notes).replace(/\n/g, '<br>') + '</span>' : '📝 Add a note') + '</button>' + '<div class="dw-stats"><div><small>In this month</small><b class="pos">' + money(inM, { rp: false }) + '</b></div><div><small>Out this month</small><b class="neg">' + money(outM, { rp: false }) + '</b></div>' + (u ? '<div><small>Not received</small><b>' + money(u, { rp: false }) + '</b></div>' : '<div><small>Transactions</small><b>' + tx.length + '</b></div>') + '</div>' +
         '<div class="dw-acts"><button type="button" data-a="add"><span>＋</span>Add</button><button type="button" data-a="move"><span>⇄</span>Transfer</button><button type="button" data-a="hist"><span>☰</span>History</button><button type="button" data-a="edit"><span>✎</span>Edit</button></div>' +
         '<div class="dw-sec">Recent</div><div class="dw-list">' + (tx.length ? tx.slice(0, 4).map(function (t, k) { return txRow(t, k, true); }).join('') : '<div class="dw-empty">No transactions in this wallet yet.</div>') + '</div>';
       bindHold(info, w, function () { paintInfo(i); applyView(i); });
@@ -2728,6 +2728,7 @@
         '<label class="fld" id="wUsdCashL">Rupiah part<input id="wUsdCash" inputmode="numeric" placeholder="e.g. 303.951.791" value="' + (w.holding && w.holding.withCash ? Math.round(cashPart(w)).toLocaleString('id-ID') : '') + '"></label></div>' +
         '<div class="gl-prev" id="wLiveV"></div></div>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
+      '<label class="fld">Notes<textarea id="wNotes" rows="3" placeholder="e.g. account number, branch, who it\u2019s for">' + esc(w.notes || '') + '</textarea></label>' +
       '<label class="set-row plain"><span class="grow">Show in wallet lists<span class="sub">Off = hidden from Home, the wallet cards and pickers</span></span><input type="checkbox" class="switch" id="wShow"' + (w.hidden ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
@@ -2764,6 +2765,7 @@
           w.name = n; if (wst.sp) { w.sp = wst.sp; delete w.custom; }
           w.excluded = !r.querySelector('#wInc').checked;
           if (r.querySelector('#wShow').checked) delete w.hidden; else w.hidden = true;
+          var wn = r.querySelector('#wNotes').value.trim(); if (wn) w.notes = wn; else delete w.notes;
           var wa = r.querySelector('#wAsset').value;
           var usdCash = null;
           if (wa === 'usd') { var uq = parseDec(r.querySelector('#wUsdQ').value), ua = parseNum(r.querySelector('#wUsdAvg').value); if (!uq || !ua) { toast('Enter your dollars and average rate'); return; } var wc = r.querySelector('#wUsdCashOn').checked; w.holding = { asset: 'usd', qty: uq, cost: uq * ua, avg: ua, withCash: wc || undefined }; if (wc) usdCash = parseNum(r.querySelector('#wUsdCash').value); }
