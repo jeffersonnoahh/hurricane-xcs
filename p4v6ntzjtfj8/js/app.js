@@ -901,7 +901,7 @@
       haptic(); save(); renderAll(); onChange(); toast((ia === 'usd' ? 'Dollars' : 'Gold') + ' now tracked live ✓');
     };
   }
-  var txAll = false, txLimit = 80;
+  var txAll = true, txLimit = 80, txCat = '';
   function renderTx() {
     var w = walletSel;
     if (w !== 'all' && !S.wallets.some(function (x) { return x.id === w; })) w = walletSel = 'all';
@@ -918,14 +918,16 @@
     $('monthLabel').innerHTML = txAll ? 'All time' : MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
     $('monthLabel').classList.toggle('all', txAll);
     var mKey = ym(cur), mt, open, end;
+    var allW = S.tx.filter(function (t) { return touches(t, w); });
     if (txAll) {
-      mt = S.tx.filter(function (t) { return touches(t, w); });
+      mt = allW;
       var firstD = mt.reduce(function (a, t) { return !a || t.date < a ? t.date : a; }, '');
       open = firstD ? balance(w, firstD) : balance(w); end = balance(w);
     } else { mt = txIn(mKey, w); open = balance(w, mKey + '-01'); end = balance(w, nextMonthStart(cur)); }
     $('pOpen').innerHTML = money(open);
     $('pEnd').innerHTML = money(end, { sign: true });
     rollTo($('pNet'), end - open, { sign: true });
+    mt = renderTxFilters(allW, mt, w);
 
     if (!mt.length) {
       // Empty month: offer a jump to the nearest month that has transactions (e.g. after importing history).
@@ -950,6 +952,30 @@
         list.map(function (t) { return txRow(t, 0, false); }).join('') + '</div>';
     }).join('') + '</div>' + (more ? '<button class="btn block tx-more" type="button" data-more="1">Show more · ' + more.toLocaleString('id-ID') + ' older</button>' : '');
     renderMlStatus();
+  }
+  // Swipeable filters on Activity: months (with spent) and categories (with amount) for the chosen period.
+  function renderTxFilters(allW, mt, w) {
+    var box = $('txFilt'); if (!box) return mt;
+    var byM = {};
+    allW.forEach(function (t) { var k = t.date.slice(0, 7), m = byM[k] = byM[k] || { out: 0, n: 0 }; m.n++; if (t.type === 'expense') m.out += t.amount; });
+    var ms = Object.keys(byM).sort().reverse(), curK = ym(cur);
+    if (!txAll && ms.indexOf(curK) === -1) { ms.push(curK); ms.sort().reverse(); }
+    var allOut = allW.reduce(function (a, t) { return a + (t.type === 'expense' ? t.amount : 0); }, 0);
+    var mChips = '<button type="button" class="tf-m' + (txAll ? ' on' : '') + '" data-tfm="all"><b>All time</b><span>' + money(allOut, { rp: false }) + '</span></button>' +
+      ms.map(function (k) { var m = byM[k] || { out: 0 }; return '<button type="button" class="tf-m' + (!txAll && k === curK ? ' on' : '') + '" data-tfm="' + k + '"><b>' + MONTHS[+k.slice(5, 7) - 1].slice(0, 3) + ' ' + k.slice(2, 4) + '</b><span>' + money(m.out, { rp: false }) + '</span></button>'; }).join('');
+    var agg = {}, spent = 0, recv = 0;
+    mt.forEach(function (t) { if (t.type !== 'expense' && t.type !== 'income') return; var a = agg[t.cat] = agg[t.cat] || { v: 0, n: 0, inc: t.type === 'income' }; a.v += t.amount; a.n++; });
+    var cats = Object.keys(agg).sort(function (a, b) { return (agg[a].inc - agg[b].inc) || agg[b].v - agg[a].v; });
+    if (txCat && !agg[txCat]) txCat = '';
+    var cChips = '<button type="button" class="tf-c' + (!txCat ? ' on' : '') + '" data-tfc="">All categories</button>' + cats.map(function (id) { var c = cat(id), a = agg[id];
+      return '<button type="button" class="tf-c' + (txCat === id ? ' on' : '') + (a.inc ? ' inc' : '') + '" data-tfc="' + esc(id) + '">' + icon(c, 'xs') + '<span>' + esc(c.name) + '</span><b>' + money(a.v, { rp: false }) + '</b></button>'; }).join('');
+    var shown = txCat ? mt.filter(function (t) { return t.cat === txCat; }) : mt;
+    shown.forEach(function (t) { if (t.type === 'expense') spent += t.amount; else if (t.type === 'income') recv += t.amount; });
+    var period = txAll ? 'all time' : monthName(curK);
+    box.innerHTML = '<div class="tf-row" id="tfMonths">' + mChips + '</div><div class="tf-row tf-cats">' + cChips + '</div>' +
+      '<div class="tf-sum"><div><small>Spent' + (txCat ? ' on ' + esc(cat(txCat).name) : '') + ' · ' + period + '</small><b class="neg">' + money(spent) + '</b></div><div><small>Received</small><b class="pos">' + money(recv) + '</b></div><div><small>Transactions</small><b>' + shown.length.toLocaleString('id-ID') + '</b></div></div>';
+    box.querySelectorAll('.tf-m.on,.tf-c.on').forEach(function (on) { var row = on.parentNode; row.style.scrollBehavior = 'auto'; row.scrollLeft = on.offsetLeft - row.clientWidth / 2 + on.offsetWidth / 2; row.style.scrollBehavior = ''; });
+    return shown;
   }
   function monthsBetween(a, b) { return (+a.slice(0, 4) - +b.slice(0, 4)) * 12 + (+a.slice(5, 7) - +b.slice(5, 7)); }
   function renderMlStatus() {
@@ -2571,7 +2597,7 @@
 
   // ---------- events ----------
   function bind() {
-    document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.onclick = function () { haptic(); var sv = b.querySelector('svg'); sv.classList.remove('pop'); void sv.offsetWidth; sv.classList.add('pop'); if (b.dataset.v === 'v-tx') { walletSel = homeWalletId(); renderTx(); } show(b.dataset.v); }; });
+    document.querySelectorAll('.bottom-nav button').forEach(function (b) { b.onclick = function () { haptic(); var sv = b.querySelector('svg'); sv.classList.remove('pop'); void sv.offsetWidth; sv.classList.add('pop'); if (b.dataset.v === 'v-tx') { walletSel = homeWalletId(); txAll = true; txCat = ''; renderTx(); } show(b.dataset.v); }; });
     window.addEventListener('resize', moveInd);
     $('fab').onclick = function () { haptic(); if (view === 'v-debts') debtSheet(null, dDir); else txSheet(null, walletSel !== 'all' ? { wallet: walletSel } : null); };
     document.querySelectorAll('[data-priv]').forEach(function (b) { b.onclick = togglePrivacy; });
@@ -2631,6 +2657,11 @@
     $('txPrev').onclick = function () { if (txAll) txAll = false; else cur.setMonth(cur.getMonth() - 1); haptic(); renderAll(); };
     $('txNext').onclick = function () { if (txAll) txAll = false; else cur.setMonth(cur.getMonth() + 1); haptic(); renderAll(); };
     $('monthLabel').onclick = function () { txAll = !txAll; txLimit = 80; haptic(); renderTx(); };
+    $('txFilt').onclick = function (e) {
+      var m = e.target.closest('[data-tfm]'), c = e.target.closest('[data-tfc]');
+      if (m) { if (m.dataset.tfm === 'all') txAll = true; else { txAll = false; cur = new Date(m.dataset.tfm + '-01T00:00:00'); } txLimit = 80; haptic(); renderAll(); return; }
+      if (c) { txCat = c.dataset.tfc; txLimit = 80; haptic(); renderTx(); }
+    };
 
     function openTx(e) { var row = e.target.closest('.tx'); if (!row) return; var t = S.tx.filter(function (x) { return x.id === row.dataset.id; })[0]; if (t) txSheet(t); }
     $('txList').onclick = function (e) {
