@@ -2346,8 +2346,39 @@
     }).then(function (buf) {
       busy(false);
       var d = JSON.parse(new TextDecoder().decode(buf));
-      mlPreview(d.rows, d.name, d.balances || {});
+      if (d.kind === 'komisi') kmImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
     }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? e.message : 'Could not unlock the import link'); });
+  }
+  // Commission history: one record per month, linked to its RESERVE TRANSFER (money already in RESERVE), with Dad's payments.
+  function kmFindTx(amount, month) {
+    var cs = kmCats(), best = null;
+    S.tx.forEach(function (t) { if (t.type !== 'income' || cs.indexOf(t.cat) === -1 || t.debtId) return; var d = Math.abs(t.amount - amount); if (d <= 1000000 && t.date > month && (!best || d < best.d)) best = { t: t, d: d }; });
+    return best && best.t;
+  }
+  function kmImportPreview(list) {
+    var have = {}; komisiRecs().forEach(function (d) { if (d.forMonth) have[d.forMonth] = 1; });
+    var todo = list.filter(function (k) { return !have[k.month]; });
+    var linked = todo.filter(function (k) { return kmFindTx(k.amount, k.month); }).length;
+    var tot = todo.reduce(function (a, k) { return a + k.amount; }, 0);
+    openSheet('<h3>Commission history</h3><div class="kt-hero"><small>' + todo.length + ' months · ' + (todo.length ? monthName(todo[0].month) + ' → ' + monthName(todo[todo.length - 1].month) : '') + '</small><b>' + money(tot) + '</b></div>' +
+      '<div class="card list-card">' + todo.map(function (k) { var paid = k.pays.reduce(function (a, p) { return a + p.a; }, 0); return '<div class="ml-row"><span class="grow"><b>' + monthName(k.month) + '</b><span class="sub">' + k.pays.length + ' payments · ' + (kmFindTx(k.amount, k.month) ? 'linked to RESERVE' : 'no transfer found') + '</span></span><span>' + money(k.amount, { rp: false }) + '<span class="sub" style="text-align:right;color:#22c55e">paid ' + money(paid, { rp: false }) + '</span></span></div>'; }).join('') + '</div>' +
+      '<p class="muted small" style="text-align:center;margin:10px 0">' + linked + ' of ' + todo.length + ' linked to the transfer already in RESERVE, so balances don\u2019t change. All months are marked paid in full (lunas).</p>' +
+      (todo.length ? '<button class="btn primary block" id="kmImp">Add ' + todo.length + ' months</button>' : '<p class="muted" style="text-align:center">Already added ✓</p>'),
+      function (r) {
+        var b = r.querySelector('#kmImp'); if (!b) return;
+        b.onclick = function () {
+          todo.forEach(function (k) {
+            var t = kmFindTx(k.amount, k.month), amt = t ? t.amount : k.amount, date = t ? t.date : k.month + '-28';
+            var pays = k.pays.map(function (p) { return { id: uid(), amount: p.a, date: date, wallet: t ? t.wallet : (S.wallets[0] || {}).id, note: p.n || 'Paid', txId: null }; });
+            var sum = pays.reduce(function (a, p) { return a + p.amount; }, 0);
+            if (sum < amt) pays.push({ id: uid(), amount: amt - sum, date: date, wallet: pays[0] ? pays[0].wallet : '', note: 'Rounded, lunas', txId: null });
+            var dd = { id: uid(), dir: 'in', earned: true, incomeCat: t ? t.cat : 'reserve_transfer', person: 'Dad', title: 'Komisi ' + monthName(k.month), amount: amt, created: date, forMonth: k.month, due: '', wallet: t ? t.wallet : (S.wallets[0] || {}).id, tags: 'income', notes: k.note || '', prebooked: true, bookTx: t ? t.id : undefined, payments: pays, ts: Date.now() };
+            S.debts.push(dd); if (t) t.debtId = dd.id;
+          });
+          haptic(); save(); closeSheet(); renderAll(); toast(todo.length + ' months of commission added ✓');
+          setTimeout(komisiSheet, 400);
+        };
+      });
   }
   function mlKey(x) { return 'ml|' + (x.id != null ? x.id : '') + '|' + x.date + '|' + x.amount + '|' + x.cat; }
   function mlCommit(R, cats, map, wMatch, skip, debtKeys, bal) {
