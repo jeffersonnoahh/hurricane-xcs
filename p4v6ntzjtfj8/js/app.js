@@ -357,16 +357,17 @@
   }
   // Net worth starts hidden every time Apex opens; tap the eye next to "Net worth" to show it.
   var netHidden = true;
+  function isRes(id) { var w = S.wallets.filter(function (x) { return x.id === id; })[0]; return !!(w && /^reserve$/i.test(String(w.name).trim())); }
+  function resMoney(id, html) { return netHidden && !S.settings.hide && isRes(id) ? '<span class="masked">Rp ••••••</span>' : html; }
   function paintNetEye() { var e = $('eyeBtn'); if (e) e.innerHTML = (S.settings.hide || netHidden) ? EYE_OFF : EYE_OPEN; }
   function toggleNet() {
     if (S.settings.hide) { togglePrivacy(); return; }
     netHidden = !netHidden; haptic();
     var el = $('hNet');
-    if (netHidden) { el.innerHTML = '<span class="masked">Rp ••••••</span>'; RS.hNet = null; el.removeAttribute('data-sig'); }
-    else renderHome();
+    renderAll();
     paintNetEye(); onScroll && onScroll();
   }
-  document.addEventListener('visibilitychange', function () { if (document.hidden && !netHidden) { netHidden = true; var el = $('hNet'); if (el) { el.innerHTML = '<span class="masked">Rp ••••••</span>'; RS.hNet = null; el.removeAttribute('data-sig'); } paintNetEye(); } });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && !netHidden) { netHidden = true; renderAll(); paintNetEye(); } });
   function togglePrivacy() { S.settings.hide = !S.settings.hide; haptic(); save(); renderAll(); toast(S.settings.hide ? 'Privacy on: all amounts hidden' : 'Amounts visible'); }
 
   function renderHome() {
@@ -527,7 +528,7 @@
       return '<div class="wcard" data-wallet="' + esc(w.id) + '" data-id="' + esc(w.id) + '" style="--a:' + g[0] + ';--b:' + g[1] + ';--i:' + i + '">' +
         '<span class="wc-3d">' + (spKey(w) ? sprite(spKey(w)) : '<b>' + esc(w.icon) + '</b>') + '</span>' +
         '<div class="wc-top"><span class="wc-name">' + esc(w.name) + '</span><span class="wc-grp">' + (GROUPS[groupOf(w)] || {}).name + '</span></div>' +
-        '<div class="wc-bot"><span class="wc-amt">' + money(balance(w.id)) + '</span>' + (plTag(w) || (u ? '<span class="wc-sub">' + money(u, { rp: false }) + ' not received</span>' : '')) + '</div><i class="wc-shine"></i></div>';
+        '<div class="wc-bot"><span class="wc-amt">' + resMoney(w.id, money(balance(w.id))) + '</span>' + (plTag(w) || (u ? '<span class="wc-sub">' + money(u, { rp: false }) + ' not received</span>' : '')) + '</div><i class="wc-shine"></i></div>';
     }).join('') + '<button class="ws-close" type="button">Close</button><div class="ws-hint">' + ws.length + ' wallets · tap to open</div></div>';
     layoutStack();
     var st = $('hWallets').querySelector('.wstack');
@@ -603,7 +604,7 @@
     function applyView(i) {
       var w = ws[i], h = w.holding, c = cards[i]; if (!c) return;
       var lvv = liveValue(w), cp = cashPart(w), amt = h && h.asset && wView(w) === 'cost' ? (+h.cost || 0) + cp : (h && h.asset && lvv != null ? lvv + cp : balance(w.id));
-      c.querySelector('.dw-big').innerHTML = money(Math.round(amt)); c.querySelector('.dw-amt').innerHTML = money(Math.round(amt));
+      c.querySelector('.dw-big').innerHTML = resMoney(w.id, money(Math.round(amt))); c.querySelector('.dw-amt').innerHTML = resMoney(w.id, money(Math.round(amt)));
       c.classList.toggle('is-cost', !!(h && h.asset && wView(w) === 'cost'));
     }
     cards.forEach(function (c, i) { applyView(i); });
@@ -938,12 +939,12 @@
     $('pillIc').outerHTML = icon(wo, 'sm').replace('<span ', '<span id="pillIc" ');
     $('pillName').textContent = wo.name;
     var hw = w === 'all' ? null : wallet(w), hb = $('txHold');
-    setMoney($('txBal'), hw && hasHolding(hw) ? (wViewOf(hw) === 'cost' ? Math.round((+hw.holding.cost || 0) + cashPart(hw)) : (liveValue(hw) != null ? Math.round(liveValue(hw) + cashPart(hw)) : balance(w))) : balance(w));
+    if (netHidden && !S.settings.hide && w !== 'all' && isRes(w)) { $('txBal').innerHTML = '<span class="masked">Rp ••••••</span>'; RS.txBal = null; $('txBal').removeAttribute('data-sig'); } else setMoney($('txBal'), hw && hasHolding(hw) ? (wViewOf(hw) === 'cost' ? Math.round((+hw.holding.cost || 0) + cashPart(hw)) : (liveValue(hw) != null ? Math.round(liveValue(hw) + cashPart(hw)) : balance(w))) : balance(w));
     if (hb) { var hh = hw ? holdHtml(hw) : ''; hb.innerHTML = hh; hb.hidden = !hh; if (hh) bindHold(hb, hw, renderTx); }
     // Real money: what's actually in this wallet (booked-but-not-received income taken out)
     var rb = $('txReal');
     if (rb) { var un = unpaidIn(w === 'all' ? null : w), real = balance(w) - un;
-      rb.innerHTML = '<span class="rb-3d">' + sprite('reserve_transfer') + '</span><span>Real money</span><b>' + money(real, { rp: true }) + '</b><i>›</i>' + (un ? '<em>' + money(un, { rp: false }) + ' not received yet</em>' : ''); }
+      rb.innerHTML = '<span class="rb-3d">' + sprite('reserve_transfer') + '</span><span>Real money</span><b>' + (netHidden && !S.settings.hide && (w === 'all' || isRes(w)) ? 'Rp ••••••' : money(real, { rp: true })) + '</b><i>›</i>' + (un ? '<em>' + money(un, { rp: false }) + ' not received yet</em>' : ''); }
     $('monthLabel').innerHTML = txAll ? 'All time' : MONTHS[cur.getMonth()] + ' ' + cur.getFullYear();
     $('monthLabel').classList.toggle('all', txAll);
     var mKey = ym(cur), mt, open, end;
@@ -1279,7 +1280,7 @@
     var el = $('realBtn'); if (!el) return;
     var u = unpaidIn(null), owing = S.debts.filter(function (d) { return d.dir === 'in' && dOpen(d); }).length;
     el.hidden = !u && !owing;
-    $('realAmt').innerHTML = money(realBalance('all'), { rp: true }); var rs = el.querySelector('svg'); if (rs) rs.outerHTML = '<span class="rb-3d">' + sprite('reserve_transfer') + '</span>';
+    $('realAmt').innerHTML = netHidden && !S.settings.hide ? 'Rp ••••••' : money(realBalance('all'), { rp: true }); var rs = el.querySelector('svg'); if (rs) rs.outerHTML = '<span class="rb-3d">' + sprite('reserve_transfer') + '</span>';
   }
   function realSheet() {
     var tot = balance('all'), unp = unpaidIn(null), real = tot - unp;
@@ -2104,7 +2105,7 @@
 
   function walletPicker() {
     var row = function (w, bal, sel) {
-      return '<div class="w-row pk-row' + (w.hidden ? ' pk-hid' : '') + '" data-id="' + esc(w.id) + '" data-pick="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(bal) + (w.hidden ? ' · hidden' : '') + '</span></span>' + (sel ? '<span class="check">✓</span>' : '') +
+      return '<div class="w-row pk-row' + (w.hidden ? ' pk-hid' : '') + '" data-id="' + esc(w.id) + '" data-pick="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + resMoney(w.id, money(bal)) + (w.hidden ? ' · hidden' : '') + '</span></span>' + (sel ? '<span class="check">✓</span>' : '') +
         (w.id !== 'all' ? '<button type="button" class="pk-ed" data-ed="' + esc(w.id) + '" aria-label="Edit">✎</button>' : '') + '</div>';
     };
     var vis = S.wallets.filter(function (w) { return !w.hidden; }), inc = vis.filter(included), exc = vis.filter(function (w) { return w.excluded; }), hid = S.wallets.filter(function (w) { return w.hidden; });
@@ -2984,7 +2985,7 @@
     $('sheetBg').onclick = closeSheet;
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
 
-    $('eyeBtnWrap').onclick = toggleNet;
+    $('eyeBtnWrap').onclick = toggleNet; $('txBal').onclick = function () { if (walletSel !== 'all' && isRes(walletSel)) toggleNet(); };
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
