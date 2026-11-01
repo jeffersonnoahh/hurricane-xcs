@@ -501,7 +501,7 @@
     return CARD_PAL[w.cardC % CARD_PAL.length];
   }
   function renderStack() {
-    var ws = S.wallets.filter(included);
+    var ws = S.wallets.filter(function (w) { return included(w) && !w.hidden; });
     $('hWallets').innerHTML = '<div class="wstack' + (stackOpen ? ' open' : '') + '">' + ws.map(function (w, i) {
       var g = walletGrad(w), u = typeof unpaidIn === 'function' ? unpaidIn(w.id) : 0;
       return '<div class="wcard" data-wallet="' + esc(w.id) + '" data-id="' + esc(w.id) + '" style="--a:' + g[0] + ';--b:' + g[1] + ';--i:' + i + '">' +
@@ -530,7 +530,7 @@
   }
   // ---------- Wallet deck (Apple Wallet: overlapping vertical stack; tap a card to lift it, tap again / outside to go back) ----------
   function walletDeck(startId, fromEl) {
-    var ws = S.wallets.filter(included); if (!ws.length) return;
+    var ws = S.wallets.filter(function (w) { return included(w) && !w.hidden; }); if (!ws.length) return;
     var ov = document.createElement('div'); ov.className = 'wdeck';
     ov.innerHTML = '<div class="dw-bg"></div><div class="dw-in">' +
       '<div class="dw-head"><button class="dw-x" type="button" aria-label="Close">‹</button><h2>Wallets</h2><button class="dw-man" type="button">Manage</button></div>' +
@@ -1180,7 +1180,7 @@
     }).join('');
   }
 
-  function walletOpts(sel) { return S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' + esc(w.icon + ' ' + w.name) + '</option>'; }).join(''); }
+  function walletOpts(sel) { return S.wallets.filter(function (w) { return !w.hidden || w.id === sel; }).map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' + esc(w.icon + ' ' + w.name) + '</option>'; }).join(''); }
   function addTx(o) { var t = Object.assign({ id: uid(), toWallet: '', time: hm(new Date()), note: '', merchant: '', src: 'manual', created: Date.now() }, o); S.tx.push(t); return t; }
 
   function debtSheet(d, dir) {
@@ -2069,7 +2069,7 @@
       y0 = e.touches[0].clientY; dy = 0;
     }, { passive: true });
     document.addEventListener('touchmove', function (e) {
-      if (y0 == null) return; dy = e.touches[0].clientY - y0;
+      if (y0 == null) return; if (document.querySelector('.sorting')) { y0 = null; sh.style.transition = ''; sh.style.transform = ''; return; } dy = e.touches[0].clientY - y0;
       if (dy > 0) { sh.style.transition = 'none'; sh.style.transform = 'translateY(' + dy + 'px)'; }
     }, { passive: true });
     document.addEventListener('touchend', function () {
@@ -2080,25 +2080,31 @@
 
   function walletPicker() {
     var row = function (w, bal, sel) {
-      return '<button class="w-row" data-pick="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(bal) + '</span></span>' + (sel ? '<span class="check">✓</span>' : '') + '</button>';
+      return '<div class="w-row pk-row' + (w.hidden ? ' pk-hid' : '') + '" data-id="' + esc(w.id) + '" data-pick="' + esc(w.id) + '">' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(bal) + (w.hidden ? ' · hidden' : '') + '</span></span>' + (sel ? '<span class="check">✓</span>' : '') +
+        (w.id !== 'all' ? '<button type="button" class="pk-ed" data-ed="' + esc(w.id) + '" aria-label="Edit">✎</button>' : '') + '</div>';
     };
-    var inc = S.wallets.filter(included), exc = S.wallets.filter(function (w) { return w.excluded; });
+    var vis = S.wallets.filter(function (w) { return !w.hidden; }), inc = vis.filter(included), exc = vis.filter(function (w) { return w.excluded; }), hid = S.wallets.filter(function (w) { return w.hidden; });
     openSheet('<div class="sheet-top"><button class="round-btn" id="pkClose" aria-label="Close">✕</button><h3>Select Wallet</h3><button class="round-btn" id="pkAdd" aria-label="Add wallet">＋</button></div>' +
       '<div class="card list-card">' + row({ id: 'all', name: 'Total', icon: '🌐', color: '#2fb5c9' }, balance('all'), walletSel === 'all') + '</div>' +
-      '<div class="sheet-sec">Included in total</div><div class="card list-card stagger">' + inc.map(function (w, i) { return row(w, balance(w.id), walletSel === w.id).replace('class="w-row"', 'class="w-row" style="--i:' + i + '"'); }).join('') + '</div>' +
-      (exc.length ? '<div class="sheet-sec">Excluded from total</div><div class="card list-card">' + exc.map(function (w) { return row(w, balance(w.id), walletSel === w.id); }).join('') + '</div>' : '') +
-      '<p class="muted small" style="text-align:center;margin-top:14px">Press and hold a wallet to edit it.</p>',
+      '<div class="sheet-sec">Included in total</div><div class="card list-card" id="pkInc">' + inc.map(function (w) { return row(w, balance(w.id), walletSel === w.id); }).join('') + '</div>' +
+      (exc.length ? '<div class="sheet-sec">Excluded from total</div><div class="card list-card" id="pkExc">' + exc.map(function (w) { return row(w, balance(w.id), walletSel === w.id); }).join('') + '</div>' : '') +
+      (hid.length ? '<div class="sheet-sec">Hidden</div><div class="card list-card">' + hid.map(function (w) { return row(w, balance(w.id), walletSel === w.id); }).join('') + '</div>' : '') +
+      '<p class="muted small" style="text-align:center;margin-top:14px">Hold a wallet to drag it into a new order. Tap ✎ to edit or hide.</p>',
       function (r) {
         r.querySelector('#pkClose').onclick = closeSheet;
         r.querySelector('#pkAdd').onclick = function () { walletSheet(); };
-        var holdT;
+        function reorder(ids) { var rest = S.wallets.filter(function (w) { return ids.indexOf(w.id) === -1; }); var by = {}; S.wallets.forEach(function (w) { by[w.id] = w; }); var moved = ids.map(function (id) { return by[id]; });
+          // keep moved wallets where the group sits, others in place
+          var out = [], used = {}; S.wallets.forEach(function (w) { if (ids.indexOf(w.id) !== -1) { if (!used.g) { used.g = 1; out = out.concat(moved); } } else out.push(w); });
+          S.wallets = out; save(); renderAll(); toast('Order saved'); var top = $('sheet').scrollTop; openSheet.quiet = true; walletPicker(); openSheet.quiet = false; $('sheet').scrollTop = top; }
+        ['#pkInc', '#pkExc'].forEach(function (q) { var box = r.querySelector(q); if (box) makeSortable(box, '.pk-row', null, reorder); });
         r.querySelectorAll('[data-pick]').forEach(function (b) {
-          var held = false;
-          b.addEventListener('touchstart', function () { held = false; holdT = setTimeout(function () { held = true; haptic(); if (b.dataset.pick !== 'all') walletSheet(wallet(b.dataset.pick)); }, 550); }, { passive: true });
-          b.addEventListener('touchend', function () { clearTimeout(holdT); });
-          b.addEventListener('touchmove', function () { clearTimeout(holdT); }, { passive: true });
-          b.addEventListener('contextmenu', function (e) { e.preventDefault(); if (b.dataset.pick !== 'all') walletSheet(wallet(b.dataset.pick)); });
-          b.onclick = function () { if (held) return; walletSel = b.dataset.pick; haptic(); closeSheet(); renderTx(); if (view !== 'v-tx') show('v-tx'); };
+          b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+          b.onclick = function (e) {
+            var ed = e.target.closest('[data-ed]'); if (ed) { haptic(); walletSheet(wallet(ed.dataset.ed)); return; }
+            var box = b.parentNode; if (box.dataset.dragged) { delete box.dataset.dragged; return; }
+            walletSel = b.dataset.pick; haptic(); closeSheet(); renderTx(); if (view !== 'v-tx') show('v-tx');
+          };
         });
       });
   }
@@ -2167,7 +2173,7 @@
     var isNew = !t;
     t = t || Object.assign({ id: uid(), type: 'expense', amount: 0, cat: 'food', wallet: S.settings.bcaWallet || (S.wallets[0] || {}).id, toWallet: '', date: ymd(new Date()), time: hm(new Date()), note: '', merchant: '', src: 'manual', created: Date.now() }, prefill || {});
     var st = { type: t.type, cat: t.cat };
-    var wOpts = function (sel) { return S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' + esc(w.icon + ' ' + w.name) + '</option>'; }).join(''); };
+    var wOpts = function (sel) { return S.wallets.filter(function (w) { return !w.hidden || w.id === sel; }).map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === sel ? ' selected' : '') + '>' + esc(w.icon + ' ' + w.name) + '</option>'; }).join(''); };
     $('fab').classList.add('open');
     openSheet(
       '<h3>' + (isNew ? 'Add transaction' : 'Edit transaction') + '</h3>' +
@@ -2672,6 +2678,7 @@
         '<label class="fld" id="wUsdCashL">Rupiah part<input id="wUsdCash" inputmode="numeric" placeholder="e.g. 303.951.791" value="' + (w.holding && w.holding.withCash ? Math.round(cashPart(w)).toLocaleString('id-ID') : '') + '"></label></div>' +
         '<div class="gl-prev" id="wLiveV"></div></div>' +
       '<label class="set-row plain"><span class="grow">Include in total balance</span><input type="checkbox" class="switch" id="wInc"' + (w.excluded ? '' : ' checked') + '></label>' +
+      '<label class="set-row plain"><span class="grow">Show in wallet lists<span class="sub">Off = hidden from Home, the wallet cards and pickers</span></span><input type="checkbox" class="switch" id="wShow"' + (w.hidden ? '' : ' checked') + '></label>' +
       '<button class="btn primary block" id="wSave">Save</button>' + (isNew ? '' : '<button class="btn danger block" id="wDel">Delete wallet</button>'),
       function (r) {
         fmtInput(r.querySelector('#wBal')); fmtInput(r.querySelector('#wCost'));
@@ -2706,6 +2713,7 @@
           var n = r.querySelector('#wName').value.trim(); if (!n) { toast('Give it a name'); return; }
           w.name = n; if (wst.sp) { w.sp = wst.sp; delete w.custom; }
           w.excluded = !r.querySelector('#wInc').checked;
+          if (r.querySelector('#wShow').checked) delete w.hidden; else w.hidden = true;
           var wa = r.querySelector('#wAsset').value;
           var usdCash = null;
           if (wa === 'usd') { var uq = parseDec(r.querySelector('#wUsdQ').value), ua = parseNum(r.querySelector('#wUsdAvg').value); if (!uq || !ua) { toast('Enter your dollars and average rate'); return; } var wc = r.querySelector('#wUsdCashOn').checked; w.holding = { asset: 'usd', qty: uq, cost: uq * ua, avg: ua, withCash: wc || undefined }; if (wc) usdCash = parseNum(r.querySelector('#wUsdCash').value); }
@@ -3962,7 +3970,7 @@
     var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
-  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); hideOldCats(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
+  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); hideOldCats(); if (S.wHideVer !== 1) { S.wHideVer = 1; S.wallets.forEach(function (w) { if (/^(ajaib|stocks|gold puter)$/i.test(String(w.name).trim())) w.hidden = true; }); } if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   setTimeout(mlSeedFromHash, 1500);
   $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); }; $('codeBtn').onclick = function () { haptic(); codeSheet(); }; setTimeout(function () { mountEarth(document.querySelector('.tile-earth .earth'), 0.012, false); }, 600);

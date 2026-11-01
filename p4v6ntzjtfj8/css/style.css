@@ -1714,3 +1714,7 @@ body.sheet-open .view.active{scale:1!important}
 .biz-grand small{display:block;font-size:12px;color:var(--muted)}
 .biz-grand b{font-size:28px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .biz-row .amt{font-size:15px;font-weight:700;white-space:nowrap}
+.pk-row{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pk-ed{flex:none;width:34px;height:34px;border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;margin-left:6px}
+.pk-hid{opacity:.5}
+.pk-row.dragging{box-shadow:0 18px 30px -12px rgba(0,0,0,.7);background:var(--surface);z-index:5;position:relative}
