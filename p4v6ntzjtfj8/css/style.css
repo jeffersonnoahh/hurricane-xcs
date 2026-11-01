@@ -1647,3 +1647,12 @@ body.sheet-open .view.active{scale:1!important}
 .pl-m.full{background:color-mix(in srgb,#22c55e 14%,var(--surface2))}
 .pl-t{width:30px;height:30px;border-radius:9px;border:1.5px dashed var(--line2);background:transparent;font-size:15px;line-height:1;display:grid;place-items:center;padding:0}
 .pl-t.on{border:0;background:var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.pl-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 4px}
+.pl-sum>div{background:var(--surface2);border-radius:14px;padding:9px 10px;box-shadow:inset 0 0 0 .5px var(--line2);min-width:0}
+.pl-sum small{display:block;font-size:10.5px;color:var(--muted)}
+.pl-sum b{display:block;font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-add{display:flex;gap:6px;margin-top:8px}
+.pl-add input{margin:0;min-width:0;flex:1}
+.pl-add input#psAmt{flex:.9}
+.pl-add .btn{flex:none;padding:0 14px}
+.ml-row .grow{flex:1;min-width:0}

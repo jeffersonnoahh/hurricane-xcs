@@ -1667,17 +1667,24 @@
     var pl = p.plan, ms = planMonths(pl), now = ym(new Date()), byY = {};
     ms.forEach(function (k) { (byY[k.slice(0, 4)] = byY[k.slice(0, 4)] || []).push(k); });
     var doneN = ms.filter(function (k) { var t = (pl.ticks || {})[k] || {}; return pl.parties.every(function (pa) { return t[pa.k]; }); }).length;
-    return (pl.account ? '<div class="pl-acct"><div><small>' + esc(pl.bank || 'Account') + ' · ' + esc(pl.holder || '') + '</small><b>' + esc(pl.account) + '</b></div><button type="button" class="btn" id="plCopy">Copy</button></div>' : '') +
+    return (pl.account ? '<div class="pl-acct"><div><small>' + esc(pl.bank || 'Account') + (pl.holder ? ' · ' + esc(pl.holder) : '') + '</small><b>' + esc(pl.account) + '</b></div><button type="button" class="btn" id="plCopy">Copy</button></div>' : '') +
       '<div class="pl-legend">' + pl.parties.map(function (pa) { return '<span>' + pa.mark + ' ' + esc(pa.name) + ' · ' + money(pa.amt, { rp: false }) + '/mo</span>'; }).join('') + '</div>' +
+      (pl.spends ? (function () { var put = planPaid(p), out = pl.spends.reduce(function (a, x) { return a + x.amount; }, 0);
+        return '<div class="pl-sum"><div><small>Put in</small><b class="pos">' + money(put, { rp: false }) + '</b></div><div><small>Spent from it</small><b class="neg">' + money(out, { rp: false }) + '</b></div><div><small>Left in account</small><b>' + money(put - out, { rp: false }) + '</b></div></div>'; })() : '') +
       '<div class="pl-prog">' + doneN + ' of ' + ms.length + ' months complete · tap to tick</div>' +
       Object.keys(byY).map(function (y) { return '<div class="sheet-sec">' + y + '</div><div class="pl-grid">' + byY[y].map(function (k) {
         var t = (pl.ticks || {})[k] || {}, full = pl.parties.every(function (pa) { return t[pa.k]; });
         return '<div class="pl-m' + (full ? ' full' : '') + (k === now ? ' now' : '') + '"><span>' + MONTHS[+k.slice(5, 7) - 1].slice(0, 3) + '</span><div>' + pl.parties.map(function (pa) { return '<button type="button" class="pl-t' + (t[pa.k] ? ' on' : '') + '" data-pm="' + k + '" data-pp="' + pa.k + '" aria-label="' + esc(pa.name) + ' ' + k + '">' + (t[pa.k] ? pa.mark : '') + '</button>'; }).join('') + '</div></div>';
       }).join('') + '</div>'; }).join('') +
+      (pl.spends ? '<div class="sheet-sec">Spent from this account</div><div class="card list-card">' + (pl.spends.length ? pl.spends.map(function (x) { return '<div class="ml-row"><span class="grow"><b>' + esc(x.note || 'Expense') + '</b>' + (x.date ? '<span class="sub">' + fmtDate(x.date) + '</span>' : '') + '</span><b class="neg">−' + money(x.amount, { rp: false }) + '</b><button type="button" class="kt-x" data-psdel="' + esc(x.id) + '" aria-label="Delete">✕</button></div>'; }).join('') : '<div class="dw-empty">Nothing spent yet.</div>') + '</div>' +
+        '<div class="pl-add"><input id="psAmt" inputmode="numeric" placeholder="Amount"><input id="psNote" placeholder="What for"><button type="button" class="btn primary" id="psAdd">Add</button></div>' : '') +
       '<p class="muted small" style="text-align:center;margin-top:10px">Ticking doesn\u2019t move money in any wallet.</p>';
   }
   function bindPlan(r, p) {
     var c = r.querySelector('#plCopy'); if (c) c.onclick = function () { var v = p.plan.account.replace(/\D/g, ''); (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(function () { toast('Account number copied'); }, function () { toast(p.plan.account); }); };
+    function rerender() { var top = $('sheet').scrollTop; instDetail(p); $('sheet').scrollTop = top; }
+    var pa = r.querySelector('#psAmt'); if (pa) { fmtInput(pa); r.querySelector('#psAdd').onclick = function () { var v = parseNum(pa.value); if (!v) { toast('Enter the amount'); return; } p.plan.spends.push({ id: uid(), amount: v, note: r.querySelector('#psNote').value.trim(), date: today() }); haptic(); save(); renderAll(); rerender(); toast('Expense added'); }; }
+    r.querySelectorAll('[data-psdel]').forEach(function (b) { b.onclick = function () { confirmBox('Delete this expense?', 'It will be removed from this account\u2019s spending.', 'Delete', true).then(function (ok) { if (!ok) return; p.plan.spends = p.plan.spends.filter(function (x) { return x.id !== b.dataset.psdel; }); save(); renderAll(); rerender(); }); }; });
     r.querySelectorAll('[data-pm]').forEach(function (b) { b.onclick = function () {
       var pl = p.plan, k = b.dataset.pm, who = b.dataset.pp; pl.ticks = pl.ticks || {}; var t = pl.ticks[k] = pl.ticks[k] || {};
       t[who] = t[who] ? 0 : Date.now(); haptic(); save(); renderAll();
@@ -2362,6 +2369,8 @@
   }
   function mlSeedPrompt() {
     var v = prompt('Paste your import code'); if (!v) return;
+    var dm = String(v).replace(/\s+/g, '').match(/APX1\.([A-Za-z0-9_\-]+)/);
+    if (dm) { try { var b = dm[1].replace(/-/g, '+').replace(/_/g, '/'); b += '='.repeat((4 - b.length % 4) % 4); seedApply(JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b), function (ch) { return ch.charCodeAt(0); })))); } catch (e) { toast('That code is incomplete. Copy the whole code and try again.'); } return; }
     var m = String(v).trim().replace(/^.*#mls=/, '').match(/^([a-f0-9]{8,40})\.([A-Za-z0-9_\-]{40,60})$/);
     if (!m) { toast('That code doesn\u2019t look right'); return; }
     mlSeed(m[1], m[2]);
@@ -2377,17 +2386,22 @@
     }).then(function (buf) {
       busy(false);
       var d = JSON.parse(new TextDecoder().decode(buf));
-      if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
-    }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? 'Not ready yet. Wait a minute, close Apex fully and try again.' : 'Could not unlock. Check the code was copied completely.'); });
+      seedApply(d);
+    }).catch(function (e) { busy(false); toast(e && e.message === 'Import file not found' ? 'Not ready yet. Wait a minute, close Apex fully and try again.' : 'Could not unlock (' + ((e && (e.name || e.message)) || 'error') + ')'); });
   }
   // Commission history: one record per month, linked to its RESERVE TRANSFER (money already in RESERVE), with Dad's payments.
   // Money owed to me, added from a private code (no wallet change: just records to collect).
-  function planImport(d) {
-    var p = (S.inst || []).filter(function (x) { return x.id === d.instId || /wedding/i.test(x.name); })[0];
+  function seedApply(d) {
+    if (d.kind === 'multi') { (d.items || []).forEach(function (x, i) { if (x.kind === 'plan') planImport(x, i < d.items.length - 1); else seedApply(x); }); return; }
+    if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
+  }
+  function planImport(d, quiet) {
+    var p = (S.inst || []).filter(function (x) { return x.id === d.instId; })[0] || (d.match ? (S.inst || []).filter(function (x) { return new RegExp(d.match, 'i').test(x.name); })[0] : null);
     if (!p) { p = { id: d.instId || uid(), name: d.name || 'WEDDING', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }; (S.inst = S.inst || []).push(p); }
     var per = d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0);
     p.plan = d.plan; p.monthly = per; p.total = per * d.plan.months;
-    save(); renderAll(); toast('Wedding plan added ✓'); setTimeout(function () { instDetail(p); }, 300);
+    if (d.plan.spends) p.plan.spends = d.plan.spends.map(function (x) { return Object.assign({ id: uid() }, x); });
+    save(); renderAll(); if (quiet) return; toast('Plans added ✓'); setTimeout(function () { if (S.inst.length > 1) instSheet(); else instDetail(p); }, 300);
   }
   function owedImportPreview(list) {
     var todo = list.filter(function (o) { return !S.debts.some(function (d) { return d.seedKey === o.key; }); });
