@@ -2367,7 +2367,52 @@
     history.replaceState(null, '', location.pathname + location.search);
     mlSeed(m[1], m[2]);
   }
-  function mlSeedPrompt() {
+  // ---------- Import code screen (paste → preview → add) ----------
+  function codeParse(v) {
+    v = String(v || '').replace(/\s+/g, '');
+    var dm = v.match(/APX1\.([A-Za-z0-9_\-]+)/);
+    if (dm) { try { var b = dm[1].replace(/-/g, '+').replace(/_/g, '/'); b += '='.repeat((4 - b.length % 4) % 4); return { type: 'data', d: JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b), function (ch) { return ch.charCodeAt(0); }))) }; } catch (e) { return { type: 'bad' }; } }
+    var m = v.replace(/^.*#mls=/, '').match(/^([a-f0-9]{8,40})\.([A-Za-z0-9_\-]{40,60})$/);
+    if (m) return { type: 'file', fid: m[1], key: m[2] };
+    return v ? { type: 'bad' } : null;
+  }
+  function codeItems(d) {
+    if (d.kind === 'multi') return [].concat.apply([], (d.items || []).map(codeItems));
+    if (d.kind === 'plan') { var acc = d.plan.account ? ' · account ••' + String(d.plan.account).replace(/\D/g, '').slice(-4) : ''; return [{ ic: /wedding/i.test(d.name || d.match || '') ? 'wedding' : 'my_home', t: (d.name || 'Plan'), s: d.plan.months + ' months · ' + money(d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0), { rp: false }) + '/mo' + acc }]; }
+    if (d.kind === 'komisi') return [{ ic: 'komisi_out', t: 'Commission history', s: d.list.length + ' months' }];
+    if (d.kind === 'owed') return [{ ic: 'debt_collection', t: 'Owed to me', s: d.list.length + ' records · ' + money(d.list.reduce(function (a, x) { return a + x.amount; }, 0), { rp: false }) }];
+    if (d.rows) return [{ ic: 'reserve_transfer', t: d.name || 'Transactions', s: d.rows.length.toLocaleString('id-ID') + ' transactions' }];
+    return [{ ic: 'uncat', t: 'Data', s: '' }];
+  }
+  function codeSheet(prefill) {
+    var log = (S.settings.codeLog || []).slice().reverse().slice(0, 6), canPaste = !!(navigator.clipboard && navigator.clipboard.readText);
+    openSheet('<div class="cd-top"><span class="cd-ico">' + sprite('transfer_in') + '</span><h3>Import code</h3><p>Paste a code from Claude to add data to Apex.</p></div>' +
+      '<div class="cd-box"><textarea id="cdIn" rows="3" placeholder="Paste code here" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>' + (canPaste ? '<button type="button" class="cd-paste" id="cdPaste">📋 Paste</button>' : '') + '</div>' +
+      '<div id="cdPrev"></div><button class="btn primary block" id="cdGo" disabled>Add to Apex</button>' +
+      (log.length ? '<div class="sheet-sec">Recently imported</div><div class="card list-card">' + log.map(function (x) { return '<div class="ml-row"><span class="cd-ok">✓</span><span class="grow">' + esc(x.label) + '<span class="sub">' + fmtDate(ymd(new Date(x.at))) + '</span></span></div>'; }).join('') + '</div>' : ''),
+      function (r) {
+        var inp = r.querySelector('#cdIn'), prev = r.querySelector('#cdPrev'), go = r.querySelector('#cdGo'), cur = null;
+        function check() {
+          cur = codeParse(inp.value); go.disabled = !(cur && cur.type !== 'bad'); var pbn = r.querySelector('#cdPaste'); if (pbn) pbn.textContent = inp.value.trim() ? '✕ Clear' : '📋 Paste'; inp.parentNode.classList.toggle('ok', !go.disabled); inp.parentNode.classList.toggle('bad', !!(cur && cur.type === 'bad'));
+          if (!cur) { prev.innerHTML = ''; return; }
+          if (cur.type === 'bad') { prev.innerHTML = '<div class="cd-msg bad">This doesn\u2019t look like a full code. Copy the whole code and paste again.</div>'; return; }
+          var items = cur.type === 'data' ? codeItems(cur.d) : [{ ic: 'insurance', t: 'Private data file', s: 'Unlocked on your phone after you tap Add' }];
+          prev.innerHTML = '<div class="cd-msg">This code adds:</div><div class="card list-card cd-items">' + items.map(function (it) { return '<div class="ml-row"><span class="cd-it">' + sprite(it.ic) + '</span><span class="grow"><b>' + esc(it.t) + '</b><span class="sub">' + it.s + '</span></span></div>'; }).join('') + '</div>';
+          go.textContent = 'Add ' + (items.length > 1 ? items.length + ' items' : 'to Apex');
+        }
+        inp.addEventListener('input', check);
+        var pb = r.querySelector('#cdPaste'); if (pb) pb.onclick = function () { if (inp.value.trim()) { inp.value = ''; check(); return; } navigator.clipboard.readText().then(function (t) { inp.value = t; check(); haptic(); }, function () { inp.focus(); toast('Long-press the box and tap Paste'); }); };
+        if (prefill) { inp.value = prefill; check(); } else setTimeout(function () { if (!canPaste) inp.focus(); }, 380);
+        go.onclick = function () {
+          if (!cur || cur.type === 'bad') return; haptic();
+          var label = cur.type === 'data' ? codeItems(cur.d).map(function (x) { return x.t; }).join(' · ') : 'Private data file';
+          (S.settings.codeLog = S.settings.codeLog || []).push({ at: Date.now(), label: label }); if (S.settings.codeLog.length > 20) S.settings.codeLog.shift(); save();
+          closeSheet(); setTimeout(function () { if (cur.type === 'data') seedApply(cur.d); else mlSeed(cur.fid, cur.key); }, 320);
+        };
+      });
+  }
+  function mlSeedPrompt() { codeSheet(); }
+  function mlSeedPromptOld() {
     var v = prompt('Paste your import code'); if (!v) return;
     var dm = String(v).replace(/\s+/g, '').match(/APX1\.([A-Za-z0-9_\-]+)/);
     if (dm) { try { var b = dm[1].replace(/-/g, '+').replace(/_/g, '/'); b += '='.repeat((4 - b.length % 4) % 4); seedApply(JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b), function (ch) { return ch.charCodeAt(0); })))); } catch (e) { toast('That code is incomplete. Copy the whole code and try again.'); } return; }
@@ -3761,7 +3806,7 @@
   load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   setTimeout(mlSeedFromHash, 1500);
-  $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); };
+  $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); }; $('codeBtn').onclick = function () { haptic(); codeSheet(); };
   $('mlFile').onchange = function () { var f = this.files[0]; this.value = ''; if (f) mlImportFile(f); };
   hideSplash(); fetchPrices(); renderGold(); fetchGold(); $('goldBar').onclick = function () { haptic(); goldSheet(); }; renderIhsg(); fetchIhsg(); $('ihsgBar').onclick = function () { haptic(); ihsgSheet(); }; renderFx(); fetchFx(); $('fxBar').onclick = function () { haptic(); fxSheet(); }; registerSW(); setTimeout(onboarding, 1300);
   // iOS 26 Home Screen apps: the viewport stops above the home bar, so the bottom inset must not be added twice
