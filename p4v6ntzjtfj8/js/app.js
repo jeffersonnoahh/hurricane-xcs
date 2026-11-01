@@ -4284,7 +4284,10 @@
     }
     var spark = months.map(function (d) { return balance('all', at(d)); }), smn = Math.min.apply(null, spark), smx = Math.max.apply(null, spark), rng = smx - smn || 1;
     var pts = spark.map(function (v, i) { return (i / Math.max(1, spark.length - 1) * 300).toFixed(1) + ',' + (56 - (v - smn) / rng * 50).toFixed(1); }).join(' ');
-    openSheet('<h3>Time machine</h3><div class="tm-hero"><div class="eyebrow" id="tmWhen"></div><div class="mid-money xl" id="tmVal"></div><div class="muted small" id="tmAgo"></div><div class="tm-cmp" id="tmCmp"></div></div>' +
+    openSheet('<h3>Time machine</h3>' +
+      '<div class="tp"><div class="tp-top"><button type="button" class="tp-play" id="tpBtn" aria-label="Play">▶</button><div class="tp-clock"><b id="tpClock">00:00.0</b><span id="tpDay">Press play to replay your money story</span></div></div>' +
+      '<div class="tp-chart"><svg id="tpSvg" viewBox="0 0 300 100" preserveAspectRatio="none"><defs><linearGradient id="tpg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399" stop-opacity=".35"/><stop offset="1" stop-color="#34d399" stop-opacity="0"/></linearGradient></defs><path class="tp-area" fill="url(#tpg)"/><polyline class="tp-line"/></svg><i class="tp-dot" id="tpDot"></i><div class="tp-tick" id="tpTick"></div></div></div>' +
+      '<div class="tm-hero"><div class="eyebrow" id="tmWhen"></div><div class="mid-money xl" id="tmVal"></div><div class="muted small" id="tmAgo"></div><div class="tm-cmp" id="tmCmp"></div></div>' +
       '<div class="tm-track"><svg viewBox="0 0 300 60" preserveAspectRatio="none"><polyline points="' + pts + '" class="tm-line"/></svg><input type="range" id="tmR" min="0" max="' + (months.length - 1) + '" value="' + (months.length - 1) + '"></div>' +
       '<div class="tm-ax"><span>' + (months[0] ? MONTHS[months[0].getMonth()].slice(0, 3) + ' ' + months[0].getFullYear() : '') + '</span><span>Now</span></div>' +
       '<div class="sheet-sec">Wallets then</div><div class="card list-card" id="tmWal"></div>',
@@ -4292,7 +4295,59 @@
         var rg = r.querySelector('#tmR'), last = -1;
         rg.oninput = function () { var i = +rg.value; if (i === last) return; last = i; haptic(); draw(i); };
         draw(months.length - 1);
+        r.querySelector('#tpBtn').onclick = function () { tmPlay(r, hidden, function (i) { rg.value = i; }, months.length - 1, draw); };
       });
+  }
+
+  // Time machine replay: from the first transaction to today in a few seconds, like a stopwatch.
+  function tmPlay(r, hidden, setSlider, lastIdx, drawMonth) {
+    var btn = r.querySelector('#tpBtn'); if (btn.dataset.on) return;
+    var txs = S.tx.filter(function (t) { return touches(t, 'all') && (t.type === 'income' || t.type === 'expense'); }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+    if (!txs.length) { toast('No transactions yet'); return; }
+    var d0 = new Date(txs[0].date + 'T00:00:00'), end = new Date(); end.setHours(0, 0, 0, 0);
+    var days = Math.max(1, Math.round((end - d0) / 864e5)), step = Math.max(1, Math.ceil(days / 160)), pts = [];
+    for (var k = 0; k <= days; k += step) { var dd = new Date(d0); dd.setDate(dd.getDate() + k + 1); pts.push({ d: k, v: balance('all', ymd(dd)) }); }
+    if (pts[pts.length - 1].d !== days) { var de = new Date(end); de.setDate(de.getDate() + 1); pts.push({ d: days, v: balance('all', ymd(de)) }); }
+    var mn = Math.min.apply(null, pts.map(function (p) { return p.v; })), mx = Math.max.apply(null, pts.map(function (p) { return p.v; })), rg = mx - mn || 1;
+    var X = function (d) { return d / days * 300; }, Y = function (v) { return 94 - (v - mn) / rg * 86; };
+    // bigger moves pop up as they happen
+    var amts = txs.map(function (t) { return t.amount; }).sort(function (a, b) { return b - a; }), cut = amts[Math.min(amts.length - 1, 40)] || 0;
+    var big = txs.filter(function (t) { return t.amount >= cut; });
+    var line = r.querySelector('.tp-line'), area = r.querySelector('.tp-area'), dot = r.querySelector('#tpDot'), clock = r.querySelector('#tpClock'), dayEl = r.querySelector('#tpDay'), tick = r.querySelector('#tpTick'), val = r.querySelector('#tmVal'), when = r.querySelector('#tmWhen'), ago = r.querySelector('#tmAgo'), cmp = r.querySelector('#tmCmp');
+    var DUR = Math.min(9000, Math.max(5000, days * 7)), t0 = performance.now(), bi = 0, lastPop = 0, lastMonth = '', stop = false;
+    btn.dataset.on = '1'; btn.textContent = '■'; btn.classList.add('on'); cmp.textContent = '';
+    btn.onclick = function () { stop = true; };
+    function pop(t) {
+      var el = document.createElement('div'); el.className = 'tp-pop ' + (t.type === 'income' ? 'in' : 'out');
+      el.innerHTML = (t.type === 'income' ? '+' : '−') + (S.settings.hide ? '••••' : short(t.amount)) + '<small>' + esc((t.merchant || cat(t.cat).name || '').slice(0, 18)) + '</small>';
+      tick.appendChild(el); setTimeout(function () { el.remove(); }, 1400);
+    }
+    (function frame(now) {
+      var p = Math.min(1, (now - t0) / DUR); if (stop) p = 1;
+      var e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2, dNow = e * days;
+      var shown = pts.filter(function (q) { return q.d <= dNow; }), head = shown[shown.length - 1] || pts[0];
+      var nxt = pts[shown.length], hv = head.v;
+      if (nxt && nxt.d > head.d) hv = head.v + (nxt.v - head.v) * ((dNow - head.d) / (nxt.d - head.d));
+      var poly = shown.map(function (q) { return X(q.d).toFixed(1) + ',' + Y(q.v).toFixed(1); }).concat([X(dNow).toFixed(1) + ',' + Y(hv).toFixed(1)]).join(' ');
+      line.setAttribute('points', poly); area.setAttribute('d', 'M0,100 L' + poly.split(' ').join(' L') + ' L' + X(dNow).toFixed(1) + ',100 Z');
+      dot.style.left = (dNow / days * 100) + '%'; dot.style.top = (Y(hv) / 100 * 100) + '%';
+      var cd = new Date(d0); cd.setDate(cd.getDate() + Math.round(dNow));
+      var ms = now - t0, sec = Math.floor(ms / 1000);
+      clock.textContent = pad(Math.floor(sec / 60)) + ':' + pad(sec % 60) + '.' + Math.floor(ms % 1000 / 100);
+      dayEl.textContent = 'Day ' + Math.round(dNow).toLocaleString('id-ID') + ' · ' + cd.getDate() + ' ' + MONTHS[cd.getMonth()].slice(0, 3) + ' ' + cd.getFullYear();
+      when.textContent = MONTHS[cd.getMonth()] + ' ' + cd.getFullYear(); ago.textContent = 'Replaying…';
+      if (!hidden) val.textContent = money(Math.round(hv)); else val.innerHTML = '<span class="masked">Rp ••••••</span>';
+      var mk = ym(cd); if (mk !== lastMonth) { lastMonth = mk; if (p < 1) haptic(); }
+      var cds = ymd(cd);
+      while (bi < big.length && big[bi].date <= cds) { if (now - lastPop > 160) { pop(big[bi]); lastPop = now; } bi++; }
+      if (p < 1) { requestAnimationFrame(frame); return; }
+      delete btn.dataset.on; btn.textContent = '↺'; btn.classList.remove('on');
+      btn.onclick = function () { tmPlay(r, hidden, setSlider, lastIdx, drawMonth); };
+      setSlider(lastIdx); drawMonth(lastIdx);
+      var gain = pts[pts.length - 1].v - pts[0].v;
+      dayEl.textContent = days.toLocaleString('id-ID') + ' days of your money ' + (gain >= 0 ? '🚀' : '');
+      if (gain > 0 && !stop) confetti();
+    })(t0);
   }
 
   // 4. Goal jar: liquid that fills to the saved percent, with a moving wave
