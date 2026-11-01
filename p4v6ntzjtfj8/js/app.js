@@ -355,6 +355,18 @@
     document.documentElement.classList.toggle('privacy', h);
     document.querySelectorAll('[data-priv]').forEach(function (b) { b.innerHTML = h ? EYE_OFF : EYE_OPEN; b.classList.toggle('on', h); b.setAttribute('aria-pressed', h); });
   }
+  // Net worth starts hidden every time Apex opens; tap the eye next to "Net worth" to show it.
+  var netHidden = true;
+  function paintNetEye() { var e = $('eyeBtn'); if (e) e.innerHTML = (S.settings.hide || netHidden) ? EYE_OFF : EYE_OPEN; }
+  function toggleNet() {
+    if (S.settings.hide) { togglePrivacy(); return; }
+    netHidden = !netHidden; haptic();
+    var el = $('hNet');
+    if (netHidden) { el.innerHTML = '<span class="masked">Rp ••••••</span>'; RS.hNet = null; el.removeAttribute('data-sig'); }
+    else renderHome();
+    paintNetEye(); onScroll && onScroll();
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden && !netHidden) { netHidden = true; var el = $('hNet'); if (el) { el.innerHTML = '<span class="masked">Rp ••••••</span>'; RS.hNet = null; el.removeAttribute('data-sig'); } paintNetEye(); } });
   function togglePrivacy() { S.settings.hide = !S.settings.hide; haptic(); save(); renderAll(); toast(S.settings.hide ? 'Privacy on: all amounts hidden' : 'Amounts visible'); }
 
   function renderHome() {
@@ -362,7 +374,8 @@
     var total = balance('all');
     var liquid = S.wallets.filter(function (w) { return included(w) && groupOf(w) !== 'invest'; }).reduce(function (a, w) { return a + balance(w.id); }, 0);
     var recv = dSum('in', 'remain'), pay = dSum('out', 'remain'), net = total + recvNet() - pay;
-    setMoney($('hNet'), net);
+    if (netHidden && !S.settings.hide) { $('hNet').innerHTML = '<span class="masked">Rp ••••••</span>'; RS.hNet = null; $('hNet').removeAttribute('data-sig'); } else setMoney($('hNet'), net);
+    paintNetEye();
     rollTo($('hTotal'), liquid, { rp: false }); rollTo($('hRecv'), recv, { rp: false }); rollTo($('hPay'), pay, { rp: false });
     var hr = new Date().getHours();
     $('hGreet').textContent = hr < 11 ? 'Good morning' : hr < 15 ? 'Good afternoon' : hr < 19 ? 'Good evening' : 'Good night';
@@ -459,8 +472,8 @@
       if (!g) return; g.removeAttribute('hidden'); g.querySelector('line').setAttribute('x1', p[0]); g.querySelector('line').setAttribute('x2', p[0]);
       var c = g.querySelector('circle'); c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]);
       if (i !== at.last) { at.last = i; haptic(); }
-      var v = SPK.pts[i] + SPK.offset, txt = money(v); $('hNet').innerHTML = txt; delete $('hNet').dataset.sig;
-      if (!S.settings.hide) RS.hNet = { sig: txt.replace(/\d/g, '0'), digits: txt.replace(/\D/g, '').split('').map(Number), v: v };
+      var v = SPK.pts[i] + SPK.offset, txt = netHidden ? '<span class="masked">Rp ••••••</span>' : money(v); $('hNet').innerHTML = txt; delete $('hNet').dataset.sig;
+      if (!S.settings.hide && !netHidden) RS.hNet = { sig: txt.replace(/\d/g, '0'), digits: txt.replace(/\D/g, '').split('').map(Number), v: v };
       var d = SPK.dates[i]; lbl.textContent = d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear(); lbl.style.left = (f * 100) + '%'; lbl.hidden = false;
     }
     function end() { if (!scrubbing) return; scrubbing = false; document.body.classList.remove('scrubbing'); lbl.hidden = true; var g = svg.querySelector('.sp-scrub'); if (g) g.setAttribute('hidden', ''); at.last = -1; if (SPK) rollTo($('hNet'), SPK.pts[SPK.pts.length - 1] + SPK.offset); }
@@ -1950,7 +1963,7 @@
   var budFrom = 'v-account';
   var TITLES = { 'v-home': 'Apex', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
   function onScroll() { var y = window.scrollY; $('topbar').classList.toggle('show', y > 120);
-    if (view === 'v-home') { var nv = $('hNet'); $('topTitle').innerHTML = '<span class="tb-l">Net worth</span> ' + (S.settings.hide ? 'Rp ••••••' : money(balance('all') + recvNet() - dSum('out', 'remain'))); } document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
+    if (view === 'v-home') { var nv = $('hNet'); $('topTitle').innerHTML = '<span class="tb-l">Net worth</span> ' + (S.settings.hide || netHidden ? 'Rp ••••••' : money(balance('all') + recvNet() - dSum('out', 'remain'))); } document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
 
   // ---------- extra motion ----------
   // Coin burst (used when income is added).
@@ -2971,7 +2984,7 @@
     $('sheetBg').onclick = closeSheet;
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
 
-    $('eyeBtnWrap').onclick = togglePrivacy;
+    $('eyeBtnWrap').onclick = toggleNet;
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
