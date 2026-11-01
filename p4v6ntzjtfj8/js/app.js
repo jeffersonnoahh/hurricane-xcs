@@ -352,6 +352,7 @@
   function togglePrivacy() { S.settings.hide = !S.settings.hide; haptic(); save(); renderAll(); toast(S.settings.hide ? 'Privacy on: all amounts hidden' : 'Amounts visible'); }
 
   function renderHome() {
+    renderSignInBanner();
     var total = balance('all');
     var liquid = S.wallets.filter(function (w) { return included(w) && groupOf(w) !== 'invest'; }).reduce(function (a, w) { return a + balance(w.id); }, 0);
     var recv = dSum('in', 'remain'), pay = dSum('out', 'remain'), net = total + recvNet() - pay;
@@ -3479,6 +3480,9 @@
   function unb64(s) { var b = atob(s), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
   function deriveKey(pass, id) {
     var enc = new TextEncoder();
+    if (String(pass).indexOf('prf:') === 0) return crypto.subtle.importKey('raw', unb64(pass.slice(4)), 'HKDF', false, ['deriveKey']).then(function (k) {
+      return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: enc.encode('apex-' + id), info: enc.encode('apex-cloud') }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
     return crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']).then(function (k) {
       return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc.encode('apex-' + id), iterations: 150000, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
     });
@@ -3535,8 +3539,60 @@
   function load2() { var d = blank(); Object.keys(d).forEach(function (k) { if (S[k] == null && k !== 'catVer') S[k] = d[k]; }); Object.keys(d.settings).forEach(function (k) { if (S.settings[k] == null) S.settings[k] = d.settings[k]; }); }
   function setCloudStatus(msg) {
     var el = $('cloudStatus'); if (!el) return; var c = S.settings.cloud;
-    el.textContent = msg || (c && c.on ? 'On · last backup ' + (c.last ? new Date(c.last).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : 'pending') : 'Off · your data is only on this device');
+    renderSignInBanner();
+    el.textContent = msg || (c && c.on ? (c.mode === 'passkey' ? 'Face ID sync · last backup ' : 'On · last backup ') + (c.last ? new Date(c.last).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : 'pending') : 'Off · your data is only on this device');
     $('cloudBtn').textContent = c && c.on ? 'Manage' : 'Turn on';
+  }
+  // ---------- Face ID sync: passkey (iCloud Keychain) unlocks the encrypted cloud copy on any Apple device ----------
+  // The passkey's PRF secret becomes the encryption key on the device; the passkey's user handle is the cloud id. Nothing readable leaves the phone.
+  var PRF_SALT = new TextEncoder().encode('apex-cloud-key-v1');
+  function pkSupported() { return !!(window.PublicKeyCredential && navigator.credentials && crypto.subtle); }
+  function hex(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
+  function pkGet() {
+    return navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rpId: location.hostname, userVerification: 'required', timeout: 120000, extensions: { prf: { eval: { first: PRF_SALT } } } } })
+      .then(function (cred) {
+        var ext = cred.getClientExtensionResults ? cred.getClientExtensionResults() : {}, out = ext.prf && ext.prf.results && ext.prf.results.first;
+        if (!out) throw new Error('This device can’t unlock with Face ID yet. Update to iOS 18 or use a passphrase.');
+        if (!cred.response.userHandle) throw new Error('Passkey has no account');
+        return { id: hex(cred.response.userHandle), pass: 'prf:' + b64(out) };
+      });
+  }
+  function pkCreate() {
+    var uidB = crypto.getRandomValues(new Uint8Array(16));
+    return navigator.credentials.create({ publicKey: {
+      rp: { name: 'Apex', id: location.hostname }, user: { id: uidB, name: 'Apex', displayName: 'Apex · private wealth' },
+      challenge: crypto.getRandomValues(new Uint8Array(32)), pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { residentKey: 'required', requireResidentKey: true, userVerification: 'required' }, timeout: 120000,
+      extensions: { prf: { eval: { first: PRF_SALT } } } } })
+      .then(function (cred) {
+        var ext = cred.getClientExtensionResults ? cred.getClientExtensionResults() : {}, out = ext.prf && ext.prf.results && ext.prf.results.first;
+        if (out) return { id: hex(uidB), pass: 'prf:' + b64(out) };
+        if (ext.prf && ext.prf.enabled === false) throw new Error('This device can’t unlock with Face ID yet. Update to iOS 18 or use a passphrase.');
+        toast('Passkey saved. Confirm Face ID once more to finish.');
+        return pkGet();
+      });
+  }
+  function faceIdOn() {
+    if (!pkSupported()) { toast('Face ID sign-in isn’t available on this browser'); return; }
+    pkCreate().then(function (k) {
+      S.settings.cloud = { id: k.id, pass: k.pass, on: true, mode: 'passkey' }; save();
+      return cloudPush().then(function () { closeSheet(); setCloudStatus(); toast('Face ID sync on ☁️'); haptic(); renderAll(); });
+    }).catch(function (e) { if (e && e.name === 'NotAllowedError') return; toast((e && e.message) || 'Could not turn on Face ID sync'); });
+  }
+  function faceIdSignIn() {
+    if (!pkSupported()) { toast('Face ID sign-in isn’t available on this browser'); return; }
+    pkGet().then(function (k) {
+      return cloudPull(k.id, k.pass, { force: true, mustExist: true }).then(function () { S.settings.cloud.mode = 'passkey'; save(); closeSheet(); toast('Signed in ✓ Everything is here'); haptic(); renderAll(); applyHome(); });
+    }).catch(function (e) { if (e && e.name === 'NotAllowedError') return; toast((e && e.message) || 'Sign in failed'); });
+  }
+  function renderSignInBanner() {
+    var el = $('signBanner'); if (!el) return; var c = S.settings.cloud, empty = !S.tx.length;
+    if (c && c.on) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = empty ? '<span class="sb-ic">' + sprite('insurance') + '</span><span class="grow"><b>Already use Apex?</b><small>Sign in with Face ID to load everything</small></span><button class="btn primary" id="sbIn">Sign in</button>'
+      : '<span class="sb-ic">' + sprite('insurance') + '</span><span class="grow"><b>Use Apex on any device</b><small>Turn on Face ID sync. Encrypted, automatic.</small></span><button class="btn primary" id="sbOn">Turn on</button>';
+    var a = $('sbIn'); if (a) a.onclick = function () { haptic(); faceIdSignIn(); };
+    var o = $('sbOn'); if (o) o.onclick = function () { haptic(); faceIdOn(); };
   }
   function snapList(c) { return fetch(FB + c.id + '_h.json?shallow=true').then(function (r) { return r.json(); }).then(function (j) { return j ? Object.keys(j).sort().reverse() : []; }); }
   function snapSheet() {
@@ -3564,7 +3620,7 @@
     if (c && c.on) {
       openSheet('<h3>Cloud backup</h3><span class="ic preview i3d">' + sprite('insurance') + '</span>' +
         '<p class="muted small" style="text-align:center">Encrypted on this phone with your passphrase before upload. Nobody else can read it.</p>' +
-        '<div class="card"><div class="eyebrow">Your sync code</div><div class="sync-code" id="syncCode">' + esc(c.id) + '</div><div class="muted small">Use this code + your passphrase to open your data on another device.</div><button class="btn block" id="copyCode">Copy code</button></div>' +
+        (c.mode === 'passkey' ? '<div class="card fid-on"><b>🔐 Face ID sync is on</b><div class="muted small">On another iPhone, iPad or Mac with your Apple account: open the Apex link → More → Encrypted cloud backup → Sign in with Face ID.</div></div>' : '') + '<div class="card"' + (c.mode === 'passkey' ? ' hidden' : '') + '><div class="eyebrow">Your sync code</div><div class="sync-code" id="syncCode">' + esc(c.id) + '</div><div class="muted small">Use this code + your passphrase to open your data on another device.</div><button class="btn block" id="copyCode">Copy code</button></div>' +
         '<button class="btn primary block" id="cNow">Back up now</button><button class="btn block" id="cSnap">🕘 Restore an earlier version</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
         function (r) {
           r.querySelector('#copyCode').onclick = function () { try { navigator.clipboard.writeText(c.id); toast('Code copied'); } catch (e) { toast(c.id); } };
@@ -3575,6 +3631,7 @@
       return;
     }
     openSheet('<h3>Cloud backup</h3><span class="ic preview i3d">' + sprite('insurance') + '</span>' +
+      (pkSupported() ? '<div class="fid"><button class="btn primary block" id="fidOn">Turn on Face ID sync</button><button class="btn block" id="fidIn">Sign in with Face ID</button><p class="muted small" style="text-align:center">Uses a passkey saved in your Apple account. Open Apex on any of your Apple devices and sign in with Face ID. Nothing to remember.</p></div><div class="sheet-sec" style="text-align:center">Or use a passphrase</div>' : '') +
       '<div class="seg" id="cMode" style="display:grid;grid-template-columns:1fr 1fr;--x:0%"><button data-m="new" class="on">New backup</button><button data-m="join">Restore / link</button><i class="seg-ind" style="transform:translateX(var(--x))"></i></div>' +
       '<label class="fld" id="cCodeL" hidden>Sync code<input id="cCode" autocomplete="off" placeholder="e.g. 7f3a9c..."></label>' +
       '<label class="fld">Passphrase<input id="cPass" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>' +
@@ -3583,6 +3640,7 @@
       '<button class="btn primary block" id="cGo">Turn on backup</button>',
       function (r) {
         var mode = 'new';
+        var fo = r.querySelector('#fidOn'); if (fo) { fo.onclick = function () { haptic(); faceIdOn(); }; r.querySelector('#fidIn').onclick = function () { haptic(); faceIdSignIn(); }; }
         r.querySelector('#cMode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; mode = b.dataset.m; this.style.setProperty('--x', mode === 'join' ? '100%' : '0%'); this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); r.querySelector('#cCodeL').hidden = mode !== 'join'; r.querySelector('#cPass2L').hidden = mode === 'join'; r.querySelector('#cGo').textContent = mode === 'join' ? 'Restore my data' : 'Turn on backup'; };
         r.querySelector('#cGo').onclick = function () {
           var p = r.querySelector('#cPass').value; if (p.length < 8) { toast('Use at least 8 characters'); return; }

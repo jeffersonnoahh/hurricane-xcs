@@ -1718,3 +1718,13 @@ body.sheet-open .view.active{scale:1!important}
 .pk-ed{flex:none;width:34px;height:34px;border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;margin-left:6px}
 .pk-hid{opacity:.5}
 .pk-row.dragging{box-shadow:0 18px 30px -12px rgba(0,0,0,.7);background:var(--surface);z-index:5;position:relative}
+/* Face ID sync */
+.sign-banner{display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:12px;background:linear-gradient(110deg,rgba(52,211,153,.14),rgba(52,211,153,.03))!important}
+.sign-banner[hidden]{display:none}
+.sign-banner .grow{flex:1;min-width:0}
+.sign-banner b{display:block;font-size:14px}
+.sign-banner small{display:block;font-size:11.5px;color:var(--muted)}
+.sign-banner .btn{flex:none;padding:8px 14px}
+.sb-ic{width:32px;height:32px;flex:none}.sb-ic .sp{width:100%;height:100%}
+.fid{margin-bottom:6px}.fid .btn{margin-top:8px}
+.fid-on{margin-bottom:10px}.fid-on b{display:block;margin-bottom:4px}
