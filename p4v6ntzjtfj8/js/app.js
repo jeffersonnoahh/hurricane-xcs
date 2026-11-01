@@ -1984,31 +1984,42 @@
   var scrollMem = {};
   function show(id, back) {
     if (id !== view && document.startViewTransition && !noMotion() && !show.busy) {
-      var src = tapSource(), hero = src && !src.el.closest('.sheet') ? src.el : null;
-      if (hero) hero.style.viewTransitionName = 'hero';
-      document.documentElement.classList.add('vt'); show.busy = true;
+      var src = tapSource();
+      var hero = src && !src.el.closest('.sheet') ? src.el : null;
+      // Parts that exist on both pages fly from one to the other.
+      var pairOld = MORPH_PAIRS[view] || {}, pairNew = MORPH_PAIRS[id] || {}, named = [];
+      var nameIt = function (el, n) { if (el) { el.style.viewTransitionName = n; named.push(el); } };
+      var shared = Object.keys(pairOld).filter(function (k) { return pairNew[k] && inView($(pairOld[k])); });
+      if (shared.length) hero = null;
+      shared.forEach(function (k) { nameIt($(pairOld[k]), 'm-' + k); });
+      if (hero) nameIt(hero, 'hero');
+      var oi = TAB_ORDER.indexOf(view), ni = TAB_ORDER.indexOf(id);
+      document.documentElement.dataset.vtDir = back || (oi > -1 && ni > -1 && ni < oi) ? 'back' : 'fwd';
+      show.busy = true;
       var vt;
       try {
         vt = document.startViewTransition(function () {
-          if (hero) hero.style.viewTransitionName = '';
+          named.forEach(function (el) { el.style.viewTransitionName = ''; }); named = [];
           show0(id, back);
-          if (hero) $(id).style.viewTransitionName = 'hero';
+          $(id).classList.add('vt-in');
+          shared.forEach(function (k) { var el = $(pairNew[k]); if (inView(el)) nameIt(el, 'm-' + k); });
+          if (hero) nameIt($(id), 'hero');
         });
       } catch (e) { vt = null; }
-      if (vt) {
-        var done = function () { document.documentElement.classList.remove('vt'); show.busy = false; $(id).style.viewTransitionName = ''; if (hero) hero.style.viewTransitionName = ''; };
-        vt.finished.then(done, done);
-        return;
-      }
-      document.documentElement.classList.remove('vt'); show.busy = false; if (hero) hero.style.viewTransitionName = '';
+      var done = function () { show.busy = false; named.forEach(function (el) { el.style.viewTransitionName = ''; }); named = []; };
+      if (vt) { vt.finished.then(done, done); return; }
+      done();
     }
     show0(id, back);
   }
+  var TAB_ORDER = ['v-home', 'v-tx', 'v-debts', 'v-account'];
+  var MORPH_PAIRS = { 'v-home': { bal: 'hNet', real: 'realBtn' }, 'v-tx': { bal: 'txBal', real: 'txReal' } };
+  function inView(el) { if (!el || el.hidden || !el.offsetParent) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight; }
   function show0(id, back) {
     if (id === view) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     scrollMem[view] = window.scrollY;
     var prev = view; view = id;
-    document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active', 'back'); });
+    document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active', 'back', 'vt-in'); });
     var el = $(id); void el.offsetWidth;
     el.classList.add('active'); if (back) el.classList.add('back');
     window.scrollTo(0, scrollMem[id] || 0);

@@ -1745,17 +1745,32 @@ body.sheet-open .view.active{scale:1!important}
 .view,.card,.sheet,h1,h2,h3,.sheet-sec{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,[contenteditable],.view input,.sheet input,.sheet textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 
-/* morph transitions: tabs crossfade, tapped tiles grow into their page */
+/* morph transitions: tabs slide and crossfade, shared parts fly between pages, tapped tiles grow into their page */
 .bottom-nav{view-transition-name:nav}
 .fab{view-transition-name:fab}
-html.vt .view.active,html.vt .view.active > *{animation:none!important}
-::view-transition-old(root){animation:vtOut .2s ease-in both}
-::view-transition-new(root){animation:vtIn .34s cubic-bezier(.2,.9,.25,1) both}
-@keyframes vtOut{to{opacity:0;transform:scale(.985)}}
-@keyframes vtIn{from{opacity:0;transform:scale(1.012)}}
+.view.vt-in,.view.vt-in > *{animation:none!important}
+::view-transition-group(root){animation-duration:.42s}
+::view-transition-old(root){animation:vtOut .24s cubic-bezier(.4,0,1,1) both}
+::view-transition-new(root){animation:vtIn .42s cubic-bezier(.2,.9,.25,1) both}
+html[data-vt-dir=back]::view-transition-old(root){animation-name:vtOutBack}
+html[data-vt-dir=back]::view-transition-new(root){animation-name:vtInBack}
+@keyframes vtOut{to{opacity:0;transform:translateX(-28px)}}
+@keyframes vtIn{from{opacity:0;transform:translateX(36px)}}
+@keyframes vtOutBack{to{opacity:0;transform:translateX(28px)}}
+@keyframes vtInBack{from{opacity:0;transform:translateX(-36px)}}
+::view-transition-group(m-bal),::view-transition-group(m-real){animation-duration:.5s;animation-timing-function:cubic-bezier(.2,.9,.25,1)}
+::view-transition-old(m-bal),::view-transition-new(m-bal),::view-transition-old(m-real),::view-transition-new(m-real){animation-duration:.5s;height:100%;object-fit:contain}
+::view-transition-group(nav),::view-transition-group(fab){animation:none}
 ::view-transition-group(hero){animation-duration:.5s;animation-timing-function:cubic-bezier(.2,.9,.25,1);overflow:clip;border-radius:22px}
 ::view-transition-old(hero){animation:vtHeroOut .25s ease-in both}
 ::view-transition-new(hero){animation:vtHeroIn .4s ease-out both}
 @keyframes vtHeroOut{to{opacity:0}}
 @keyframes vtHeroIn{from{opacity:0}}
 ::view-transition-old(hero),::view-transition-new(hero){height:auto;width:100%;object-fit:none;object-position:top center}
+.view.vt-in .stagger > *,.view.vt-in .tiles,.view.vt-in .wd-card,.view.vt-in .wd-row{animation:none!important}
+.bg-mesh{view-transition-name:bg}
+#topbar{view-transition-name:topbar}
+::view-transition-group(bg){animation:none}
+::view-transition-old(bg){animation:none;opacity:0}
+::view-transition-new(bg){animation:none}
+::view-transition-group(topbar){animation-duration:.3s}
