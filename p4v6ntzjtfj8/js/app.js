@@ -132,10 +132,11 @@
     var n = Math.min(pa.length, pb.length), m = Math.min(sa.length, sb.length);
     return n >= 2 && m >= 2 && pa.slice(0, n) === pb.slice(0, n) && sa.slice(-m) === sb.slice(-m);
   }
-  // Wallet for Mandiri emails: chosen in Account, else a wallet named Spending.
+  // Wallet for Mandiri emails: chosen in Account, else Personal Expense.
   function mandiriWalletId() {
+    if (S.settings.mWalletVer !== 2) { delete S.settings.mandiriWallet; S.settings.mWalletVer = 2; }
     var id = S.settings.mandiriWallet; if (id && S.wallets.some(function (w) { return w.id === id; })) return id;
-    var w = S.wallets.filter(function (x) { return /spend/i.test(x.name); })[0] || S.wallets.filter(function (x) { return /mandiri/i.test(x.name); })[0];
+    var w = S.wallets.filter(function (x) { return /personal\s*expense/i.test(x.name); })[0] || S.wallets.filter(function (x) { return /spend/i.test(x.name); })[0] || S.wallets.filter(function (x) { return /mandiri/i.test(x.name); })[0];
     return w ? w.id : null;
   }
   function isMandiriEmail(em) { return /mandiri/i.test((em.from || '') + ' ' + (em.subject || '')) || /bankmandiri|livin/i.test(em.body || ''); }
