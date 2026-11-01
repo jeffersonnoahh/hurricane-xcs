@@ -1738,7 +1738,7 @@
           el.querySelector('#bzPrev').onclick = function () { mDate.setMonth(mDate.getMonth() - 1); haptic(); draw(); };
           el.querySelectorAll('[data-bzm]').forEach(function (x) { x.onclick = function () { mDate = new Date(x.dataset.bzm + '-01T00:00:00'); haptic(); draw(); $('sheet').scrollTop = 0; }; });
           el.querySelector('#bzNext').onclick = function () { mDate.setMonth(mDate.getMonth() + 1); haptic(); draw(); };
-          bindClients(el, b, function () { var top = $('sheet').scrollTop; draw(); $('sheet').scrollTop = top; });
+          bindClients(el, b, function () { var top = $('sheet').scrollTop; openSheet.quiet = true; draw(); openSheet.quiet = false; $('sheet').scrollTop = top; });
           el.querySelector('#bzIn').onclick = function () { txSheet(null, { type: 'income', cat: 'other_in', biz: b.id }); };
           el.querySelector('#bzOut').onclick = function () { txSheet(null, { type: 'expense', cat: 'other_out', biz: b.id }); };
           el.addEventListener('click', function (e) { var rw = e.target.closest('.tx'); if (rw) { var t = S.tx.filter(function (x) { return x.id === rw.dataset.id; })[0]; if (t) txSheet(t); } });
@@ -1770,13 +1770,13 @@
   }
   function bindPlan(r, p) {
     var c = r.querySelector('#plCopy'); if (c) c.onclick = function () { var v = p.plan.account.replace(/\D/g, ''); (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(function () { toast('Account number copied'); }, function () { toast(p.plan.account); }); };
-    function rerender() { var top = $('sheet').scrollTop; instDetail(p); $('sheet').scrollTop = top; }
+    function rerender() { var top = $('sheet').scrollTop; openSheet.quiet = true; instDetail(p); openSheet.quiet = false; $('sheet').scrollTop = top; }
     var pa = r.querySelector('#psAmt'); if (pa) { fmtInput(pa); r.querySelector('#psAdd').onclick = function () { var v = parseNum(pa.value); if (!v) { toast('Enter the amount'); return; } p.plan.spends.push({ id: uid(), amount: v, note: r.querySelector('#psNote').value.trim(), date: today() }); haptic(); save(); renderAll(); rerender(); toast('Expense added'); }; }
     r.querySelectorAll('[data-psdel]').forEach(function (b) { b.onclick = function () { confirmBox('Delete this expense?', 'It will be removed from this account\u2019s spending.', 'Delete', true).then(function (ok) { if (!ok) return; p.plan.spends = p.plan.spends.filter(function (x) { return x.id !== b.dataset.psdel; }); save(); renderAll(); rerender(); }); }; });
     r.querySelectorAll('[data-pm]').forEach(function (b) { b.onclick = function () {
       var pl = p.plan, k = b.dataset.pm, who = b.dataset.pp; pl.ticks = pl.ticks || {}; var t = pl.ticks[k] = pl.ticks[k] || {};
       t[who] = t[who] ? 0 : Date.now(); haptic(); save(); renderAll();
-      var sc = r.closest('.sheet') || $('sheet'), top = sc.scrollTop; instDetail(p); $('sheet').scrollTop = top;
+      var sc = r.closest('.sheet') || $('sheet'), top = sc.scrollTop; openSheet.quiet = true; instDetail(p); openSheet.quiet = false; $('sheet').scrollTop = top;
     }; });
   }
   function iLeft(p) { return Math.max(0, (p.total || 0) - iPaid(p)); }
@@ -1917,6 +1917,7 @@
     var el = $(id); void el.offsetWidth;
     el.classList.add('active'); if (back) el.classList.add('back');
     window.scrollTo(0, scrollMem[id] || 0);
+    requestAnimationFrame(function () { countUpAll(el, true); });
     var navId = id === 'v-report' ? (prev === 'v-tx' ? 'v-tx' : prev === 'v-account' ? 'v-account' : 'v-home') : id === 'v-budget' ? (prev === 'v-home' ? 'v-home' : 'v-account') : id;
     if (id === 'v-budget') budFrom = prev;
     if (id === 'v-report') repFrom = prev;
@@ -2018,6 +2019,26 @@
 
   // ---------- sheet (bottom modal) ----------
   var sheetOpen = false;
+  // Count every amount up from 0 when a panel opens (skips hidden amounts, inputs and the rolling-digit numbers).
+  var NUM_RE = /^([+\u2212\-]?\s?(?:Rp\s?)?)(\d{1,3}(?:\.\d{3})+|\d{3,})(\s?(?:g|jt)?)$/;
+  function countUpAll(root, quick) {
+    if (!root || S.settings.hide || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    var els = [], vh = window.innerHeight + 200;
+    root.querySelectorAll('b, span, small, em, div, i, strong').forEach(function (el) {
+      if (els.length > 60 || el.children.length || el.closest('input,textarea,select,.dg,.masked,[data-nocount]')) return;
+      var t = el.textContent.trim(), m = t.match(NUM_RE); if (!m) return;
+      var v = +m[2].replace(/\./g, ''); if (v < 100) return;
+      var r = el.getBoundingClientRect(); if (r.top > vh || r.bottom < -50) return;
+      els.push({ el: el, pre: m[1], suf: m[3] || '', v: v, txt: t });
+    });
+    if (!els.length) return;
+    var t0 = performance.now(), D = quick ? 420 : 750;
+    (function f(now) {
+      var p = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - p, 3);
+      els.forEach(function (x) { if (!x.el.isConnected) return; x.el.textContent = p >= 1 ? x.txt : x.pre + Math.round(x.v * e).toLocaleString('id-ID') + x.suf; });
+      if (p < 1) requestAnimationFrame(f);
+    })(t0);
+  }
   function openSheet(html, onMount) {
     $('sheetBody').innerHTML = html;
     $('sheet').hidden = false; $('sheetBg').hidden = false; $('sheet').scrollTop = 0;
@@ -2025,6 +2046,7 @@
     $('sheet').classList.add('show'); $('sheetBg').classList.add('show'); document.body.classList.add('sheet-open');
     sheetOpen = true;
     if (onMount) onMount($('sheetBody'));
+    if (!openSheet.quiet) requestAnimationFrame(function () { countUpAll($('sheetBody')); });
   }
   function closeSheet() {
     if (!sheetOpen) return;
