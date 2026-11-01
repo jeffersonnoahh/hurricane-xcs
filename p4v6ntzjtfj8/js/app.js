@@ -1983,15 +1983,10 @@
 
   // ---------- navigation ----------
   var scrollMem = {};
-  // Tab switch: the new page fades and slides in on the very next frame. Glass blur and icon
-  // shadows are paused during the slide so the phone only moves one flat layer.
+  // Tab switch: no animation, the page just appears.
   function show(id, back) {
-    if (id === view || noMotion()) { show0(id, back); return; }
-    var oi = TAB_ORDER.indexOf(view), ni = TAB_ORDER.indexOf(id), dir = back || (oi > -1 && ni > -1 && ni < oi) ? -1 : 1;
     show0(id, back);
-    var el = $(id); el.classList.add('vt-in', 'vt-anim');
-    var a = el.animate([{ opacity: 0, transform: 'translate3d(' + (dir * 18) + 'px,0,0)' }, { opacity: 1, transform: 'translate3d(0,0,0)' }], { duration: 260, easing: 'cubic-bezier(.25,.8,.3,1)' });
-    a.onfinish = a.oncancel = function () { el.classList.remove('vt-anim'); };
+    $(id).classList.add('vt-in');
   }
   var TAB_ORDER = ['v-home', 'v-tx', 'v-debts', 'v-account'];
     function inView(el) { if (!el || el.hidden || !el.offsetParent) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight; }
@@ -2003,7 +1998,7 @@
     var el = $(id);
     el.classList.add('active'); if (back) el.classList.add('back');
     // Numbers start rolling once the page has settled, so the slide itself stays smooth.
-    setTimeout(function () { if (view === id) { replayRolls(el); countUpAll(el, true); } }, noMotion() ? 0 : 240);
+    setTimeout(function () { if (view === id) { replayRolls(el); countUpAll(el, true); } }, 60);
     var navId = id === 'v-report' ? (prev === 'v-tx' ? 'v-tx' : prev === 'v-account' ? 'v-account' : 'v-home') : id === 'v-budget' ? (prev === 'v-home' ? 'v-home' : 'v-account') : id;
     if (id === 'v-budget') budFrom = prev;
     if (id === 'v-report') repFrom = prev;
