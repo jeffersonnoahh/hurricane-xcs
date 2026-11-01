@@ -1774,3 +1774,8 @@ html[data-vt-dir=back]::view-transition-new(root){animation-name:vtInBack}
 ::view-transition-old(bg){animation:none;opacity:0}
 ::view-transition-new(bg){animation:none}
 ::view-transition-group(topbar){animation-duration:.3s}
+.view.vt-anim{will-change:opacity,transform}
+.view.vt-anim *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.view.vt-anim .sp,.view.vt-anim .ic{filter:none!important}
+/* rows below the screen are skipped until scrolled to (much faster page switches) */
+#txList .day{content-visibility:auto;contain-intrinsic-size:auto 240px}

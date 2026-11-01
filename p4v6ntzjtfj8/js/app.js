@@ -1983,45 +1983,27 @@
 
   // ---------- navigation ----------
   var scrollMem = {};
-  // Tab switch: the new page slides in on the very next frame, and parts both pages share
-  // (net worth / balance, Real money) fly from their old spot into the new one.
+  // Tab switch: the new page fades and slides in on the very next frame. Glass blur and icon
+  // shadows are paused during the slide so the phone only moves one flat layer.
   function show(id, back) {
     if (id === view || noMotion()) { show0(id, back); return; }
-    var pairOld = MORPH_PAIRS[view] || {}, pairNew = MORPH_PAIRS[id] || {}, fly = [];
-    Object.keys(pairOld).forEach(function (k) {
-      var el = $(pairOld[k]); if (!pairNew[k] || !inView(el)) return;
-      var cs = getComputedStyle(el);
-      fly.push({ k: k, el: el, r: el.getBoundingClientRect(), st: { font: cs.font, color: cs.color, letterSpacing: cs.letterSpacing, textAlign: cs.textAlign, whiteSpace: 'nowrap' } });
-    });
     var oi = TAB_ORDER.indexOf(view), ni = TAB_ORDER.indexOf(id), dir = back || (oi > -1 && ni > -1 && ni < oi) ? -1 : 1;
     show0(id, back);
-    var el = $(id); el.classList.add('vt-in');
-    el.animate([{ opacity: 0.2, transform: 'translateX(' + (dir * 22) + 'px)' }, { opacity: 1, transform: 'none' }], { duration: 340, easing: MORPH_EASE });
-    fly.forEach(function (f) {
-      var to = $(pairNew[f.k]); if (!inView(to)) return;
-      var tr = to.getBoundingClientRect(); if (!tr.width || !tr.height) return;
-      var cl = f.el.cloneNode(true); cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
-      Object.assign(cl.style, f.st, { position: 'fixed', left: f.r.left + 'px', top: f.r.top + 'px', width: f.r.width + 'px', height: f.r.height + 'px', margin: '0', zIndex: '45', pointerEvents: 'none', transformOrigin: '0 0', boxSizing: 'border-box' });
-      document.body.appendChild(cl);
-      var sx = tr.width / f.r.width, sy = tr.height / f.r.height, sc = f.k === 'bal' ? sy : null;
-      var end = 'translate(' + (tr.left - f.r.left) + 'px,' + (tr.top - f.r.top) + 'px) scale(' + (sc || sx) + ',' + (sc || sy) + ')';
-      to.style.opacity = '0';
-      var a = cl.animate([{ transform: 'none' }, { transform: end }], { duration: 440, easing: MORPH_EASE, fill: 'forwards' });
-      a.onfinish = a.oncancel = function () { cl.remove(); to.style.opacity = ''; };
-    });
+    var el = $(id); el.classList.add('vt-in', 'vt-anim');
+    var a = el.animate([{ opacity: 0, transform: 'translate3d(' + (dir * 18) + 'px,0,0)' }, { opacity: 1, transform: 'translate3d(0,0,0)' }], { duration: 260, easing: 'cubic-bezier(.25,.8,.3,1)' });
+    a.onfinish = a.oncancel = function () { el.classList.remove('vt-anim'); };
   }
   var TAB_ORDER = ['v-home', 'v-tx', 'v-debts', 'v-account'];
-  var MORPH_PAIRS = { 'v-home': { bal: 'hNet', real: 'realBtn' }, 'v-tx': { bal: 'txBal', real: 'txReal' } };
-  function inView(el) { if (!el || el.hidden || !el.offsetParent) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight; }
+    function inView(el) { if (!el || el.hidden || !el.offsetParent) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight; }
   function show0(id, back) {
     if (id === view) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     scrollMem[view] = window.scrollY;
     var prev = view; view = id;
-    document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active', 'back', 'vt-in'); });
+    document.querySelectorAll('.view').forEach(function (v) { v.getAnimations().forEach(function (x) { x.cancel(); }); v.classList.remove('active', 'back', 'vt-in', 'vt-anim'); });
     var el = $(id);
     el.classList.add('active'); if (back) el.classList.add('back');
-    window.scrollTo(0, scrollMem[id] || 0);
-    requestAnimationFrame(function () { replayRolls(el); countUpAll(el, true); });
+    // Numbers start rolling once the page has settled, so the slide itself stays smooth.
+    setTimeout(function () { if (view === id) { replayRolls(el); countUpAll(el, true); } }, noMotion() ? 0 : 240);
     var navId = id === 'v-report' ? (prev === 'v-tx' ? 'v-tx' : prev === 'v-account' ? 'v-account' : 'v-home') : id === 'v-budget' ? (prev === 'v-home' ? 'v-home' : 'v-account') : id;
     if (id === 'v-budget') budFrom = prev;
     if (id === 'v-report') repFrom = prev;
@@ -2030,12 +2012,13 @@
     $('fab').classList.toggle('gone', id === 'v-account' || id === 'v-report');
     if (id === 'v-debts') renderDebts();
     if (id === 'v-budget' || id === 'v-report') { growBars($(id)); }
-    $('topTitle').textContent = TITLES[id] || ''; onScroll();
+    $('topTitle').textContent = TITLES[id] || '';
+    window.scrollTo(0, scrollMem[id] || 0); onScroll();
   }
   var budFrom = 'v-account';
   var TITLES = { 'v-home': 'Apex', 'v-tx': 'Activity', 'v-budget': 'Budgets', 'v-report': 'Report', 'v-account': 'More', 'v-debts': 'Money owed' };
   function onScroll() { var y = window.scrollY; $('topbar').classList.toggle('show', y > 120);
-    if (view === 'v-home') { var nv = $('hNet'); $('topTitle').innerHTML = '<span class="tb-l">Net worth</span> ' + (S.settings.hide || netHidden ? 'Rp ••••••' : money(NET_LAST)); } document.documentElement.style.setProperty('--p', Math.max(0, Math.min(1, y / 180)).toFixed(3)); }
+    if (view === 'v-home') { var nv = $('hNet'); $('topTitle').innerHTML = '<span class="tb-l">Net worth</span> ' + (S.settings.hide || netHidden ? 'Rp ••••••' : money(NET_LAST)); } var pv = Math.max(0, Math.min(1, y / 180)).toFixed(3); if (pv !== onScroll.p) { onScroll.p = pv; document.documentElement.style.setProperty('--p', pv); } }
 
   // ---------- extra motion ----------
   // Coin burst (used when income is added).
@@ -2112,8 +2095,8 @@
   function moveInd() {
     var on = document.querySelector('.bottom-nav button.on'), ind = $('navInd'), nav = $('nav');
     if (!on) return;
-    var r = on.getBoundingClientRect(), nr = nav.getBoundingClientRect();
-    var x = r.left - nr.left, dist = Math.abs(x - (ind._x == null ? x : ind._x));
+    if (!on._nx || moveInd.w !== window.innerWidth) { moveInd.w = window.innerWidth; var nr = nav.getBoundingClientRect(); document.querySelectorAll('.bottom-nav button').forEach(function (b) { var br = b.getBoundingClientRect(); b._nx = { x: br.left - nr.left, w: br.width }; }); }
+    var r = { width: on._nx.w }, x = on._nx.x, dist = Math.abs(x - (ind._x == null ? x : ind._x));
     ind._x = x;
     ind.style.width = r.width + 'px';
     ind.style.transform = 'translateX(' + x + 'px)';
