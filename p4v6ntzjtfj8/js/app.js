@@ -360,9 +360,22 @@
   function isRes(id) { var w = S.wallets.filter(function (x) { return x.id === id; })[0]; return !!(w && /^reserve$/i.test(String(w.name).trim())); }
   function resMoney(id, html) { return netHidden && !S.settings.hide && isRes(id) ? '<span class="masked">Rp ••••••</span>' : html; }
   function paintNetEye() { var e = $('eyeBtn'); if (e) e.innerHTML = (S.settings.hide || netHidden) ? EYE_OFF : EYE_OPEN; }
+  // Face ID before showing hidden amounts (uses the Apex passkey; creates an unlock-only passkey the first time).
+  function faceGate() {
+    if (S.settings.revealFaceId === false || !window.PublicKeyCredential || !navigator.credentials) return Promise.resolve(true);
+    return (PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable ? PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() : Promise.resolve(false)).then(function (avail) {
+      if (!avail) return true; // no Face ID / Touch ID on this device
+      var ch = crypto.getRandomValues(new Uint8Array(32)), id = S.settings.unlockCred;
+      if (id) return navigator.credentials.get({ publicKey: { challenge: ch, rpId: location.hostname, userVerification: 'required', timeout: 60000, allowCredentials: [{ type: 'public-key', id: unb64(id) }] } }).then(function () { return true; });
+      return navigator.credentials.create({ publicKey: { rp: { name: 'Apex', id: location.hostname }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'Apex unlock', displayName: 'Apex unlock' }, challenge: ch,
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }], authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'preferred', userVerification: 'required' }, timeout: 60000 } })
+        .then(function (cred) { S.settings.unlockCred = b64(cred.rawId); save(); return true; });
+    }).catch(function () { return false; });
+  }
   function toggleNet() {
     if (S.settings.hide) { togglePrivacy(); return; }
-    netHidden = !netHidden; haptic();
+    if (netHidden) { faceGate().then(function (ok) { if (!ok) { toast('Face ID needed to show amounts'); return; } netHidden = false; haptic(); renderAll(); paintNetEye(); onScroll && onScroll(); }); return; }
+    netHidden = true; haptic();
     var el = $('hNet');
     renderAll();
     paintNetEye(); onScroll && onScroll();
@@ -2985,6 +2998,7 @@
     $('sheetBg').onclick = closeSheet;
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
 
+    $('faceRevealToggle').checked = S.settings.revealFaceId !== false; $('faceRevealToggle').onchange = function () { var on = this.checked, el = this; if (on) { S.settings.revealFaceId = true; save(); toast('Face ID will be asked to show amounts'); return; } faceGate().then(function (ok) { if (!ok) { el.checked = true; return; } S.settings.revealFaceId = false; save(); toast('Face ID off for showing amounts'); }); };
     $('eyeBtnWrap').onclick = toggleNet; $('txBal').onclick = function () { if (walletSel !== 'all' && isRes(walletSel)) toggleNet(); };
     $('hideToggle').onchange = function () { S.settings.hide = this.checked; save(); renderAll(); };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
@@ -3626,6 +3640,7 @@
         var ext = cred.getClientExtensionResults ? cred.getClientExtensionResults() : {}, out = ext.prf && ext.prf.results && ext.prf.results.first;
         if (!out) throw new Error('This device can’t unlock with Face ID yet. Update to iOS 18 or use a passphrase.');
         if (!cred.response.userHandle) throw new Error('Passkey has no account');
+        S.settings.unlockCred = b64(cred.rawId);
         return { id: hex(cred.response.userHandle), pass: 'prf:' + b64(out) };
       });
   }
@@ -3638,6 +3653,7 @@
       extensions: { prf: { eval: { first: PRF_SALT } } } } })
       .then(function (cred) {
         var ext = cred.getClientExtensionResults ? cred.getClientExtensionResults() : {}, out = ext.prf && ext.prf.results && ext.prf.results.first;
+        S.settings.unlockCred = b64(cred.rawId);
         if (out) return { id: hex(uidB), pass: 'prf:' + b64(out) };
         if (ext.prf && ext.prf.enabled === false) throw new Error('This device can’t unlock with Face ID yet. Update to iOS 18 or use a passphrase.');
         toast('Passkey saved. Confirm Face ID once more to finish.');
