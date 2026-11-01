@@ -538,7 +538,7 @@
     var chip = $('hChip'), lbl = { 7: '1W', 30: '1M', 90: '3M', 365: '1Y' }[n];
     chip.hidden = false; chip.className = 'chip' + (up ? '' : ' dn');
     var pc = first ? Math.abs(diff / first * 100) : 0;
-    chip.innerHTML = (up ? '▲ ' : '▼ ') + money(Math.abs(diff), { rp: true }) + ' · ' + pc.toFixed(pc < 10 ? 1 : 0) + '% · ' + lbl;
+    chip.innerHTML = (up ? '▲ ' : '▼ ') + (netHidden && !S.settings.hide ? 'Rp ••••••' : money(Math.abs(diff), { rp: true })) + ' · ' + pc.toFixed(pc < 10 ? 1 : 0) + '% · ' + lbl;
     document.querySelectorAll('#hRange button').forEach(function (b) { b.classList.toggle('on', +b.dataset.r === n); });
   }
 

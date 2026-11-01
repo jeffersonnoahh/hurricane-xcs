@@ -1740,3 +1740,7 @@ body.sheet-open .view.active{scale:1!important}
 .dw-files{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .dw-f{width:72px;height:72px;border-radius:12px;overflow:hidden;padding:0;background:var(--surface);box-shadow:inset 0 0 0 .5px var(--line2);display:grid;place-items:center;font-size:12px;font-weight:800;color:#ef4444}
 .dw-f img{width:100%;height:100%;object-fit:cover}
+
+/* no accidental text selection on long press */
+.view,.card,.sheet,h1,h2,h3,.sheet-sec{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,[contenteditable],.view input,.sheet input,.sheet textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
