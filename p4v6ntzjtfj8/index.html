@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
+<style id="preCss">body>*:not(#splash){display:none!important}</style>
 <style>html,body{background:#060807;margin:0}html[data-theme=light],html[data-theme=light] body{background:#f5f3ee}</style>
 <meta name="color-scheme" content="dark light">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -31,12 +32,12 @@
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261101-74" media="print" onload="this.media='all';if(window.__cssOk)window.__cssOk()">
+<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261101-74" media="print" onload="this.media='all';var p=document.getElementById('preCss');if(p)p.remove();if(window.__cssOk)window.__cssOk()">
 <noscript><link rel="stylesheet" href="css/style.css?v=20261101-74"></noscript>
 </head>
 <body>
 <style>
-#splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(90% 60% at 50% 38%,rgba(16,185,129,.20),transparent 62%),#060807;transition:opacity .55s cubic-bezier(.2,.8,.2,1),visibility .55s}
+#splash{position:fixed;inset:0;bottom:-160px;padding-bottom:160px;z-index:200;display:grid;place-items:center;background:radial-gradient(90% 60% at 50% 38%,rgba(16,185,129,.20),transparent 62%),#060807;transition:opacity .55s cubic-bezier(.2,.8,.2,1),visibility .55s}
 [data-theme="light"] #splash{background:radial-gradient(90% 60% at 50% 38%,rgba(16,185,129,.14),transparent 62%),#f5f3ee}
 #splash .sp-in{display:flex;flex-direction:column;align-items:center;transition:transform .6s cubic-bezier(.32,.72,0,1),opacity .45s;will-change:transform,opacity}
 #splash .sp-logo{position:relative;width:96px;height:96px;animation:spBreathe 2.4s ease-in-out infinite}
@@ -438,7 +439,7 @@
     ['js/bca-parser.js?v=20261101-4', 'js/app.js?v=20261101-114'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
   }
   var l = document.getElementById('mainCss');
-  if (l && l.media === 'all') boot(); else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; boot(); }, 5000); }
+  if (l && l.media === 'all') { var p0 = document.getElementById('preCss'); if (p0) p0.remove(); boot(); } else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; var p = document.getElementById('preCss'); if (p) p.remove(); boot(); }, 5000); }
 })();
 </script>
 </body>
