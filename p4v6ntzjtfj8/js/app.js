@@ -413,7 +413,7 @@
   // Net worth starts hidden every time Apex opens; tap the eye next to "Net worth" to show it.
   var netHidden = true;
   function isRes(id) { var w = S.wallets.filter(function (x) { return x.id === id; })[0]; return !!(w && /^reserve$/i.test(String(w.name).trim())); }
-  function resMoney(id, html) { return netHidden && !S.settings.hide && isRes(id) ? '<span class="masked">Rp ••••••</span>' : html; }
+  function resMoney(id, html) { return netHidden && !S.settings.hide && (id === 'all' || isRes(id)) ? '<span class="masked">Rp ••••••</span>' : html; }
   function paintNetEye() { var hh = S.settings.hide || netHidden, e = $('eyeBtn'); if (e) e.innerHTML = hh ? EYE_OFF : EYE_OPEN; document.querySelectorAll('[data-priv]').forEach(function (b) { b.innerHTML = hh ? EYE_OFF : EYE_OPEN; b.classList.toggle('on', hh); }); }
   // Face ID before showing hidden amounts (uses the Apex passkey; creates an unlock-only passkey the first time).
   // Face ID once per visit before showing hidden amounts. The passkey call must start right inside the tap (iPhone rule), so nothing async runs before it.
@@ -639,8 +639,8 @@
       '<div class="dw-stack">' + ws.map(function (w, i) {
         var g = walletGrad(w);
         return '<div class="dw-card" data-i="' + i + '" style="--a:' + g[0] + ';--b:' + g[1] + ';z-index:' + (i + 1) + '"><i class="dw-sheen"></i>' +
-          '<div class="dw-strip"><span class="dw-ic">' + (spKey(w) ? sprite(spKey(w)) : '<b>' + esc(w.icon) + '</b>') + '</span><span class="dw-name">' + esc(w.name) + '</span><span class="dw-amt">' + money(balance(w.id)) + '</span></div>' +
-          '<div class="dw-body"><span class="dw-grp">' + ((GROUPS[groupOf(w)] || {}).name || '') + '</span><span class="dw-big">' + money(balance(w.id)) + '</span></div></div>';
+          '<div class="dw-strip"><span class="dw-ic">' + (spKey(w) ? sprite(spKey(w)) : '<b>' + esc(w.icon) + '</b>') + '</span><span class="dw-name">' + esc(w.name) + '</span><span class="dw-amt">' + resMoney(w.id, money(balance(w.id))) + '</span></div>' +
+          '<div class="dw-body"><span class="dw-grp">' + ((GROUPS[groupOf(w)] || {}).name || '') + '</span><span class="dw-big">' + resMoney(w.id, money(balance(w.id))) + '</span></div></div>';
       }).join('') + '<div class="dw-info"></div></div></div>';
     document.body.appendChild(ov);
     var inEl = ov.querySelector('.dw-in'), stack = ov.querySelector('.dw-stack'), cards = [].slice.call(stack.querySelectorAll('.dw-card')), info = ov.querySelector('.dw-info');
@@ -1020,7 +1020,7 @@
     $('pillIc').outerHTML = icon(wo, 'sm').replace('<span ', '<span id="pillIc" ');
     $('pillName').textContent = wo.name;
     var hw = w === 'all' ? null : wallet(w), hb = $('txHold');
-    if (netHidden && !S.settings.hide && w !== 'all' && isRes(w)) { $('txBal').innerHTML = '<span class="masked">Rp ••••••</span>'; RS.txBal = null; $('txBal').removeAttribute('data-sig'); } else setMoney($('txBal'), hw && hasHolding(hw) ? (wViewOf(hw) === 'cost' ? Math.round((+hw.holding.cost || 0) + cashPart(hw)) : (liveValue(hw) != null ? Math.round(liveValue(hw) + cashPart(hw)) : balance(w))) : balance(w));
+    if (netHidden && !S.settings.hide && (w === 'all' || isRes(w))) { $('txBal').innerHTML = '<span class="masked">Rp ••••••</span>'; RS.txBal = null; $('txBal').removeAttribute('data-sig'); } else setMoney($('txBal'), hw && hasHolding(hw) ? (wViewOf(hw) === 'cost' ? Math.round((+hw.holding.cost || 0) + cashPart(hw)) : (liveValue(hw) != null ? Math.round(liveValue(hw) + cashPart(hw)) : balance(w))) : balance(w));
     if (hb) { var hh = hw ? holdHtml(hw) : ''; hb.innerHTML = hh; hb.hidden = !hh; if (hh) bindHold(hb, hw, renderTx); }
     // Real money: what's actually in this wallet (booked-but-not-received income taken out)
     var rb = $('txReal');
@@ -1178,7 +1178,7 @@
     }).join('');
 
     $('walletList').innerHTML = S.wallets.map(function (w) {
-      return '<button class="w-row" data-id="' + esc(w.id) + '" data-edit-wallet="' + esc(w.id) + '"><span class="drag" aria-label="Drag">≡</span>' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + money(balance(w.id)) + (w.excluded ? ' · not in total' : '') + '</span>' + plTag(w) + '</span><span class="muted">›</span></button>';
+      return '<button class="w-row" data-id="' + esc(w.id) + '" data-edit-wallet="' + esc(w.id) + '"><span class="drag" aria-label="Drag">≡</span>' + icon(w) + '<span class="grow">' + esc(w.name) + '<span class="sub">' + resMoney(w.id, money(balance(w.id))) + (w.excluded ? ' · not in total' : '') + '</span>' + plTag(w) + '</span><span class="muted">›</span></button>';
     }).join('');
     if (!$('walletList').dataset.sortable) { $('walletList').dataset.sortable = 1; makeSortable($('walletList'), '.w-row', '.drag', function (ids) { reorderWallets(ids); }); }
     document.querySelectorAll('#catSeg button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === catTab); });
