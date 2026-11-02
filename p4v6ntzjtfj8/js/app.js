@@ -4471,14 +4471,20 @@
       else if (k === 'del') e = e.slice(0, -1);
       else if (k === 'done') { kpCommit(); kpHide(); return; }
       else if (k === 'save') { kpCommit(); var sv = kpSaveBtn(); kpHide(); if (sv) sv.click(); return; }
-      else if (k === 'scan') { var sc = document.getElementById('fScan'); kpCommit(); kpHide(); if (sc) sc.click(); return; }
-      else if (k === 'note') { kpCommit(); kpHide(); var nt = document.querySelector('.sheet #fNote, .sheet textarea, .sheet input[id*=Note]'); if (nt) { nt.scrollIntoView({ block: 'center' }); nt.focus(); } return; }
       else if (isOp(k)) { if (!e) { if (k !== '-') return; } if (isOp(last)) e = e.slice(0, -1); e += k; }
       else if (k === '.') { var seg = e.split(/[+\-*/]/).pop(); if (seg.indexOf('.') !== -1) return; e += seg ? '.' : '0.'; }
       else { if (KP.fresh) e = ''; var seg2 = e.split(/[+\-*/]/).pop(); if (seg2 === '0' && k !== '.') e = e.slice(0, -1); if (seg2.replace('.', '').length >= 13) return; e += (k === '000' && !seg2) ? '0' : k; }
       KP.fresh = false; KP.expr = e; kpPaint();
     };
-    el.addEventListener('pointerdown', function (ev) { var b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); b.classList.add('down'); haptic(); var k = b.dataset.k; if (k) press(k); else if (b.dataset.amt) { KP.expr = b.dataset.amt; KP.fresh = false; kpPaint(); } });
+    el.addEventListener('pointerdown', function (ev) { var b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); b.classList.add('down'); var k = b.dataset.k; if (k === 'scan' || k === 'note') return; if (k) press(k); else if (b.dataset.amt) { KP.expr = b.dataset.amt; KP.fresh = false; kpPaint(); } });
+    el.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-k=scan],[data-k=note]'); if (!b) return;
+      kpCommit(); kpHide();
+      if (b.dataset.k === 'scan') {
+        var fi = document.querySelector('.sheet #fFiles input[type=file], .sheet .att input[type=file]');
+        if (fi) fi.click(); else { var sc = document.getElementById('fScan'); if (sc) sc.click(); }
+      } else { var nt = document.querySelector('.sheet #fNote, .sheet textarea, .sheet input[id*=Note]'); if (nt) { nt.scrollIntoView({ block: 'center' }); nt.focus(); } }
+    });
     el.addEventListener('pointerup', function (ev) { el.querySelectorAll('.down').forEach(function (b) { b.classList.remove('down'); }); });
     el.addEventListener('pointercancel', function () { el.querySelectorAll('.down').forEach(function (b) { b.classList.remove('down'); }); });
     document.addEventListener('keydown', function (ev) {
@@ -4509,18 +4515,18 @@
     KP.input = inp; KP.expr = String(parseNum(inp.value) || ''); KP.fresh = !!KP.expr;
     document.querySelectorAll('.amt-wrap.kp-on').forEach(function (w) { w.classList.remove('kp-on'); });
     var wrap = inp.closest('.amt-wrap'); if (wrap) wrap.classList.add('kp-on');
-    el.querySelector('[data-k=scan]').hidden = !document.getElementById('fScan');
+    el.querySelector('[data-k=scan]').hidden = !document.querySelector('.sheet #fFiles input[type=file], .sheet .att input[type=file]') && !document.getElementById('fScan');
     el.querySelector('[data-k=note]').hidden = !document.querySelector('.sheet #fNote, .sheet textarea');
     $('kpChips').innerHTML = kpSuggest(inp).map(function (a) { return '<button type="button" data-amt="' + a + '">' + a.toLocaleString('id-ID') + '</button>'; }).join('');
     el.classList.add('show'); document.body.classList.add('kp-open');
     var sh = document.getElementById('sheet'), ph = el.offsetHeight;
-    if (sh) { sh.style.bottom = (ph - 24) + 'px'; sh.style.maxHeight = (window.innerHeight - ph - 30) + 'px'; sh.style.borderRadius = '28px'; }
+    if (sh) { sh.style.maxHeight = (window.innerHeight - ph - 30 + 24) + 'px'; sh.style.transform = 'translateY(' + (-(ph - 24)) + 'px)'; sh.style.borderRadius = '28px'; }
     setTimeout(function () { var sr = sh.getBoundingClientRect(), ir = inp.getBoundingClientRect(); if (ir.top < sr.top + 60 || ir.bottom > sr.bottom - 10) sh.scrollTop += ir.top - sr.top - 90; }, 380);
   }
   function kpHide() {
     if (!KP.el) return; KP.el.classList.remove('show'); document.body.classList.remove('kp-open');
     document.querySelectorAll('.amt-wrap.kp-on').forEach(function (w) { w.classList.remove('kp-on'); });
-    var sh = document.getElementById('sheet'); if (sh) { sh.style.bottom = ''; sh.style.maxHeight = ''; sh.style.borderRadius = ''; }
+    var sh = document.getElementById('sheet'); if (sh) { sh.style.transform = ''; sh.style.maxHeight = ''; sh.style.borderRadius = ''; }
     KP.input = null;
   }
   function kpAttach(root) {
