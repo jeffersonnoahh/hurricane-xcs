@@ -31,7 +31,8 @@
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" href="css/style.css?v=20261101-74">
+<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261101-74" media="print" onload="this.media='all';if(window.__cssOk)window.__cssOk()">
+<noscript><link rel="stylesheet" href="css/style.css?v=20261101-74"></noscript>
 </head>
 <body>
 <style>
@@ -428,7 +429,17 @@
 <div class="toast" id="toast" hidden></div>
 
 
-<script src="js/bca-parser.js?v=20261101-4"></script>
-<script src="js/app.js?v=20261101-114"></script>
+<script>
+// Load the app once the design file is ready; the dark loader above is already on screen meanwhile.
+(function () {
+  var done = false;
+  function boot() {
+    if (done) return; done = true;
+    ['js/bca-parser.js?v=20261101-4', 'js/app.js?v=20261101-114'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
+  }
+  var l = document.getElementById('mainCss');
+  if (l && l.media === 'all') boot(); else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; boot(); }, 5000); }
+})();
+</script>
 </body>
 </html>
