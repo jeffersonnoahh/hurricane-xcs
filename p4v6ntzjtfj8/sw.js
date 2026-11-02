@@ -10,7 +10,14 @@ self.addEventListener('fetch', function (e) {
   if (/\/files\//.test(url.pathname)) return; // encrypted attachments: never cached by the service worker
   if (/firebaseio\.com|coingecko\.com|script\.google|googleusercontent|tessdata|jsdelivr/.test(url.host + url.pathname) && !/cloudfront/.test(url.host)) return;
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(function (r) { var c = r.clone(); caches.open(CACHE).then(function (ca) { ca.put('./index.html', c); }); return r; }).catch(function () { return caches.match('./index.html'); }));
+    // Fresh page when the network answers quickly; otherwise open instantly from the saved copy (and refresh it in the background).
+    var net = fetch(req).then(function (r) { if (r && r.ok) { var c = r.clone(); caches.open(CACHE).then(function (ca) { ca.put('./index.html', c); }); } return r; });
+    e.respondWith(caches.match('./index.html').then(function (hit) {
+      if (!hit) return net;
+      var slow = new Promise(function (res) { setTimeout(function () { res(hit); }, 1200); });
+      return Promise.race([net.catch(function () { return hit; }), slow]);
+    }));
+    e.waitUntil(net.catch(function () {}));
     return;
   }
   if (url.origin === location.origin || /cloudfront\.net|fonts\.(googleapis|gstatic)\.com/.test(url.host)) {
