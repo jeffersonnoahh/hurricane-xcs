@@ -271,6 +271,48 @@
     setTimeout(function () { sp.classList.add('out'); document.body.classList.add('app-in'); setTimeout(function () { sp.remove(); }, 700); }, wait);
   }
   function haptic() { try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {} }
+  // ---------- Sound effects: tiny sounds made in code (no files). On/off in More. ----------
+  var SFX = { ctx: null, last: {} };
+  function sfxCtx() {
+    if (S && S.settings && S.settings.sound === false) return null;
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    if (!SFX.ctx) { try { SFX.ctx = new AC(); SFX.master = SFX.ctx.createGain(); SFX.master.gain.value = 0.55; SFX.master.connect(SFX.ctx.destination); } catch (e) { return null; } }
+    if (SFX.ctx.state === 'suspended') SFX.ctx.resume();
+    return SFX.ctx;
+  }
+  // iPhone only allows sound after a tap, so wake the audio on the first touch.
+  ['touchend', 'pointerup', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function wake() { var c = sfxCtx(); if (c) { var b = c.createBuffer(1, 1, 22050), src = c.createBufferSource(); src.buffer = b; src.connect(c.destination); src.start(0); } document.removeEventListener(ev, wake, true); }, true); });
+  function tone(c, o) {
+    var t = c.currentTime + (o.at || 0), osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(o.f, t); if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t + o.d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.v || 0.2, t + (o.a || 0.005)); g.gain.exponentialRampToValueAtTime(0.0001, t + o.d);
+    osc.connect(g); g.connect(SFX.master); osc.start(t); osc.stop(t + o.d + 0.02);
+  }
+  function noise(c, o) {
+    var t = c.currentTime + (o.at || 0), len = Math.floor(c.sampleRate * o.d), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    var src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); src.buffer = buf;
+    f.type = o.ft || 'bandpass'; f.frequency.setValueAtTime(o.f, t); if (o.f2) f.frequency.exponentialRampToValueAtTime(o.f2, t + o.d); f.Q.value = o.q || 1;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.v || 0.2, t + (o.a || 0.01)); g.gain.exponentialRampToValueAtTime(0.0001, t + o.d);
+    src.connect(f); f.connect(g); g.connect(SFX.master); src.start(t); src.stop(t + o.d + 0.02);
+  }
+  function sfx(name) {
+    var c = sfxCtx(); if (!c) return;
+    var now = performance.now(); if (SFX.last[name] && now - SFX.last[name] < 35) return; SFX.last[name] = now;
+    try {
+      switch (name) {
+        case 'click': noise(c, { f: 2600, q: 1.2, d: 0.03, v: 0.18, a: 0.002 }); tone(c, { f: 1800, d: 0.025, v: 0.04, type: 'triangle' }); break;
+        case 'soft': noise(c, { f: 1500, q: 1, d: 0.035, v: 0.12, a: 0.002 }); break;
+        case 'pop': tone(c, { f: 420, f2: 900, d: 0.09, v: 0.22 }); tone(c, { f: 1300, d: 0.06, v: 0.05, at: 0.03 }); break;
+        case 'coin': tone(c, { f: 1568, d: 0.12, v: 0.16, type: 'square' }); tone(c, { f: 2093, d: 0.42, v: 0.14, type: 'square', at: 0.08 }); tone(c, { f: 4186, d: 0.3, v: 0.03, at: 0.08 }); break;
+        case 'whoosh': noise(c, { f: 500, f2: 3200, q: 0.8, d: 0.28, v: 0.22, a: 0.08 }); tone(c, { f: 660, f2: 330, d: 0.18, v: 0.05, at: 0.05 }); break;
+        case 'bubble': [0, 0.11, 0.24, 0.34].forEach(function (at, i) { tone(c, { f: 380 + i * 90, f2: 900 + i * 160, d: 0.08, v: 0.09, at: at }); }); break;
+        case 'tick': tone(c, { f: 2400, d: 0.018, v: 0.05, type: 'triangle' }); break;
+        case 'ding': tone(c, { f: 1318.5, d: 0.9, v: 0.16 }); tone(c, { f: 1975.5, d: 0.7, v: 0.07, at: 0.02 }); tone(c, { f: 2637, d: 0.5, v: 0.03, at: 0.04 }); break;
+        case 'sparkle': [0, 0.06, 0.12, 0.2, 0.27].forEach(function (at, i) { tone(c, { f: [2093, 2637, 3136, 2349, 3520][i], d: 0.22, v: 0.05, at: at }); }); break;
+      }
+    } catch (e) {}
+  }
 
   // ---------- state ----------
   var cur = new Date(); cur.setDate(1);
@@ -2427,7 +2469,7 @@
             dd.biz = root.querySelector('#fBiz').value || undefined; var bt = addTx({ biz: dd.biz, type: 'income', cat: st.cat, amount: a, wallet: w, date: dd.created, merchant: payer, note: dd.title + ' (not received yet)', debtId: dd.id, files: files }); dd.bookTx = bt.id; dd.ownBook = true;
             var pn = parseNum(root.querySelector('#fPaidNow').value);
             if (pn) dd.payments.push({ id: uid(), amount: Math.min(pn, a), date: dd.created, wallet: w, note: 'Already received', txId: null });
-            haptic(); save(); closeSheet(); renderAll();
+            haptic(); sfx('coin'); save(); closeSheet(); renderAll();
             toast(money(a, { rp: true }) + ' added to ' + wallet(w).name + ' · ' + payer + ' still owes ' + money(a - Math.min(pn, a), { rp: true }));
             return;
           }
@@ -2443,7 +2485,7 @@
           if (t.debtId) S.debts.forEach(function (d) { if (d.bookTx === t.id) d.files = files; });
           if (isNew) S.tx.push(t);
           if (t.debtId) S.debts.forEach(function (d) { (d.payments || []).forEach(function (p) { if (p.txId === t.id) { p.amount = t.amount; p.date = t.date; p.wallet = t.wallet; } }); if (d.bookTx === t.id && d.ownBook) { d.amount = t.amount; d.wallet = t.wallet; } });
-          haptic(); save(); closeSheet(); renderAll(); toast(isNew ? 'Added ✓' : 'Saved ✓');
+          haptic(); sfx(st.type === 'income' ? 'coin' : st.type === 'expense' ? 'whoosh' : 'pop'); save(); closeSheet(); renderAll(); toast(isNew ? 'Added ✓' : 'Saved ✓');
           if (isNew && t.type === 'income') { var fr = $('fab').getBoundingClientRect(); burst(fr.left + fr.width / 2, fr.top); }
         };
         var del = root.querySelector('#fDel');
@@ -3086,6 +3128,7 @@
 
     $('faceRevealToggle').checked = S.settings.revealFaceId === true; $('faceRevealToggle').onchange = function () { var on = this.checked, el = this; if (on) { S.settings.revealFaceId = true; save(); toast('Face ID will be asked to show amounts (iPhone shows a passkey sheet)'); return; } faceGate().then(function (ok) { if (!ok) { el.checked = true; return; } S.settings.revealFaceId = false; save(); toast('Face ID off for showing amounts'); }); };
     $('eyeBtnWrap').onclick = toggleNet; $('txBal').onclick = function () { if (walletSel !== 'all' && isRes(walletSel)) toggleNet(); };
+    if ($('soundToggle')) { $('soundToggle').checked = S.settings.sound !== false; $('soundToggle').onchange = function () { S.settings.sound = this.checked; save(); if (this.checked) sfx('pop'); }; }
     $('hideToggle').onchange = function () { if (this.checked) { S.settings.hide = true; netHidden = true; save(); renderAll(); paintNetEye(); } else { this.checked = true; revealAll(); } };
     $('hSync').onclick = function () { haptic(); if (S.review.length) { show('v-account'); setTimeout(function () { $('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); } else sync(true); };
     $('seeAllWallets').onclick = walletPicker;
@@ -3369,6 +3412,7 @@
       });
   }
   function confetti() {
+    sfx('sparkle');
     if (matchMedia('(prefers-reduced-motion: reduce)').matches || !document.body.animate) return;
     var cols = ['#34d399', '#fbbf24', '#60a5fa', '#f472b6', '#a78bfa', '#fff'];
     for (var k = 0; k < 70; k++) (function (k) {
@@ -4341,7 +4385,7 @@
       dayEl.textContent = 'Day ' + Math.round(dNow).toLocaleString('id-ID') + ' · ' + cd.getDate() + ' ' + MONTHS[cd.getMonth()].slice(0, 3) + ' ' + cd.getFullYear();
       when.textContent = MONTHS[cd.getMonth()] + ' ' + cd.getFullYear(); ago.textContent = 'Replaying…';
       if (!hidden) val.textContent = money(Math.round(hv)); else val.innerHTML = '<span class="masked">Rp ••••••</span>';
-      var mk = ym(cd); if (mk !== lastMonth) { lastMonth = mk; if (p < 1) haptic(); }
+      var mk = ym(cd); if (mk !== lastMonth) { lastMonth = mk; if (p < 1) { haptic(); sfx('tick'); } }
       var cds = ymd(cd);
       while (bi < big.length && big[bi].date <= cds) { if (now - lastPop > 160) { pop(big[bi]); lastPop = now; } bi++; }
       if (p < 1) { requestAnimationFrame(frame); return; }
@@ -4350,12 +4394,13 @@
       setSlider(lastIdx); drawMonth(lastIdx);
       var gain = pts[pts.length - 1].v - pts[0].v;
       dayEl.textContent = days.toLocaleString('id-ID') + ' days of your money ' + (gain >= 0 ? '🚀' : '');
-      if (gain > 0 && !stop) confetti();
+      sfx('ding'); if (gain > 0 && !stop) confetti();
     })(t0);
   }
 
   // 4. Goal jar: liquid that fills to the saved percent, with a moving wave
   function jarSvg(pct, col, size) {
+    if (size > 80) setTimeout(function () { sfx('bubble'); }, 450);
     var p = Math.max(0, Math.min(1, pct || 0)), y = 112 - p * 92, id = 'jw' + Math.random().toString(36).slice(2, 7);
     return '<svg class="jar" viewBox="0 0 100 124" width="' + size + '" height="' + (size * 1.24) + '" style="--jy:' + y.toFixed(1) + 'px">' +
       '<defs><clipPath id="' + id + '"><path d="M22 18h56v8c10 6 14 16 14 28v52c0 8-6 14-14 14H22c-8 0-14-6-14-14V54c0-12 4-22 14-28z"/></clipPath>' +
@@ -4476,7 +4521,7 @@
       else { if (KP.fresh) e = ''; var seg2 = e.split(/[+\-*/]/).pop(); if (seg2 === '0' && k !== '.') e = e.slice(0, -1); if (seg2.replace('.', '').length >= 13) return; e += (k === '000' && !seg2) ? '0' : k; }
       KP.fresh = false; KP.expr = e; kpPaint();
     };
-    el.addEventListener('pointerdown', function (ev) { var b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); b.classList.add('down'); var k = b.dataset.k; if (k === 'scan' || k === 'note') return; if (k) press(k); else if (b.dataset.amt) { KP.expr = b.dataset.amt; KP.fresh = false; kpPaint(); } });
+    el.addEventListener('pointerdown', function (ev) { var b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); b.classList.add('down'); var k = b.dataset.k; if (k === 'scan' || k === 'note') return; sfx(k === 'done' || k === 'save' ? 'pop' : k === 'C' || k === 'del' ? 'soft' : 'click'); if (k) press(k); else if (b.dataset.amt) { KP.expr = b.dataset.amt; KP.fresh = false; kpPaint(); } });
     el.addEventListener('click', function (ev) {
       var b = ev.target.closest('[data-k=scan],[data-k=note]'); if (!b) return;
       kpCommit(); kpHide();
