@@ -2153,6 +2153,8 @@
     sh.classList.add('show'); $('sheetBg').classList.add('show'); document.body.classList.add('sheet-open');
     sheetOpen = true;
     if (onMount) onMount($('sheetBody'));
+    if (KP.input) kpHide();
+    kpAttach($('sheetBody'));
     morphSrc = null;
     if (m) {
       void sh.offsetWidth;
@@ -2166,6 +2168,7 @@
   function closeSheet() {
     if (!sheetOpen) return;
     sheetOpen = false;
+    if (KP.input) kpHide();
     var sh = $('sheet'), src = morphSrc; morphSrc = null;
     if (src && src.isConnected && !sh.style.transform && !noMotion() && !document.querySelector('.sorting')) {
       var r = src.getBoundingClientRect();
@@ -4432,6 +4435,101 @@
     if ($('repBubbles')) $('repBubbles').addEventListener('click', function (e) { var p = e.target.closest('[data-bcat]'); if (!p) return; haptic(); p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); if (p.dataset.bcat !== '_other') setTimeout(function () { catDetail(cat(p.dataset.bcat)); }, 180); });
     if ($('hWidgets')) $('hWidgets').addEventListener('click', function (e) { var w = e.target.closest('[data-wg]'); if (!w) return; haptic(); var k = w.dataset.wg; if (k === 'gold') goldSheet(); else if (k === 'km') komisiSheet(); else show('v-budget'); });
     if ($('tmBtn')) $('tmBtn').onclick = function () { haptic(); timeMachine(); };
+  }
+
+  // ---------- Calculator keypad for money boxes (replaces the phone keyboard) ----------
+  var KP = { el: null, input: null, expr: '', fresh: false };
+  function kpFmtNum(n) { var neg = n < 0; n = Math.abs(n); var parts = String(n).split('.'), i = (+parts[0]).toLocaleString('id-ID'); return (neg ? '−' : '') + i + (parts[1] != null ? ',' + parts[1] : ''); }
+  function kpShow(expr) { return expr.replace(/\d+(\.\d*)?/g, function (m) { var dot = m.indexOf('.'); return dot === -1 ? (+m).toLocaleString('id-ID') : (+m.slice(0, dot)).toLocaleString('id-ID') + ',' + m.slice(dot + 1); }).replace(/\*/g, ' × ').replace(/\//g, ' ÷ ').replace(/\+/g, ' + ').replace(/-/g, ' − '); }
+  function kpEval(expr) {
+    var toks = expr.match(/\d+(\.\d*)?|[+\-*/]/g) || []; if (!toks.length) return 0;
+    while (toks.length && /[+\-*/]/.test(toks[toks.length - 1])) toks.pop();
+    var nums = [], ops = [], prec = { '+': 1, '-': 1, '*': 2, '/': 2 };
+    var apply = function () { var b = nums.pop(), a = nums.pop(), o = ops.pop(); nums.push(o === '+' ? a + b : o === '-' ? a - b : o === '*' ? a * b : b ? a / b : 0); };
+    toks.forEach(function (t, i) { if (/[+\-*/]/.test(t)) { if (i === 0) { nums.push(0); } while (ops.length && prec[ops[ops.length - 1]] >= prec[t]) apply(); ops.push(t); } else nums.push(parseFloat(t)); });
+    while (ops.length) apply();
+    return Math.round(nums[0] || 0);
+  }
+  function kpSuggest(input) {
+    var type = (document.querySelector('#fType .on') || {}).dataset ? (document.querySelector('#fType .on') || { dataset: {} }).dataset.t : '', cnt = {};
+    S.tx.slice(-600).forEach(function (t) { if (type && type !== 'transfer' && t.type !== type) return; var a = t.amount; if (!a || a % 1000) return; cnt[a] = (cnt[a] || 0) + 1; });
+    var top = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 8).map(Number);
+    [50000, 100000, 500000, 1000000].forEach(function (x) { if (top.length < 6 && top.indexOf(x) === -1) top.push(x); });
+    return top;
+  }
+  function kpBuild() {
+    if (KP.el) return KP.el;
+    var el = document.createElement('div'); el.className = 'kpad'; el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '<div class="kp-top"><button type="button" class="kp-save" data-k="save">Save</button><button type="button" class="kp-round" data-k="scan" aria-label="Scan receipt"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg></button><button type="button" class="kp-round" data-k="note" aria-label="Note"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button></div>' +
+      '<div class="kp-chips" id="kpChips"></div>' +
+      '<div class="kp-grid">' + [['C', 'op'], ['÷', 'op', '/'], ['×', 'op', '*'], ['⌫', 'op', 'del'], ['7'], ['8'], ['9'], ['−', 'op', '-'], ['4'], ['5'], ['6'], ['+', 'op', '+'], ['1'], ['2'], ['3'], ['DONE', 'done', 'done'], ['0'], ['000'], ['.', '', '.']].map(function (k) {
+        return '<button type="button" class="kp-k ' + (k[1] || '') + '" data-k="' + (k[2] || k[0]) + '">' + (k[0] === '⌫' ? '<svg viewBox="0 0 24 24"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z" class="f"/><path d="M12 9l5 6M17 9l-5 6"/></svg>' : k[0]) + '</button>'; }).join('') + '</div>';
+    document.body.appendChild(el); KP.el = el;
+    var press = function (k) {
+      var e = KP.expr, last = e.slice(-1), isOp = function (c) { return /[+\-*/]/.test(c); };
+      if (k === 'C') e = '';
+      else if (k === 'del') e = e.slice(0, -1);
+      else if (k === 'done') { kpCommit(); kpHide(); return; }
+      else if (k === 'save') { kpCommit(); var sv = kpSaveBtn(); kpHide(); if (sv) sv.click(); return; }
+      else if (k === 'scan') { var sc = document.getElementById('fScan'); kpCommit(); kpHide(); if (sc) sc.click(); return; }
+      else if (k === 'note') { kpCommit(); kpHide(); var nt = document.querySelector('.sheet #fNote, .sheet textarea, .sheet input[id*=Note]'); if (nt) { nt.scrollIntoView({ block: 'center' }); nt.focus(); } return; }
+      else if (isOp(k)) { if (!e) { if (k !== '-') return; } if (isOp(last)) e = e.slice(0, -1); e += k; }
+      else if (k === '.') { var seg = e.split(/[+\-*/]/).pop(); if (seg.indexOf('.') !== -1) return; e += seg ? '.' : '0.'; }
+      else { if (KP.fresh) e = ''; var seg2 = e.split(/[+\-*/]/).pop(); if (seg2 === '0' && k !== '.') e = e.slice(0, -1); if (seg2.replace('.', '').length >= 13) return; e += (k === '000' && !seg2) ? '0' : k; }
+      KP.fresh = false; KP.expr = e; kpPaint();
+    };
+    el.addEventListener('pointerdown', function (ev) { var b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); b.classList.add('down'); haptic(); var k = b.dataset.k; if (k) press(k); else if (b.dataset.amt) { KP.expr = b.dataset.amt; KP.fresh = false; kpPaint(); } });
+    el.addEventListener('pointerup', function (ev) { el.querySelectorAll('.down').forEach(function (b) { b.classList.remove('down'); }); });
+    el.addEventListener('pointercancel', function () { el.querySelectorAll('.down').forEach(function (b) { b.classList.remove('down'); }); });
+    document.addEventListener('keydown', function (ev) {
+      if (!KP.input || !el.classList.contains('show')) return;
+      var map = { Enter: 'done', Backspace: 'del', Escape: 'done', '*': '*', x: '*', '/': '/', '+': '+', '-': '-', '.': '.', ',': '.', Delete: 'C' };
+      var k = /^\d$/.test(ev.key) ? ev.key : map[ev.key]; if (!k) return; ev.preventDefault(); press(k);
+    });
+    document.addEventListener('pointerdown', function (ev) { if (!el.classList.contains('show')) return; if (el.contains(ev.target) || ev.target === KP.input) return; kpCommit(); kpHide(); }, true);
+    return el;
+  }
+  function kpSaveBtn() { var sh = document.getElementById('sheet'); return sh && (sh.querySelector('#fSave') || sh.querySelector('.btn.primary.block') || sh.querySelector('.btn.primary')); }
+  function kpPaint() {
+    var inp = KP.input; if (!inp) return; var e = KP.expr, hasOp = /\d[+\-*/]/.test(e);
+    inp.value = e ? kpShow(e) : '';
+    var L = inp.value.length; inp.style.fontSize = L > 24 ? '18px' : L > 18 ? '22px' : L > 12 ? '28px' : '';
+    var wrap = inp.closest('.amt-wrap'); if (wrap) { wrap.classList.toggle('kp-calc', hasOp); var r = wrap.querySelector('.kp-res'); if (!r) { r = document.createElement('span'); r.className = 'kp-res'; wrap.appendChild(r); } r.textContent = hasOp ? '= ' + kpFmtNum(kpEval(e)) : ''; }
+  }
+  function kpCommit() {
+    var inp = KP.input; if (!inp) return; var v = kpEval(KP.expr);
+    inp.value = v ? v.toLocaleString('id-ID') : ''; KP.expr = v ? String(v) : '';
+    inp.style.fontSize = '';
+    var wrap = inp.closest('.amt-wrap'); if (wrap) { wrap.classList.remove('kp-calc'); var r = wrap.querySelector('.kp-res'); if (r) r.textContent = ''; }
+    inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  function kpOpen(inp) {
+    var el = kpBuild();
+    if (KP.input && KP.input !== inp) kpCommit();
+    KP.input = inp; KP.expr = String(parseNum(inp.value) || ''); KP.fresh = !!KP.expr;
+    document.querySelectorAll('.amt-wrap.kp-on').forEach(function (w) { w.classList.remove('kp-on'); });
+    var wrap = inp.closest('.amt-wrap'); if (wrap) wrap.classList.add('kp-on');
+    el.querySelector('[data-k=scan]').hidden = !document.getElementById('fScan');
+    el.querySelector('[data-k=note]').hidden = !document.querySelector('.sheet #fNote, .sheet textarea');
+    $('kpChips').innerHTML = kpSuggest(inp).map(function (a) { return '<button type="button" data-amt="' + a + '">' + a.toLocaleString('id-ID') + '</button>'; }).join('');
+    el.classList.add('show'); document.body.classList.add('kp-open');
+    var sh = document.getElementById('sheet'), ph = el.offsetHeight;
+    if (sh) { sh.style.bottom = (ph - 24) + 'px'; sh.style.maxHeight = (window.innerHeight - ph - 30) + 'px'; sh.style.borderRadius = '28px'; }
+    setTimeout(function () { var sr = sh.getBoundingClientRect(), ir = inp.getBoundingClientRect(); if (ir.top < sr.top + 60 || ir.bottom > sr.bottom - 10) sh.scrollTop += ir.top - sr.top - 90; }, 380);
+  }
+  function kpHide() {
+    if (!KP.el) return; KP.el.classList.remove('show'); document.body.classList.remove('kp-open');
+    document.querySelectorAll('.amt-wrap.kp-on').forEach(function (w) { w.classList.remove('kp-on'); });
+    var sh = document.getElementById('sheet'); if (sh) { sh.style.bottom = ''; sh.style.maxHeight = ''; sh.style.borderRadius = ''; }
+    KP.input = null;
+  }
+  function kpAttach(root) {
+    root.querySelectorAll('.amt-input').forEach(function (inp) {
+      if (inp._kp) return; inp._kp = 1;
+      inp.readOnly = true; inp.setAttribute('inputmode', 'none');
+      inp.addEventListener('click', function () { kpOpen(inp); });
+      inp.addEventListener('focus', function () { kpOpen(inp); });
+    });
   }
 
   // ---------- onboarding ----------
