@@ -6,15 +6,27 @@
 // Pertama kali: jalankan script ini sekali dari app Scriptable lalu izinkan akses kalender.
 // Versi 2026-11-03
 
+const LANG = 'id'                               // 'en' = English · 'id' = Bahasa Indonesia
 const OPEN = 'googlecalendar://'                // ganti 'calshow://' untuk app Kalender iPhone
 const DAYS_AHEAD = 7
 const C = {
   bg: new Color('#000000'), text: new Color('#f5f5f7'), dim: new Color('#8e8e93'),
   faint: new Color('#3a3a3c'), green: new Color('#30d158'), gold: new Color('#ffd426'), red: new Color('#ff453a')
 }
-const HARI = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU']
-const HR = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
-const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+const EN = LANG === 'en'
+const HARI = EN ? ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] : ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU']
+const HR = EN ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+const BLN = EN ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] : ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+const T = EN ? {
+  cal: 'CALENDAR', today: 'TODAY', tomorrow: 'TOMORROW', allDay: 'All day', now: 'Now', untitled: '(No title)',
+  none: 'No events in the next ' , noneEnd: ' days', more: ' more', then: 'Then ', noEvents: 'No events',
+  perm: 'Open Scriptable, run this script once, then allow calendar access.'
+} : {
+  cal: 'KALENDER', today: 'HARI INI', tomorrow: 'BESOK', allDay: 'Seharian', now: 'Sekarang', untitled: '(Tanpa judul)',
+  none: 'Tidak ada acara ', noneEnd: ' hari ke depan', more: ' acara lagi', then: 'Lalu ', noEvents: 'Tidak ada acara',
+  perm: 'Buka app Scriptable, jalankan script ini sekali, lalu izinkan akses kalender.'
+}
+function dShort(d) { return EN ? HR[d.getDay()] + ', ' + BLN[d.getMonth()] + ' ' + d.getDate() : HR[d.getDay()] + ', ' + d.getDate() + ' ' + BLN[d.getMonth()] }
 
 function p2(n) { return String(n).padStart(2, '0') }
 function hm(d) { return p2(d.getHours()) + ':' + p2(d.getMinutes()) }
@@ -30,20 +42,20 @@ async function load() {
     .filter(e => e.isAllDay ? e.endDate > t0 : e.endDate > now)          // yang sudah lewat hari ini dibuang
     .sort((a, b) => a.startDate - b.startDate)                              // acara seharian mulai 00:00 → tampil duluan di harinya
     .map(e => ({
-      title: (e.title || '(Tanpa judul)').trim(), start: e.startDate, end: e.endDate, allDay: e.isAllDay,
+      title: (e.title || T.untitled).trim(), start: e.startDate, end: e.endDate, allDay: e.isAllDay,
       where: e.location ? String(e.location).split('\n')[0] : '',
       color: e.calendar && e.calendar.color ? e.calendar.color : C.green
     }))
   return { now: now, ev: ev }
 }
 function dayLabel(d, now) {
-  if (sameDay(d, now)) return 'HARI INI'
-  if (sameDay(d, addDays(now, 1))) return 'BESOK'
-  return HARI[d.getDay()] + ' ' + d.getDate() + ' ' + BLN[d.getMonth()].toUpperCase()
+  if (sameDay(d, now)) return T.today
+  if (sameDay(d, addDays(now, 1))) return T.tomorrow
+  return EN ? HARI[d.getDay()] + ', ' + BLN[d.getMonth()].toUpperCase() + ' ' + d.getDate() : HARI[d.getDay()] + ' ' + d.getDate() + ' ' + BLN[d.getMonth()].toUpperCase()
 }
 function when(e, now) {
-  if (e.allDay) return 'Seharian'
-  if (e.start <= now && e.end > now) return 'Sekarang'
+  if (e.allDay) return T.allDay
+  if (e.start <= now && e.end > now) return T.now
   return hm(e.start)
 }
 // acara yang sedang/akan berlangsung paling dekat (untuk layar kunci & jadwal refresh)
@@ -62,9 +74,9 @@ function header(w, now, small) {
   const h = w.addStack(); h.layoutHorizontally(); h.centerAlignContent()
   const dot = h.addStack(); dot.size = new Size(7, 7); dot.cornerRadius = 3.5; dot.backgroundColor = C.green
   h.addSpacer(5)
-  txt(h, 'KALENDER', small ? 10 : 11, C.gold, 'heavy')
+  txt(h, T.cal, small ? 10 : 11, C.gold, 'heavy')
   h.addSpacer()
-  txt(h, HR[now.getDay()] + ', ' + now.getDate() + ' ' + BLN[now.getMonth()], small ? 9 : 10, C.dim, 'medium')
+  txt(h, dShort(now), small ? 9 : 10, C.dim, 'medium')
 }
 function eventRow(s, e, now, size) {
   const r = s.addStack(); r.layoutHorizontally(); r.centerAlignContent()
@@ -83,16 +95,16 @@ function list(s, x, max, size, groups) {
     const lab = dayLabel(e.start < dayStart(x.now) ? x.now : e.start, x.now)   // mulai kemarin & masih berlangsung → HARI INI
     if (groups && lab !== lastDay) {
       if (lastDay) s.addSpacer(6)
-      txt(s, lab, 9, lab === 'HARI INI' ? C.green : C.dim, 'semi')
+      txt(s, lab, 9, lab === T.today ? C.green : C.dim, 'semi')
       s.addSpacer(4)
       lastDay = lab
     } else if (n) s.addSpacer(5)
     eventRow(s, e, x.now, size)
     n++
   }
-  if (!n) { txt(s, 'Tidak ada acara ' + DAYS_AHEAD + ' hari ke depan', size, C.dim, 'medium', 0.7) }
+  if (!n) { txt(s, T.none + DAYS_AHEAD + T.noneEnd, size, C.dim, 'medium', 0.7) }
   const more = x.ev.length - n
-  if (more > 0) { s.addSpacer(5); txt(s, '+' + more + ' acara lagi', 10, C.dim, 'medium') }
+  if (more > 0) { s.addSpacer(5); txt(s, '+' + more + T.more, 10, C.dim, 'medium') }
 }
 
 /* ── widget per ukuran ───────────────────────────────────────────── */
@@ -109,7 +121,7 @@ function build(family, x, err) {
   if (!lock) w.backgroundColor = C.bg
 
   if (family === 'accessoryInline') {
-    w.addText(ne ? when(ne, now) + ' ' + ne.title : 'Tidak ada acara')
+    w.addText(ne ? when(ne, now) + ' ' + ne.title : T.noEvents)
     return w
   }
   if (family === 'accessoryCircular') {
@@ -119,10 +131,10 @@ function build(family, x, err) {
     return w
   }
   if (family === 'accessoryRectangular') {
-    const a = w.addText(ne ? dayLabel(ne.start < now ? now : ne.start, now) + ' · ' + when(ne, now) : 'KALENDER'); a.font = Font.heavySystemFont(11); a.lineLimit = 1
-    const b = w.addText(ne ? ne.title : 'Tidak ada acara'); b.font = Font.boldSystemFont(15); b.lineLimit = 1; b.minimumScaleFactor = 0.6
+    const a = w.addText(ne ? dayLabel(ne.start < now ? now : ne.start, now) + ' · ' + when(ne, now) : T.cal); a.font = Font.heavySystemFont(11); a.lineLimit = 1
+    const b = w.addText(ne ? ne.title : T.noEvents); b.font = Font.boldSystemFont(15); b.lineLimit = 1; b.minimumScaleFactor = 0.6
     const nx = x && ne ? x.ev[x.ev.indexOf(ne) + 1] : null
-    const c = w.addText(nx ? 'Lalu ' + when(nx, now) + ' ' + nx.title : ''); c.font = Font.mediumSystemFont(11); c.lineLimit = 1; c.minimumScaleFactor = 0.7
+    const c = w.addText(nx ? T.then + when(nx, now) + ' ' + nx.title : ''); c.font = Font.mediumSystemFont(11); c.lineLimit = 1; c.minimumScaleFactor = 0.7
     return w
   }
 
@@ -131,7 +143,7 @@ function build(family, x, err) {
   if (err) {
     header(w, now, small)
     w.addSpacer()
-    txt(w, 'Buka app Scriptable, jalankan script ini sekali, lalu izinkan akses kalender.', 11, C.dim, 'medium').lineLimit = 4
+    txt(w, T.perm, 11, C.dim, 'medium').lineLimit = 4
     w.addSpacer()
     return w
   }

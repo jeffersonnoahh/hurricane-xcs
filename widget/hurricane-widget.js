@@ -4,6 +4,7 @@
 // Ketuk widget = buka dashboard. iOS yang menentukan jadwal pembaruan (biasanya ±15–60 menit).
 // Versi 2026-11-03
 
+const LANG = 'id'                               // 'en' = English · 'id' = Bahasa Indonesia
 const DB = 'https://hurricane-scorecard-default-rtdb.firebaseio.com'
 const NS = ''                                   // '' = Hurricane · 'maria/' · 'calvin/'
 const BRAND = 'HURRICANE'
@@ -17,15 +18,25 @@ const C = {
   dim: new Color('#8e8e93'), faint: new Color('#3a3a3c'), green: new Color('#30d158'),
   gold: new Color('#ffd426'), red: new Color('#ff453a')
 }
-const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+const EN = LANG === 'en'
+const BLN = EN ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] : ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+const T = EN ? {
+  today: 'REVENUE TODAY', of: ' of ', closing: ' closings', month: 'This month ', top: 'TOP TODAY', none: 'No closings yet',
+  same: ' (same days) ', last14: 'LAST 14 DAYS', fail: "Couldn't load data. Try again later.", inlineNone: 'Hurricane: no data',
+  noData: 'No data', todaySuffix: ' today', monthShort: 'Month ', target: '% of target'
+} : {
+  today: 'OMZET HARI INI', of: ' dari ', closing: ' closing', month: 'Bulan ini ', top: 'TOP HARI INI', none: 'Belum ada closing',
+  same: ' (hari yang sama) ', last14: '14 HARI TERAKHIR', fail: 'Tidak bisa memuat data. Coba lagi nanti.', inlineNone: 'Hurricane: tidak ada data',
+  noData: 'Tidak ada data', todaySuffix: ' hari ini', monthShort: 'Bulan ', target: '% target'
+}
 
 /* ── angka & tanggal ─────────────────────────────────────────────── */
-function fdec(c) { const w = Math.floor(c / 100), f = c % 100; return f ? w + ',' + String(f).padStart(2, '0') : String(w) }
-function rp(n) {                                // sama dengan dashboard: 109,27jt · 3,36M · 850rb
+function fdec(c) { const w = Math.floor(c / 100), f = c % 100; return f ? w + (EN ? '.' : ',') + String(f).padStart(2, '0') : String(w) }
+function rp(n) {                                // dashboard: 109,27jt · 3,36M · 850rb — English: 109.27M · 3.36B · 850K
   n = +n || 0; const a = Math.abs(n), s = n < 0 ? '-' : ''
-  if (a >= 999995000) return s + fdec(Math.round(a / 1e7)) + 'M'
-  if (a >= 999500) return s + fdec(Math.round(a / 1e4)) + 'jt'
-  if (a >= 1000) return s + Math.round(a / 1e3) + 'rb'
+  if (a >= 999995000) return s + fdec(Math.round(a / 1e7)) + (EN ? 'B' : 'M')
+  if (a >= 999500) return s + fdec(Math.round(a / 1e4)) + (EN ? 'M' : 'jt')
+  if (a >= 1000) return s + Math.round(a / 1e3) + (EN ? 'K' : 'rb')
   return String(Math.round(n))
 }
 function p2(n) { return String(n).padStart(2, '0') }
@@ -76,7 +87,7 @@ async function load() {
   return {
     at: Date.now(), K: K, today: days[K] || 0, target: +target || 150e6, todayCloses: todayCloses,
     month: month, prev: prev, delta: prev > 0 ? month / prev - 1 : null,
-    monthLabel: BLN[m] + ' ' + y, prevLabel: '1–' + Math.min(d, pmDays) + ' ' + BLN[pm.getUTCMonth()],
+    monthLabel: BLN[m] + ' ' + y, prevLabel: EN ? BLN[pm.getUTCMonth()] + ' 1–' + Math.min(d, pmDays) : '1–' + Math.min(d, pmDays) + ' ' + BLN[pm.getUTCMonth()],
     series: series, top: top
   }
 }
@@ -160,7 +171,7 @@ function header(w, x, small) {
 }
 function timeLabel(ms) { const d = new Date(ms + 7 * 3600e3); return p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes()) }
 function todayBlock(s, x, big, barW) {
-  txt(s, 'OMZET HARI INI', 9, C.dim, 'semi')
+  txt(s, T.today, 9, C.dim, 'semi')
   s.addSpacer(2)
   txt(s, 'Rp ' + rp(x.today), big, C.text, 'heavy', { shrink: 0.5 })
   s.addSpacer(6)
@@ -169,11 +180,11 @@ function todayBlock(s, x, big, barW) {
   s.addSpacer(4)
   const r = s.addStack(); r.layoutHorizontally()
   txt(r, Math.round(pct * 100) + '%', 11, pct >= 1 ? C.gold : C.green, 'bold')
-  txt(r, ' dari ' + rp(x.target) + ' · ' + x.todayCloses + ' closing', 11, C.dim, 'medium', { shrink: 0.7 })
+  txt(r, T.of + rp(x.target) + ' · ' + x.todayCloses + T.closing, 11, C.dim, 'medium', { shrink: 0.7 })
 }
 function monthLine(s, x, size) {
   const r = s.addStack(); r.layoutHorizontally(); r.centerAlignContent()
-  txt(r, 'Bulan ini ', size, C.dim, 'medium')
+  txt(r, T.month, size, C.dim, 'medium')
   txt(r, 'Rp ' + rp(x.month), size, C.text, 'bold', { shrink: 0.7 })
   if (x.delta != null) {
     const up = x.delta >= 0
@@ -181,9 +192,9 @@ function monthLine(s, x, size) {
   }
 }
 function topList(s, x, n, size) {
-  txt(s, 'TOP HARI INI', 9, C.dim, 'semi')
+  txt(s, T.top, 9, C.dim, 'semi')
   s.addSpacer(4)
-  if (!x.top.length) { txt(s, 'Belum ada closing', size, C.dim, 'medium'); return }
+  if (!x.top.length) { txt(s, T.none, size, C.dim, 'medium'); return }
   x.top.slice(0, n).forEach((t, i) => {
     const r = s.addStack(); r.layoutHorizontally(); r.centerAlignContent()
     txt(r, String(i + 1).padStart(2, '0') + ' ', size, i === 0 ? C.gold : C.dim, 'bold')
@@ -202,7 +213,7 @@ function build(family, x) {
   if (String(family).indexOf('accessory') !== 0) w.backgroundColor = C.bg   // layar kunci: latar dari iOS
 
   if (family === 'accessoryInline') {
-    w.addText(x ? 'Rp ' + rp(x.today) + ' · ' + Math.round(x.today / x.target * 100) + '% target' : 'Hurricane: tidak ada data')
+    w.addText(x ? 'Rp ' + rp(x.today) + ' · ' + Math.round(x.today / x.target * 100) + T.target : T.inlineNone)
     return w
   }
   if (family === 'accessoryCircular') {
@@ -214,15 +225,15 @@ function build(family, x) {
   }
   if (family === 'accessoryRectangular') {
     const a = w.addText(BRAND + (x ? ' · ' + Math.round(x.today / x.target * 100) + '%' : '')); a.font = Font.heavySystemFont(11); a.lineLimit = 1
-    const b = w.addText(x ? 'Rp ' + rp(x.today) + ' hari ini' : 'Tidak ada data'); b.font = Font.boldSystemFont(15); b.lineLimit = 1; b.minimumScaleFactor = 0.6
-    const c = w.addText(x ? 'Bulan Rp ' + rp(x.month) + (x.delta != null ? (x.delta >= 0 ? ' ▲' : ' ▼') + Math.abs(Math.round(x.delta * 100)) + '%' : '') : ''); c.font = Font.mediumSystemFont(11); c.lineLimit = 1; c.minimumScaleFactor = 0.7
+    const b = w.addText(x ? 'Rp ' + rp(x.today) + T.todaySuffix : T.noData); b.font = Font.boldSystemFont(15); b.lineLimit = 1; b.minimumScaleFactor = 0.6
+    const c = w.addText(x ? T.monthShort + 'Rp ' + rp(x.month) + (x.delta != null ? (x.delta >= 0 ? ' ▲' : ' ▼') + Math.abs(Math.round(x.delta * 100)) + '%' : '') : ''); c.font = Font.mediumSystemFont(11); c.lineLimit = 1; c.minimumScaleFactor = 0.7
     return w
   }
 
   const small = family === 'small', D = dims()
   w.setPadding(small ? 13 : 15, small ? 14 : 16, small ? 12 : 14, small ? 14 : 16)
   header(w, x, small)
-  if (!x) { w.addSpacer(); txt(w, 'Tidak bisa memuat data. Coba lagi nanti.', 12, C.dim, 'medium'); w.addSpacer(); return w }
+  if (!x) { w.addSpacer(); txt(w, T.fail, 12, C.dim, 'medium'); w.addSpacer(); return w }
   w.addSpacer(small ? 8 : 10)
 
   if (small) {
@@ -248,9 +259,9 @@ function build(family, x) {
   todayBlock(w, x, roomy ? 34 : 30, cw)
   w.addSpacer(roomy ? 12 : 9)
   monthLine(w, x, 12)
-  txt(w, 'vs ' + x.prevLabel + ' (hari yang sama) Rp ' + rp(x.prev), 10, C.dim, 'medium', { shrink: 0.7 })
+  txt(w, 'vs ' + x.prevLabel + T.same + 'Rp ' + rp(x.prev), 10, C.dim, 'medium', { shrink: 0.7 })
   w.addSpacer(roomy ? 12 : 9)
-  txt(w, '14 HARI TERAKHIR', 9, C.dim, 'semi')
+  txt(w, T.last14, 9, C.dim, 'semi')
   w.addSpacer(5)
   w.addImage(chart(cw, gh, x.series, x.target)).imageSize = new Size(cw, gh)
   w.addSpacer(roomy ? 12 : 9)
