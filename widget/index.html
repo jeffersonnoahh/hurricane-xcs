@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>Widget Hurricane untuk iPhone</title>
+<style>
+:root{--bg:#000;--card:#141416;--line:#2c2c2e;--text:#f5f5f7;--dim:#8e8e93;--green:#30d158;--gold:#ffd426}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 28px) 16px calc(env(safe-area-inset-bottom) + 40px)}
+.kick{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
+h1{font-size:30px;line-height:1.15;margin:6px 0 8px;letter-spacing:-.02em}
+.sub{color:var(--dim);margin:0 0 22px}
+.copy{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border:0;border-radius:16px;background:var(--green);color:#000;font:700 17px/1 inherit;cursor:pointer}
+.copy:active{transform:scale(.98)}
+.copy.done{background:#1c1c1e;color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.hint{color:var(--dim);font-size:13px;text-align:center;margin:8px 0 26px}
+ol{list-style:none;counter-reset:s;padding:0;margin:0}
+li{counter-increment:s;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px 14px 56px;margin-bottom:10px}
+li::before{content:counter(s);position:absolute;left:14px;top:14px;width:28px;height:28px;border-radius:50%;background:#1f1f22;color:var(--gold);font-weight:800;font-size:14px;display:grid;place-items:center}
+li b{color:#fff}
+li small{display:block;color:var(--dim);font-size:13px;margin-top:4px}
+a{color:var(--green)}
+.note{margin-top:22px;color:var(--dim);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+code{background:#1f1f22;border-radius:6px;padding:1px 6px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kick">HURRICANE XCS</div>
+  <h1>Widget dashboard di layar iPhone</h1>
+  <p class="sub">Omzet hari ini, target, omzet bulan ini, top sales, dan grafik 14 hari — langsung di layar utama atau layar kunci. Hanya membaca data, tidak bisa mengubah apa pun.</p>
+
+  <button class="copy" id="copy" type="button" disabled>Memuat script…</button>
+  <div class="hint" id="hint">Ketuk tombol hijau untuk menyalin script widget.</div>
+
+  <ol>
+    <li>Pasang aplikasi <b>Scriptable</b> (gratis) dari App Store.
+      <small><a href="https://apps.apple.com/app/scriptable/id1405459188">Buka Scriptable di App Store</a></small></li>
+    <li>Ketuk tombol hijau di atas untuk <b>menyalin script</b>.</li>
+    <li>Buka Scriptable, ketuk <b>+</b> di kanan atas, lalu <b>tekan lama → Paste</b>.
+      <small>Ketuk judul "Untitled Script" di atas, ganti jadi <b>Hurricane</b>, lalu <b>Done</b>.</small></li>
+    <li>Di layar utama: <b>tekan lama</b> bagian kosong → <b>Edit</b> → <b>Add Widget</b> → cari <b>Scriptable</b> → pilih ukuran (kecil, sedang, atau besar).</li>
+    <li><b>Tekan lama widget</b> yang baru → <b>Edit Widget</b> → <b>Script</b>: pilih <b>Hurricane</b>.
+      <small>Biarkan "When Interacting" apa adanya — mengetuk widget membuka dashboard.</small></li>
+    <li>Opsional, layar kunci: tekan lama layar kunci → <b>Customize</b> → <b>Lock Screen</b> → tambah widget <b>Scriptable</b> → pilih script <b>Hurricane</b>.</li>
+  </ol>
+
+  <p class="note">iOS memperbarui widget sendiri kira-kira tiap 10–15 menit. Jam kecil di pojok widget = terakhir diperbarui; tulisan "offline" berarti sedang tidak ada internet dan angka terakhir yang tampil.<br><br>
+  Script mentah: <a href="hurricane-widget.js">hurricane-widget.js</a></p>
+</div>
+<script>
+(function(){
+  var btn=document.getElementById('copy'),hint=document.getElementById('hint'),code='';
+  fetch('hurricane-widget.js?t='+Date.now()).then(function(r){return r.text();}).then(function(t){
+    code=t;btn.disabled=false;btn.textContent='Salin script widget';
+  }).catch(function(){btn.textContent='Gagal memuat — buka "Script mentah" di bawah';});
+  function fallback(){
+    var ta=document.createElement('textarea');ta.value=code;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,code.length);
+    var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+    ta.remove();return ok;
+  }
+  btn.addEventListener('click',function(){
+    if(!code)return;
+    var done=function(){btn.classList.add('done');btn.textContent='Tersalin ✓';hint.textContent='Sekarang buka Scriptable → + → tekan lama → Paste.';};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(done,function(){if(fallback())done();});}
+    else if(fallback())done();
+  });
+})();
+</script>
+</body>
+</html>
