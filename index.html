@@ -2,7 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" id="hxVp" content="width=device-width, initial-scale=1.0">
+<script>
+/* iPhone Duo TERBUKA (layar dalam ±890×626 / 626×890 pt): tampilan LAPTOP yang
+   diperkecil — viewport 1280 px saat mendatar, 980 px saat tegak; Safari
+   mengecilkan skala sendiri. Terlipat (±466 pt) & iPhone biasa tetap tampilan HP.
+   Ukuran layar dalam pt = visualViewport.width/height × scale, jadi tetap benar
+   setelah viewport diganti, di-zoom, dilipat atau diputar. Tidak dihitung ulang
+   saat keyboard terbuka (tinggi layar mengecil sementara). */
+(function(){
+  if(!/iPhone/.test(navigator.userAgent||''))return;
+  var m=document.getElementById('hxVp'),PHONE=m.getAttribute('content'),cur=PHONE;
+  function apply(){
+    var a=document.activeElement;
+    if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;
+    var v=window.visualViewport,s=v&&v.scale?v.scale:1;
+    var w=(v?v.width:innerWidth)*s,h=(v?v.height:innerHeight)*s;
+    var want=(w>=600&&h>=520)?(w>h?'width=1280':'width=980'):PHONE;
+    if(want!==cur){cur=want;m.setAttribute('content',want);}
+  }
+  apply();
+  var t;function later(){clearTimeout(t);t=setTimeout(apply,200);}
+  addEventListener('resize',later);addEventListener('orientationchange',later);
+})();
+</script>
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
 <title>Hurricane XCS — Dashboard</title>
