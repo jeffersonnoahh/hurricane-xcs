@@ -1957,16 +1957,21 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
   .kp-grid{grid-auto-rows:38px}
 }
 /* Duo open (portrait is like a big phone): a bit more breathing room */
-@media (min-width:600px) and (max-width:959px){
-  .view{max-width:820px;padding:0 24px}
+@media (min-width:600px) and (max-width:1199px){
+  .view{max-width:880px;padding:0 max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left))}
   .sheet,.kpad{max-width:600px}
 }
 /* Duo open sideways: two-column Home, market bars side by side */
-@media (min-width:820px) and (max-width:959px){
+@media (min-width:780px) and (max-width:1199px){
   .mkt-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
   .mkt-row .gold-bar{margin:0;min-width:0}
   .mkt-row .gb-spark{display:none}
-  #homeSecs{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:start}
-  #homeSecs > .sec{min-width:0}
-  #homeSecs > .sec[data-sec=widgets],#homeSecs > .sec[data-sec=wallets],#homeSecs > .sec[data-sec=insights],#homeSecs > .sec[data-sec=recent],#homeSecs > .sec[data-sec=cashflow]{grid-column:1/-1}
+  /* masonry: each card flows into the shorter column, so there are no empty holes */
+  #homeSecs{column-count:2;column-gap:16px}
+  #homeSecs > .sec{break-inside:avoid;-webkit-column-break-inside:avoid;display:block;width:100%;min-width:0;padding-top:1px}
+  #homeSecs > .sec.sec-off{display:none}
+  #homeSecs > .sec[data-sec=widgets]{column-span:all;-webkit-column-span:all}
+  #homeSecs .ins-row{flex-wrap:wrap;overflow:visible}
+  #homeSecs .ins-row{margin:0;padding:2px 0 6px;scroll-snap-type:none}
+  #homeSecs .ins-row > *{flex:1 1 100%;max-width:none}
 }
