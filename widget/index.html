@@ -25,6 +25,8 @@ li::before{content:counter(s);position:absolute;left:14px;top:14px;width:28px;he
 li b{color:#fff}
 li small{display:block;color:var(--dim);font-size:13px;margin-top:4px}
 a{color:var(--green)}
+.h2{font-size:22px;line-height:1.2;margin:34px 0 6px;letter-spacing:-.01em}
+.ol2{counter-reset:s}
 .note{margin-top:22px;color:var(--dim);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
 code{background:#1f1f22;border-radius:6px;padding:1px 6px;font-size:13px}
 </style>
@@ -35,8 +37,8 @@ code{background:#1f1f22;border-radius:6px;padding:1px 6px;font-size:13px}
   <h1>Widget dashboard di layar iPhone</h1>
   <p class="sub">Omzet hari ini, target, omzet bulan ini, top sales, dan grafik 14 hari — langsung di layar utama atau layar kunci. Hanya membaca data, tidak bisa mengubah apa pun.</p>
 
-  <button class="copy" id="copy" type="button" disabled>Memuat script…</button>
-  <div class="hint" id="hint">Ketuk tombol hijau untuk menyalin script widget.</div>
+  <button class="copy" data-src="hurricane-widget.js" data-name="Hurricane" type="button" disabled>Memuat script…</button>
+  <div class="hint">Ketuk tombol hijau untuk menyalin script widget.</div>
 
   <ol>
     <li>Pasang aplikasi <b>Scriptable</b> (gratis) dari App Store.
@@ -50,26 +52,40 @@ code{background:#1f1f22;border-radius:6px;padding:1px 6px;font-size:13px}
     <li>Opsional, layar kunci: tekan lama layar kunci → <b>Customize</b> → <b>Lock Screen</b> → tambah widget <b>Scriptable</b> → pilih script <b>Hurricane</b>.</li>
   </ol>
 
+  <h2 class="h2">Widget Kalender — gaya Hurricane</h2>
+  <p class="sub">Hitam pekat seperti widget Hurricane: hari, tanggal, dan acara berikutnya dengan warna kalender Google-mu. Membaca app Kalender iPhone (Google Calendar ikut kalau akun Google sudah ditambahkan di <b>Pengaturan → Apps → Calendar → Calendar Accounts</b>). Hanya membaca.</p>
+  <button class="copy" data-src="kalender-widget.js" data-name="Kalender" type="button" disabled>Memuat script…</button>
+  <div class="hint">Ketuk tombol hijau untuk menyalin script kalender.</div>
+  <ol class="ol2">
+    <li>Di Scriptable: <b>+</b> → tekan lama → <b>Paste</b> → ganti judul jadi <b>Kalender</b> → <b>Done</b>.</li>
+    <li>Ketuk tile <b>Kalender</b> sekali. iPhone bertanya soal kalender → pilih <b>Allow Full Access</b> (Izinkan akses penuh).
+      <small>Tanpa langkah ini widget hanya menampilkan pesan "izinkan akses kalender".</small></li>
+    <li>Tambah widget Scriptable seperti langkah 4–5 di atas, tapi pilih script <b>Kalender</b>.
+      <small>Ketuk widget = buka app Google Calendar.</small></li>
+  </ol>
+
   <p class="note">iOS yang mengatur jadwal pembaruan widget (biasanya tiap ±15–60 menit). Mau angka terbaru sekarang? Ketuk widget untuk membuka dashboard. Jam kecil di pojok widget = terakhir diperbarui; tulisan "offline" berarti sedang tidak ada internet dan angka terakhir yang tampil.<br><br>
-  Script mentah: <a href="hurricane-widget.js">hurricane-widget.js</a></p>
+  Script mentah: <a href="hurricane-widget.js">hurricane-widget.js</a> · <a href="kalender-widget.js">kalender-widget.js</a></p>
 </div>
 <script>
 (function(){
-  var btn=document.getElementById('copy'),hint=document.getElementById('hint'),code='';
-  fetch('hurricane-widget.js?t='+Date.now()).then(function(r){return r.text();}).then(function(t){
-    code=t;btn.disabled=false;btn.textContent='Salin script widget';
-  }).catch(function(){btn.textContent='Gagal memuat — buka "Script mentah" di bawah';});
-  function fallback(){
+  function fallback(code){
     var ta=document.createElement('textarea');ta.value=code;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';
     document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,code.length);
     var ok=false;try{ok=document.execCommand('copy');}catch(e){}
     ta.remove();return ok;
   }
-  btn.addEventListener('click',function(){
-    if(!code)return;
-    var done=function(){btn.classList.add('done');btn.textContent='Tersalin ✓';hint.textContent='Sekarang buka Scriptable → + → tekan lama → Paste.';};
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(done,function(){if(fallback())done();});}
-    else if(fallback())done();
+  document.querySelectorAll('.copy[data-src]').forEach(function(btn){
+    var code='',hint=btn.nextElementSibling,name=btn.getAttribute('data-name');
+    fetch(btn.getAttribute('data-src')+'?t='+Date.now()).then(function(r){if(!r.ok)throw 0;return r.text();}).then(function(t){
+      code=t;btn.disabled=false;btn.textContent=name==='Hurricane'?'Salin script widget':'Salin script kalender';
+    }).catch(function(){btn.textContent='Gagal memuat — buka "Script mentah" di bawah';});
+    btn.addEventListener('click',function(){
+      if(!code)return;
+      var done=function(){btn.classList.add('done');btn.textContent='Tersalin ✓';if(hint)hint.textContent='Sekarang buka Scriptable → + → tekan lama → Paste → beri nama "'+name+'".';};
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(done,function(){if(fallback(code))done();});}
+      else if(fallback(code))done();
+    });
   });
 })();
 </script>
