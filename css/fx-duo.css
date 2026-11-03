@@ -1,0 +1,38 @@
+/* FX DUO — layar lipat & tablet kecil.
+   iPhone Duo: terlipat ±466×678 (tata letak HP, sudah pas), terbuka
+   mendatar ±890×626 (atau ±830 dengan bilah Safari di samping), terbuka
+   tegak ±626×890 (tata letak HP), split view ±445 lebar (tata letak HP).
+   Yang perlu diatur hanya mode TERBUKA MENDATAR: lebar 769–1100 px memakai
+   tata letak desktop, jadi bar tab terlalu lebar (tab Warning/Admin/More
+   terdorong keluar layar) dan header + nav memakan 148 px dari 626.
+   Hanya CSS tata letak; tidak ada logika. Dimuat paling akhir. */
+
+/* 769–1100 px: tab desktop memakai label pendek HP (People, Recap, Insights…)
+   dan jarak lebih rapat → semua tab muat tanpa digulir ke samping */
+@media (min-width:769px) and (max-width:1100px){
+  /* !important: reference-dashboard.css memaksa .premium-nav-label{display:inline!important} */
+  .nav-bar .nav-tab .premium-nav-label{display:none!important}
+  .nav-bar .nav-tab .premium-mobile-label{display:inline!important;font-size:13px!important}
+  .nav-bar{gap:2px!important;padding-left:8px!important;padding-right:8px!important}
+  .nav-bar .nav-tab{padding:0 11px!important}
+  /* tab "More" di desktop hanya mengulang tab yang sudah tampil di bar ini */
+  .nav-bar .premium-more-tab{display:none!important}
+}
+@media (min-width:769px) and (max-width:900px){
+  .nav-bar{gap:0!important;padding-left:4px!important;padding-right:4px!important}
+  .nav-bar .nav-tab{padding:0 9px!important}
+  .nav-bar .nav-tab .premium-mobile-label{font-size:12.5px!important}
+}
+
+/* layar pendek (≤ 720 px tinggi) dengan tata letak desktop: header & nav lebih
+   ringkas supaya isi halaman mendapat ruang. Total 82+66 → 60+54 = 114 px. */
+@media (min-width:769px) and (max-height:720px){
+  header{height:60px!important;min-height:60px!important;padding-top:6px!important;padding-bottom:6px!important;box-sizing:border-box!important}
+  header .brand-logo{width:40px!important;height:40px!important}
+  header .brand-sub{display:none!important}
+  .nav-wrapper{top:60px!important}
+  .nav-bar{padding-top:4px!important;padding-bottom:4px!important}
+  .nav-bar .nav-tab{min-height:40px!important;margin:3px 0!important}
+  /* papan Top Performers menempel tepat di bawah nav (aslinya 148 − 6) */
+  .premium-leaderboard-panel{top:108px!important}
+}
