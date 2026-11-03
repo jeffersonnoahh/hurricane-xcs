@@ -4564,10 +4564,17 @@
     el.querySelector('[data-k=note]').hidden = !document.querySelector('.sheet #fNote, .sheet textarea');
     $('kpChips').innerHTML = kpSuggest(inp).map(function (a) { return '<button type="button" data-amt="' + a + '">' + a.toLocaleString('id-ID') + '</button>'; }).join('');
     el.classList.add('show'); document.body.classList.add('kp-open');
-    var sh = document.getElementById('sheet'), ph = el.offsetHeight;
-    if (sh) { sh.style.maxHeight = (window.innerHeight - ph - 30 + 24) + 'px'; sh.style.transform = 'translateY(' + (-(ph - 24)) + 'px)'; sh.style.borderRadius = '28px'; }
+    kpLayout();
+    var sh = document.getElementById('sheet');
     setTimeout(function () { var sr = sh.getBoundingClientRect(), ir = inp.getBoundingClientRect(); if (ir.top < sr.top + 60 || ir.bottom > sr.bottom - 10) sh.scrollTop += ir.top - sr.top - 90; }, 380);
   }
+  // Lift the panel above the pad (runs again when the screen size changes, e.g. folding the iPhone Duo).
+  function kpLayout() {
+    var el = KP.el, sh = document.getElementById('sheet'); if (!el || !sh || !KP.input) return;
+    var ph = el.offsetHeight;
+    sh.style.maxHeight = (window.innerHeight - ph - 6) + 'px'; sh.style.transform = 'translateY(' + (-(ph - 24)) + 'px)'; sh.style.borderRadius = '28px';
+  }
+  window.addEventListener('resize', function () { if (KP.input) requestAnimationFrame(kpLayout); });
   function kpHide() {
     if (!KP.el) return; KP.el.classList.remove('show'); document.body.classList.remove('kp-open');
     document.querySelectorAll('.amt-wrap.kp-on').forEach(function (w) { w.classList.remove('kp-on'); });
