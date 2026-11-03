@@ -5,24 +5,62 @@
 <meta name="viewport" id="hxVp" content="width=device-width, initial-scale=1.0">
 <script>
 /* iPhone Duo TERBUKA (layar dalam ±890×626 / 626×890 pt): tampilan LAPTOP yang
-   diperkecil — viewport 1280 px saat mendatar, 980 px saat tegak; Safari
-   mengecilkan skala sendiri. Terlipat (±466 pt) & iPhone biasa tetap tampilan HP.
+   diperkecil, dengan tombol zoom − / + di header (seperti ⌘− / ⌘+ di laptop).
+   Zoom = lebar tata letak: mendatar 1280 px (±70%) dan tegak 980 px (±64%)
+   sebagai awal; − = lebih lebar (lebih kecil, lebih banyak isi), + = lebih
+   sempit, sampai 100% (ukuran asli). Pilihan disimpan per arah di HP ini.
+   Terlipat (±466 pt) & iPhone biasa: tetap tampilan HP, tanpa tombol.
    Ukuran layar dalam pt = visualViewport.width/height × scale, jadi tetap benar
-   setelah viewport diganti, di-zoom, dilipat atau diputar. Tidak dihitung ulang
-   saat keyboard terbuka (tinggi layar mengecil sementara). */
+   setelah viewport diganti, di-zoom jari, dilipat atau diputar. Tidak dihitung
+   ulang saat keyboard terbuka (tinggi layar mengecil sementara). */
 (function(){
   if(!/iPhone/.test(navigator.userAgent||''))return;
-  var m=document.getElementById('hxVp'),PHONE=m.getAttribute('content'),cur=PHONE;
-  function apply(){
+  var m=document.getElementById('hxVp'),PHONE=m.getAttribute('content'),cur=PHONE,R=document.documentElement;
+  var STEPS={land:[0,1024,1152,1280,1440,1600,1800],port:[0,860,980,1100,1280,1440]},DEF={land:1280,port:980};
+  var Z={duo:false,ori:'land',w:0,lay:0};
+  function rd(k){try{var v=localStorage.getItem('hx-zoom-'+k);return v===null?null:+v}catch(e){return null}}
+  function wr(k,v){try{if(v===null)localStorage.removeItem('hx-zoom-'+k);else localStorage.setItem('hx-zoom-'+k,String(v))}catch(e){}}
+  function apply(force){
     var a=document.activeElement;
-    if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;
+    if(!force&&a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;
     var v=window.visualViewport,s=v&&v.scale?v.scale:1;
     var w=(v?v.width:innerWidth)*s,h=(v?v.height:innerHeight)*s;
-    var want=(w>=600&&h>=520)?(w>h?'width=1280':'width=980'):PHONE;
+    Z.duo=w>=600&&h>=520;Z.ori=w>h?'land':'port';Z.w=w;
+    var lay=rd(Z.ori);if(lay===null||STEPS[Z.ori].indexOf(lay)<0)lay=DEF[Z.ori];
+    Z.lay=Z.duo?lay:0;
+    var want=Z.lay?'width='+Z.lay:PHONE;
     if(want!==cur){cur=want;m.setAttribute('content',want);}
+    R.classList.toggle('hx-duo',Z.duo);
+    ui();
   }
+  function pct(){return Z.lay?Math.round(Z.w/Z.lay*100):100;}
+  function step(dir){                       /* dir −1 = perkecil (lebih lebar), +1 = perbesar */
+    if(!Z.duo)return;
+    var L=STEPS[Z.ori],i=L.indexOf(Z.lay);if(i<0)i=L.indexOf(DEF[Z.ori]);
+    var n=Math.max(0,Math.min(L.length-1,i-dir));if(n===i)return;
+    wr(Z.ori,L[n]);apply(true);
+  }
+  var box=null;
+  function ui(){
+    if(!Z.duo){if(box)box.style.setProperty('display','none','important');return;}
+    if(box)box.style.removeProperty('display');
+    if(!box&&document.body){
+      var hr=document.querySelector('header .header-right');if(!hr)return;
+      box=document.createElement('div');box.className='day-switcher hxz';box.setAttribute('role','group');box.setAttribute('aria-label','Zoom tampilan');
+      box.innerHTML='<button type="button" class="day-btn" data-z="-1" aria-label="Perkecil">\u2212</button><span class="day-label hxz-v" role="button" tabindex="0" title="Kembali ke ukuran awal"></span><button type="button" class="day-btn" data-z="1" aria-label="Perbesar">+</button>';
+      box.addEventListener('click',function(e){var b=e.target.closest('[data-z]');if(b){step(+b.getAttribute('data-z'));return;}if(e.target.closest('.hxz-v')){wr(Z.ori,null);apply(true);}});
+      hr.insertBefore(box,hr.firstChild);
+    }
+    if(!box)return;
+    var L=STEPS[Z.ori],i=L.indexOf(Z.lay);
+    box.querySelector('.hxz-v').textContent=pct()+'%';
+    box.querySelector('[data-z="-1"]').disabled=i===L.length-1;
+    box.querySelector('[data-z="1"]').disabled=i===0;
+  }
+  window.HXZoom={state:function(){return{duo:Z.duo,ori:Z.ori,layout:Z.lay,pct:pct()};},step:step};
   apply();
-  var t;function later(){clearTimeout(t);t=setTimeout(apply,200);}
+  document.addEventListener('DOMContentLoaded',ui);
+  var t;function later(){clearTimeout(t);t=setTimeout(function(){apply(false);},200);}
   addEventListener('resize',later);addEventListener('orientationchange',later);
 })();
 </script>
@@ -52,7 +90,7 @@
 <link rel="stylesheet" href="css/fx-stars.css?v=20261029-yr1">
 <link rel="stylesheet" href="css/fx-year.css?v=20261029-yr1">
 <link rel="stylesheet" href="css/fx-egg.css?v=20261030-egg3">
-<link rel="stylesheet" href="css/fx-duo.css?v=20261103-duo1">
+<link rel="stylesheet" href="css/fx-duo.css?v=20261103-duo2">
 </head>
 
 <body>
