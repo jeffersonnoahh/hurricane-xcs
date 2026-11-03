@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="dark light">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#09090b">
+<meta name="theme-color" content="#060807">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -438,7 +438,7 @@
   var done = false;
   function boot() {
     if (done) return; done = true;
-    ['js/bca-parser.js?v=20261101-4', 'js/app.js?v=20261101-115'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
+    ['js/bca-parser.js?v=20261101-4', 'js/app.js?v=20261101-116'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
   }
   var l = document.getElementById('mainCss');
   if (l && l.media === 'all') { var p0 = document.getElementById('preCss'); if (p0) p0.remove(); boot(); } else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; var p = document.getElementById('preCss'); if (p) p.remove(); boot(); }, 5000); }
