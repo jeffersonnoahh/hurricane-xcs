@@ -15,7 +15,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system
 .kick{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
 h1{font-size:30px;line-height:1.15;margin:6px 0 8px;letter-spacing:-.02em}
 .sub{color:var(--dim);margin:0 0 22px}
-.copy{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border:0;border-radius:16px;background:var(--green);color:#000;font:700 17px/1 inherit;cursor:pointer}
+.copy{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border:0;border-radius:16px;background:var(--green);color:#000;font-family:inherit;font-size:17px;font-weight:800;line-height:1;cursor:pointer}
 .copy:active{transform:scale(.98)}
 .copy.done{background:#1c1c1e;color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
 .hint{color:var(--dim);font-size:13px;text-align:center;margin:8px 0 26px}
@@ -50,7 +50,7 @@ code{background:#1f1f22;border-radius:6px;padding:1px 6px;font-size:13px}
     <li>Opsional, layar kunci: tekan lama layar kunci → <b>Customize</b> → <b>Lock Screen</b> → tambah widget <b>Scriptable</b> → pilih script <b>Hurricane</b>.</li>
   </ol>
 
-  <p class="note">iOS memperbarui widget sendiri kira-kira tiap 10–15 menit. Jam kecil di pojok widget = terakhir diperbarui; tulisan "offline" berarti sedang tidak ada internet dan angka terakhir yang tampil.<br><br>
+  <p class="note">iOS yang mengatur jadwal pembaruan widget (biasanya tiap ±15–60 menit). Mau angka terbaru sekarang? Ketuk widget untuk membuka dashboard. Jam kecil di pojok widget = terakhir diperbarui; tulisan "offline" berarti sedang tidak ada internet dan angka terakhir yang tampil.<br><br>
   Script mentah: <a href="hurricane-widget.js">hurricane-widget.js</a></p>
 </div>
 <script>
