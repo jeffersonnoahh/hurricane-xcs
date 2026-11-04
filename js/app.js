@@ -15,7 +15,7 @@ let TM={
   'Agung':   {m:['Agung','Koko','Luthfi','Ayu'],c:'#2eccc8',bg:'#0d2020',e:''},
   'Ivan':    {m:['Ivan','Hendri','Eli'],c:'#ff6b1a',bg:'#2a1200',e:''},
   'Stanley': {m:['Stanley','Yora'],c:'#2ecc71',bg:'#0d2015',e:''},
-  'REI':     {m:['Rei','Alif'],c:'#ff4d6d',bg:'#2a0d18',e:''},
+  'REI':     {m:['Rei Shopee','Alif'],c:'#ff4d6d',bg:'#2a0d18',e:''},
 };
 // Keep a backup of default teams for recovery
 const TM_DEFAULT=JSON.parse(JSON.stringify(TM));
