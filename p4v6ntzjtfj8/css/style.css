@@ -1975,3 +1975,10 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
   #homeSecs .ins-row{margin:0;padding:2px 0 6px;scroll-snap-type:none}
   #homeSecs .ins-row > *{flex:1 1 100%;max-width:none}
 }
+/* new category inside the picker */
+.cat-new{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;margin-top:4px;border-radius:14px;color:var(--pos);font-weight:600;font-size:14.5px;text-align:left;background:rgba(52,211,153,.08);box-shadow:inset 0 0 0 1px rgba(52,211,153,.25)}
+.cat-new span{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(52,211,153,.18);font-size:18px}
+.cat-new:active{transform:scale(.98)}
+.cat-newf{display:flex;flex-direction:column;gap:10px;padding:4px 2px 8px}
+.cat-newf input,.cat-newf select{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface2,rgba(255,255,255,.05));color:var(--ink);font-size:16px}
+.cat-newf .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}

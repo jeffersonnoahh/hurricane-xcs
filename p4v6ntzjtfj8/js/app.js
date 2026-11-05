@@ -2434,7 +2434,8 @@
           }
           root.querySelector('#fCats').innerHTML = allC.map(function (c, i) {
             return '<div class="sw" data-cid="' + esc(c.id) + '"><button class="sw-del" type="button" data-delcat="' + esc(c.id) + '"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Delete</button><button type="button" data-c="' + esc(c.id) + '" class="cat-row' + (c.parent ? ' child' : '') + (c.id === st.cat ? ' on' : '') + '" style="--i:' + Math.min(i, 14) + '">' + icon(c, 'sm') + '<span class="grow">' + esc(c.name) + '</span>' + (c.id === st.cat ? '<span class="check">✓</span>' : '') + '</button></div>';
-          }).join('') + (moreN > 0 ? '<button type="button" class="cat-more" data-showall="1">Show all categories · ' + moreN + ' more</button>' : '') || '<p class="muted small" style="text-align:center">No category found</p>';
+          }).join('') + (moreN > 0 ? '<button type="button" class="cat-more" data-showall="1">Show all categories · ' + moreN + ' more</button>' : '') +
+            (st.type !== 'transfer' ? '<button type="button" class="cat-new" data-newcat="1"><span>＋</span>' + (q && !allC.length ? 'Create "' + esc(root.querySelector('#fCatQ').value.trim()) + '"' : 'New category') + '</button>' : '');
         }
         var pickOpen = isNew;
         root.querySelector('#fCatSel').onclick = function () { pickOpen = !pickOpen; haptic(); paint(); };
@@ -2452,6 +2453,34 @@
         }
         bindSwipe(root.querySelector('#fCats'));
         var onDel = function () { if (!document.body.contains(root)) { document.removeEventListener('catdeleted', onDel); return; } paint(); }; document.addEventListener('catdeleted', onDel);
+        // Make a new category right here, without leaving the transaction.
+        function newCatForm() {
+          var qv = root.querySelector('#fCatQ').value.trim(), parents = S.cats.filter(function (p) { return p.type === st.type && !p.parent && !p.hidden; });
+          root.querySelector('#fCats').innerHTML = '<div class="cat-newf"><div class="sheet-sec" style="margin-top:4px">New ' + (st.type === 'income' ? 'income' : st.type === 'debt' ? 'debt/loan' : 'expense') + ' category</div>' +
+            '<input id="ncName" placeholder="Category name, e.g. Coffee" value="' + esc(qv) + '" autocomplete="off" enterkeyhint="done">' +
+            '<select id="ncParent"><option value="">Main category</option>' + parents.map(function (p) { return '<option value="' + esc(p.id) + '">Inside ' + esc(p.name) + '</option>'; }).join('') + '</select>' +
+            '<div class="two"><button type="button" class="btn" data-nccancel="1">Cancel</button><button type="button" class="btn primary" data-ncsave="1">Add category</button></div></div>';
+          var nm = root.querySelector('#ncName'); setTimeout(function () { nm.focus(); }, 60);
+          nm.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); newCatSave(); } });
+        }
+        function newCatSave() {
+          var n = (root.querySelector('#ncName').value || '').trim(); if (!n) { toast('Give it a name'); return; }
+          var same = S.cats.filter(function (c) { return c.type === st.type && c.name.toLowerCase() === n.toLowerCase(); })[0];
+          if (same) { if (same.hidden) delete same.hidden; st.cat = same.id; toast('Using ' + same.name); }
+          else {
+            var c = { id: uid(), name: n, icon: '🏷️', type: st.type, sp: st.type === 'income' ? 'other_in' : st.type === 'debt' ? 'loan' : 'other_out' };
+            var pv = root.querySelector('#ncParent').value; if (pv) c.parent = pv;
+            if (st.type === 'debt') c.flow = 'out';
+            S.cats.push(c); st.cat = c.id; save(); sfx('pop'); toast('Category added ✓');
+          }
+          pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); autoOwed();
+        }
+        root.querySelector('#fCats').addEventListener('click', function (e) {
+          if (e.target.closest('[data-newcat]')) { haptic(); newCatForm(); return; }
+          if (e.target.closest('[data-nccancel]')) { haptic(); paint(); return; }
+          if (e.target.closest('[data-ncsave]')) { newCatSave(); return; }
+          if (e.target.closest('.cat-newf')) return;
+        });
         root.querySelector('#fCats').addEventListener('click', function (e) { if (e.target.closest('[data-showall]')) { st.showAll = true; haptic(); paint(); return; } var b = e.target.closest('button[data-c]'); if (b) { st.cat = b.dataset.c; pickOpen = false; root.querySelector('#fCatQ').value = ''; haptic(); paint(); autoOwed(); } });
         paint(); if (isNew && prefill && prefill.cat) autoOwed();
         if (isNew) setTimeout(function () { amt.focus(); }, 380);
