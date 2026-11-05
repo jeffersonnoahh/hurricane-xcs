@@ -32,8 +32,8 @@
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261101-77" media="print" onload="this.media='all';var p=document.getElementById('preCss');if(p)p.remove();if(window.__cssOk)window.__cssOk()">
-<noscript><link rel="stylesheet" href="css/style.css?v=20261101-77"></noscript>
+<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261101-78" media="print" onload="this.media='all';var p=document.getElementById('preCss');if(p)p.remove();if(window.__cssOk)window.__cssOk()">
+<noscript><link rel="stylesheet" href="css/style.css?v=20261101-78"></noscript>
 </head>
 <body>
 <style>
@@ -358,6 +358,11 @@
     <label class="fld">Secret<input id="sToken" type="password" placeholder="same SECRET as in Code.gs" autocomplete="off"></label>
     <label class="fld">Default wallet for BCA transactions<select id="sWallet"></select></label>
     <label class="fld">Wallet for Mandiri transactions<select id="sMWallet"></select></label>
+    <div class="trip-box">
+      <label class="set-row plain"><span class="grow"><b>✈️ Trip mode</b><span class="sub">While you travel, every BCA and Mandiri expense goes to one category</span></span><input type="checkbox" class="switch" id="tripOn"></label>
+      <label class="fld">Trip category<input id="tripName" placeholder="e.g. Japan" autocomplete="off"></label>
+      <div class="two"><label class="fld">From<input id="tripFrom" type="date"></label><label class="fld">Until<input id="tripTo" type="date"></label></div>
+    </div>
     <div class="fld">Which wallet each BCA account uses<span class="sub">Matched on the "Source of Fund" in each BCA email.</span></div>
     <div id="acctList"></div>
     <button class="link" id="addAcct" type="button">+ Add account</button>
@@ -438,7 +443,7 @@
   var done = false;
   function boot() {
     if (done) return; done = true;
-    ['js/bca-parser.js?v=20261101-4', 'js/app.js?v=20261101-117'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
+    ['js/bca-parser.js?v=20261101-4', 'js/app.js?v=20261101-118'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
   }
   var l = document.getElementById('mainCss');
   if (l && l.media === 'all') { var p0 = document.getElementById('preCss'); if (p0) p0.remove(); boot(); } else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; var p = document.getElementById('preCss'); if (p) p.remove(); boot(); }, 5000); }

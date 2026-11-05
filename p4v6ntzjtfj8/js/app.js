@@ -132,6 +132,20 @@
     var n = Math.min(pa.length, pb.length), m = Math.min(sa.length, sb.length);
     return n >= 2 && m >= 2 && pa.slice(0, n) === pb.slice(0, n) && sa.slice(-m) === sb.slice(-m);
   }
+  // Trip mode: while travelling, every BCA/Mandiri expense goes to the trip category (e.g. Japan, 5 to 17 Nov 2026).
+  function ensureTrip() {
+    S.settings = S.settings || {};
+    if (S.tripVer !== 1) { S.tripVer = 1; if (!S.settings.trip) S.settings.trip = { on: true, name: 'Japan', from: '2026-11-05', to: '2026-11-17' }; }
+    var tr = S.settings.trip; if (!tr || !tr.on || !tr.name) return null;
+    var c = S.cats.filter(function (x) { return x.type === 'expense' && x.name.toLowerCase() === tr.name.toLowerCase(); })[0];
+    if (!c) { c = { id: 'trip_' + uid(), name: tr.name, icon: '✈️', type: 'expense', sp: 'shanghai' }; S.cats.push(c); }
+    if (c.hidden) delete c.hidden;
+    tr.cat = c.id;
+    // bank expenses already synced inside the trip dates move to the trip category once
+    if (!tr.moved) { tr.moved = 1; S.tx.forEach(function (t) { if ((t.src === 'bca' || t.src === 'mandiri') && t.type === 'expense' && t.date >= tr.from && t.date <= tr.to) t.cat = c.id; }); }
+    return tr;
+  }
+  function tripCatFor(date, type) { var tr = S.settings && S.settings.trip; return tr && tr.on && tr.cat && type === 'expense' && date >= tr.from && date <= tr.to && S.cats.some(function (c) { return c.id === tr.cat; }) ? tr.cat : null; }
   // Wallet for Mandiri emails: chosen in Account, else Personal Expense.
   function mandiriWalletId() {
     if (S.settings.mWalletVer !== 2) { delete S.settings.mandiriWallet; S.settings.mWalletVer = 2; }
@@ -1171,6 +1185,7 @@
     $('startFromLine').textContent = s.startFrom ? 'Tracking BCA emails since ' + new Date(s.startFrom).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '';
     $('sWallet').innerHTML = S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '">' + esc(w.icon + ' ' + w.name) + '</option>'; }).join('');
     $('sWallet').value = s.bcaWallet;
+    var trp = S.settings.trip || {}; if ($('tripOn')) { $('tripOn').checked = !!trp.on; $('tripName').value = trp.name || ''; $('tripFrom').value = trp.from || ''; $('tripTo').value = trp.to || ''; }
     $('sMWallet').innerHTML = $('sWallet').innerHTML; $('sMWallet').value = mandiriWalletId() || s.bcaWallet;
     ensureAccounts();
     $('acctList').innerHTML = s.bcaAccounts.map(function (a, i) {
@@ -2560,6 +2575,7 @@
   var syncing = false;
   function sync(manual) {
     var s = S.settings;
+    ensureTrip();
     if (!s.syncUrl || !s.token) { if (manual) { toast('Set up BCA sync in Account first'); } return Promise.resolve(); }
     if (syncing) return Promise.resolve();
     syncing = true; busy(true, 'Syncing bank emails…');
@@ -2592,7 +2608,7 @@
           if (p.ref && S.tx.some(function (t) { return t.src === bank && t.ref === p.ref && t.amount === p.amount; })) return;
           var d = new Date(em.date);
           S.tx.push({
-            id: uid(), type: p.type, amount: p.amount, cat: guessCat(p.merchant, p.type),
+            id: uid(), type: p.type, amount: p.amount, cat: tripCatFor(ymd(d), p.type) || guessCat(p.merchant, p.type),
             wallet: (bank === 'mandiri' ? mandiriWalletId() : walletForSrc(p.src)) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || '',
             toWallet: '', biz: bizForCat(guessCat(p.merchant, p.type)) || undefined, date: ymd(d), time: hm(d), merchant: p.merchant, note: '', src: bank, srcId: em.id, ref: p.ref || '', created: Date.now()
           });
@@ -3243,6 +3259,9 @@
       S.settings.syncUrl = url; S.settings.token = $('sToken').value.trim();
       var wasOn = !!S.settings.autoSync;
       S.settings.autoSync = $('sAuto').checked; S.settings.bcaWallet = $('sWallet').value; S.settings.mandiriWallet = $('sMWallet').value;
+      if ($('tripOn')) { var oldT = S.settings.trip || {}, nt = { on: $('tripOn').checked, name: $('tripName').value.trim(), from: $('tripFrom').value, to: $('tripTo').value };
+        if (nt.on && (!nt.name || !nt.from || !nt.to || nt.to < nt.from)) { toast('Trip needs a name and valid dates'); return false; }
+        nt.moved = oldT.name === nt.name && oldT.from === nt.from && oldT.to === nt.to ? oldT.moved : 0; S.settings.trip = nt; ensureTrip(); }
       // Turning live sync back on: only take BCA emails from now on (older history is already imported), so nothing doubles.
       if (!wasOn && S.settings.autoSync) { S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now(); }
       save(); renderAll(); toast(!wasOn && S.settings.autoSync ? 'Live BCA sync on ✓ New transactions from now on' : 'Saved ✓'); return true;
@@ -4735,7 +4754,7 @@
     var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
-  load(); fixBilliard(); zeroStart(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); hideOldCats(); if (S.wHideVer !== 1) { S.wHideVer = 1; S.wallets.forEach(function (w) { if (/^(ajaib|stocks|gold puter)$/i.test(String(w.name).trim())) w.hidden = true; }); } if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
+  load(); fixBilliard(); zeroStart(); ensureTrip(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); hideOldCats(); if (S.wHideVer !== 1) { S.wHideVer = 1; S.wallets.forEach(function (w) { if (/^(ajaib|stocks|gold puter)$/i.test(String(w.name).trim())) w.hidden = true; }); } if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   setTimeout(mlSeedFromHash, 1500);
   $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); }; $('codeBtn').onclick = function () { haptic(); codeSheet(); }; setTimeout(function () { mountEarth(document.querySelector('.tile-earth .earth'), 0.012, false); }, 600);
