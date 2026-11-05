@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>Hurricane iPhone Widgets</title>
+<style>
+:root{--bg:#000;--card:#141416;--line:#2c2c2e;--text:#f5f5f7;--dim:#8e8e93;--green:#30d158;--gold:#ffd426}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 22px) 16px calc(env(safe-area-inset-bottom) + 40px)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.kick{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
+.lang{display:inline-flex;padding:3px;border-radius:12px;background:#1c1c1e;border:1px solid var(--line)}
+.lang button{border:0;background:transparent;color:var(--dim);font:inherit;font-size:13px;font-weight:700;padding:6px 12px;border-radius:9px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:#2c2c2e;color:#fff}
+h1{font-size:30px;line-height:1.15;margin:14px 0 8px;letter-spacing:-.02em}
+.h2{font-size:22px;line-height:1.2;margin:34px 0 6px;letter-spacing:-.01em}
+.sub{color:var(--dim);margin:0 0 20px}
+.sub b{color:#fff}
+.copy{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border:0;border-radius:16px;background:var(--green);color:#000;font-family:inherit;font-size:17px;font-weight:800;line-height:1;cursor:pointer}
+.copy:active{transform:scale(.98)}
+.copy.done{background:#1c1c1e;color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.hint{color:var(--dim);font-size:13px;text-align:center;margin:8px 0 22px}
+ol{list-style:none;counter-reset:s;padding:0;margin:0}
+li{counter-increment:s;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px 14px 56px;margin-bottom:10px}
+li::before{content:counter(s);position:absolute;left:14px;top:14px;width:28px;height:28px;border-radius:50%;background:#1f1f22;color:var(--gold);font-weight:800;font-size:14px;display:grid;place-items:center}
+li b{color:#fff}
+li small{display:block;color:var(--dim);font-size:13px;margin-top:4px}
+a{color:var(--green)}
+code{background:#1f1f22;border-radius:6px;padding:1px 6px;font-size:12px}
+.note{margin-top:22px;color:var(--dim);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+.note b{color:#fff}
+[data-l]{display:none}
+html[data-lang="en"] [data-l="en"],html[data-lang="id"] [data-l="id"]{display:block}
+html[data-lang="en"] span[data-l="en"],html[data-lang="id"] span[data-l="id"]{display:inline}
+</style>
+<script>
+(function(){var l='en';try{var q=new URLSearchParams(location.search).get('lang');l=q==='id'||q==='en'?q:(localStorage.getItem('hx-widget-lang')||'en');}catch(e){}document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l;})();
+</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="kick">HURRICANE XCS</div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-set="en">English</button>
+      <button type="button" data-set="id">Indonesia</button>
+    </div>
+  </div>
+
+  <h1><span data-l="en">Dashboard widgets for your iPhone</span><span data-l="id">Widget dashboard di layar iPhone</span></h1>
+  <p class="sub" data-l="en">Today's revenue, target, this month, top sales and a 14-day chart — right on your home screen or lock screen. Read-only: it can't change anything.</p>
+  <p class="sub" data-l="id">Omzet hari ini, target, omzet bulan ini, top sales, dan grafik 14 hari — langsung di layar utama atau layar kunci. Hanya membaca data, tidak bisa mengubah apa pun.</p>
+
+  <button class="copy" data-src="hurricane-widget.js" data-name="Hurricane" type="button" disabled>…</button>
+  <div class="hint"></div>
+
+  <ol data-l="en">
+    <li>Install the free app <b>Scriptable</b> from the App Store.
+      <small><a href="https://apps.apple.com/app/scriptable/id1405459188">Open Scriptable in the App Store</a></small></li>
+    <li>Tap the green button above to <b>copy the script</b>.</li>
+    <li>Open Scriptable, tap <b>+</b> (top right), then <b>press and hold → Paste</b>.
+      <small>Tap the title "Untitled Script" at the top, rename it <b>Hurricane</b>, then tap <b>Done</b>.</small></li>
+    <li>On your home screen: <b>press and hold</b> an empty spot → <b>Edit</b> → <b>Add Widget</b> → search <b>Scriptable</b> → pick a size (small, medium or large).</li>
+    <li><b>Press and hold the new widget</b> → <b>Edit Widget</b> → <b>Script</b>: choose <b>Hurricane</b>.
+      <small>Leave "When Interacting" as it is — tapping the widget opens the dashboard.</small></li>
+    <li>Optional, lock screen: press and hold the lock screen → <b>Customize</b> → <b>Lock Screen</b> → add a <b>Scriptable</b> widget → choose <b>Hurricane</b>.</li>
+  </ol>
+  <ol data-l="id">
+    <li>Pasang aplikasi <b>Scriptable</b> (gratis) dari App Store.
+      <small><a href="https://apps.apple.com/app/scriptable/id1405459188">Buka Scriptable di App Store</a></small></li>
+    <li>Ketuk tombol hijau di atas untuk <b>menyalin script</b>.</li>
+    <li>Buka Scriptable, ketuk <b>+</b> di kanan atas, lalu <b>tekan lama → Paste</b>.
+      <small>Ketuk judul "Untitled Script" di atas, ganti jadi <b>Hurricane</b>, lalu <b>Done</b>.</small></li>
+    <li>Di layar utama: <b>tekan lama</b> bagian kosong → <b>Edit</b> → <b>Add Widget</b> → cari <b>Scriptable</b> → pilih ukuran (kecil, sedang, atau besar).</li>
+    <li><b>Tekan lama widget</b> yang baru → <b>Edit Widget</b> → <b>Script</b>: pilih <b>Hurricane</b>.
+      <small>Biarkan "When Interacting" apa adanya — mengetuk widget membuka dashboard.</small></li>
+    <li>Opsional, layar kunci: tekan lama layar kunci → <b>Customize</b> → <b>Lock Screen</b> → tambah widget <b>Scriptable</b> → pilih script <b>Hurricane</b>.</li>
+  </ol>
+
+  <h2 class="h2"><span data-l="en">Calendar widget — Hurricane style</span><span data-l="id">Widget Kalender — gaya Hurricane</span></h2>
+  <p class="sub" data-l="en">Pitch black like the Hurricane widget: the day, the date and your next events in your Google Calendar colours. It reads the iPhone Calendar app (Google Calendar is included once your Google account is added in <b>Settings → Apps → Calendar → Calendar Accounts</b>). Read-only.</p>
+  <p class="sub" data-l="id">Hitam pekat seperti widget Hurricane: hari, tanggal, dan acara berikutnya dengan warna kalender Google-mu. Membaca app Kalender iPhone (Google Calendar ikut kalau akun Google sudah ditambahkan di <b>Pengaturan → Apps → Calendar → Calendar Accounts</b>). Hanya membaca.</p>
+  <button class="copy" data-src="kalender-widget.js" data-name="Kalender" type="button" disabled>…</button>
+  <div class="hint"></div>
+  <ol data-l="en">
+    <li>In Scriptable: <b>+</b> → press and hold → <b>Paste</b> → rename it <b>Calendar</b> → <b>Done</b>.</li>
+    <li>Tap the <b>Calendar</b> tile once. Your iPhone asks about calendar access → tap <b>Allow Full Access</b>.
+      <small>Without this step the widget only shows "allow calendar access".</small></li>
+    <li>Add a Scriptable widget like steps 4–5 above, but choose the script <b>Calendar</b>.
+      <small>Tapping the widget opens the Google Calendar app.</small></li>
+  </ol>
+  <ol data-l="id">
+    <li>Di Scriptable: <b>+</b> → tekan lama → <b>Paste</b> → ganti judul jadi <b>Kalender</b> → <b>Done</b>.</li>
+    <li>Ketuk tile <b>Kalender</b> sekali. iPhone bertanya soal kalender → pilih <b>Allow Full Access</b> (Izinkan akses penuh).
+      <small>Tanpa langkah ini widget hanya menampilkan pesan "izinkan akses kalender".</small></li>
+    <li>Tambah widget Scriptable seperti langkah 4–5 di atas, tapi pilih script <b>Kalender</b>.
+      <small>Ketuk widget = buka app Google Calendar.</small></li>
+  </ol>
+
+  <p class="note" data-l="en"><b>Already installed it in Indonesian?</b> Copy again here, open your script in Scriptable, tap inside the code → <b>Select All</b> → <b>Paste</b> → <b>Done</b>. The widget on your home screen switches language by itself.<br><br>
+  iOS decides when widgets refresh (usually every 15–60 minutes). The small clock in the corner is the last update; "offline" means no internet right now and the last numbers are shown. Tap the widget for the latest numbers.<br><br>
+  Raw scripts: <a href="hurricane-widget.js">hurricane-widget.js</a> · <a href="kalender-widget.js">kalender-widget.js</a> (Indonesian by default; change <code>LANG</code> to <code>'en'</code>).</p>
+  <p class="note" data-l="id">iOS yang mengatur jadwal pembaruan widget (biasanya tiap ±15–60 menit). Jam kecil di pojok widget = terakhir diperbarui; tulisan "offline" berarti sedang tidak ada internet dan angka terakhir yang tampil. Ketuk widget untuk angka terbaru.<br><br>
+  Script mentah: <a href="hurricane-widget.js">hurricane-widget.js</a> · <a href="kalender-widget.js">kalender-widget.js</a></p>
+</div>
+<script>
+(function(){
+  var R=document.documentElement;
+  function lang(){return R.getAttribute('data-lang')==='id'?'id':'en';}
+  var TXT={
+    en:{load:'Loading…',fail:'Could not load — use the raw script link below',copy:{Hurricane:'Copy widget script',Kalender:'Copy calendar script'},hint:{Hurricane:'Tap the green button to copy the widget script.',Kalender:'Tap the green button to copy the calendar script.'},done:'Copied ✓',after:function(n){return 'Now open Scriptable → + → press and hold → Paste → name it "'+(n==='Kalender'?'Calendar':n)+'".';}},
+    id:{load:'Memuat script…',fail:'Gagal memuat — buka "Script mentah" di bawah',copy:{Hurricane:'Salin script widget',Kalender:'Salin script kalender'},hint:{Hurricane:'Ketuk tombol hijau untuk menyalin script widget.',Kalender:'Ketuk tombol hijau untuk menyalin script kalender.'},done:'Tersalin ✓',after:function(n){return 'Sekarang buka Scriptable → + → tekan lama → Paste → beri nama "'+n+'".';}}
+  };
+  var btns=[].slice.call(document.querySelectorAll('.copy[data-src]'));
+  function paint(){
+    var t=TXT[lang()];
+    document.querySelectorAll('.lang [data-set]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-set')===lang()));});
+    btns.forEach(function(b){var n=b.getAttribute('data-name');b.classList.remove('done');
+      b.textContent=b._code?t.copy[n]:(b._failed?t.fail:t.load);
+      if(b.nextElementSibling)b.nextElementSibling.textContent=t.hint[n];});
+  }
+  document.querySelectorAll('.lang [data-set]').forEach(function(b){b.addEventListener('click',function(){
+    var l=b.getAttribute('data-set');R.setAttribute('data-lang',l);R.lang=l;try{localStorage.setItem('hx-widget-lang',l);}catch(e){}paint();});});
+  function fallback(code){
+    var ta=document.createElement('textarea');ta.value=code;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,code.length);
+    var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+    ta.remove();return ok;
+  }
+  btns.forEach(function(btn){
+    var n=btn.getAttribute('data-name');
+    fetch(btn.getAttribute('data-src')+'?t='+Date.now()).then(function(r){if(!r.ok)throw 0;return r.text();}).then(function(t){
+      btn._code=t;btn.disabled=false;paint();
+    }).catch(function(){btn._failed=true;paint();});
+    btn.addEventListener('click',function(){
+      if(!btn._code)return;
+      var code=btn._code.replace("const LANG = 'id'","const LANG = '"+lang()+"'");
+      var t=TXT[lang()];
+      var done=function(){btn.classList.add('done');btn.textContent=t.done;if(btn.nextElementSibling)btn.nextElementSibling.textContent=t.after(n);};
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(done,function(){if(fallback(code))done();});}
+      else if(fallback(code))done();
+    });
+  });
+  paint();
+})();
+</script>
+</body>
+</html>

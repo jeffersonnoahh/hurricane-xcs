@@ -36,3 +36,17 @@
   /* papan Top Performers menempel tepat di bawah nav (aslinya 148 − 6) */
   .premium-leaderboard-panel{top:108px!important}
 }
+
+/* tombol zoom − / + (hanya iPhone Duo terbuka; dibuat oleh skrip di <head>
+   index.html). Memakai gaya .day-switcher/.day-btn supaya sama dengan pemilih
+   tanggal di sebelahnya. */
+.hxz{display:none!important}
+html.hx-duo .hxz{display:inline-flex!important;align-items:center}
+html.hx-duo .hxz .hxz-v{min-width:52px;text-align:center;cursor:pointer;font-variant-numeric:tabular-nums}
+html.hx-duo .hxz .day-btn{font-size:18px;font-weight:700}
+html.hx-duo .hxz .day-btn:disabled{opacity:.3;cursor:default}
+/* layar sentuh: jangan "macet" putih setelah diketuk (hover lengket) — cukup kilat saat ditekan */
+@media (hover:none){
+  html.hx-duo .hxz .day-btn:hover{background:transparent!important;color:inherit!important}
+  html.hx-duo .hxz .day-btn:active{background:rgba(255,255,255,.14)!important}
+}
