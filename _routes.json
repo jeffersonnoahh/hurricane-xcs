@@ -2,7 +2,8 @@
   "version": 1,
   "include": [
     "/p4v6ntzjtfj8/mkt",
-    "/p4v6ntzjtfj8/files/*"
+    "/p4v6ntzjtfj8/files/*",
+    "/designs/thumb"
   ],
   "exclude": []
 }

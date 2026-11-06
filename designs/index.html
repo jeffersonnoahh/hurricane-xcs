@@ -291,6 +291,166 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 @media (prefers-reduced-motion:reduce){
   *,*:before,*:after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
+
+/* ── v3: quality, month, feedback, review ── */
+.full{grid-column:1/-1}
+.alert{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:22px;margin-bottom:14px;color:#fff;
+  background:linear-gradient(140deg,rgba(232,90,51,.95),rgba(252,115,77,.88));box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 18px 36px -14px rgba(232,90,51,.7);animation:pop .7s var(--spring) both}
+.alert .ic{font-size:26px;animation:bob 2.4s ease-in-out infinite}
+.alert b{display:block;font-size:14.5px}
+.alert small{font-size:12.5px;opacity:.92}
+.alert button{margin-left:auto;flex:none;padding:9px 12px;border-radius:14px;font-size:12px;font-weight:800;background:rgba(255,255,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+
+.qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.qt{background:var(--well);border-radius:16px;padding:12px 10px;text-align:left;box-shadow:inset 0 0 0 1px var(--line);transition:transform .45s var(--spring)}
+.qt:active{transform:scale(.95)}
+.qt small{display:block;font-size:11px;color:var(--muted);font-weight:700}
+.qt b{display:block;font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
+.qt em{font-style:normal;font-size:11px;color:var(--ink2);font-weight:600}
+.qt.bad b{color:var(--orange)} .qt.good b{color:var(--good)}
+.scan{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:var(--muted);font-weight:600}
+.scan .t{flex:1;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.scan .t i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0287C9,#4CC2F5);transition:width .5s var(--ease)}
+.qbtn{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:12px;padding:13px 16px;border-radius:16px;font-weight:700;font-size:14px}
+
+/* month calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px}
+.cal .wh{font-size:10.5px;font-weight:800;color:var(--muted);text-align:center;text-transform:uppercase;padding-bottom:2px}
+.cell{aspect-ratio:1/1.08;border-radius:14px;padding:6px 5px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;background:var(--well);box-shadow:inset 0 0 0 1px var(--line);transition:transform .45s var(--spring);animation:pop .55s var(--spring) both;animation-delay:calc(var(--i)*14ms)}
+.cell:active{transform:scale(.92)}
+.cell .dn{font-size:11px;font-weight:800;color:var(--ink2)}
+.cell .cn{font-size:12.5px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cell.ok{background:color-mix(in srgb,var(--good) 22%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--good) 35%,transparent)}
+.cell.short{background:color-mix(in srgb,var(--orange) calc(var(--p)*1%),transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--orange) 30%,transparent)}
+.cell.off{opacity:.55}
+.cell.fut{opacity:.35;animation:none}
+.cell.pad{visibility:hidden;animation:none}
+.cell.sel{box-shadow:inset 0 0 0 2px var(--blue)}
+.cell.today .dn{color:var(--blue)}
+.mstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+@media(max-width:480px){.mstats{grid-template-columns:repeat(2,1fr)}}
+
+/* fair share marker */
+.bar .t{position:relative;overflow:visible}
+.bar .t .fair{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:2px;background:var(--ink);opacity:.35}
+.low{color:var(--orange);font-size:10.5px;font-weight:800;margin-left:6px;padding:2px 7px;border-radius:99px;background:color-mix(in srgb,var(--orange) 14%,transparent)}
+
+/* badges on tiles */
+.tile .bdg{position:absolute;top:6px;left:6px;z-index:2;font-size:10px;font-weight:800;color:#fff;padding:3px 7px;border-radius:99px;background:rgba(232,90,51,.85);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.tile .bdg.look{background:rgba(160,100,10,.8)}
+.tile .vote{position:absolute;top:6px;right:6px;z-index:2;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:rgba(255,255,255,.75);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.tile.dupe img{filter:grayscale(.6) brightness(.9)}
+
+/* quality page */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-radius:22px;margin-top:12px;animation:pop .6s var(--spring) both}
+.pair .tile{border-radius:16px;animation:none}
+.pair .ph small{display:block;font-size:11px;font-weight:700;color:var(--muted);margin:6px 2px 0}
+.pair .ph small b{color:var(--ink)}
+.pair .pf{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 2px 0}
+.sim{font-size:12px;font-weight:800;padding:5px 10px;border-radius:99px;color:var(--orange);background:color-mix(in srgb,var(--orange) 14%,transparent)}
+.sim.exact{color:#fff;background:var(--orange)}
+.cnt0{font-size:11.5px;font-weight:700;color:var(--muted)}
+.okbtn{margin-left:auto;font-size:12px;font-weight:800;padding:7px 11px;border-radius:12px;background:var(--well);box-shadow:inset 0 0 0 1px var(--line)}
+.issue{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:18px;margin-top:8px;text-decoration:none;color:inherit;animation:pop .5s var(--spring) both}
+.issue .ic{font-size:18px;line-height:1.2}
+.issue b{font-size:12px;font-weight:800;color:var(--blue)}
+.issue p{font-size:13px;line-height:1.4;margin-top:1px}
+.issue .go{margin-left:auto;color:var(--muted);font-weight:800;align-self:center}
+.qintro{font-size:12.5px;color:var(--ink2);line-height:1.5;padding:4px 4px 2px}
+
+/* feedback */
+.fbrow{display:flex;align-items:center;gap:10px}
+.fbrow .nm{width:78px;flex:none;font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis}
+.fbrow .t{flex:1;height:8px;border-radius:99px;background:var(--well);overflow:hidden;box-shadow:inset 0 1px 2px rgba(2,7,10,.08)}
+.fbrow .t i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#0287C9,#4CC2F5);transition:width 1.1s var(--spring)}
+.fbrows{display:grid;gap:10px;margin-top:14px}
+.fbrow .ct{font-size:11.5px;color:var(--ink2);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rsum{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.rsum span{font-size:12px;font-weight:700;padding:6px 10px;border-radius:99px;background:var(--well);box-shadow:inset 0 0 0 1px var(--line)}
+.rsum span b{color:var(--orange)}
+.picks{display:flex;gap:8px;overflow-x:auto;margin:12px -4px 0;padding:2px 4px 6px;scrollbar-width:none}
+.picks::-webkit-scrollbar{display:none}
+.picks .tile{flex:none;width:86px;border-radius:14px}
+.h3{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:16px}
+.share{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 14px;border-radius:18px;background:var(--well);box-shadow:inset 0 0 0 1px var(--line)}
+.share code{flex:1;min-width:0;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--blue)}
+.share button{flex:none;padding:9px 13px;border-radius:12px;font-size:12.5px;font-weight:800}
+
+/* leader mode */
+body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSettings{display:none !important}
+.leadercard{padding:24px 20px;text-align:center;margin-bottom:14px}
+.leadercard .hi{font-size:15px;font-weight:700;color:var(--ink2)}
+.leadercard .lnum{font-size:64px;font-weight:800;letter-spacing:-.05em;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums;background:linear-gradient(160deg,#3FB8F0,#0287C9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.leadercard .lsub{font-size:14px;color:var(--ink2);font-weight:600;margin-top:4px}
+.bigbtn{display:block;width:100%;margin-top:18px;padding:17px;border-radius:20px;font-size:16px;font-weight:800;transition:transform .45s var(--spring)}
+.bigbtn:active{transform:scale(.96)}
+.bigbtn.btn-p{box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 16px 30px -12px rgba(2,151,222,.8)}
+.lstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.lstats div{padding:10px 4px;border-radius:16px;background:var(--well);box-shadow:inset 0 0 0 1px var(--line)}
+.lstats b{display:block;font-size:18px;font-weight:800}
+.lstats small{font-size:10.5px;color:var(--muted);font-weight:700}
+.linkish{margin-top:14px;font-size:12.5px;font-weight:700;color:var(--muted);text-decoration:underline}
+.pick{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px}
+.pick button{padding:15px 8px;border-radius:18px;font-size:15px;font-weight:800}
+.howto{display:flex;justify-content:center;gap:14px;margin-top:14px;font-size:12px;color:var(--muted);font-weight:700}
+
+/* review deck */
+.rv{position:fixed;inset:0;z-index:65;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;
+  opacity:0;visibility:hidden;transform:scale(1.04);transition:opacity .35s var(--ease),transform .5s var(--spring),visibility 0s .4s}
+.rv.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s var(--ease),transform .5s var(--spring)}
+.rv:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(60vmax 50vmax at 0% 0%,var(--b1),transparent 70%),radial-gradient(50vmax 50vmax at 100% 100%,var(--b2),transparent 70%);opacity:.6;filter:blur(30px)}
+.rvtop{display:flex;align-items:center;gap:12px;padding:max(12px,env(safe-area-inset-top)) 14px 8px}
+.rvprog{flex:1}
+.rvprog .t{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.rvprog .t i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0287C9,#4CC2F5);transition:width .5s var(--spring)}
+.rvprog small{display:block;text-align:center;font-size:12px;font-weight:800;color:var(--ink2);margin-top:5px;font-variant-numeric:tabular-nums}
+.deck{position:relative;flex:1;margin:6px 18px 0;min-height:0}
+.rcard{position:absolute;left:50%;top:0;width:min(100%,calc((100vh - 270px)*.8),460px);transform-origin:50% 120%;
+  translate:-50% 0;transition:transform .5s var(--spring),opacity .4s;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;
+  --like:0;--skip:0;--love:0}
+.rcard.under{transform:translateY(calc(var(--k)*14px)) scale(calc(1 - var(--k)*.05));pointer-events:none}
+.rcard.under .rimg{filter:brightness(.92)}
+.rcard.under .rmeta,.rcard.under .stamp{opacity:0}
+.rmeta{transition:opacity .3s}
+.rcard.enter{opacity:0}
+.rimg{border-radius:28px !important;box-shadow:0 26px 50px -18px rgba(2,20,40,.45),inset 0 0 0 1px var(--line) !important;animation:none !important}
+.rimg img{pointer-events:none}
+.stamp{position:absolute;top:24px;font-size:22px;font-weight:900;letter-spacing:.04em;padding:8px 14px;border-radius:14px;border:3px solid;pointer-events:none;z-index:3;background:rgba(255,255,255,.85)}
+.s-like{left:20px;color:var(--good);transform:rotate(-12deg);opacity:var(--like)}
+.s-skip{right:20px;color:var(--orange);transform:rotate(12deg);opacity:var(--skip)}
+.s-love{left:50%;top:40%;translate:-50% 0;color:#E0245E;opacity:var(--love)}
+.rmeta{display:flex;align-items:center;gap:8px;margin-top:10px;padding:0 6px}
+.rmeta b{font-size:14px;font-weight:800}
+.rmeta span{flex:1;min-width:0;font-size:12px;color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ropen{font-size:12px;font-weight:800;padding:7px 11px;border-radius:12px;background:var(--well);box-shadow:inset 0 0 0 1px var(--line)}
+.rvbtns{display:flex;justify-content:center;align-items:center;gap:18px;padding:12px 0 max(18px,env(safe-area-inset-bottom));transition:opacity .3s,transform .4s var(--spring)}
+.rvbtns.hide{opacity:0;transform:translateY(30px);pointer-events:none}
+.rb{width:68px;height:68px;border-radius:50%;font-size:28px;display:grid;place-items:center;transition:transform .45s var(--spring)}
+.rb:active{transform:scale(.86)}
+.rb.love{width:56px;height:56px;font-size:23px}
+.rb.skip{box-shadow:inset 0 1px 0 var(--edge),0 10px 24px -10px rgba(232,90,51,.6)}
+.rb.like{box-shadow:inset 0 1px 0 var(--edge),0 10px 24px -10px rgba(18,161,80,.6)}
+.rb small{display:block;font-size:10px;font-weight:800;margin-top:-6px;color:var(--ink2)}
+.rlabel{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--muted)}
+.reasons{position:absolute;left:12px;right:12px;bottom:max(16px,env(safe-area-inset-bottom));z-index:20;padding:14px;border-radius:24px;
+  transform:translateY(140%);transition:transform .5s var(--spring)}
+.reasons.on{transform:none}
+.reasons p{font-size:13px;font-weight:800;margin:0 4px 10px}
+.reasons p small{font-weight:600;color:var(--muted)}
+.reasons .chips2{display:flex;flex-wrap:wrap;gap:7px}
+.reasons .chips2 button{padding:9px 13px;border-radius:99px;font-size:13px;font-weight:700;background:var(--well);box-shadow:inset 0 0 0 1px var(--line);transition:transform .4s var(--spring)}
+.reasons .chips2 button:active{transform:scale(.92)}
+.rdone{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;animation:pop .7s var(--spring) both}
+.rdone .big{font-size:64px;animation:bob 2.5s ease-in-out infinite}
+.rdone h3{font-size:24px;font-weight:800;margin-top:10px;letter-spacing:-.02em}
+.rdone p{font-size:14px;color:var(--ink2);margin-top:6px}
+.rdone .lstats{width:100%;max-width:360px}
+.tipbar{text-align:center;font-size:11.5px;color:var(--muted);font-weight:700;padding-bottom:2px}
+.still .cell,.still .tile,.still .fcard,.still .chart .cb,.still .chart .kpi,.still .fday,.still .pair,.still .issue,.still .alert{animation:none !important}
+.still .bar .t i,.still .lrow .t i,.still .fbrow .t i,.still .ring .arc{transition:none !important}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));z-index:90;translate:-50% 0;padding:11px 16px;border-radius:16px;font-size:13px;font-weight:700;
+  transform:translateY(120px);transition:transform .5s var(--spring)}
+.toast.on{transform:none}
 </style>
 </head>
 <body>
@@ -298,34 +458,49 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <div class="wrap">
   <header class="top">
     <div class="mascot"><i></i><i></i></div>
-    <div><h1>Design Studio</h1><p id="updated">Loading designs…</p></div>
+    <div><h1 id="appTitle">Design Studio</h1><p id="updated">Loading designs…</p></div>
     <div class="sp"></div>
     <button class="iconbtn glass press" id="refresh" aria-label="Refresh"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></button>
     <button class="iconbtn glass press" id="openSettings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </header>
 
   <div id="notice"></div>
+  <div id="alert"></div>
+  <div id="leaderBox"></div>
   <div class="days" id="days"></div>
 
   <div class="grid main" id="dash">
     <div class="card glass hero reveal"><span class="orb a"></span><span class="orb b"></span><span class="shine"></span>
       <div class="lbl" id="heroLbl">Today</div>
       <div class="row">
-        <div><div class="big" id="heroNum">0 <span>/ 950</span></div></div>
+        <div><div class="big" id="heroNum">0 <span>/ 900</span></div></div>
         <svg class="ring" viewBox="0 0 110 110" id="ring"></svg>
       </div>
       <div class="msg" id="heroMsg">&nbsp;</div>
-      <div class="pill" id="heroPill">Daily KPI 950 designs</div>
+      <div class="pill" id="heroPill">&nbsp;</div>
     </div>
 
     <div class="card glass reveal">
       <h2>Last 14 days</h2>
-      <div class="sub">Photos finished per day. Orange dashes are each day's target, green bars hit it.</div>
+      <div class="sub">Unique photos per day. Orange dashes are each day's target, green bars hit it.</div>
       <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
     </div>
 
-    <div class="card glass reveal log">
-      <div class="lh"><div><h2>Daily log</h2><div class="sub">Photos completed vs target, each day</div></div>
+    <div class="card glass reveal">
+      <h2>Quality check</h2>
+      <div class="sub" id="qSub">Copies, look alikes and format for the selected day</div>
+      <div class="qgrid" id="qStats"></div>
+      <div class="scan" id="scan"></div>
+      <button class="qbtn glass press" data-q="copies"><span>Open quality report</span><span>›</span></button>
+    </div>
+
+    <div class="card glass reveal">
+      <div class="lh"><div><h2>Leader feedback</h2><div class="sub">Last 7 days · how leaders rate her photos</div></div><div class="wk" id="fbSum"></div></div>
+      <div id="fbBody"></div>
+    </div>
+
+    <div class="card glass reveal full log">
+      <div class="lh"><div><h2>Daily log</h2><div class="sub">Unique photos completed vs target, each day</div></div>
         <div class="wk" id="wk"></div></div>
       <div class="rows" id="log"></div>
     </div>
@@ -338,23 +513,32 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 
     <div class="card glass reveal">
       <h2>Spread to the team</h2>
-      <div class="sub">How the day's designs split across her folders</div>
+      <div class="sub" id="spreadSub">How the day's photos split across her folders</div>
       <div class="bars" id="bars"></div>
+    </div>
+
+    <div class="card glass reveal full">
+      <div class="lh"><div><h2 id="mTitle">This month</h2><div class="sub">Tap a day to open it. Green hit the target, orange fell short.</div></div><div class="wk" id="mSum"></div></div>
+      <div class="cal" id="cal"></div>
+      <div class="mstats" id="mStats"></div>
     </div>
   </div>
 
-  <div class="ghead"><h2>Team folders</h2><span class="sub" id="fCount" style="font-size:13px;color:var(--muted)"></span></div>
-  <div class="folders" id="folders"></div>
+  <div class="ownerOnly">
+    <div class="ghead"><h2>Team folders</h2><span class="sub" id="fCount" style="font-size:13px;color:var(--muted)"></span></div>
+    <div class="folders" id="folders"></div>
 
-  <div class="ghead"><h2 id="gTitle">Gallery</h2><span class="sub" id="gCount" style="font-size:13px;color:var(--muted)"></span></div>
-  <div class="chips" id="chips"></div>
-  <div class="gallery" id="gallery"></div>
-  <button class="more glass press" id="more" style="display:none">Show more</button>
+    <div class="ghead"><h2 id="gTitle">Gallery</h2><span class="sub" id="gCount" style="font-size:13px;color:var(--muted)"></span></div>
+    <div class="chips" id="chips"></div>
+    <div class="gallery" id="gallery"></div>
+    <button class="more glass press" id="more" style="display:none">Show more</button>
+  </div>
 </div>
 
+<!-- folder page -->
 <div class="fv" id="fv" aria-hidden="true">
   <div class="fvbar glass">
-    <button class="iconbtn press" id="fvBack" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="iconbtn press" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fvt"><b id="fvName"></b><small id="fvSub"></small></div>
   </div>
   <div class="fvbody">
@@ -363,13 +547,38 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
   </div>
 </div>
 
-<div class="lb" id="lb">
-  <button class="x" id="lbX">✕</button>
-  <button class="nav prev" id="lbP">‹</button>
-  <button class="nav next" id="lbN">›</button>
-  <div id="lbMedia"></div>
-  <div class="meta" id="lbMeta"></div>
+<!-- quality page -->
+<div class="fv" id="qv" aria-hidden="true">
+  <div class="fvbar glass">
+    <button class="iconbtn press" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fvt"><b>Quality report</b><small id="qvSub"></small></div>
+  </div>
+  <div class="fvbody">
+    <div class="seg glass" id="qvSeg"></div>
+    <div id="qvBody"></div>
+  </div>
 </div>
+
+<!-- review deck -->
+<div class="rv" id="rv" aria-hidden="true">
+  <div class="rvtop">
+    <button class="iconbtn glass press" data-back aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="rvprog"><div class="t"><i id="rvBar"></i></div><small id="rvCount"></small></div>
+    <button class="iconbtn glass press" id="rvUndo" aria-label="Undo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+  </div>
+  <div class="deck" id="deck"></div>
+  <div class="rvbtns" id="rvBtns">
+    <div class="rlabel"><button class="rb glass skip press" data-vote="-1" aria-label="Skip">👎</button>Skip</div>
+    <div class="rlabel"><button class="rb glass love press" data-vote="2" aria-label="Love">❤️</button>Love</div>
+    <div class="rlabel"><button class="rb glass like press" data-vote="1" aria-label="Will post">👍</button>Will post</div>
+  </div>
+  <div class="reasons glass" id="reasons">
+    <p>Why skip? <small>Optional, one tap helps her improve</small></p>
+    <div class="chips2" id="reasonChips"></div>
+  </div>
+</div>
+
+<div class="toast glass" id="toast"></div>
 
 <div class="sheet" id="sheet"><div class="in glass">
   <div class="grab"></div>
@@ -386,6 +595,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
       <div><div class="hint" style="margin:0 0 4px">Saturday</div><input id="sSat" type="number" min="0" inputmode="numeric"></div>
       <div><div class="hint" style="margin:0 0 4px">Sunday</div><input id="sSun" type="number" min="0" inputmode="numeric"></div>
     </div>
+    <label>Look alike cut off (%)</label>
+    <input id="sCut" type="number" min="80" max="100" inputmode="numeric">
+    <div class="hint">Photos at least this similar to an earlier one don't count toward the target. Exact copies never count. 92 is a good start.</div>
     <label>Google Drive folder link or ID</label>
     <input id="sFolder">
     <label>Google API key (Drive API)</label>
@@ -398,48 +610,75 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-// ── Config ──
-const TZ='Asia/Jakarta', DAYS=14, PAGE=120;
-const DEFAULTS={tWk:900,tSat:600,tSun:0,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyBk4nc2bXAaVyQQFYpYy26VZ8YBi96A7ro'};
+// ══ Config ══
+const TZ='Asia/Jakarta', DAYS=14, PAGE=120, FOLDER='application/vnd.google-apps.folder';
+const DEFAULTS={tWk:900,tSat:600,tSun:0,sim:92,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyBk4nc2bXAaVyQQFYpYy26VZ8YBi96A7ro'};
 const ADMIN_PWD=(()=>{try{return localStorage.getItem('hxcs_admin_pwd')||'hurricane2026'}catch(e){return 'hurricane2026'}})();
-let cfg={...DEFAULTS}, files=[], members=[], selDay=dayKey(new Date()), folderFilter='All', shown=PAGE, viewList=[], lbIdx=-1, loading=false;
+const REASONS=['Boring','Text wrong','Off brand','Low quality','Looks like another','Wrong product'];
+const LOOK_SHOW=7;   // max differing bits (of 64) to list as a look alike (about 89%)
+let cfg={...DEFAULTS}, files=[], members=[], memberIds={}, issues=[], selDay=dayKey(new Date()), folderFilter='All', shown=PAGE, viewList=[], loading=false, adminOn=false;
+let hashes={}, oks={}, fb={}, ana={copy:new Map(),removed:new Set()}, light={files:[],issues:[],at:0,from:''};
+let me='', leaderMode=false;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
 function dayKey(d){return new Date(d).toLocaleDateString('en-CA',{timeZone:TZ})}
+function today(){return dayKey(new Date())}
 function fmtDay(k,o){return new Date(k+'T12:00:00+07:00').toLocaleDateString('en-GB',{timeZone:TZ,...o})}
 function fmtTime(d){return new Date(d).toLocaleTimeString('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit'})}
 function lastDays(n){const out=[];const now=Date.now();for(let i=n-1;i>=0;i--)out.push(dayKey(now-i*864e5));return [...new Set(out)]}
-// target for a YYYY-MM-DD day: Mon-Fri / Saturday / Sunday
+function recentStart(){return lastDays(DAYS)[0]}
+function monthStart(){return today().slice(0,8)+'01'}
+function windowStart(){const a=recentStart(),b=monthStart();return a<b?a:b}
 function wd(k){return new Date(k+'T12:00:00+07:00').getUTCDay()}
 let startDay='';
-function tgt(k){if(startDay&&k<startDay)return 0;const d=wd(k);return d===0?cfg.tSun:d===6?cfg.tSat:cfg.tWk}
+function tgt(k){if(startDay&&k<startDay)return 0;if(k>today())return 0;const d=wd(k);return d===0?cfg.tSun:d===6?cfg.tSat:cfg.tWk}
 function pctOf(n,t){return t?Math.round(n/t*100):(n?100:0)}
 function parseFolder(v){v=(v||'').trim();const m=v.match(/folders\/([\w-]+)/)||v.match(/[?&]id=([\w-]+)/);return m?m[1]:v}
+const fbKey=s=>String(s).replace(/[.#$\/\[\]]/g,'_');
+const nf=n=>(+n||0).toLocaleString();
+let rT=null;function scheduleRender(){clearTimeout(rT);rT=setTimeout(()=>{if(files.length)render(true)},250)}
+let aT=null;function scheduleAnalyze(){clearTimeout(aT);aT=setTimeout(()=>{analyze();if(files.length)render(true)},400)}
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2200)}
 
-// ── Firebase (shared settings at /designs/settings, nothing else touched) ──
-let settingsRef=null;
+// ══ Leader mode (?review or ?leader=NAME) ══
+(()=>{const q=new URLSearchParams(location.search);
+  if(q.has('review')||q.has('leader')){leaderMode=true;document.body.classList.add('leader');me=(q.get('leader')||store.get('ds_leader')||'').toUpperCase()}})();
+
+// ══ Firebase: settings, look alike hashes, "not a copy" marks, leader feedback (all under /designs) ══
+let db=null, settingsRef=null;
 try{
   firebase.initializeApp({apiKey:"AIzaSyDfWkhwB3flykNloLRKaXwkNWfxbY22H2g",authDomain:"hurricane-scorecard.firebaseapp.com",databaseURL:"https://hurricane-scorecard-default-rtdb.firebaseio.com",projectId:"hurricane-scorecard"});
-  settingsRef=firebase.database().ref('designs/settings');
+  db=firebase.database();
+  settingsRef=db.ref('designs/settings');
   let first=true;
   settingsRef.on('value',s=>{
     const v=s.val()||{}, prev=JSON.stringify(cfg);
     const num=(x,d)=>x===undefined||x===null||x===''||isNaN(+x)?d:+x;
-    cfg={tWk:num(v.tWk,DEFAULTS.tWk),tSat:num(v.tSat,DEFAULTS.tSat),tSun:num(v.tSun,DEFAULTS.tSun),folderId:v.folderId||DEFAULTS.folderId,apiKey:v.apiKey||DEFAULTS.apiKey};
-    if(first||JSON.stringify(cfg)!==prev){first=false;load()}
+    cfg={tWk:num(v.tWk,DEFAULTS.tWk),tSat:num(v.tSat,DEFAULTS.tSat),tSun:num(v.tSun,DEFAULTS.tSun),sim:num(v.sim,DEFAULTS.sim),folderId:v.folderId||DEFAULTS.folderId,apiKey:v.apiKey||DEFAULTS.apiKey};
+    if(first||JSON.stringify(cfg)!==prev){first=false;if(prev&&JSON.parse(prev).folderId!==cfg.folderId)light.at=0;load()}
   },()=>load());
+  const hq=db.ref('designs/hash').orderByKey().startAt(recentStart());
+  const onH=d=>{Object.assign(hashes,d.val()||{});scheduleAnalyze()};
+  hq.on('child_added',onH);hq.on('child_changed',onH);
+  db.ref('designs/ok').on('value',s=>{oks=s.val()||{};scheduleAnalyze()});
+  const fq=db.ref('designs/fb').orderByKey().startAt(windowStart());
+  const onF=d=>{fb[d.key]=d.val()||{};scheduleRender()};
+  fq.on('child_added',onF);fq.on('child_changed',onF);fq.on('child_removed',d=>{delete fb[d.key];scheduleRender()});
 }catch(e){load()}
 setTimeout(()=>{if(!files.length&&!loading)load()},4000);
 
-// ── Google Drive listing ──
-async function driveList(parent,key){
+// ══ Google Drive ══
+const FULL='nextPageToken,files(id,name,mimeType,createdTime,thumbnailLink,webViewLink,parents,md5Checksum,imageMediaMetadata(width,height))';
+const LIGHT='nextPageToken,files(id,name,mimeType,parents,md5Checksum)';
+// one request per folder (Google refuses combined folder queries when using only an API key)
+async function driveQuery(ids,fields){
   const out=[];let token='';
-  const q=`'${parent}' in parents and trashed=false`;
+  const q=`'${ids[0]}' in parents and trashed=false`;
   do{
     const u=new URL('https://www.googleapis.com/drive/v3/files');
-    u.search=new URLSearchParams({q,key,pageSize:'1000',supportsAllDrives:'true',includeItemsFromAllDrives:'true',
-      fields:'nextPageToken,files(id,name,mimeType,createdTime,thumbnailLink,webViewLink)',...(token?{pageToken:token}:{})});
+    u.search=new URLSearchParams({q,key:cfg.apiKey,pageSize:'1000',supportsAllDrives:'true',includeItemsFromAllDrives:'true',fields,...(token?{pageToken:token}:{})});
     const r=await fetch(u);const j=await r.json();
     if(!r.ok)throw new Error((j.error&&j.error.message)||('HTTP '+r.status));
     out.push(...(j.files||[]));token=j.nextPageToken||'';
@@ -449,137 +688,376 @@ async function driveList(parent,key){
 // "05-11-2026" or "XCS (02-11-2026)" -> "2026-11-05"
 function folderDate(name){const m=String(name).match(/(\d{1,2})[-.\/](\d{1,2})[-.\/](\d{4})/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:''}
 function folderType(name){const n=String(name).toUpperCase();return n.includes('BUFFER')?'BUFFER':n.includes('XCS')?'XCS':''}
-async function loadDrive(){
-  const oldest=lastDays(DAYS)[0];
-  const all=[];members=[];
-  let level=[{id:cfg.folderId,member:'',day:'',type:''}];
+const isMedia=m=>/^(image|video)\//.test(m)||/pdf|photoshop|illustrator/.test(m);
+const flink=id=>`https://drive.google.com/drive/folders/${id}`;
+
+async function loadDrive(withLight){
+  const oldest=withLight?windowStart():recentStart(), recent=recentStart(), now=today();
+  const out=[], lightOut=[], iss=[], lightIss=[]; members=[];memberIds={};
+  const dateFolders=[], loose={}, nonMedia={};
+  let level=[{id:cfg.folderId,member:'',day:'',type:'',name:'Main folder'}];
   for(let depth=0;depth<5&&level.length;depth++){
-    const next=[];
-    for(let i=0;i<level.length;i+=8){
-      const res=await Promise.all(level.slice(i,i+8).map(f=>driveList(f.id,cfg.apiKey).then(r=>({f,r}))));
-      for(const {f,r} of res)for(const it of r){
-        if(it.mimeType==='application/vnd.google-apps.folder'){
-          const member=f.member||it.name, day=folderDate(it.name)||f.day, type=folderType(it.name)||f.type;
-          if(!f.member)members.push(it.name);
-          if(day&&day<oldest)continue;           // skip date folders older than the chart window
-          next.push({id:it.id,member,day,type});continue;
+    const next=[], byId={};level.forEach(e=>byId[e.id]=e);
+    const groups=[];
+    for(const lt of [false,true]){
+      const arr=level.filter(e=>!!(e.day&&e.day<recent)===lt);
+      for(const e of arr)groups.push({ids:[e.id],fields:lt?LIGHT:FULL,lt});
+    }
+    for(let i=0;i<groups.length;i+=12){
+      const res=await Promise.all(groups.slice(i,i+12).map(g=>driveQuery(g.ids,g.fields).then(r=>({g,r}))));
+      for(const {g,r} of res)for(const it of r){
+        const f=byId[(it.parents||[]).find(p=>byId[p])];if(!f)continue;
+        const I=g.lt?lightIss:iss;
+        if(it.mimeType===FOLDER){
+          if(depth===0){members.push(it.name);memberIds[it.name]=it.id;next.push({id:it.id,member:it.name,day:'',type:'',name:it.name});continue}
+          const fd=folderDate(it.name), ft=folderType(it.name), day=fd||f.day, type=ft||f.type;
+          if(depth===1){
+            if(!fd&&!ft)I.push({lv:'warn',who:f.member,text:`Folder “${it.name}” has no date in its name. Use DD-MM-YYYY, like ${fmtDay(now,{day:'2-digit'})}-${now.slice(5,7)}-${now.slice(0,4)}.`,link:flink(it.id)});
+            else if(fd&&!/^\d{2}-\d{2}-\d{4}$/.test(it.name.trim()))I.push({lv:'info',who:f.member,text:`“${it.name}” should be named ${fd.split('-').reverse().join('-')}${ft?`, with a ${ft} folder inside`:''}.`,link:flink(it.id)});
+            if(fd&&fd>now)I.push({lv:'warn',who:f.member,text:`“${it.name}” is dated in the future.`,link:flink(it.id)});
+          }
+          if(depth===2&&!ft&&f.day)I.push({lv:'info',who:f.member,text:`Unknown folder “${it.name}” inside ${f.name}. Expected XCS or BUFFER.`,link:flink(it.id)});
+          if(day&&day<oldest)continue;
+          const e={id:it.id,member:f.member,day,type,name:it.name,parent:f,n:0,direct:0};
+          if(fd&&!f.day){e.isDate=true;dateFolders.push(e)}
+          next.push(e);continue;
         }
-        if(!/^(image|video)\//.test(it.mimeType)&&!/pdf|photoshop|illustrator/.test(it.mimeType))continue;
-        all.push({id:it.id,name:it.name,mime:it.mimeType,created:it.createdTime,day:f.day||dayKey(it.createdTime),
-          folder:f.member||'Main folder',type:f.type||'Unsorted',thumb:it.thumbnailLink,link:it.webViewLink});
+        if(!isMedia(it.mimeType)){if(depth>0)(nonMedia[f.member]=nonMedia[f.member]||[]).push(it.name);continue}
+        if(depth===0){I.push({lv:'warn',who:'Main folder',text:`“${it.name}” sits in the main folder, not in a team leader's folder. It isn't counted.`,link:flink(cfg.folderId)});continue}
+        if(!f.day){loose[f.member]=(loose[f.member]||0)+1;if(!it.createdTime)continue}
+        const day=f.day||dayKey(it.createdTime);
+        const m=it.imageMediaMetadata||{};
+        const rec={id:it.id,name:it.name,mime:it.mimeType,created:it.createdTime||'',day,folder:f.member,type:f.type||'Unsorted',
+          thumb:it.thumbnailLink||'',link:it.webViewLink||'',md5:it.md5Checksum||'',w:m.width||0,h:m.height||0,light:g.lt};
+        (g.lt?lightOut:out).push(rec);
+        let a=f;while(a&&!a.isDate)a=a.parent;if(a){a.n++;if(a===f)a.direct++}
       }
     }
     level=next;
   }
+  // folder health summary
+  const seen={};
+  for(const e of dateFolders){
+    const k=e.member+'|'+e.day;seen[k]=(seen[k]||0)+1;
+    const I=e.day<recent?lightIss:iss;
+    if(seen[k]===2)I.push({lv:'warn',who:e.member,text:`Two folders for ${fmtDay(e.day,{day:'numeric',month:'short'})}. Photos may be split or counted twice.`,link:flink(memberIds[e.member])});
+    if(!e.n&&e.day<now&&tgt(e.day))I.push({lv:'warn',who:e.member,text:`Folder ${e.name} is empty.`,link:flink(e.id)});
+  }
+  const unsplit={};for(const e of dateFolders)if(e.direct&&!e.type&&e.day>=recent)unsplit[e.member]=(unsplit[e.member]||0)+1;
+  for(const m in unsplit)iss.push({lv:'info',who:m,text:`Photos on ${unsplit[m]} day${unsplit[m]>1?'s':''} aren't split into XCS / BUFFER folders.`,link:flink(memberIds[m])});
+  for(const m in loose)iss.push({lv:'warn',who:m,text:`${loose[m]} photo${loose[m]>1?'s are':' is'} not inside a date folder, so the day is guessed from the upload time.`,link:flink(memberIds[m])});
+  for(const m in nonMedia)iss.push({lv:'info',who:m,text:`${nonMedia[m].length} file${nonMedia[m].length>1?'s are':' is'} not a photo (${esc(nonMedia[m].slice(0,2).join(', '))}${nonMedia[m].length>2?'…':''}) and isn't counted.`,link:flink(memberIds[m])});
   members.sort();
-  return all.sort((a,b)=>a.folder.localeCompare(b.folder)||a.type.localeCompare(b.type)||a.name.localeCompare(b.name,undefined,{numeric:true}));
+  if(withLight)light={files:lightOut,issues:lightIss,at:Date.now(),from:oldest};
+  return {files:out,issues:iss};
 }
 
 async function load(){
   if(loading)return;loading=true;$('refresh').classList.add('spin');
   if(!files.length)$('gallery').innerHTML=Array(8).fill(0).map((_,i)=>`<div class="tile skel" style="--i:${i}"></div>`).join('');
   try{
-    files=await loadDrive();
+    // older days of the month only change rarely: refresh them every 30 minutes, recent days every 5
+    const withLight=!light.at||Date.now()-light.at>30*60e3||light.from!==windowStart();
+    const r=await loadDrive(withLight);
+    const rec=recentStart();
+    const had=files.length>0;
+    files=[...r.files,...light.files.filter(f=>f.day<rec)];
+    issues=[...r.issues,...light.issues];
     $('notice').innerHTML='';$('dash').style.display='';
-    $('updated').textContent='Updated '+fmtTime(new Date())+' WIB · '+files.length.toLocaleString()+' designs · '+members.length+' team folders';
-    render();
+    analyze();
+    render(had);
+    runHasher();
   }catch(e){showFallback(e.message)}
   loading=false;$('refresh').classList.remove('spin');
 }
 
 function showFallback(msg){
   $('updated').textContent='Showing the folder directly';
-  $('notice').innerHTML=`<div class="notice"><b>Counting is not switched on yet.</b> Google said: “${esc(msg)}”.<br>You can still browse the folder below. To turn on the KPI counter:
+  $('notice').innerHTML=`<div class="notice"><b>Counting is not switched on yet.</b> Google said: “${esc(msg)}”.<br>You can still browse the folder below. To turn on the counter:
   <ol><li>Make sure the Drive folder is shared as <i>Anyone with the link can view</i>.</li>
-  <li>Open console.cloud.google.com, choose project <i>hurricane-scorecard</i>, search “Google Drive API” and press <i>Enable</i>.</li>
-  <li>Tap refresh. If it still fails, create an API key there and paste it in Settings ⚙.</li></ol></div>`;
+  <li>Check the Google Drive API is enabled for the API key's project.</li>
+  <li>Tap refresh. If it still fails, paste a new API key in Settings ⚙.</li></ol></div>`;
   $('dash').style.display='none';$('days').innerHTML='';$('chips').innerHTML='';$('more').style.display='none';
   $('gTitle').textContent='Folder';$('gCount').textContent='';
   $('gallery').style.display='block';
   $('gallery').innerHTML=`<iframe class="fallback" src="https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(cfg.folderId)}#grid"></iframe>`;
 }
 
-// ── Render ──
-function counts(){const c={};for(const f of files)c[f.day]=(c[f.day]||0)+1;startDay=Object.keys(c).sort()[0]||'';return c}
-function render(){
+// ══ Copies & look alikes ══
+// Each photo gets a 64 bit "fingerprint": shrink to 9×8 grey pixels, note where it gets lighter or darker.
+// Two photos whose fingerprints differ in only a few bits look almost the same.
+function hex2(h){return [parseInt(h.slice(0,8),16)>>>0,parseInt(h.slice(8,16),16)>>>0]}
+function pop32(x){x=x-((x>>>1)&0x55555555);x=(x&0x33333333)+((x>>>2)&0x33333333);return(((x+(x>>>4))&0x0F0F0F0F)*0x01010101)>>>24}
+function ham(a,b){return pop32(a[0]^b[0])+pop32(a[1]^b[1])}
+const simOf=d=>Math.round((1-d/64)*100);
+function colorNear(a,b){if(!a._c||!b._c)return true;const d=Math.hypot(a._c[0]-b._c[0],a._c[1]-b._c[1],a._c[2]-b._c[2]);return d<=40}
+function analyze(){
+  const ord=(a,b)=>a.day.localeCompare(b.day)||(a.created||'~').localeCompare(b.created||'~')||a.name.localeCompare(b.name,undefined,{numeric:true});
+  const fs=files.slice().sort(ord);
+  const copy=new Map(), firstByMd5={};
+  for(const f of fs){
+    if(!f.md5)continue;
+    const o=firstByMd5[f.md5];
+    if(o)copy.set(f.id,{orig:o,kind:'exact',sim:100});else firstByMd5[f.md5]=f;
+  }
+  // look alikes: 8 buckets of 8 bits, any pair within 7 bits shares at least one bucket
+  const bands=Array.from({length:8},()=>new Map());
+  for(const f of fs){
+    const h=hashes[f.id];if(!h||h.length<16||copy.has(f.id))continue;
+    const v=hex2(h);f._h=v;f._c=h.length>=22?[0,2,4].map(i=>parseInt(h.slice(16+i,18+i),16)):null;
+    let best=null,bd=99;const seen=new Set();
+    for(let b=0;b<8;b++){const arr=bands[b].get(h.slice(b*2,b*2+2));if(arr)for(const g of arr){if(seen.has(g))continue;seen.add(g);const d=ham(v,g._h);if(d<bd&&colorNear(f,g)){bd=d;best=g}}}
+    if(best&&bd<=LOOK_SHOW){copy.set(f.id,{orig:best,kind:'look',sim:simOf(bd)});continue}
+    for(let b=0;b<8;b++){const k=h.slice(b*2,b*2+2);let arr=bands[b].get(k);if(!arr)bands[b].set(k,arr=[]);arr.push(f)}
+  }
+  const removed=new Set();
+  for(const [id,c] of copy)if(!oks[id]&&(c.kind==='exact'||c.sim>=cfg.sim))removed.add(id);
+  ana={copy,removed};
+}
+// format check: her photos should be 4:5 and sharp enough to post
+function formatIssue(f){
+  if(!f.w||!f.h)return '';
+  const r=f.w/f.h;
+  if(Math.abs(r-.8)>.03)return Math.abs(r-1)<.02?'Square, not 4:5':r>1?'Landscape, not 4:5':(Math.abs(r-.5625)<.02?'9:16 story size':'Not 4:5');
+  if(f.w<1000)return `Small (${f.w}px wide)`;
+  return '';
+}
+
+// fingerprints are made in the browser from a tiny thumbnail and shared through Firebase,
+// so each photo is only ever checked once by whoever opens the page first
+let hashing=false, hashDone=0, hashTotal=0, hashFail=0, hashMode='proxy', hashBroken=false;
+function loadImg(src,cors){return new Promise((res,rej)=>{const im=new Image();if(cors)im.crossOrigin='anonymous';const t=setTimeout(()=>rej('timeout'),15000);im.onload=()=>{clearTimeout(t);res(im)};im.onerror=()=>{clearTimeout(t);rej('err')};im.src=src})}
+function dhash(im){
+  const c=document.createElement('canvas');c.width=9;c.height=8;const x=c.getContext('2d',{willReadFrequently:true});
+  x.drawImage(im,0,0,9,8);const d=x.getImageData(0,0,9,8).data;const g=[];for(let i=0;i<72;i++)g.push(d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114);
+  let h='';for(let y=0;y<8;y++){let n=0;for(let xx=0;xx<8;xx++)n=n*2+(g[y*9+xx]>g[y*9+xx+1]?1:0);h+=n.toString(16).padStart(2,'0')}
+  // plus the average colour, so the same layout in a different colour is not called a copy
+  let r=0,gg=0,b=0;for(let i=0;i<72;i++){r+=d[i*4];gg+=d[i*4+1];b+=d[i*4+2]}
+  return h+[r,gg,b].map(v=>Math.round(v/72).toString(16).padStart(2,'0')).join('');
+}
+async function hashOne(f){
+  const tries=[];
+  if(hashMode==='proxy')tries.push([`/designs/thumb?id=${encodeURIComponent(f.id)}`,false]);
+  if(f.thumb)tries.push([f.thumb.replace(/=s\d+(-[a-z]+)?$/,'')+'=s64',true]);
+  for(const [u,cors] of tries){
+    try{const im=await loadImg(u,cors);return dhash(im)}catch(e){if(!cors&&hashMode==='proxy'&&!hashDone)hashMode='direct'}
+  }
+  throw new Error('no image');
+}
+async function runHasher(){
+  if(hashing||hashBroken||leaderMode&&!files.length)return;
+  const rec=recentStart();
+  const todo=files.filter(f=>!f.light&&f.day>=rec&&/^image\//.test(f.mime)&&!hashes[f.id]);
+  if(!todo.length){updateScan();return}
+  hashing=true;hashTotal=todo.length;hashDone=0;hashFail=0;
+  const pending={};
+  const flush=()=>{const ks=Object.keys(pending);if(!ks.length||!db)return;const u={};ks.forEach(k=>{u[k]=pending[k];delete pending[k]});db.ref('designs/hash').update(u).catch(()=>{})};
+  let i=0;
+  const worker=async()=>{while(i<todo.length&&!hashBroken){const f=todo[i++];
+    try{const h=await hashOne(f);hashes[f.id]=h;pending[f.day+'/'+f.id]=h}catch(e){hashFail++;if(hashFail>=12&&hashFail>hashDone*.5)hashBroken=true}
+    hashDone++;if(hashDone%60===0){flush();scheduleAnalyze()}updateScan()}};
+  await Promise.all(Array(6).fill(0).map(worker));
+  flush();hashing=false;scheduleAnalyze();updateScan();
+}
+function updateScan(){
+  const el=$('scan');if(!el)return;
+  const rec=recentStart(), list=files.filter(f=>!f.light&&f.day===selDay&&/^image\//.test(f.mime));
+  const done=list.filter(f=>hashes[f.id]).length;
+  if(hashBroken&&done<list.length){el.innerHTML=`<span>⚠️ Look alike check can't read the photos right now. Exact copies are still caught.</span>`;return}
+  if(!list.length||selDay<rec){el.innerHTML=selDay<rec?'<span>Look alike check covers the last 14 days. Exact copies are checked for the whole month.</span>':'';return}
+  el.innerHTML=done>=list.length?`<span>✓ All ${nf(list.length)} photos checked for look alikes</span>`
+    :`<span>Checking look alikes</span><div class="t"><i style="width:${done/list.length*100}%"></i></div><span>${nf(done)}/${nf(list.length)}</span>`;
+}
+
+// ══ Counting ══
+function counts(){
+  const c={},raw={};
+  for(const f of files){raw[f.day]=(raw[f.day]||0)+1;if(!ana.removed.has(f.id))c[f.day]=(c[f.day]||0)+1}
+  startDay=Object.keys(raw).sort()[0]||'';
+  return {c,raw};
+}
+const voteOf=(f,who)=>((fb[f.day]||{})[f.id]||{})[fbKey(who)];
+
+// ══ Render (owner dashboard) ══
+let quiet=false;
+// quiet = a background data update: redraw without replaying the entrance animations
+function render(q=false){
+  quiet=q;document.body.classList.toggle('still',q);
   $('gallery').style.display='';
-  const c=counts(), days=lastDays(DAYS), today=dayKey(new Date());
-  if(!days.includes(selDay))selDay=today;
+  const {c,raw}=counts(), days=lastDays(DAYS), t0=today();
+  if(!(selDay>=windowStart()&&selDay<=t0))selDay=t0;
   const T=tgt(selDay);
+  $('updated').textContent='Updated '+fmtTime(new Date())+' WIB · '+nf(files.length)+' photos · '+members.length+' team folders';
+  if(leaderMode){renderLeader();if($('fv').classList.contains('on'))renderFolder();return}
 
   $('days').innerHTML=days.slice().reverse().map(k=>`<button class="day glass press${k===selDay?' on':''}" data-day="${k}">
-    <small>${k===today?'Today':fmtDay(k,{weekday:'short'})}</small><b>${fmtDay(k,{day:'numeric'})}</b><div class="dot${tgt(k)&&(c[k]||0)>=tgt(k)?' hit':''}"></div></button>`).join('');
+    <small>${k===t0?'Today':fmtDay(k,{weekday:'short'})}</small><b>${fmtDay(k,{day:'numeric'})}</b><div class="dot${tgt(k)&&(c[k]||0)>=tgt(k)?' hit':''}"></div></button>`).join('');
 
-  const n=c[selDay]||0, pct=pctOf(n,T), left=Math.max(0,T-n), isToday=selDay===today;
+  const n=c[selDay]||0, made=raw[selDay]||0, cut=made-n, pct=pctOf(n,T), left=Math.max(0,T-n), isToday=selDay===t0;
   $('heroLbl').textContent=isToday?'Today':fmtDay(selDay,{weekday:'long',day:'numeric',month:'long'});
-  $('heroNum').innerHTML=`<em style="font-style:normal" data-count="${n}">${$('heroNum').dataset.last||0}</em> <span>/ ${T?T.toLocaleString():'day off'}</span>`;$('heroNum').dataset.last=n;
-  $('heroMsg').textContent=!T&&selDay<startDay?'No photos recorded yet on this day.':!T?(n?`Day off, but she still finished ${n.toLocaleString()} photos.`:'Day off. No target today.'):n>=T?`Target reached. ${n-T>0?(n-T)+' extra photos on top.':'Right on target.'}`:
-    (isToday?`${left.toLocaleString()} more to hit today's target.`:`Finished ${left.toLocaleString()} short of the target.`);
-  $('heroPill').textContent=T?`${['Sunday','Weekday','Weekday','Weekday','Weekday','Weekday','Saturday'][wd(selDay)]} target ${T.toLocaleString()} photos · ${pct}%`:(selDay<startDay?'Before tracking started':'Sunday · day off');
+  $('heroNum').innerHTML=`<em style="font-style:normal" data-count="${n}">${$('heroNum').dataset.last||0}</em> <span>/ ${T?nf(T):'day off'}</span>`;$('heroNum').dataset.last=n;
+  $('heroMsg').textContent=!T&&selDay<startDay?'No photos recorded yet on this day.':!T?(n?`Day off, but she still finished ${nf(n)} photos.`:'Day off. No target today.'):n>=T?`Target reached. ${n-T>0?nf(n-T)+' extra photos on top.':'Right on target.'}`:
+    (isToday?`${nf(left)} more to hit today's target.`:`Finished ${nf(left)} short of the target.`);
+  $('heroPill').textContent=(T?`${['Sunday','Weekday','Weekday','Weekday','Weekday','Weekday','Saturday'][wd(selDay)]} target ${nf(T)} · ${pct}%`:(selDay<startDay?'Before tracking started':'Sunday · day off'))+(cut?` · ${nf(cut)} copies not counted`:'');
   const R=46,C=2*Math.PI*R,p=T?Math.min(1,n/T):(n?1:0);
   $('ring').innerHTML=`<circle cx="55" cy="55" r="${R}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="10"/>
-    <circle class="arc" data-dash="${C*p} ${C}" cx="55" cy="55" r="${R}" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 ${C}" transform="rotate(-90 55 55)"/>
-    <text x="55" y="61" text-anchor="middle" font-size="21"><tspan data-count="${pct}">0</tspan>%</text>`;
+    <circle class="arc" data-dash="${C*p} ${C}" cx="55" cy="55" r="${R}" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="${quiet?C*p:0} ${C}" transform="rotate(-90 55 55)"/>
+    <text x="55" y="61" text-anchor="middle" font-size="21"><tspan data-count="${pct}">${quiet?pct:0}</tspan>%</text>`;
 
-  // stats
   const dayFiles=files.filter(f=>f.day===selDay);
+  // snapshot
   const l7=lastDays(7), done7=l7.reduce((a,k)=>a+(c[k]||0),0), tgt7=l7.reduce((a,k)=>a+tgt(k),0);
-  const work=days.filter(k=>tgt(k)>0&&!(k===today&&(c[k]||0)<tgt(k)));
+  const work=days.filter(k=>tgt(k)>0&&!(k===t0&&(c[k]||0)<tgt(k)));
   const hit=work.filter(k=>(c[k]||0)>=tgt(k)).length;
   let streak=0;for(const k of work.slice().reverse()){if((c[k]||0)>=tgt(k))streak++;else break}
   const byT={};for(const f of dayFiles)byT[f.type]=(byT[f.type]||0)+1;
-  const pc=v=>n?Math.round(v/n*100)+'% of the day':'';
-  const lastUp=dayFiles.length?fmtTime(dayFiles.reduce((a,b)=>a.created>b.created?a:b).created):'None yet';
+  const pc=v=>made?Math.round(v/made*100)+'% of the day':'';
+  const withTime=dayFiles.filter(f=>f.created);
+  const lastUp=withTime.length?fmtTime(withTime.reduce((a,b)=>a.created>b.created?a:b).created):'–';
   const sent=members.filter(m=>dayFiles.some(f=>f.folder===m)).length;
   $('snapSub').textContent=isToday?'Live for today':'For '+fmtDay(selDay,{day:'numeric',month:'short'});
   $('stats').innerHTML=[
-    ['XCS',(byT.XCS||0).toLocaleString(),pc(byT.XCS||0)],['Buffer',(byT.BUFFER||0).toLocaleString(),pc(byT.BUFFER||0)],
-    ...(byT.Unsorted?[['Not split',byT.Unsorted.toLocaleString(),'no XCS/BUFFER folder']]:[]),
-    ['Team covered',`${sent} / ${members.length}`,sent<members.length?(members.length-sent)+' got nothing':'Everyone got designs'],
-    ['Last 7 days',done7.toLocaleString(),`${pctOf(done7,tgt7)}% of ${tgt7.toLocaleString()} target`],
+    ['XCS',nf(byT.XCS),pc(byT.XCS||0)],['Buffer',nf(byT.BUFFER),pc(byT.BUFFER||0)],
+    ...(byT.Unsorted?[['Not split',nf(byT.Unsorted),'no XCS/BUFFER folder']]:[]),
+    ['Team covered',`${sent} / ${members.length}`,sent<members.length?(members.length-sent)+' got nothing':'Everyone got photos'],
+    ['Last 7 days',nf(done7),`${pctOf(done7,tgt7)}% of ${nf(tgt7)} target`],
     ['Target days hit',`${hit} / ${work.length}`,streak?`${streak} day streak`:'No streak yet'],
-    ['Remaining',T?left.toLocaleString():'0',!T?'Day off':n>=T?'Done':'photos'],['Last upload',lastUp,'WIB']
+    ['Remaining',T?nf(left):'0',!T?'Day off':n>=T?'Done':'photos'],['Last upload',lastUp,lastUp==='–'?'':'WIB']
   ].map(([a,b,e])=>`<div class="stat"><small>${a}</small><b>${/^[\d,]+$/.test(String(b))?`<span data-count="${String(b).replace(/,/g,'')}">0</span>`:b}</b><em>${e||'&nbsp;'}</em></div>`).join('');
 
   drawChart(days,c);
-  renderLog(days,c,today);
-
-  // per folder
-  const byF={};for(const f of dayFiles)byF[f.folder]=(byF[f.folder]||0)+1;
-  members.forEach(m=>{if(!(m in byF))byF[m]=0});
-  const fl=Object.entries(byF).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])), max=Math.max(1,...fl.map(x=>x[1]));
-  const split=m=>{const x=dayFiles.filter(f=>f.folder===m&&f.type==='XCS').length,b=dayFiles.filter(f=>f.folder===m&&f.type==='BUFFER').length;return (x||b)?` <small style="color:var(--muted);font-weight:500">XCS ${x} · Buffer ${b}</small>`:''};
-  $('bars').innerHTML=fl.length?fl.map(([k,v])=>`<div class="bar"><div class="h"><div>${esc(k)}${v?split(k):''}</div><span>${v?v.toLocaleString()+' · '+Math.round(v/n*100)+'%':'<b style="color:var(--orange)">0</b>'}</span></div><div class="t"><i data-w="${v/max*100}"></i></div></div>`).join('')
-    :'<div class="empty">No team folders found.</div>';
+  renderLog(days,c,raw,t0);
+  renderSpread(dayFiles,made);
+  renderQuality(dayFiles);
+  renderFeedback();
+  renderMonth(c,raw);
+  renderAlert(c);
 
   // gallery
-  const folders=['All',...fl.filter(x=>x[1]).map(x=>x[0])];
+  const byF={};for(const f of dayFiles)byF[f.folder]=(byF[f.folder]||0)+1;
+  const folders=['All',...members.filter(m=>byF[m])];
   if(!folders.includes(folderFilter))folderFilter='All';
   $('chips').innerHTML=folders.length>2?folders.map(k=>`<button class="chip glass press${k===folderFilter?' on':''}" data-folder="${esc(k)}">${esc(k)}${k==='All'?'':' · '+byF[k]}</button>`).join(''):'';
   viewList=dayFiles.filter(f=>folderFilter==='All'||f.folder===folderFilter);
-  $('gTitle').textContent=isToday?"Today's designs":'Designs on '+fmtDay(selDay,{day:'numeric',month:'short'});
-  $('gCount').textContent=viewList.length.toLocaleString()+' items';
+  $('gTitle').textContent=isToday?"Today's photos":'Photos on '+fmtDay(selDay,{day:'numeric',month:'short'});
+  $('gCount').textContent=nf(viewList.length)+' items';
   renderGallery();
   renderFolders();
   if($('fv').classList.contains('on'))renderFolder();
+  if($('qv').classList.contains('on'))renderQv();
+  updateScan();
   animateIn();
 }
-function renderLog(days,c,today){
-  // this week (Mon to today)
+
+function renderLog(days,c,raw,t0){
   const wkDays=[];for(let i=0;i<7;i++){const k=dayKey(Date.now()-i*864e5);wkDays.unshift(k);if(wd(k)===1)break}
   const wDone=wkDays.reduce((a,k)=>a+(c[k]||0),0), wT=wkDays.reduce((a,k)=>a+tgt(k),0);
-  $('wk').innerHTML=`<small>This week</small><b><span data-count="${wDone}">0</span></b><em>of ${wT.toLocaleString()} · ${pctOf(wDone,wT)}%</em>`;
-  $('log').innerHTML=days.slice().reverse().map((k,i)=>{
-    const n=c[k]||0, t=tgt(k), p=pctOf(n,t), d=wd(k);
-    const st=k<startDay?['off','Not tracked']:!t?(n?['bonus','Bonus']:['off','Day off']):n>=t?['ok','✓ Done']:k===today?['now','In progress']:['short',`${(t-n).toLocaleString()} short`];
-    return `<button class="lrow press${k===selDay?' on':''}${d===1?' mon':''}" data-day="${k}">
-      <div class="dt"><b>${fmtDay(k,{day:'numeric'})}</b><small>${k===today?'Today':fmtDay(k,{weekday:'short'})}</small></div>
-      <div class="mid"><div class="nums"><b><span data-count="${n}">0</span></b><span>/ ${t?t.toLocaleString():'0'}</span></div>
+  $('wk').innerHTML=`<small>This week</small><b><span data-count="${wDone}">0</span></b><em>of ${nf(wT)} · ${pctOf(wDone,wT)}%</em>`;
+  $('log').innerHTML=days.slice().reverse().map(k=>{
+    const n=c[k]||0, r=raw[k]||0, t=tgt(k), p=pctOf(n,t);
+    const st=k<startDay?['off','Not tracked']:!t?(n?['bonus','Bonus']:['off','Day off']):n>=t?['ok','✓ Done']:k===t0?['now','In progress']:['short',`${nf(t-n)} short`];
+    return `<button class="lrow press${k===selDay?' on':''}" data-day="${k}">
+      <div class="dt"><b>${fmtDay(k,{day:'numeric'})}</b><small>${k===t0?'Today':fmtDay(k,{weekday:'short'})}</small></div>
+      <div class="mid"><div class="nums"><b><span data-count="${n}">0</span></b><span>/ ${t?nf(t):'0'}${r>n?` · ${nf(r-n)} copies cut`:''}</span></div>
         <div class="t"><i class="${st[0]}" data-w="${t?Math.min(100,p):(n?100:0)}"></i></div></div>
       <span class="st ${st[0]}">${st[1]}</span></button>`;
   }).join('');
 }
-// ── Team folders ──
+
+// fair split: every leader should get about the same share of the day
+function renderSpread(dayFiles,made){
+  const byF={};members.forEach(m=>byF[m]=0);for(const f of dayFiles)byF[f.folder]=(byF[f.folder]||0)+1;
+  const fl=Object.entries(byF).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])), max=Math.max(1,...fl.map(x=>x[1]));
+  const fair=members.length?made/members.length:0;
+  $('spreadSub').textContent=made?`Fair share is about ${Math.round(fair)} each. The line on each bar marks it.`:'How the day\'s photos split across her folders';
+  const split=m=>{const x=dayFiles.filter(f=>f.folder===m&&f.type==='XCS').length,b=dayFiles.filter(f=>f.folder===m&&f.type==='BUFFER').length;return (x||b)?` <small style="color:var(--muted);font-weight:500">XCS ${x} · Buffer ${b}</small>`:''};
+  const cps=m=>dayFiles.filter(f=>f.folder===m&&ana.removed.has(f.id)).length;
+  $('bars').innerHTML=fl.length?fl.map(([k,v])=>{const low=made&&v<fair*.7, cc=cps(k);
+    return `<div class="bar"><div class="h"><div>${esc(k)}${v?split(k):''}${low?'<span class="low">Low</span>':''}</div><span>${v?nf(v)+' · '+Math.round(v/made*100)+'%':'<b style="color:var(--orange)">0</b>'}${cc?` · ${cc} copies`:''}</span></div>
+      <div class="t"><i data-w="${v/max*100}"></i>${made?`<span class="fair" style="left:${Math.min(100,fair/max*100)}%"></span>`:''}</div></div>`}).join('')
+    :'<div class="empty">No team folders found.</div>';
+}
+
+function dayCopies(dayFiles){return dayFiles.filter(f=>ana.copy.has(f.id))}
+function renderQuality(dayFiles){
+  const cps=dayCopies(dayFiles), exact=cps.filter(f=>ana.copy.get(f.id).kind==='exact').length;
+  const look=cps.length-exact, cut=dayFiles.filter(f=>ana.removed.has(f.id)).length;
+  const shared=cps.filter(f=>ana.copy.get(f.id).orig.folder!==f.folder).length;
+  const fmt=dayFiles.filter(f=>formatIssue(f)).length, warn=issues.filter(i=>i.lv==='warn').length;
+  $('qSub').textContent=`For ${selDay===today()?'today':fmtDay(selDay,{day:'numeric',month:'short'})} · ${nf(dayFiles.length-cut)} of ${nf(dayFiles.length)} count as unique`;
+  const q=(k,label,val,em,cls)=>`<button class="qt press ${cls||''}" data-q="${k}"><small>${label}</small><b>${nf(val)}</b><em>${em}</em></button>`;
+  $('qStats').innerHTML=
+    q('copies','Exact copies',exact,'same file twice',exact?'bad':'good')+
+    q('copies','Look alikes',look,`${nf(cut-exact)} not counted`,look?'bad':'good')+
+    q('shared','Sent twice',shared,'to 2 leaders',shared?'bad':'good')+
+    q('format','Wrong size',fmt,'not 4:5 or small',fmt?'bad':'good')+
+    q('folders','Folder issues',warn,`${issues.length-warn} tips`,warn?'bad':'good')+
+    q('copies','Unique',dayFiles.length-cut,'count to target','good');
+}
+
+// ══ Leader feedback (owner view) ══
+function fbStats(days){
+  const per={},reasons={},picks=[];
+  members.forEach(m=>per[m]={got:0,rev:0,love:0,like:0,skip:0});
+  for(const f of files){if(!days.includes(f.day))continue;const p=per[f.folder];if(!p)continue;p.got++;
+    const v=voteOf(f,f.folder);if(!v)continue;p.rev++;if(v.v===2){p.love++;picks.push([f,v.t])}else if(v.v===1)p.like++;else{p.skip++;if(v.r)reasons[v.r]=(reasons[v.r]||0)+1}}
+  return {per,reasons,picks:picks.sort((a,b)=>b[1]-a[1]).map(x=>x[0])};
+}
+function reviewLink(){return location.origin+location.pathname+'?review'}
+function renderFeedback(){
+  const {per,reasons,picks}=fbStats(lastDays(7));
+  let rev=0,got=0,good=0;for(const m in per){rev+=per[m].rev;got+=per[m].got;good+=per[m].love+per[m].like}
+  $('fbSum').innerHTML=rev?`<small>Approval</small><b><span data-count="${pctOf(good,rev)}">0</span>%</b><em>${nf(rev)} of ${nf(got)} rated</em>`:`<small>Approval</small><b>–</b><em>no ratings yet</em>`;
+  const rows=members.slice().sort((a,b)=>(per[b].got?per[b].rev/per[b].got:0)-(per[a].got?per[a].rev/per[a].got:0)).map(m=>{const p=per[m];
+    return `<div class="fbrow"><span class="nm">${esc(m)}</span><div class="t"><i data-w="${p.got?p.rev/p.got*100:0}"></i></div>
+      <span class="ct">${p.rev?`${pctOf(p.rev,p.got)}% · ❤️${p.love} 👍${p.like} 👎${p.skip}`:`<span style="color:var(--orange)">0 of ${nf(p.got)}</span>`}</span></div>`}).join('');
+  const rs=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
+  $('fbBody').innerHTML=`<div class="h3" style="margin-top:12px">Share of their photos reviewed</div><div class="fbrows">${rows}</div>
+    ${rs.length?`<div class="h3">Why leaders skip</div><div class="rsum">${rs.map(([r,n])=>`<span>${esc(r)} <b>${n}</b></span>`).join('')}</div>`:''}
+    ${picks.length?`<div class="h3">Leaders' favourites ❤️</div><div class="picks">${picks.slice(0,14).map((f,i)=>`<button class="tile" data-pick="${i}">${img(f,240)}</button>`).join('')}</div>`:''}
+    <div class="share"><code>${esc(reviewLink().replace(/^https?:\/\//,''))}</code><button class="btn-p press" id="shareLink">Share</button></div>
+    <div class="hint" style="margin-top:6px">Send this one link to all team leaders. They pick their name once, then swipe through their photos.</div>`;
+  $('fbBody')._picks=picks;
+}
+
+// ══ Month calendar ══
+function renderMonth(c,raw){
+  const t0=today(), ms=monthStart(), y=+ms.slice(0,4), mo=+ms.slice(5,7);
+  const dim=new Date(Date.UTC(y,mo,0)).getUTCDate(), lead=(wd(ms)+6)%7;
+  $('mTitle').textContent=fmtDay(ms,{month:'long',year:'numeric'});
+  let cells=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="wh">${d}</div>`).join('');
+  for(let i=0;i<lead;i++)cells+='<div class="cell pad"></div>';
+  let done=0,made=0,tsum=0,hitD=0,workD=0;
+  for(let d=1;d<=dim;d++){
+    const k=ms.slice(0,8)+String(d).padStart(2,'0'), n=c[k]||0, t=tgt(k), fut=k>t0;
+    if(!fut){done+=n;made+=raw[k]||0;tsum+=t;if(t&&!(k===t0&&n<t)){workD++;if(n>=t)hitD++}}
+    const cls=fut?'fut':k<startDay?'off':!t?'off':n>=t?'ok':k===t0?'':'short';
+    cells+=`<button class="cell ${cls}${k===selDay?' sel':''}${k===t0?' today':''}" ${fut?'disabled':`data-day="${k}"`} style="--i:${d};--p:${t?Math.round(10+18*(1-Math.min(1,n/t))):0}">
+      <span class="dn">${d}</span><span class="cn">${fut||k<startDay?'':n?nf(n):(t?'0':'–')}</span></button>`;
+  }
+  $('cal').innerHTML=cells;
+  $('mSum').innerHTML=`<small>So far</small><b><span data-count="${done}">0</span></b><em>of ${nf(tsum)} · ${pctOf(done,tsum)}%</em>`;
+  const st=(a,b,e)=>`<div class="stat"><small>${a}</small><b>${b}</b><em>${e}</em></div>`;
+  $('mStats').innerHTML=st('Made',nf(made),'all uploads')+st('Unique',nf(done),`${nf(made-done)} copies cut`)+st('Target days hit',`${hitD} / ${workD}`,workD?pctOf(hitD,workD)+'% of work days':'')+st('Per work day',workD?nf(Math.round(done/Math.max(1,workD))):'0','average');
+}
+
+// ══ Midday warning ══
+const CHECKS=[[17,.75],[13,.4]];   // by 13:00 at least 40% done, by 17:00 at least 75%
+function renderAlert(c){
+  const k=today(), T=tgt(k), n=c[k]||0;
+  const h=+new Date().toLocaleString('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false});
+  const ck=CHECKS.find(([hr])=>h>=hr);
+  if(!T||!ck||n>=T*ck[1]){$('alert').innerHTML='';return}
+  const need=Math.round(T*ck[1]), canNotify='Notification' in window&&Notification.permission==='default';
+  $('alert').innerHTML=`<div class="alert"><span class="ic">⏰</span><div><b>Behind pace: ${nf(n)} / ${nf(T)} today</b><small>By ${ck[0]}:00 she should be past ${nf(need)}. ${nf(T-n)} still to go.</small></div>${canNotify?'<button id="notifyBtn">🔔 Alert me</button>':''}</div>`;
+  const key='ds_alert_'+k+'_'+ck[0];
+  if('Notification' in window&&Notification.permission==='granted'&&!store.get(key)){
+    store.set(key,'1');try{new Notification('Design Studio: behind pace',{body:`${n} / ${T} photos so far today. By ${ck[0]}:00 she should be past ${need}.`})}catch(e){}
+  }
+}
+setInterval(()=>{if(files.length&&!leaderMode)renderAlert(counts().c)},60e3);
+
+// ══ Team folders ══
 let fvName='', fvType='All', fvOpen={};
 function renderFolders(){
   const days=lastDays(DAYS);
@@ -588,29 +1066,23 @@ function renderFolders(){
     const mine=files.filter(f=>f.folder===m&&days.includes(f.day));
     const latest=mine.reduce((a,f)=>f.day>a?f.day:a,'');
     const cov=mine.filter(f=>f.day===latest).slice(0,4);
-    const coverHtml=cov.length?`<div class="cov${cov.length<4?' one':''}">${(cov.length<4?cov.slice(0,1):cov).map(f=>`<span class="tile">${img(f,cov.length<4?600:300)}</span>`).join('')}<span class="ct">${mine.length.toLocaleString()}</span></div>`
+    const coverHtml=cov.length?`<div class="cov${cov.length<4?' one':''}">${(cov.length<4?cov.slice(0,1):cov).map(f=>`<span class="tile">${img(f,cov.length<4?600:300)}</span>`).join('')}<span class="ct">${nf(mine.length)}</span></div>`
       :`<div class="cov none">No photos yet</div>`;
-    const todayN=mine.filter(f=>f.day===selDay).length;
+    const dayN=mine.filter(f=>f.day===selDay).length;
     return `<button class="fcard glass press" data-open="${esc(m)}" style="--i:${i}">${coverHtml}
       <div class="fn">${esc(m)}</div>
-      <div class="fs">${latest?`Latest ${fmtDay(latest,{day:'numeric',month:'short'})}`:'Nothing in 14 days'} · <b>${todayN}</b> on ${selDay===dayKey(new Date())?'today':fmtDay(selDay,{day:'numeric',month:'short'})}</div></button>`;
+      <div class="fs">${latest?`Latest ${fmtDay(latest,{day:'numeric',month:'short'})}`:'Nothing in 14 days'} · <b>${dayN}</b> on ${selDay===today()?'today':fmtDay(selDay,{day:'numeric',month:'short'})}</div></button>`;
   }).join('');
 }
 function fvFiles(){return files.filter(f=>f.folder===fvName&&(fvType==='All'||f.type===fvType))}
 function fvSection(k){return fvFiles().filter(f=>f.day===k)}
-function openFolder(m){
-  fvName=m;fvType='All';fvOpen={};renderFolder();
-  $('fv').scrollTop=0;$('fv').classList.add('on');$('fv').setAttribute('aria-hidden','false');
-  document.body.style.overflow='hidden';
-  try{history.pushState({fv:m},'')}catch(e){}
+function openFolder(m){fvName=m;fvType='All';fvOpen={};renderFolder();openOv('fv')}
+function badges(f,showVote){
+  const c=ana.copy.get(f.id);let s='';
+  if(c)s+=`<span class="bdg${c.kind==='look'?' look':''}">${c.kind==='exact'?'Copy':c.sim+'% alike'}</span>`;
+  if(showVote){const v=voteOf(f,f.folder);if(v)s+=`<span class="vote">${v.v===2?'❤️':v.v===1?'👍':'👎'}</span>`}
+  return s;
 }
-function closeFolder(fromPop){
-  if(!$('fv').classList.contains('on'))return;
-  $('fv').classList.remove('on');$('fv').setAttribute('aria-hidden','true');document.body.style.overflow='';
-  if(!fromPop)try{history.back()}catch(e){}
-}
-$('fvBack').onclick=()=>closeFolder(false);
-addEventListener('popstate',()=>{if($('lb').classList.contains('on')){$('lbX').onclick();if($('fv').classList.contains('on'))try{history.pushState({fv:fvName},'')}catch(e){};return}closeFolder(true)});
 function renderFolder(){
   if(!fvName)return;
   const all=files.filter(f=>f.folder===fvName), list=fvFiles();
@@ -619,33 +1091,170 @@ function renderFolder(){
   $('fvName').textContent=fvName;
   const byD={};for(const f of list)(byD[f.day]=byD[f.day]||[]).push(f);
   const ds=Object.keys(byD).sort().reverse();
-  $('fvSub').textContent=`${all.length.toLocaleString()} photos · ${Object.keys(all.reduce((a,f)=>(a[f.day]=1,a),{})).length} days`;
+  const rated=all.filter(f=>voteOf(f,fvName)).length;
+  $('fvSub').textContent=`${nf(all.length)} photos · ${Object.keys(all.reduce((a,f)=>(a[f.day]=1,a),{})).length} days · ${nf(rated)} rated by ${fvName}`;
   $('fvSeg').style.display=types.length>2?'':'none';
   $('fvSeg').innerHTML=types.map(t=>`<button class="${t===fvType?'on':''}" data-fseg="${t}">${t==='All'?'All':t==='BUFFER'?'Buffer':t==='Unsorted'?'Not split':t} · ${(t==='All'?all:all.filter(f=>f.type===t)).length}</button>`).join('');
   $('fvDays').innerHTML=ds.length?ds.map((k,di)=>{
     const L=byD[k], lim=fvOpen[k]?L.length:12;
-    const x=L.filter(f=>f.type==='XCS').length,b=L.filter(f=>f.type==='BUFFER').length;
+    const x=L.filter(f=>f.type==='XCS').length,b=L.filter(f=>f.type==='BUFFER').length, cp=L.filter(f=>ana.removed.has(f.id)).length;
     return `<section class="fday" style="animation-delay:${Math.min(di,6)*70}ms">
-      <div class="fdh glass"><div><b>${k===dayKey(new Date())?'Today':fmtDay(k,{weekday:'long',day:'numeric',month:'short'})}</b><small>${fvType==='All'&&(x||b)?`XCS ${x} · Buffer ${b}`:esc(fvType==='All'?'Photos':fvType)}</small></div>
-        <div class="cnt"><b>${L.length.toLocaleString()}</b><small>photos</small></div></div>
-      <div class="fgrid">${L.slice(0,lim).map((f,i)=>`<button class="tile" data-fi="${i}" data-sec="${k}" style="--i:${Math.min(i,18)}">${img(f,400)}${fvType==='All'&&f.type!=='Unsorted'?`<div class="cap"><span>${esc(f.type)}</span></div>`:''}</button>`).join('')}</div>
-      ${L.length>lim?`<button class="fmore glass press" data-fmore="${k}">See all ${L.length.toLocaleString()} photos</button>`:''}
-    </section>`}).join(''):'<div class="empty">No photos in this folder in the last 14 days.</div>';
-}
-function thumb(f,w){return f.thumb?f.thumb.replace(/=s\d+(-[a-z]+)?$/,'')+'=s'+w:alt(f,w)}
-function alt(f,w){return `https://drive.google.com/thumbnail?id=${f.id}&sz=w${w}`}
-function img(f,w){return `<img loading="lazy" decoding="async" onload="this.parentNode.classList.add('ok')" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='${alt(f,w)}'}else{this.parentNode.classList.add('ok','noimg')}" src="${thumb(f,w)}" alt="${esc(f.name)}">`}
-function renderGallery(){
-  const list=viewList.slice(0,shown);
-  $('gallery').innerHTML=list.length?list.map((f,i)=>`<button class="tile" data-i="${i}" style="--i:${Math.min(i%PAGE,24)}">
-    ${img(f,500)}
-    ${/^video/.test(f.mime)?'<span class="vid">▶ Video</span>':''}
-    <div class="cap"><span>${esc(f.type)}</span>${folderFilter==='All'&&f.folder!=='Main folder'?`<span>${esc(f.folder)}</span>`:''}</div></button>`).join('')
-    :'<div class="empty">Nothing here yet. New designs show up as soon as they land in Drive.</div>';
-  $('more').style.display=viewList.length>shown?'block':'none';
-  $('more').textContent=`Show more (${(viewList.length-shown).toLocaleString()} left)`;
+      <div class="fdh glass"><div><b>${k===today()?'Today':fmtDay(k,{weekday:'long',day:'numeric',month:'short'})}</b><small>${fvType==='All'&&(x||b)?`XCS ${x} · Buffer ${b}`:esc(fvType==='All'?'Photos':fvType)}${cp?` · ${cp} copies`:''}</small></div>
+        <div class="cnt"><b>${nf(L.length)}</b><small>photos</small></div></div>
+      <div class="fgrid">${L.slice(0,lim).map((f,i)=>`<button class="tile${ana.removed.has(f.id)?' dupe':''}" data-fi="${i}" data-sec="${k}" style="--i:${Math.min(i,18)}">${img(f,400)}${badges(f,true)}${fvType==='All'&&f.type!=='Unsorted'?`<div class="cap"><span>${esc(f.type)}</span></div>`:''}</button>`).join('')}</div>
+      ${L.length>lim?`<button class="fmore glass press" data-fmore="${k}">See all ${nf(L.length)} photos</button>`:''}
+    </section>`}).join(''):'<div class="empty">No photos in this folder this month.</div>';
 }
 
+// ══ Quality page ══
+let qTab='copies', qLim=40;
+function openQv(tab){qTab=tab||'copies';qLim=40;renderQv();openOv('qv')}
+function renderQv(){
+  const dayFiles=files.filter(f=>f.day===selDay);
+  const cps=dayCopies(dayFiles), shared=cps.filter(f=>ana.copy.get(f.id).orig.folder!==f.folder), fmt=dayFiles.filter(f=>formatIssue(f));
+  $('qvSub').textContent=(selDay===today()?'Today':fmtDay(selDay,{weekday:'long',day:'numeric',month:'short'}))+' · '+nf(dayFiles.length)+' photos';
+  const tabs=[['copies','Copies',cps.length],['shared','Sent twice',shared.length],['format','Size',fmt.length],['folders','Folders',issues.length]];
+  $('qvSeg').innerHTML=tabs.map(([k,l,n])=>`<button class="${k===qTab?'on':''}" data-qtab="${k}">${l} · ${n}</button>`).join('');
+  const lbl=f=>`<b>${esc(f.folder)}</b> · ${fmtDay(f.day,{day:'numeric',month:'short'})}${f.type!=='Unsorted'?' · '+esc(f.type):''}`;
+  const pair=(f,i)=>{const c=ana.copy.get(f.id), counted=!ana.removed.has(f.id);
+    return `<div class="pair glass" style="animation-delay:${Math.min(i,8)*50}ms">
+      <div class="ph"><button class="tile" data-qopen="${c.orig.id}">${img(c.orig,400)}</button><small>Original · ${lbl(c.orig)}</small></div>
+      <div class="ph"><button class="tile" data-qopen="${f.id}">${img(f,400)}</button><small>Copy · ${lbl(f)}</small></div>
+      <div class="pf"><span class="sim${c.kind==='exact'?' exact':''}">${c.kind==='exact'?'Exact copy':c.sim+'% similar'}</span>
+        <span class="cnt0">${counted?'Still counts':'Not counted'}</span>
+        ${c.kind==='look'?`<button class="okbtn press" data-okid="${f.id}">${oks[f.id]?'Undo, it is a copy':'Not a copy'}</button>`:''}</div></div>`};
+  let h='';
+  if(qTab==='copies'){
+    h=`<div class="qintro">Exact copies are the same file uploaded twice. Look alikes are different files that look ${cfg.sim}% or more the same as an earlier photo, so they don't count toward the target. Tap “Not a copy” if one was flagged wrongly.</div>`;
+    h+=cps.length?cps.sort((a,b)=>ana.copy.get(b.id).sim-ana.copy.get(a.id).sim).slice(0,qLim).map(pair).join(''):'<div class="empty">🎉 No copies on this day.</div>';
+    if(cps.length>qLim)h+=`<button class="fmore glass press" data-qmore>Show more (${cps.length-qLim})</button>`;
+  }else if(qTab==='shared'){
+    h=`<div class="qintro">The same or almost the same photo went to two different team leaders. Each leader should get fresh content.</div>`;
+    h+=shared.length?shared.slice(0,qLim).map(pair).join(''):'<div class="empty">🎉 Every leader got different photos.</div>';
+  }else if(qTab==='format'){
+    h=`<div class="qintro">Her photos should be 4:5 (like 1080×1350) and at least 1000px wide, so they look sharp when posted.</div>`;
+    h+=fmt.length?`<div class="fgrid" style="margin-top:12px">${fmt.slice(0,120).map(f=>`<button class="tile" data-qopen="${f.id}">${img(f,300)}<span class="bdg">${esc(formatIssue(f))}</span><div class="cap"><span>${esc(f.folder)}</span></div></button>`).join('')}</div>`:'<div class="empty">🎉 All photos are the right size.</div>';
+  }else{
+    h=`<div class="qintro">Keep every folder as <b>Leader → DD-MM-YYYY → XCS or BUFFER</b> so the counts stay right. Tap an item to open that folder in Drive.</div>`;
+    const sorted=issues.slice().sort((a,b)=>(a.lv==='warn'?0:1)-(b.lv==='warn'?0:1)||a.who.localeCompare(b.who));
+    h+=sorted.length?sorted.map((it,i)=>`<a class="issue glass" href="${it.link}" target="_blank" rel="noopener" style="animation-delay:${Math.min(i,10)*40}ms"><span class="ic">${it.lv==='warn'?'⚠️':'💡'}</span><div><b>${esc(it.who)}</b><p>${it.text}</p></div><span class="go">›</span></a>`).join(''):'<div class="empty">🎉 All folders are tidy.</div>';
+  }
+  $('qvBody').innerHTML=h;
+}
+
+// ══ Overlays & the phone's back button ══
+const stack=[];let skipPop=0;
+function openOv(id){const el=$(id);if(stack.includes(id))return;el.classList.add('on');el.setAttribute('aria-hidden','false');el.scrollTop=0;stack.push(id);document.body.style.overflow='hidden';try{history.pushState({ov:id},'')}catch(e){}}
+function closeOv(id,fromPop){const i=stack.lastIndexOf(id);if(i<0)return;stack.splice(i,1);const el=$(id);el.classList.remove('on');el.setAttribute('aria-hidden','true');if(!stack.length)document.body.style.overflow='';if(id==='rv')onReviewClose();if(!fromPop){skipPop++;try{history.back()}catch(e){skipPop--}}}
+addEventListener('popstate',()=>{if(skipPop){skipPop--;return}const top=stack[stack.length-1];if(top)closeOv(top,true)});
+
+// ══ Leader view & swipe review ══
+function renderLeader(){
+  const box=$('leaderBox');
+  $('appTitle').textContent='Photo review';
+  if(!me||!members.includes(me)){
+    box.innerHTML=`<div class="card glass leadercard"><div class="hi">Welcome 👋</div><div class="lsub" style="font-size:18px;font-weight:800;color:var(--ink);margin-top:6px">Who are you?</div>
+      <div class="lsub">Tap your name. You only do this once.</div>
+      <div class="pick">${members.map(m=>`<button class="glass press" data-me="${esc(m)}">${esc(m)}</button>`).join('')}</div></div>`;
+    return;
+  }
+  const q=myQueue(), wk=lastDays(7), mine=files.filter(f=>f.folder===me&&wk.includes(f.day));
+  let love=0,like=0,skip=0;for(const f of mine){const v=voteOf(f,me);if(!v)continue;if(v.v===2)love++;else if(v.v===1)like++;else skip++}
+  box.innerHTML=`<div class="card glass leadercard">
+    <div class="hi">Hi ${esc(me)} 👋</div>
+    <div class="lnum"><span data-count="${q.length}">0</span></div>
+    <div class="lsub">${q.length?`new photo${q.length>1?'s':''} waiting for you`:'All caught up. Nice work!'}</div>
+    ${q.length?`<button class="bigbtn btn-p" data-review>Start review</button>`:''}
+    <div class="howto"><span>👍 swipe right</span><span>👎 swipe left</span><span>❤️ swipe up</span></div>
+    <div class="lstats"><div><b>${nf(mine.length)}</b><small>this week</small></div><div><b>${love}</b><small>❤️ loved</small></div><div><b>${like}</b><small>👍 posting</small></div><div><b>${skip}</b><small>👎 skipped</small></div></div>
+    <button class="bigbtn btn-s press" data-open="${esc(me)}">See all my photos</button>
+    <button class="linkish" data-switch>Not ${esc(me)}? Switch name</button></div>`;
+  animateIn();
+}
+function myQueue(){
+  const rec=recentStart();
+  return files.filter(f=>f.folder===me&&f.day>=rec&&/^image\//.test(f.mime)&&!voteOf(f,me))
+    .sort((a,b)=>b.day.localeCompare(a.day)||a.name.localeCompare(b.name,undefined,{numeric:true}));
+}
+let rq=[],ri=0,rHist=[],rSession={love:0,like:0,skip:0};
+function startReview(){rq=myQueue();ri=0;rHist=[];rSession={love:0,like:0,skip:0};openOv('rv');drawDeck()}
+function onReviewClose(){hideReasons();if(leaderMode)renderLeader()}
+function cardHtml(f,k){
+  return `<div class="rcard${k?' under':''}${k===2?' enter':''}" style="--k:${k};z-index:${10-k}" data-rid="${f.id}">
+    <div class="tile rimg">${img(f,1000)}${badges(f,false)}</div>
+    <span class="stamp s-like">POST</span><span class="stamp s-skip">SKIP</span><span class="stamp s-love">LOVE ❤️</span>
+    <div class="rmeta"><b>${f.day===today()?'Today':fmtDay(f.day,{weekday:'short',day:'numeric',month:'short'})}</b><span>${esc(f.type==='Unsorted'?'':f.type+' · ')}${esc(f.name)}</span><button class="ropen" data-ropen="${f.id}">Open ↗</button></div></div>`;
+}
+function drawDeck(){
+  const total=rq.length;
+  $('rvCount').textContent=total?`${Math.min(ri+1,total)} of ${total}`:'';
+  $('rvBar').style.width=(total?Math.min(1,ri/total)*100:100)+'%';
+  $('rvUndo').style.visibility=rHist.length?'visible':'hidden';
+  if(ri>=total){
+    $('rvBtns').classList.add('hide');
+    $('deck').innerHTML=`<div class="rdone"><div class="big">🎉</div><h3>All caught up!</h3><p>${total?`You reviewed ${total} photo${total>1?'s':''}. She'll see your feedback.`:'No new photos right now. Check back later.'}</p>
+      ${total?`<div class="lstats" style="margin-top:18px"><div><b>${total}</b><small>reviewed</small></div><div><b>${rSession.love}</b><small>❤️</small></div><div><b>${rSession.like}</b><small>👍</small></div><div><b>${rSession.skip}</b><small>👎</small></div></div>`:''}
+      <button class="bigbtn btn-p" data-back style="max-width:360px">Done</button></div>`;
+    return;
+  }
+  $('rvBtns').classList.remove('hide');
+  $('deck').innerHTML=rq.slice(ri,ri+3).map((f,k)=>cardHtml(f,k)).join('');
+  $('deck').querySelectorAll('.enter').forEach(c=>requestAnimationFrame(()=>c.classList.remove('enter')));
+  bindTop();
+}
+function topCard(){return $('deck').querySelector('.rcard:not(.under):not(.gone)')}
+function bindTop(){
+  const c=topCard();if(!c)return;
+  let sx=0,sy=0,dx=0,dy=0,drag=false;
+  c.onpointerdown=e=>{if(e.target.closest('.ropen'))return;drag=true;sx=e.clientX;sy=e.clientY;dx=dy=0;try{c.setPointerCapture(e.pointerId)}catch(_){}c.style.transition='none';hideReasons()};
+  c.onpointermove=e=>{if(!drag)return;dx=e.clientX-sx;dy=e.clientY-sy;
+    c.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/16}deg)`;
+    const up=Math.abs(dx)<70?Math.max(0,Math.min(1,-dy/140)):0;
+    c.style.setProperty('--like',up?0:Math.max(0,Math.min(1,dx/110)));c.style.setProperty('--skip',up?0:Math.max(0,Math.min(1,-dx/110)));c.style.setProperty('--love',up)};
+  const end=()=>{if(!drag)return;drag=false;c.style.transition='';
+    if(dy<-140&&Math.abs(dx)<70)vote(2);else if(dx>110)vote(1);else if(dx<-110)vote(-1);
+    else{c.style.transform='';['--like','--skip','--love'].forEach(p=>c.style.setProperty(p,0))}};
+  c.onpointerup=end;c.onpointercancel=end;
+}
+function saveVote(f,v,r){
+  const day=fb[f.day]=fb[f.day]||{}, rec=day[f.id]=day[f.id]||{}, k=fbKey(me);
+  const val=v===null?null:{v,t:Date.now(),...(r?{r}:{})};
+  if(val)rec[k]=val;else delete rec[k];
+  if(db)db.ref(`designs/fb/${f.day}/${f.id}/${k}`).set(val).catch(()=>toast('⚠️ Could not save. Check your internet.'));
+}
+function vote(v){
+  const f=rq[ri];if(!f)return;const c=topCard();
+  if(c){c.classList.add('gone');c.onpointerdown=null;c.style.transition='transform .5s cubic-bezier(.2,.7,.3,1),opacity .5s';
+    c.style.transform=v===2?'translate(0,-120vh) scale(.9)':v>0?'translate(140vw,40px) rotate(28deg)':'translate(-140vw,40px) rotate(-28deg)';c.style.opacity='0';
+    c.style.setProperty(v===2?'--love':v>0?'--like':'--skip',1)}
+  try{navigator.vibrate&&navigator.vibrate(v===2?[8,40,8]:10)}catch(e){}
+  saveVote(f,v,'');rHist.push(f);rSession[v===2?'love':v>0?'like':'skip']++;ri++;
+  // lift the next cards up one place, then add a new one at the back
+  $('deck').querySelectorAll('.rcard.under').forEach(el=>{const k=+el.style.getPropertyValue('--k')-1;el.style.setProperty('--k',k);el.style.zIndex=10-k;if(!k){el.classList.remove('under')}});
+  setTimeout(()=>{if(c)c.remove();const nf2=rq[ri+2];if(nf2){$('deck').insertAdjacentHTML('beforeend',cardHtml(nf2,2));const e=$('deck').lastElementChild;requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.remove('enter')))}
+    bindTop();if(ri>=rq.length)drawDeck();else{$('rvCount').textContent=`${ri+1} of ${rq.length}`;$('rvBar').style.width=(ri/rq.length*100)+'%';$('rvUndo').style.visibility='visible'}},420);
+  $('rvBar').style.width=(ri/rq.length*100)+'%';
+  if(v<0)showReasons(f);else hideReasons();
+}
+let reasonFor=null,reasonT=null;
+function showReasons(f){reasonFor=f;$('reasonChips').innerHTML=REASONS.map(r=>`<button data-reason="${esc(r)}">${esc(r)}</button>`).join('');$('reasons').classList.add('on');clearTimeout(reasonT);reasonT=setTimeout(hideReasons,6000)}
+function hideReasons(){$('reasons').classList.remove('on');clearTimeout(reasonT)}
+function undo(){const f=rHist.pop();if(!f)return;const v=voteOf(f,me);if(v)rSession[v.v===2?'love':v.v>0?'like':'skip']--;saveVote(f,null);ri=Math.max(0,ri-1);rq[ri]=f;hideReasons();drawDeck();toast('↶ Undone')}
+
+// ══ Photos & gallery ══
+function thumb(f,w){return f.thumb?f.thumb.replace(/=s\d+(-[a-z]+)?$/,'')+'=s'+w:alt(f,w)}
+function alt(f,w){return `https://drive.google.com/thumbnail?id=${f.id}&sz=w${w}`}
+function img(f,w){return `<img loading="lazy" decoding="async" draggable="false" onload="this.parentNode.classList.add('ok')" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='${alt(f,w)}'}else{this.parentNode.classList.add('ok','noimg')}" src="${thumb(f,w)}" alt="${esc(f.name)}">`}
+function renderGallery(){
+  const list=viewList.slice(0,shown);
+  $('gallery').innerHTML=list.length?list.map((f,i)=>`<button class="tile${ana.removed.has(f.id)?' dupe':''}" data-i="${i}" style="--i:${Math.min(i%PAGE,24)}">
+    ${img(f,500)}${badges(f,true)}
+    ${/^video/.test(f.mime)?'<span class="vid">▶ Video</span>':''}
+    <div class="cap"><span>${esc(f.type)}</span>${folderFilter==='All'?`<span>${esc(f.folder)}</span>`:''}</div></button>`).join('')
+    :'<div class="empty">Nothing here yet. New photos show up as soon as they land in Drive.</div>';
+  $('more').style.display=viewList.length>shown?'block':'none';
+  $('more').textContent=`Show more (${nf(viewList.length-shown)} left)`;
+}
 function drawChart(days,c,still){
   const el=$('chart');el.classList.toggle('still',!!still);el.dataset.w=el.clientWidth;const W=el.clientWidth||320, H=170, pb=22, pt=10;
   const vals=days.map(k=>c[k]||0), tg=days.map(tgt), max=Math.max(...tg.map(t=>t*1.15),...vals,1);
@@ -663,92 +1272,104 @@ function drawChart(days,c,still){
   el.innerHTML=s+'<div class="tip" id="tip"></div>';
   el.querySelectorAll('.hit').forEach(r=>{
     const i=+r.dataset.i, k=days[i];
-    r.addEventListener('mouseenter',()=>{const t=$('tip');t.innerHTML=`<b>${vals[i].toLocaleString()}</b> designs · ${fmtDay(k,{weekday:'short',day:'numeric',month:'short'})}<br>${tg[i]?`${pctOf(vals[i],tg[i])}% of ${tg[i]} target`:'Day off'}`;t.style.left=(i*bw+bw/2)+'px';t.style.top=y(vals[i])+'px';t.classList.add('on')});
+    r.addEventListener('mouseenter',()=>{const t=$('tip');t.innerHTML=`<b>${nf(vals[i])}</b> unique · ${fmtDay(k,{weekday:'short',day:'numeric',month:'short'})}<br>${tg[i]?`${pctOf(vals[i],tg[i])}% of ${tg[i]} target`:'Day off'}`;t.style.left=(i*bw+bw/2)+'px';t.style.top=y(vals[i])+'px';t.classList.add('on')});
     r.addEventListener('mouseleave',()=>$('tip').classList.remove('on'));
     r.addEventListener('click',()=>{selDay=k;shown=PAGE;render()});
   });
 }
-
-// ── Lightbox ──
-// tapping a photo opens it in Google Drive
 function openDrive(f){if(!f)return;const u=f.link||`https://drive.google.com/file/d/${f.id}/view`;const w=window.open(u,'_blank');if(w){try{w.opener=null}catch(e){}}else location.href=u}
-let lbList=[];
-function openLb(i,list){
-  if(list)lbList=list;lbIdx=i;const f=lbList[i];if(!f)return;
-  $('lbMedia').innerHTML=/^video|pdf/.test(f.mime)?`<iframe src="https://drive.google.com/file/d/${f.id}/preview" allow="autoplay"></iframe>`:`<img src="${thumb(f,1600)}" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='${alt(f,1600)}'}" alt="${esc(f.name)}">`;
-  $('lbMeta').innerHTML=`${esc(f.name)}<br>${esc(f.folder)} · ${esc(f.type)} · uploaded ${fmtDay(dayKey(f.created),{day:'numeric',month:'short'})} ${fmtTime(f.created)} · <a href="${f.link||'https://drive.google.com/file/d/'+f.id+'/view'}" target="_blank" rel="noopener">Open in Drive</a>`;
-  $('lb').classList.add('on');
-}
-$('lbX').onclick=()=>{$('lb').classList.remove('on');setTimeout(()=>{if(!$('lb').classList.contains('on'))$('lbMedia').innerHTML=''},400)};
-$('lb').addEventListener('click',e=>{if(e.target===$('lb'))$('lbX').onclick()});
-$('lbP').onclick=()=>openLb(Math.max(0,lbIdx-1));
-$('lbN').onclick=()=>openLb(Math.min(lbList.length-1,lbIdx+1));
-document.addEventListener('keydown',e=>{if(!$('lb').classList.contains('on'))return;if(e.key==='Escape')$('lbX').onclick();if(e.key==='ArrowLeft')$('lbP').onclick();if(e.key==='ArrowRight')$('lbN').onclick()});
+const byId=id=>files.find(f=>f.id===id);
 
-// ── Events ──
-document.addEventListener('click',e=>{
-  const d=e.target.closest('[data-day]');if(d){selDay=d.dataset.day;shown=PAGE;folderFilter='All';render();return}
-  const c=e.target.closest('[data-folder]');if(c){folderFilter=c.dataset.folder;shown=PAGE;render();return}
-  const t=e.target.closest('.tile[data-i]');if(t){openDrive(viewList[+t.dataset.i]);return}
-  const ft=e.target.closest('.tile[data-fi]');if(ft){openDrive(fvSection(ft.dataset.sec)[+ft.dataset.fi]);return}
-  const fc=e.target.closest('[data-open]');if(fc){openFolder(fc.dataset.open);return}
-  const fm=e.target.closest('[data-fmore]');if(fm){fvOpen[fm.dataset.fmore]=1;renderFolder();return}
-  const fs=e.target.closest('[data-fseg]');if(fs){fvType=fs.dataset.fseg;renderFolder();return}
-  if(e.target.closest('[data-close]')||e.target===$('sheet'))$('sheet').classList.remove('on');
+// ══ Taps ══
+document.addEventListener('click',async e=>{
+  const T=e.target, g=s=>T.closest(s);
+  let x;
+  if(x=g('[data-back]')){const top=stack[stack.length-1];if(top)closeOv(top);return}
+  if(x=g('[data-vote]')){vote(+x.dataset.vote);return}
+  if(x=g('[data-reason]')){if(reasonFor){saveVote(reasonFor,-1,x.dataset.reason);toast('Thanks! Noted: '+x.dataset.reason)}hideReasons();return}
+  if(x=g('[data-ropen]')){openDrive(byId(x.dataset.ropen));return}
+  if(x=g('[data-review]')){startReview();return}
+  if(x=g('[data-me]')){me=x.dataset.me;store.set('ds_leader',me);render();return}
+  if(x=g('[data-switch]')){me='';store.set('ds_leader',null);render();return}
+  if(x=g('[data-day]')){selDay=x.dataset.day;shown=PAGE;folderFilter='All';render();if(x.classList.contains('cell'))scrollTo({top:0,behavior:calm?'auto':'smooth'});return}
+  if(x=g('[data-folder]')){folderFilter=x.dataset.folder;shown=PAGE;render();return}
+  if(x=g('.tile[data-i]')){openDrive(viewList[+x.dataset.i]);return}
+  if(x=g('.tile[data-fi]')){openDrive(fvSection(x.dataset.sec)[+x.dataset.fi]);return}
+  if(x=g('[data-pick]')){openDrive(($('fbBody')._picks||[])[+x.dataset.pick]);return}
+  if(x=g('[data-qopen]')){openDrive(byId(x.dataset.qopen));return}
+  if(x=g('[data-open]')){openFolder(x.dataset.open);return}
+  if(x=g('[data-fmore]')){fvOpen[x.dataset.fmore]=1;renderFolder();return}
+  if(x=g('[data-fseg]')){fvType=x.dataset.fseg;renderFolder();return}
+  if(x=g('[data-q]')){openQv(x.dataset.q);return}
+  if(x=g('[data-qtab]')){qTab=x.dataset.qtab;qLim=40;renderQv();$('qv').scrollTop=0;return}
+  if(x=g('[data-qmore]')){qLim+=40;renderQv();return}
+  if(x=g('[data-okid]')){
+    if(!adminOn){const p=prompt('Admin password to change this');if(p!==ADMIN_PWD){if(p!==null)toast('Wrong password');return}adminOn=true}
+    const id=x.dataset.okid, on=!oks[id];oks[id]=on||undefined;if(!on)delete oks[id];
+    if(db)db.ref('designs/ok/'+id).set(on?true:null).catch(()=>{});
+    analyze();render();toast(on?'Marked as not a copy. It counts again.':'Marked as a copy again.');return}
+  if(x=g('#shareLink')){const u=reviewLink();try{if(navigator.share){await navigator.share({title:'Photo review',text:'Review your photos for today:',url:u});return}}catch(_){return}
+    try{await navigator.clipboard.writeText(u);toast('✓ Link copied')}catch(_){prompt('Copy this link',u)}return}
+  if(x=g('#notifyBtn')){try{const r=await Notification.requestPermission();toast(r==='granted'?'🔔 You will get an alert while this page is open':'Alerts are blocked in this browser')}catch(_){}render();return}
+  if(g('[data-close]')||T===$('sheet'))$('sheet').classList.remove('on');
 });
+$('rvUndo').onclick=undo;
+document.addEventListener('keydown',e=>{if(!stack.includes('rv'))return;if(e.key==='ArrowRight')vote(1);else if(e.key==='ArrowLeft')vote(-1);else if(e.key==='ArrowUp')vote(2);else if(e.key==='Backspace')undo()});
 $('more').onclick=()=>{shown+=PAGE;renderGallery()};
-$('refresh').onclick=load;
-$('openSettings').onclick=()=>{$('sheet').classList.add('on');$('lockBox').style.display='';$('setBox').style.display='none';$('pwd').value=''};
+$('refresh').onclick=()=>{light.at=0;load()};
+$('openSettings').onclick=()=>{$('sheet').classList.add('on');$('lockBox').style.display=adminOn?'none':'';$('setBox').style.display=adminOn?'':'none';$('pwd').value='';if(adminOn)fillSettings()};
+function fillSettings(){$('sWk').value=cfg.tWk;$('sSat').value=cfg.tSat;$('sSun').value=cfg.tSun;$('sCut').value=cfg.sim;$('sFolder').value=cfg.folderId;$('sKey').value=cfg.apiKey}
 $('unlock').onclick=()=>{
   if($('pwd').value!==ADMIN_PWD){const i=$('pwd');i.style.boxShadow='inset 0 0 0 2px var(--orange)';i.classList.remove('shake');void i.offsetWidth;i.classList.add('shake');return}
-  $('lockBox').style.display='none';$('setBox').style.display='';
-  $('sWk').value=cfg.tWk;$('sSat').value=cfg.tSat;$('sSun').value=cfg.tSun;$('sFolder').value=cfg.folderId;$('sKey').value=cfg.apiKey;
+  adminOn=true;$('lockBox').style.display='none';$('setBox').style.display='';fillSettings();
 };
 $('save').onclick=async()=>{
-  const iv=(id,d)=>{const x=parseInt($(id).value);return isNaN(x)?d:Math.max(0,x)};
-  const v={tWk:iv('sWk',DEFAULTS.tWk),tSat:iv('sSat',DEFAULTS.tSat),tSun:iv('sSun',DEFAULTS.tSun),folderId:parseFolder($('sFolder').value)||DEFAULTS.folderId,apiKey:$('sKey').value.trim()||DEFAULTS.apiKey};
+  const iv=(id,d,lo,hi)=>{const x=parseInt($(id).value);return isNaN(x)?d:Math.min(hi??1e9,Math.max(lo??0,x))};
+  const v={tWk:iv('sWk',DEFAULTS.tWk),tSat:iv('sSat',DEFAULTS.tSat),tSun:iv('sSun',DEFAULTS.tSun),sim:iv('sCut',DEFAULTS.sim,80,100),folderId:parseFolder($('sFolder').value)||DEFAULTS.folderId,apiKey:$('sKey').value.trim()||DEFAULTS.apiKey};
   try{if(settingsRef)await settingsRef.update(v)}catch(e){alert('Could not save: '+e.message);return}
-  cfg=v;$('sheet').classList.remove('on');load();
+  const reload=v.folderId!==cfg.folderId||v.apiKey!==cfg.apiKey;
+  cfg=v;$('sheet').classList.remove('on');toast('✓ Saved');
+  if(reload){light.at=0;load()}else{analyze();render()}
 };
-// ── Motion ──
+
+// ══ Motion ══
 const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ease=t=>1-Math.pow(1-t,4);
 function countUp(el){
   const to=+el.dataset.count, from=+(el.textContent.replace(/,/g,''))||0;
-  if(calm||from===to){el.textContent=to.toLocaleString();return}
+  if(calm||quiet||from===to){el.textContent=to.toLocaleString();return}
   const t0=performance.now(), dur=1100;
   (function f(t){const k=Math.min(1,(t-t0)/dur);el.textContent=Math.round(from+(to-from)*ease(k)).toLocaleString();if(k<1)requestAnimationFrame(f)})(t0);
 }
 function animateIn(){
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  const go=()=>{
     document.querySelectorAll('[data-count]').forEach(countUp);
     document.querySelectorAll('.ring .arc').forEach(a=>a.setAttribute('stroke-dasharray',a.dataset.dash));
-    document.querySelectorAll('.bar .t i,.lrow .t i').forEach((b,i)=>{b.style.transitionDelay=(Math.min(i,10)*60)+'ms';b.style.width=b.dataset.w+'%'});
-  }));
+    document.querySelectorAll('.bar .t i,.lrow .t i,.fbrow .t i').forEach((b,i)=>{b.style.transitionDelay=quiet?'0ms':(Math.min(i,10)*50)+'ms';b.style.width=b.dataset.w+'%'});
+  };
+  // background updates apply at once (before the screen paints), so nothing flashes back to 0
+  if(quiet)go();else requestAnimationFrame(()=>requestAnimationFrame(go));
 }
-// cards float up as they come into view
-const io='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.08}):null;
-document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(i*90)+'ms';io?io.observe(el):el.classList.add('in')});
-// specular light follows the finger or cursor across glass
+const io='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.05}):null;
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(Math.min(i,4)*90)+'ms';io?io.observe(el):el.classList.add('in')});
 let litEl=null;
-function light(e){
+function lightUp(e){
   const g=e.target.closest&&e.target.closest('.glass');
   if(litEl&&litEl!==g)litEl.style.setProperty('--lit',0);
   litEl=g;if(!g)return;
   const r=g.getBoundingClientRect();
   g.style.setProperty('--mx',(e.clientX-r.left)+'px');g.style.setProperty('--my',(e.clientY-r.top)+'px');g.style.setProperty('--lit',1);
 }
-document.addEventListener('pointermove',light,{passive:true});
-document.addEventListener('pointerdown',light,{passive:true});
+document.addEventListener('pointermove',lightUp,{passive:true});
+document.addEventListener('pointerdown',lightUp,{passive:true});
 document.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse'&&litEl){const g=litEl;setTimeout(()=>g.style.setProperty('--lit',0),350)}},{passive:true});
-// gentle tilt of the hero card with the phone
 if(!calm&&window.DeviceOrientationEvent){
   const hero=document.querySelector('.hero');
   addEventListener('deviceorientation',e=>{if(e.gamma==null)return;const x=Math.max(-1,Math.min(1,e.gamma/30)),y=Math.max(-1,Math.min(1,(e.beta-45)/30));
     hero.style.setProperty('--mx',(50+x*40)+'%');hero.style.setProperty('--my',(30+y*30)+'%');hero.style.setProperty('--lit',.8)},{passive:true});
 }
-window.addEventListener('resize',()=>{const el=$('chart');if(files.length&&$('dash').style.display!=='none'&&+el.dataset.w!==el.clientWidth)drawChart(lastDays(DAYS),counts(),true)});
-setInterval(()=>{if(!document.hidden)load()},5*60*1000);
+window.addEventListener('resize',()=>{const el=$('chart');if(files.length&&!leaderMode&&$('dash').style.display!=='none'&&+el.dataset.w!==el.clientWidth)drawChart(lastDays(DAYS),counts().c,true)});
+setInterval(()=>{if(!document.hidden&&!stack.includes('rv'))load()},5*60*1000);
 </script>
 </body>
 </html>
