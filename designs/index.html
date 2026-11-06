@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Design Studio</title>
+<title>Hurricane Design Studio</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="manifest" href="/designs/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Design Studio">
+<script>try{var t=localStorage.getItem('ds_theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <meta name="theme-color" content="#EEF3F8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#02070A" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -76,7 +84,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 @keyframes bob{50%{transform:translateY(-3px) rotate(-2deg)}}
 @keyframes blink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.1)}}
 @keyframes sheen{0%{transform:translateX(-120%)}35%,100%{transform:translateX(120%)}}
-.top h1{font-size:21px;font-weight:800;letter-spacing:-.025em}
+.top h1{font-size:20px;font-weight:800;letter-spacing:-.025em}
 .top p{font-size:12.5px;color:var(--muted);margin-top:2px}
 .top .sp{flex:1}
 .iconbtn{width:44px;height:44px;border-radius:16px;display:grid;place-items:center;flex:none}
@@ -451,15 +459,106 @@ body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSett
 .toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));z-index:90;translate:-50% 0;padding:11px 16px;border-radius:16px;font-size:13px;font-weight:700;
   transform:translateY(120px);transition:transform .5s var(--spring)}
 .toast.on{transform:none}
+
+/* ── v4: brand, theme switch, splash, tab bar, liquid ring, confetti, pull to refresh ── */
+:root{--brand:#FDCA00;--brand2:#FFB300}
+.brandlogo{width:54px;height:54px;border-radius:18px;flex:none;position:relative;overflow:hidden;display:grid;place-items:center;
+  background:linear-gradient(150deg,#FFE066,var(--brand) 55%,var(--brand2));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -2px 6px rgba(160,100,0,.25),0 10px 24px -8px rgba(253,202,0,.75);animation:bob 5s ease-in-out infinite}
+.brandlogo img{width:74%;height:auto;display:block;filter:drop-shadow(0 1px 0 rgba(255,255,255,.35));animation:gust 5s var(--ease) infinite}
+.brandlogo:after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.7) 45%,transparent 60%);transform:translateX(-120%);animation:sheen 5s var(--ease) infinite 1.2s}
+@keyframes gust{0%,100%{transform:translateX(0)}45%{transform:translateX(0)}50%{transform:translateX(2px) skewX(-6deg)}58%{transform:translateX(0)}}
+.ttl small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+.live{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--good)}
+.live:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 60%,transparent);animation:ping 2s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.themebtn svg{position:absolute;transition:transform .6s var(--spring),opacity .3s}
+.themebtn{position:relative}
+.themebtn .i-sun,.themebtn .i-moon,.themebtn .i-auto{opacity:0;transform:rotate(-90deg) scale(.4)}
+.themebtn[data-t="light"] .i-sun,.themebtn[data-t="dark"] .i-moon,.themebtn[data-t="auto"] .i-auto{opacity:1;transform:none}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){z-index:9999}
+
+/* splash */
+#splash{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--bg);
+  transition:opacity .7s var(--ease),transform .9s var(--ease),filter .7s var(--ease)}
+#splash:before{content:"";position:absolute;inset:-20%;background:radial-gradient(40vmax 40vmax at 30% 30%,color-mix(in srgb,var(--brand) 45%,transparent),transparent 70%),radial-gradient(40vmax 40vmax at 70% 75%,var(--b1),transparent 70%);filter:blur(40px);animation:drift1 6s var(--ease) infinite alternate}
+#splash.out{opacity:0;transform:scale(1.08);filter:blur(12px);pointer-events:none}
+.sp-logo{position:relative;width:120px;height:120px;border-radius:36px;display:grid;place-items:center;
+  background:linear-gradient(150deg,#FFE066,var(--brand) 55%,var(--brand2));box-shadow:inset 0 2px 0 rgba(255,255,255,.8),inset 0 -4px 12px rgba(160,100,0,.3),0 30px 60px -18px rgba(253,202,0,.8);
+  animation:spPop 1s var(--spring) both}
+.sp-logo img{width:74%;clip-path:inset(0 100% 0 0);animation:spDraw .9s var(--ease) .35s forwards}
+.sp-logo:after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 45%,transparent 60%);transform:translateX(-120%);animation:sheen 1.6s var(--ease) .9s forwards}
+@keyframes spPop{from{transform:scale(.4) rotate(-14deg);opacity:0}}
+@keyframes spDraw{to{clip-path:inset(0 0 0 0)}}
+.sp-t{position:relative;text-align:center;animation:pop .8s var(--spring) .55s both}
+.sp-t small{display:block;font-size:11px;font-weight:800;letter-spacing:.3em;color:var(--muted)}
+.sp-t b{display:block;font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:4px}
+.sp-bar{position:relative;width:120px;height:4px;border-radius:9px;background:var(--line);overflow:hidden;animation:pop .6s var(--spring) .8s both}
+.sp-bar i{position:absolute;inset:0;width:40%;border-radius:9px;background:linear-gradient(90deg,var(--brand),#0297DE);animation:spLoad 1.1s ease-in-out infinite}
+@keyframes spLoad{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+
+/* liquid inside the progress ring */
+.ring .wv{animation:wave 3.2s linear infinite}
+.ring .w2{animation-duration:4.6s;animation-direction:reverse}
+.ring .lvl{transition:transform 1.8s var(--ease)}
+@keyframes wave{to{transform:translateX(55px)}}
+.still .ring .lvl{transition:none}
+
+/* bottom tab bar, iOS style liquid glass */
+.tabbar{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));z-index:30;translate:-50% 0;display:flex;gap:2px;padding:6px;border-radius:30px;
+  width:min(440px,calc(100% - 32px));transition:transform .5s var(--spring),opacity .3s}
+.tabbar.hide{transform:translateY(140%);opacity:0}
+.tabbar button{flex:1;position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 6px;border-radius:24px;font-size:10.5px;font-weight:800;color:var(--ink2);transition:color .3s,transform .45s var(--spring)}
+.tabbar button:active{transform:scale(.9)}
+.tabbar button svg{width:22px;height:22px}
+.tabbar button.on{color:var(--blue)}
+.lens{position:absolute;top:6px;bottom:6px;left:6px;z-index:0;border-radius:24px;pointer-events:none;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--blue) 22%,transparent),color-mix(in srgb,var(--blue) 10%,transparent));
+  box-shadow:inset 0 1px 0 var(--edge),inset 0 0 0 1px color-mix(in srgb,var(--blue) 25%,transparent);
+  transition:transform .55s var(--spring),width .55s var(--spring)}
+.lens.stretch{animation:stretch .55s var(--ease)}
+@keyframes stretch{40%{scale:1.18 .9}}
+body.leader .tabbar{display:none}
+.top{gap:10px}
+.top .sp{display:none}
+.ttl{flex:1;min-width:0}
+.ttl h1,.ttl p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .iconbtn{width:40px;height:40px;border-radius:14px}
+.top .iconbtn svg{width:19px;height:19px}
+.sp-logo{overflow:hidden}
+.tabbar{background:linear-gradient(160deg,color-mix(in srgb,var(--bg) 86%,transparent),color-mix(in srgb,var(--bg) 76%,transparent));-webkit-backdrop-filter:blur(30px) saturate(200%);backdrop-filter:blur(30px) saturate(200%)}
+.toast{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 84px)}
+body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
+.wrap{padding-bottom:120px}
+[id^="sec"]{scroll-margin-top:14px}
+
+/* confetti + pull to refresh */
+#confetti{position:fixed;inset:0;z-index:150;pointer-events:none}
+#ptr{position:fixed;left:50%;top:0;z-index:35;translate:-50% 0;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  transform:translateY(-60px);opacity:0;transition:transform .45s var(--spring),opacity .3s}
+#ptr svg{transition:transform .2s}
+#ptr.go svg{animation:spin .8s linear infinite}
+#ptr.ready{box-shadow:inset 0 1px 0 var(--edge),0 0 0 3px color-mix(in srgb,var(--blue) 40%,transparent),var(--drop)}
+
+/* dark mode extra polish */
+:root[data-theme="dark"] .hero{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 60px -20px rgba(2,151,222,.55)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hero{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 60px -20px rgba(2,151,222,.55)}}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><div class="sp-logo"><img src="/img/logo.png" alt=""></div><div class="sp-t"><small>HURRICANE XCS</small><b>Design Studio</b></div><div class="sp-bar"><i></i></div></div>
 <div class="aura" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <div class="wrap">
   <header class="top">
-    <div class="mascot"><i></i><i></i></div>
-    <div><h1 id="appTitle">Design Studio</h1><p id="updated">Loading designs…</p></div>
+    <div class="brandlogo"><img src="/img/logo.png" alt="Hurricane XCS"></div>
+    <div class="ttl"><small>Hurricane XCS</small><h1 id="appTitle">Design Studio</h1><p id="updated">Loading…</p></div>
     <div class="sp"></div>
+    <button class="iconbtn glass press themebtn" id="themeBtn" aria-label="Light or dark mode" data-t="auto">
+      <svg class="i-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
+      <svg class="i-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      <svg class="i-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+    </button>
     <button class="iconbtn glass press" id="refresh" aria-label="Refresh"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></button>
     <button class="iconbtn glass press" id="openSettings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </header>
@@ -470,7 +569,7 @@ body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSett
   <div class="days" id="days"></div>
 
   <div class="grid main" id="dash">
-    <div class="card glass hero reveal"><span class="orb a"></span><span class="orb b"></span><span class="shine"></span>
+    <div class="card glass hero reveal" id="secToday"><span class="orb a"></span><span class="orb b"></span><span class="shine"></span>
       <div class="lbl" id="heroLbl">Today</div>
       <div class="row">
         <div><div class="big" id="heroNum">0 <span>/ 900</span></div></div>
@@ -486,7 +585,7 @@ body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSett
       <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
     </div>
 
-    <div class="card glass reveal">
+    <div class="card glass reveal" id="secQuality">
       <h2>Quality check</h2>
       <div class="sub" id="qSub">Copies, look alikes and format for the selected day</div>
       <div class="qgrid" id="qStats"></div>
@@ -517,7 +616,7 @@ body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSett
       <div class="bars" id="bars"></div>
     </div>
 
-    <div class="card glass reveal full">
+    <div class="card glass reveal full" id="secMonth">
       <div class="lh"><div><h2 id="mTitle">This month</h2><div class="sub">Tap a day to open it. Green hit the target, orange fell short.</div></div><div class="wk" id="mSum"></div></div>
       <div class="cal" id="cal"></div>
       <div class="mstats" id="mStats"></div>
@@ -525,7 +624,7 @@ body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSett
   </div>
 
   <div class="ownerOnly">
-    <div class="ghead"><h2>Team folders</h2><span class="sub" id="fCount" style="font-size:13px;color:var(--muted)"></span></div>
+    <div class="ghead" id="secTeam"><h2>Team folders</h2><span class="sub" id="fCount" style="font-size:13px;color:var(--muted)"></span></div>
     <div class="folders" id="folders"></div>
 
     <div class="ghead"><h2 id="gTitle">Gallery</h2><span class="sub" id="gCount" style="font-size:13px;color:var(--muted)"></span></div>
@@ -579,6 +678,14 @@ body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSett
 </div>
 
 <div class="toast glass" id="toast"></div>
+<nav class="tabbar glass" id="tabbar"><span class="lens" id="lens"></span>
+  <button data-tab="secToday" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg>Today</button>
+  <button data-tab="secQuality"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.3-7.5 9.5-4.3-1.2-7.5-4.9-7.5-9.5V6z"/><path d="m8.8 12 2.3 2.3 4.3-4.6"/></svg>Quality</button>
+  <button data-tab="secMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Month</button>
+  <button data-tab="secTeam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>Team</button>
+</nav>
+<div id="ptr" class="glass"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></div>
+<canvas id="confetti"></canvas>
 
 <div class="sheet" id="sheet"><div class="in glass">
   <div class="grab"></div>
@@ -772,6 +879,7 @@ async function load(){
 }
 
 function showFallback(msg){
+  hideSplash();
   $('updated').textContent='Showing the folder directly';
   $('notice').innerHTML=`<div class="notice"><b>Counting is not switched on yet.</b> Google said: “${esc(msg)}”.<br>You can still browse the folder below. To turn on the counter:
   <ol><li>Make sure the Drive folder is shared as <i>Anyone with the link can view</i>.</li>
@@ -887,7 +995,7 @@ function render(q=false){
   const {c,raw}=counts(), days=lastDays(DAYS), t0=today();
   if(!(selDay>=windowStart()&&selDay<=t0))selDay=t0;
   const T=tgt(selDay);
-  $('updated').textContent='Updated '+fmtTime(new Date())+' WIB · '+nf(files.length)+' photos · '+members.length+' team folders';
+  $('updated').innerHTML=`<span class="live">Live</span> · ${fmtTime(new Date())} · ${nf(files.length)} photos`;
   if(leaderMode){renderLeader();if($('fv').classList.contains('on'))renderFolder();return}
 
   $('days').innerHTML=days.slice().reverse().map(k=>`<button class="day glass press${k===selDay?' on':''}" data-day="${k}">
@@ -900,7 +1008,10 @@ function render(q=false){
     (isToday?`${nf(left)} more to hit today's target.`:`Finished ${nf(left)} short of the target.`);
   $('heroPill').textContent=(T?`${['Sunday','Weekday','Weekday','Weekday','Weekday','Weekday','Saturday'][wd(selDay)]} target ${nf(T)} · ${pct}%`:(selDay<startDay?'Before tracking started':'Sunday · day off'))+(cut?` · ${nf(cut)} copies not counted`:'');
   const R=46,C=2*Math.PI*R,p=T?Math.min(1,n/T):(n?1:0);
-  $('ring').innerHTML=`<circle cx="55" cy="55" r="${R}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="10"/>
+  const lvl=94-78*p, wave=`M-110 0 ${'q13.75 -5 27.5 0 t27.5 0 '.repeat(6)}V90 H-110 Z`;
+  $('ring').innerHTML=`<defs><clipPath id="rclip"><circle cx="55" cy="55" r="39"/></clipPath></defs>
+    <g clip-path="url(#rclip)"><g class="lvl" data-l="${lvl}" style="transform:translateY(${quiet?lvl:94}px)"><path class="wv w2" d="${wave}" fill="rgba(255,255,255,.16)" transform="translate(0,-3)"/><path class="wv" d="${wave}" fill="rgba(255,255,255,.26)"/></g></g>
+    <circle cx="55" cy="55" r="${R}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="10"/>
     <circle class="arc" data-dash="${C*p} ${C}" cx="55" cy="55" r="${R}" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="${quiet?C*p:0} ${C}" transform="rotate(-90 55 55)"/>
     <text x="55" y="61" text-anchor="middle" font-size="21"><tspan data-count="${pct}">${quiet?pct:0}</tspan>%</text>`;
 
@@ -947,6 +1058,8 @@ function render(q=false){
   if($('qv').classList.contains('on'))renderQv();
   updateScan();
   animateIn();
+  if(!quiet&&selDay===t0&&T&&n>=T&&!store.get('ds_conf_'+t0)){store.set('ds_conf_'+t0,'1');setTimeout(confetti,splashOut?300:1900)}
+  hideSplash();
 }
 
 function renderLog(days,c,raw,t0){
@@ -1144,12 +1257,13 @@ function renderQv(){
 
 // ══ Overlays & the phone's back button ══
 const stack=[];let skipPop=0;
-function openOv(id){const el=$(id);if(stack.includes(id))return;el.classList.add('on');el.setAttribute('aria-hidden','false');el.scrollTop=0;stack.push(id);document.body.style.overflow='hidden';try{history.pushState({ov:id},'')}catch(e){}}
-function closeOv(id,fromPop){const i=stack.lastIndexOf(id);if(i<0)return;stack.splice(i,1);const el=$(id);el.classList.remove('on');el.setAttribute('aria-hidden','true');if(!stack.length)document.body.style.overflow='';if(id==='rv')onReviewClose();if(!fromPop){skipPop++;try{history.back()}catch(e){skipPop--}}}
+function openOv(id){const el=$(id);if(stack.includes(id))return;$('tabbar').classList.add('hide');el.classList.add('on');el.setAttribute('aria-hidden','false');el.scrollTop=0;stack.push(id);document.body.style.overflow='hidden';try{history.pushState({ov:id},'')}catch(e){}}
+function closeOv(id,fromPop){const i=stack.lastIndexOf(id);if(i<0)return;stack.splice(i,1);const el=$(id);el.classList.remove('on');el.setAttribute('aria-hidden','true');if(!stack.length){document.body.style.overflow='';$('tabbar').classList.remove('hide')}if(id==='rv')onReviewClose();if(!fromPop){skipPop++;try{history.back()}catch(e){skipPop--}}}
 addEventListener('popstate',()=>{if(skipPop){skipPop--;return}const top=stack[stack.length-1];if(top)closeOv(top,true)});
 
 // ══ Leader view & swipe review ══
 function renderLeader(){
+  hideSplash();
   const box=$('leaderBox');
   $('appTitle').textContent='Photo review';
   if(!me||!members.includes(me)){
@@ -1195,6 +1309,7 @@ function drawDeck(){
     $('deck').innerHTML=`<div class="rdone"><div class="big">🎉</div><h3>All caught up!</h3><p>${total?`You reviewed ${total} photo${total>1?'s':''}. She'll see your feedback.`:'No new photos right now. Check back later.'}</p>
       ${total?`<div class="lstats" style="margin-top:18px"><div><b>${total}</b><small>reviewed</small></div><div><b>${rSession.love}</b><small>❤️</small></div><div><b>${rSession.like}</b><small>👍</small></div><div><b>${rSession.skip}</b><small>👎</small></div></div>`:''}
       <button class="bigbtn btn-p" data-back style="max-width:360px">Done</button></div>`;
+    if(total)confetti();
     return;
   }
   $('rvBtns').classList.remove('hide');
@@ -1341,17 +1456,20 @@ function countUp(el){
   const t0=performance.now(), dur=1100;
   (function f(t){const k=Math.min(1,(t-t0)/dur);el.textContent=Math.round(from+(to-from)*ease(k)).toLocaleString();if(k<1)requestAnimationFrame(f)})(t0);
 }
+let pendingAnim=false;
 function animateIn(){
+  if(!splashOut&&!quiet){pendingAnim=true;return}
   const go=()=>{
     document.querySelectorAll('[data-count]').forEach(countUp);
     document.querySelectorAll('.ring .arc').forEach(a=>a.setAttribute('stroke-dasharray',a.dataset.dash));
+    document.querySelectorAll('.ring .lvl').forEach(g=>g.style.transform=`translateY(${g.dataset.l}px)`);
     document.querySelectorAll('.bar .t i,.lrow .t i,.fbrow .t i').forEach((b,i)=>{b.style.transitionDelay=quiet?'0ms':(Math.min(i,10)*50)+'ms';b.style.width=b.dataset.w+'%'});
   };
   // background updates apply at once (before the screen paints), so nothing flashes back to 0
   if(quiet)go();else requestAnimationFrame(()=>requestAnimationFrame(go));
 }
 const io='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.05}):null;
-document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(Math.min(i,4)*90)+'ms';io?io.observe(el):el.classList.add('in')});
+function startReveal(){document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(Math.min(i,4)*90)+'ms';io?io.observe(el):el.classList.add('in')})}
 let litEl=null;
 function lightUp(e){
   const g=e.target.closest&&e.target.closest('.glass');
@@ -1368,6 +1486,92 @@ if(!calm&&window.DeviceOrientationEvent){
   addEventListener('deviceorientation',e=>{if(e.gamma==null)return;const x=Math.max(-1,Math.min(1,e.gamma/30)),y=Math.max(-1,Math.min(1,(e.beta-45)/30));
     hero.style.setProperty('--mx',(50+x*40)+'%');hero.style.setProperty('--my',(30+y*30)+'%');hero.style.setProperty('--lit',.8)},{passive:true});
 }
+
+// ══ Intro screen ══
+const splashT0=performance.now();let splashOut=false,splashGone=false;
+function hideSplash(){
+  if(splashGone)return;splashGone=true;
+  const wait=calm?0:Math.max(0,1700-(performance.now()-splashT0));
+  setTimeout(()=>{const s=$('splash');if(s){s.classList.add('out');setTimeout(()=>s.remove(),900)}
+    splashOut=true;startReveal();if(pendingAnim){pendingAnim=false;animateIn()}},wait);
+}
+setTimeout(hideSplash,5000);
+
+// ══ Light / dark / auto, with a circle wipe from the button ══
+const THEMES=['auto','light','dark'];
+function themeNow(){return document.documentElement.getAttribute('data-theme')||'auto'}
+function isDark(){const t=themeNow();return t==='dark'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches)}
+function applyTheme(t){
+  if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);
+  store.set('ds_theme',t==='auto'?null:t);$('themeBtn').dataset.t=t;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{if(t==='auto'){m.content=/dark/.test(m.media)?'#02070A':'#EEF3F8'}else m.content=t==='dark'?'#02070A':'#EEF3F8'});
+}
+applyTheme(themeNow());
+$('themeBtn').onclick=e=>{
+  const next=THEMES[(THEMES.indexOf(themeNow())+1)%3];
+  const wasDark=isDark();
+  const r=$('themeBtn').getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,R=Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y));
+  const swap=()=>applyTheme(next);
+  toast(next==='auto'?'◐ Auto: follows your phone':next==='light'?'☀️ Light mode':'🌙 Dark mode');
+  try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
+  if(!document.startViewTransition||calm){swap();return}
+  const vt=document.startViewTransition(swap);
+  vt.ready.then(()=>{if(isDark()===wasDark)return;
+    document.documentElement.animate({clipPath:[`circle(0px at ${x}px ${y}px)`,`circle(${R}px at ${x}px ${y}px)`]},{duration:700,easing:'cubic-bezier(.22,1,.36,1)',pseudoElement:'::view-transition-new(root)'})}).catch(()=>{});
+};
+
+// ══ Tab bar with a sliding glass lens ══
+const tabBtns=[...document.querySelectorAll('#tabbar [data-tab]')];
+let tabIdx=0;
+function setLens(i,stretch){
+  const b=tabBtns[i];if(!b)return;const L=$('lens');
+  L.style.width=b.offsetWidth+'px';L.style.transform=`translateX(${b.offsetLeft-6}px)`;
+  tabBtns.forEach((x,k)=>x.classList.toggle('on',k===i));
+  if(stretch){L.classList.remove('stretch');void L.offsetWidth;L.classList.add('stretch')}
+}
+tabBtns.forEach((b,i)=>b.onclick=()=>{
+  const el=$(b.dataset.tab);if(!el)return;tabIdx=i;setLens(i,true);lockTab=Date.now();
+  try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}
+  if(i===0)scrollTo({top:0,behavior:calm?'auto':'smooth'});else el.scrollIntoView({behavior:calm?'auto':'smooth',block:'start'});
+});
+let lockTab=0,tabRaf=0;
+addEventListener('scroll',()=>{if(tabRaf)return;tabRaf=requestAnimationFrame(()=>{tabRaf=0;if(Date.now()-lockTab<800)return;
+  let k=0;tabBtns.forEach((b,i)=>{const el=$(b.dataset.tab);if(el&&el.getBoundingClientRect().top<innerHeight*.4)k=i});
+  if(innerHeight+scrollY>=document.documentElement.scrollHeight-4)k=tabBtns.length-1;
+  if(k!==tabIdx){tabIdx=k;setLens(k,true)}})},{passive:true});
+addEventListener('resize',()=>setLens(tabIdx));
+requestAnimationFrame(()=>setLens(0));
+// the sections sit in page order Today, Quality, Month, Team
+
+// ══ Confetti (brand colours) ══
+function confetti(){
+  if(calm)return;const c=$('confetti'),dpr=Math.min(2,devicePixelRatio||1);
+  c.width=innerWidth*dpr;c.height=innerHeight*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);
+  const cols=['#FDCA00','#0297DE','#FC734D','#12A150','#FFFFFF','#C9C2FF','#56C3F2'];
+  const P=Array.from({length:160},(_,i)=>({x:innerWidth*(.2+.6*Math.random()),y:innerHeight*.35+Math.random()*40,vx:(Math.random()-.5)*14,vy:-8-Math.random()*12,
+    w:6+Math.random()*7,h:4+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],s:Math.random()<.3}));
+  const t0=performance.now();
+  try{navigator.vibrate&&navigator.vibrate([14,60,14,60,24])}catch(_){}
+  (function f(t){const k=(t-t0)/1000;x.clearRect(0,0,innerWidth,innerHeight);
+    for(const p of P){p.vy+=.38;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+      x.save();x.globalAlpha=Math.max(0,1-Math.max(0,k-1.8)/1.2);x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;
+      if(p.s){x.beginPath();x.arc(0,0,p.w/2.4,0,7);x.fill()}else x.fillRect(-p.w/2,-p.h/2,p.w,p.h*Math.abs(Math.cos(p.r*2)));x.restore()}
+    if(k<3)requestAnimationFrame(f);else x.clearRect(0,0,innerWidth,innerHeight)})(t0);
+}
+
+// ══ Pull down to refresh ══
+let pY=null;const ptr=$('ptr');
+function ptrHide(){ptr.style.transition='';ptr.classList.remove('ready','go');ptr.style.opacity=0;ptr.style.transform='translateY(-60px)'}
+addEventListener('touchstart',e=>{pY=(scrollY<=0&&!stack.length&&e.touches.length===1)?e.touches[0].clientY:null},{passive:true});
+addEventListener('touchmove',e=>{if(pY==null)return;const dy=e.touches[0].clientY-pY;if(dy<=0){ptrHide();return}
+  const d=Math.min(110,dy*.5);ptr.style.transition='none';ptr.style.opacity=Math.min(1,d/45);ptr.style.transform=`translateY(${d}px)`;
+  ptr.firstElementChild.style.transform=`rotate(${d*4}deg)`;const was=ptr.classList.contains('ready');ptr.classList.toggle('ready',d>=70);
+  if(!was&&d>=70)try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}},{passive:true});
+addEventListener('touchend',async()=>{if(pY==null)return;pY=null;
+  if(!ptr.classList.contains('ready')){ptrHide();return}
+  ptr.style.transition='';ptr.classList.add('go');ptr.style.transform='translateY(64px)';
+  await load();toast('✓ Up to date');setTimeout(ptrHide,250)});
+
 window.addEventListener('resize',()=>{const el=$('chart');if(files.length&&!leaderMode&&$('dash').style.display!=='none'&&+el.dataset.w!==el.clientWidth)drawChart(lastDays(DAYS),counts().c,true)});
 setInterval(()=>{if(!document.hidden&&!stack.includes('rv'))load()},5*60*1000);
 </script>
