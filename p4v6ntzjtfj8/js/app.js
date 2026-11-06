@@ -135,7 +135,14 @@
     return n >= 2 && m >= 2 && pa.slice(0, n) === pb.slice(0, n) && sa.slice(-m) === sb.slice(-m);
   }
   // Trip mode: while travelling, every BCA/Mandiri expense goes to the trip category (e.g. Japan, 5 to 17 Nov 2026).
+  // Re-price foreign card payments with your BCA card rate (BCA adds its own markup on top of the market rate).
+  function applyCardRate(cur) {
+    var r = S.settings.cardRate && +S.settings.cardRate[cur]; if (!r) return 0; var n = 0;
+    S.tx.forEach(function (t) { if (!t.fx || t.fx.cur !== cur) return; var a = Math.round(t.fx.amt * r); if (t.amount !== a || t.fx.rate !== r) { t.amount = a; t.fx.rate = r; t.note = cur + ' ' + t.fx.amt.toLocaleString('id-ID') + ' · BCA rate 1 ' + cur + ' = Rp ' + r.toLocaleString('id-ID', { maximumFractionDigits: 2 }); n++; } });
+    return n;
+  }
   function ensureTrip() {
+    if (S.cardRateVer !== 1) { S.cardRateVer = 1; S.settings.cardRate = Object.assign({ JPY: 116.76 }, S.settings.cardRate || {}); applyCardRate('JPY'); }
     S.settings = S.settings || {};
     if (S.tripVer !== 1) { S.tripVer = 1; if (!S.settings.trip) S.settings.trip = { on: true, name: 'Japan', from: '2026-11-05', to: '2026-11-17' }; }
     var tr = S.settings.trip; if (!tr || !tr.on || !tr.name) return null;
@@ -1219,6 +1226,7 @@
     $('startFromLine').textContent = s.startFrom ? 'Tracking BCA emails since ' + new Date(s.startFrom).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '';
     $('sWallet').innerHTML = S.wallets.map(function (w) { return '<option value="' + esc(w.id) + '">' + esc(w.icon + ' ' + w.name) + '</option>'; }).join('');
     $('sWallet').value = s.bcaWallet;
+    if ($('tripRate')) $('tripRate').value = ((S.settings.cardRate || {}).JPY || '').toString().replace('.', ',');
     var trp = S.settings.trip || {}; if ($('tripOn')) { $('tripOn').checked = !!trp.on; $('tripName').value = trp.name || ''; $('tripFrom').value = trp.from || ''; $('tripTo').value = trp.to || ''; }
     $('sMWallet').innerHTML = $('sWallet').innerHTML; $('sMWallet').value = mandiriWalletId() || s.bcaWallet;
     ensureAccounts();
@@ -2633,7 +2641,7 @@
       .then(function (r) { return r.json(); })
       .then(function (data) { // get rupiah rates for any foreign-currency card payments first
         var curs = {}; ((data && data.emails) || []).forEach(function (em) { if (!em || !em.id || done(em)) return; var p = window.BcaParser.parseBcaEmail(em); if (p && p.cur) curs[p.cur] = 1; });
-        return Promise.all(Object.keys(curs).map(function (c) { return fxToIdr(c).then(function (r) { FXR[c] = r; }, function () {}); })).then(function () { return data; });
+        return Promise.all(Object.keys(curs).filter(function (c) { return !(S.settings.cardRate && +S.settings.cardRate[c]); }).map(function (c) { return fxToIdr(c).then(function (r) { FXR[c] = r; }, function () {}); })).then(function () { return data; });
       })
       .then(function (data) {
         if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'Unexpected reply');
@@ -2656,7 +2664,7 @@
           }
           var fxNote = '';
           if (p.cur) {
-            var rate = FXR[p.cur];
+            var rate = (S.settings.cardRate && +S.settings.cardRate[p.cur]) || FXR[p.cur];
             if (!rate) { log(em, 'to review: no ' + p.cur + ' rate'); S.review.unshift({ id: em.id, date: em.date, subject: em.subject, snippet: p.cur + ' ' + p.famt + ' at ' + (p.merchant || '') + ' (no exchange rate yet, add it by hand)' }); review++; return; }
             p.amount = Math.round(p.famt * rate); fxNote = p.cur + ' ' + p.famt.toLocaleString('id-ID') + ' · 1 ' + p.cur + ' = Rp ' + rate.toLocaleString('id-ID', { maximumFractionDigits: 2 });
           }
@@ -3328,6 +3336,8 @@
       S.settings.autoSync = $('sAuto').checked; S.settings.bcaWallet = $('sWallet').value; S.settings.mandiriWallet = $('sMWallet').value;
       if ($('tripOn')) { var oldT = S.settings.trip || {}, nt = { on: $('tripOn').checked, name: $('tripName').value.trim(), from: $('tripFrom').value, to: $('tripTo').value };
         if (nt.on && (!nt.name || !nt.from || !nt.to || nt.to < nt.from)) { toast('Trip needs a name and valid dates'); return false; }
+        var rv = String($('tripRate') ? $('tripRate').value : '').trim(), rr = parseFloat(rv.indexOf(',') !== -1 ? rv.replace(/\./g, '').replace(',', '.') : rv);
+        if (rr > 0) { S.settings.cardRate = S.settings.cardRate || {}; if (S.settings.cardRate.JPY !== rr) { S.settings.cardRate.JPY = rr; var nn = applyCardRate('JPY'); if (nn) toast(nn + ' yen payment' + (nn > 1 ? 's' : '') + ' re-priced'); } }
         nt.moved = oldT.name === nt.name && oldT.from === nt.from && oldT.to === nt.to ? oldT.moved : 0; S.settings.trip = nt; ensureTrip(); }
       // Turning live sync back on: only take BCA emails from now on (older history is already imported), so nothing doubles.
       if (!wasOn && S.settings.autoSync) { S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now(); }

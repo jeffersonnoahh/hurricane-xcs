@@ -362,6 +362,7 @@
       <label class="set-row plain"><span class="grow"><b>✈️ Trip mode</b><span class="sub">While you travel, every BCA and Mandiri expense goes to one category</span></span><input type="checkbox" class="switch" id="tripOn"></label>
       <label class="fld">Trip category<input id="tripName" placeholder="e.g. Japan" autocomplete="off"></label>
       <div class="two"><label class="fld">From<input id="tripFrom" type="date"></label><label class="fld">Until<input id="tripTo" type="date"></label></div>
+      <label class="fld">BCA rate for yen (Rp per 1 JPY)<input id="tripRate" inputmode="decimal" placeholder="116,76" autocomplete="off"><span class="sub">From your BCA statement: rupiah charged ÷ yen. Every yen payment uses this.</span></label>
     </div>
     <div class="fld">Which wallet each BCA account uses<span class="sub">Matched on the "Source of Fund" in each BCA email.</span></div>
     <div id="acctList"></div>
@@ -445,7 +446,7 @@
   var done = false;
   function boot() {
     if (done) return; done = true;
-    ['js/bca-parser.js?v=20261106-8', 'js/app.js?v=20261106-127'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
+    ['js/bca-parser.js?v=20261106-8', 'js/app.js?v=20261106-128'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
   }
   var l = document.getElementById('mainCss');
   if (l && l.media === 'all') { var p0 = document.getElementById('preCss'); if (p0) p0.remove(); boot(); } else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; var p = document.getElementById('preCss'); if (p) p.remove(); boot(); }, 5000); }
