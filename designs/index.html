@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Design Studio</title>
+<meta name="theme-color" content="#F3F6F9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F6F9; --card:#FFFFFF; --card2:#F7F9FB; --line:#E6EBF0;
+  --ink:#02070A; --ink2:#4A5560; --muted:#8A949E;
+  --blue:#0297DE; --blue-soft:#D9F0FB; --orange:#FC734D; --orange-soft:#FFE6DE;
+  --good:#12A150; --good-soft:#DDF5E7;
+  --shadow:0 1px 2px rgba(2,7,10,.04),0 8px 24px rgba(2,7,10,.06);
+  --r:22px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#02070A; --card:#0C1419; --card2:#111B22; --line:#1C2A33;
+  --ink:#F2F6F8; --ink2:#AAB6BF; --muted:#6D7A84;
+  --blue:#2BAEEB; --blue-soft:#0B2B3B; --orange:#FF8A68; --orange-soft:#3A1D14;
+  --good:#3BC97A; --good-soft:#0E2D1C; --shadow:0 1px 2px rgba(0,0,0,.4);
+}}
+:root[data-theme="dark"]{
+  --bg:#02070A; --card:#0C1419; --card2:#111B22; --line:#1C2A33;
+  --ink:#F2F6F8; --ink2:#AAB6BF; --muted:#6D7A84;
+  --blue:#2BAEEB; --blue-soft:#0B2B3B; --orange:#FF8A68; --orange-soft:#3A1D14;
+  --good:#3BC97A; --good-soft:#0E2D1C; --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+.top{display:flex;align-items:center;gap:12px;padding:6px 0 18px}
+.mascot{width:52px;height:52px;border-radius:16px;flex:none;background:linear-gradient(150deg,#5CC8F5,#0297DE 70%);position:relative;overflow:hidden;box-shadow:0 6px 16px rgba(2,151,222,.35)}
+.mascot:before{content:"";position:absolute;left:6px;right:-4px;bottom:-6px;height:30px;border-radius:20px 24px 0 0;background:radial-gradient(circle at 30% 30%,#fff,#DDF2FC);box-shadow:-10px -8px 0 -2px #EEF8FD}
+.mascot i{position:absolute;bottom:11px;width:11px;height:11px;border-radius:50%;background:#02070A;border:3px solid #fff;box-sizing:content-box}
+.mascot i:nth-child(1){left:14px}.mascot i:nth-child(2){left:30px}
+.top h1{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.top p{font-size:13px;color:var(--muted);margin-top:2px}
+.top .sp{flex:1}
+.iconbtn{width:42px;height:42px;border-radius:14px;background:var(--card);box-shadow:var(--shadow);display:grid;place-items:center;font-size:18px}
+.iconbtn.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.days{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 14px;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{flex:none;min-width:58px;padding:9px 6px;border-radius:16px;background:var(--card);text-align:center;box-shadow:var(--shadow)}
+.day b{display:block;font-size:17px;font-weight:700}
+.day small{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase}
+.day .dot{width:6px;height:6px;border-radius:50%;margin:5px auto 0;background:var(--line)}
+.day .dot.hit{background:var(--good)}
+.day.on{background:var(--ink);color:var(--bg)}
+.day.on small{color:var(--bg);opacity:.7}
+
+.grid{display:grid;gap:14px}
+@media(min-width:860px){.grid.main{grid-template-columns:1.1fr 1fr}}
+.card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.card h2{font-size:15px;font-weight:700}
+.card .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.hero{background:linear-gradient(140deg,#0B6FA8 0%,#0297DE 55%,#56C3F2 100%);color:#fff;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.12)}
+.hero .lbl{font-size:12px;font-weight:600;opacity:.85;text-transform:uppercase;letter-spacing:.06em}
+.hero .row{display:flex;align-items:center;gap:18px;margin-top:10px;position:relative;z-index:1}
+.hero .big{font-size:52px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.hero .big span{font-size:20px;font-weight:600;opacity:.75}
+.hero .msg{margin-top:10px;font-size:14px;opacity:.95}
+.ring{width:110px;height:110px;flex:none;margin-left:auto}
+.ring text{fill:#fff;font-weight:800}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.18);font-size:12px;font-weight:600;margin-top:14px;position:relative;z-index:1}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+.stat{background:var(--card2);border-radius:16px;padding:14px}
+.stat small{font-size:11.5px;color:var(--muted);font-weight:600}
+.stat b{display:block;font-size:22px;font-weight:800;margin-top:4px;letter-spacing:-.02em}
+.stat em{font-style:normal;font-size:12px;color:var(--ink2)}
+
+.chart{position:relative;margin-top:14px;height:170px}
+.chart svg{width:100%;height:100%;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:7px 10px;border-radius:10px;white-space:nowrap;transform:translate(-50%,-110%);opacity:0;transition:opacity .12s}
+.tip b{font-weight:700}
+
+.bars{margin-top:14px;display:grid;gap:12px}
+.bar .h{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
+.bar .h span{color:var(--ink2);font-weight:500}
+.bar .t{height:8px;border-radius:99px;background:var(--card2);margin-top:6px;overflow:hidden}
+.bar .t i{display:block;height:100%;border-radius:99px;background:var(--blue)}
+.empty{font-size:13px;color:var(--muted);padding:14px 0}
+
+.ghead{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:26px 2px 12px}
+.ghead h2{font-size:18px;font-weight:800}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:8px 14px;border-radius:99px;background:var(--card);font-size:13px;font-weight:600;box-shadow:var(--shadow)}
+.chip.on{background:var(--blue);color:#fff}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+@media(max-width:420px){.gallery{grid-template-columns:repeat(2,1fr)}}
+.tile{position:relative;aspect-ratio:1;border-radius:18px;overflow:hidden;background:var(--card2);box-shadow:var(--shadow)}
+.tile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.tile:hover img{transform:scale(1.04)}
+.tile .cap{position:absolute;left:8px;right:8px;bottom:8px;display:flex;justify-content:space-between;gap:6px;font-size:11px;font-weight:600}
+.tile .cap span{background:rgba(2,7,10,.62);color:#fff;padding:4px 8px;border-radius:99px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;backdrop-filter:blur(6px)}
+.tile .vid{position:absolute;top:8px;right:8px;background:rgba(2,7,10,.62);color:#fff;font-size:11px;padding:3px 8px;border-radius:99px}
+.more{display:block;margin:16px auto 0;padding:12px 22px;border-radius:99px;background:var(--ink);color:var(--bg);font-weight:700;font-size:14px}
+
+.notice{background:var(--orange-soft);color:var(--ink);border-radius:18px;padding:16px;font-size:13.5px;line-height:1.5;margin-bottom:14px}
+.notice b{color:var(--orange)}
+.notice ol{margin:8px 0 0 18px}
+.fallback{width:100%;height:70vh;border:0;border-radius:var(--r);background:#fff}
+
+.lb{position:fixed;inset:0;background:rgba(2,7,10,.88);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;flex-direction:column;gap:12px}
+.lb.on{display:flex}
+.lb img,.lb iframe{max-width:100%;max-height:78vh;border-radius:16px;background:#111}
+.lb iframe{width:min(900px,100%);height:70vh;border:0}
+.lb .meta{color:#fff;font-size:13px;text-align:center;opacity:.85}
+.lb .meta a{color:#7FD3FA}
+.lb .x{position:absolute;top:14px;right:14px;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.14);color:#fff;font-size:20px}
+.lb .nav{position:absolute;top:50%;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:20px}
+.lb .prev{left:10px}.lb .next{right:10px}
+
+.sheet{position:fixed;inset:0;background:rgba(2,7,10,.5);display:none;align-items:flex-end;justify-content:center;z-index:60}
+.sheet.on{display:flex}
+.sheet .in{background:var(--card);width:100%;max-width:520px;border-radius:26px 26px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom))}
+.sheet h3{font-size:18px;font-weight:800;margin-bottom:14px}
+.sheet label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin:12px 0 6px}
+.sheet input{width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--ink);font:inherit;font-size:15px}
+.sheet .hint{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.4}
+.sheet .acts{display:flex;gap:10px;margin-top:18px}
+.sheet .acts button{flex:1;padding:14px;border-radius:14px;font-weight:700}
+.btn-p{background:var(--blue);color:#fff}.btn-s{background:var(--card2)}
+.skel{background:linear-gradient(90deg,var(--card2),var(--line),var(--card2));background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mascot"><i></i><i></i></div>
+    <div><h1>Design Studio</h1><p id="updated">Loading designs…</p></div>
+    <div class="sp"></div>
+    <button class="iconbtn" id="refresh" aria-label="Refresh"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></button>
+    <button class="iconbtn" id="openSettings" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </header>
+
+  <div id="notice"></div>
+  <div class="days" id="days"></div>
+
+  <div class="grid main" id="dash">
+    <div class="card hero">
+      <div class="lbl" id="heroLbl">Today</div>
+      <div class="row">
+        <div><div class="big" id="heroNum">0 <span>/ 950</span></div></div>
+        <svg class="ring" viewBox="0 0 110 110" id="ring"></svg>
+      </div>
+      <div class="msg" id="heroMsg">&nbsp;</div>
+      <div class="pill" id="heroPill">Daily KPI 950 designs</div>
+    </div>
+
+    <div class="card">
+      <h2>Last 14 days</h2>
+      <div class="sub">Designs per day. Dashed line is the KPI.</div>
+      <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Snapshot</h2>
+      <div class="sub" id="snapSub">For the selected day</div>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="card">
+      <h2>Spread to the team</h2>
+      <div class="sub">How the day's designs split across her folders</div>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+
+  <div class="ghead"><h2 id="gTitle">Gallery</h2><span class="sub" id="gCount" style="font-size:13px;color:var(--muted)"></span></div>
+  <div class="chips" id="chips"></div>
+  <div class="gallery" id="gallery"></div>
+  <button class="more" id="more" style="display:none">Show more</button>
+</div>
+
+<div class="lb" id="lb">
+  <button class="x" id="lbX">✕</button>
+  <button class="nav prev" id="lbP">‹</button>
+  <button class="nav next" id="lbN">›</button>
+  <div id="lbMedia"></div>
+  <div class="meta" id="lbMeta"></div>
+</div>
+
+<div class="sheet" id="sheet"><div class="in">
+  <h3>Settings</h3>
+  <div id="lockBox">
+    <label>Admin password</label>
+    <input id="pwd" type="password" autocomplete="current-password">
+    <div class="acts"><button class="btn-s" data-close>Cancel</button><button class="btn-p" id="unlock">Unlock</button></div>
+  </div>
+  <div id="setBox" style="display:none">
+    <label>Daily KPI (designs per day)</label>
+    <input id="sTarget" type="number" min="1" inputmode="numeric">
+    <label>Google Drive folder link or ID</label>
+    <input id="sFolder">
+    <label>Google API key (Drive API)</label>
+    <input id="sKey">
+    <div class="hint">Saved for everyone who opens this page. The folder must be shared as "Anyone with the link can view".</div>
+    <div class="acts"><button class="btn-s" data-close>Cancel</button><button class="btn-p" id="save">Save</button></div>
+  </div>
+</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+// ── Config ──
+const TZ='Asia/Jakarta', DAYS=14, PAGE=120;
+const DEFAULTS={target:950,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyDfWkhwB3flykNloLRKaXwkNWfxbY22H2g'};
+const ADMIN_PWD=(()=>{try{return localStorage.getItem('hxcs_admin_pwd')||'hurricane2026'}catch(e){return 'hurricane2026'}})();
+let cfg={...DEFAULTS}, files=[], selDay=dayKey(new Date()), folderFilter='All', shown=PAGE, viewList=[], lbIdx=-1, loading=false;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function dayKey(d){return new Date(d).toLocaleDateString('en-CA',{timeZone:TZ})}
+function fmtDay(k,o){return new Date(k+'T12:00:00+07:00').toLocaleDateString('en-GB',{timeZone:TZ,...o})}
+function fmtTime(d){return new Date(d).toLocaleTimeString('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit'})}
+function lastDays(n){const out=[];const now=Date.now();for(let i=n-1;i>=0;i--)out.push(dayKey(now-i*864e5));return [...new Set(out)]}
+function parseFolder(v){v=(v||'').trim();const m=v.match(/folders\/([\w-]+)/)||v.match(/[?&]id=([\w-]+)/);return m?m[1]:v}
+
+// ── Firebase (shared settings at /designs/settings, nothing else touched) ──
+let settingsRef=null;
+try{
+  firebase.initializeApp({apiKey:"AIzaSyDfWkhwB3flykNloLRKaXwkNWfxbY22H2g",authDomain:"hurricane-scorecard.firebaseapp.com",databaseURL:"https://hurricane-scorecard-default-rtdb.firebaseio.com",projectId:"hurricane-scorecard"});
+  settingsRef=firebase.database().ref('designs/settings');
+  let first=true;
+  settingsRef.on('value',s=>{
+    const v=s.val()||{}, prev=JSON.stringify(cfg);
+    cfg={target:+v.target||DEFAULTS.target,folderId:v.folderId||DEFAULTS.folderId,apiKey:v.apiKey||DEFAULTS.apiKey};
+    if(first||JSON.stringify(cfg)!==prev){first=false;load()}
+  },()=>load());
+}catch(e){load()}
+setTimeout(()=>{if(!files.length&&!loading)load()},4000);
+
+// ── Google Drive listing ──
+async function driveList(parent,since,key){
+  const out=[];let token='';
+  const q=`'${parent}' in parents and trashed=false and (mimeType='application/vnd.google-apps.folder' or createdTime > '${since}')`;
+  do{
+    const u=new URL('https://www.googleapis.com/drive/v3/files');
+    u.search=new URLSearchParams({q,key,pageSize:'1000',supportsAllDrives:'true',includeItemsFromAllDrives:'true',
+      fields:'nextPageToken,files(id,name,mimeType,createdTime,thumbnailLink,webViewLink)',...(token?{pageToken:token}:{})});
+    const r=await fetch(u);const j=await r.json();
+    if(!r.ok)throw new Error((j.error&&j.error.message)||('HTTP '+r.status));
+    out.push(...(j.files||[]));token=j.nextPageToken||'';
+  }while(token);
+  return out;
+}
+async function loadDrive(){
+  const since=new Date(Date.now()-(DAYS+1)*864e5).toISOString();
+  const all=[];let level=[{id:cfg.folderId,path:''}];
+  for(let depth=0;depth<5&&level.length;depth++){
+    const next=[];
+    for(let i=0;i<level.length;i+=6){
+      const res=await Promise.all(level.slice(i,i+6).map(f=>driveList(f.id,since,cfg.apiKey).then(r=>({f,r}))));
+      for(const {f,r} of res)for(const it of r){
+        if(it.mimeType==='application/vnd.google-apps.folder'){next.push({id:it.id,path:f.path||it.name});continue}
+        if(!/^(image|video)\//.test(it.mimeType)&&!/pdf|photoshop|illustrator/.test(it.mimeType))continue;
+        all.push({id:it.id,name:it.name,mime:it.mimeType,created:it.createdTime,day:dayKey(it.createdTime),folder:f.path||'Main folder',thumb:it.thumbnailLink,link:it.webViewLink});
+      }
+    }
+    level=next;
+  }
+  return all.sort((a,b)=>b.created.localeCompare(a.created));
+}
+
+async function load(){
+  if(loading)return;loading=true;$('refresh').classList.add('spin');
+  if(!files.length)$('gallery').innerHTML=Array(8).fill('<div class="tile skel"></div>').join('');
+  try{
+    files=await loadDrive();
+    $('notice').innerHTML='';$('dash').style.display='';
+    $('updated').textContent='Updated '+fmtTime(new Date())+' WIB · '+files.length+' designs in 14 days';
+    render();
+  }catch(e){showFallback(e.message)}
+  loading=false;$('refresh').classList.remove('spin');
+}
+
+function showFallback(msg){
+  $('updated').textContent='Showing the folder directly';
+  $('notice').innerHTML=`<div class="notice"><b>Counting is not switched on yet.</b> Google said: “${esc(msg)}”.<br>You can still browse the folder below. To turn on the KPI counter:
+  <ol><li>Make sure the Drive folder is shared as <i>Anyone with the link can view</i>.</li>
+  <li>Open console.cloud.google.com, choose project <i>hurricane-scorecard</i>, search “Google Drive API” and press <i>Enable</i>.</li>
+  <li>Tap refresh. If it still fails, create an API key there and paste it in Settings ⚙.</li></ol></div>`;
+  $('dash').style.display='none';$('days').innerHTML='';$('chips').innerHTML='';$('more').style.display='none';
+  $('gTitle').textContent='Folder';$('gCount').textContent='';
+  $('gallery').style.display='block';
+  $('gallery').innerHTML=`<iframe class="fallback" src="https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(cfg.folderId)}#grid"></iframe>`;
+}
+
+// ── Render ──
+function counts(){const c={};for(const f of files)c[f.day]=(c[f.day]||0)+1;return c}
+function render(){
+  $('gallery').style.display='';
+  const c=counts(), days=lastDays(DAYS), T=cfg.target, today=dayKey(new Date());
+  if(!days.includes(selDay))selDay=today;
+
+  $('days').innerHTML=days.slice().reverse().map(k=>`<button class="day${k===selDay?' on':''}" data-day="${k}">
+    <small>${k===today?'Today':fmtDay(k,{weekday:'short'})}</small><b>${fmtDay(k,{day:'numeric'})}</b><div class="dot${(c[k]||0)>=T?' hit':''}"></div></button>`).join('');
+
+  const n=c[selDay]||0, pct=Math.round(n/T*100), left=Math.max(0,T-n), isToday=selDay===today;
+  $('heroLbl').textContent=isToday?'Today':fmtDay(selDay,{weekday:'long',day:'numeric',month:'long'});
+  $('heroNum').innerHTML=`${n.toLocaleString()} <span>/ ${T.toLocaleString()}</span>`;
+  $('heroMsg').textContent=n>=T?`KPI reached. ${n-T>0?(n-T)+' extra designs on top.':'Right on target.'}`:
+    (isToday?`${left.toLocaleString()} more to hit today's KPI.`:`Finished ${left.toLocaleString()} short of the KPI.`);
+  $('heroPill').textContent=`Daily KPI ${T.toLocaleString()} designs · ${pct}%`;
+  const R=46,C=2*Math.PI*R,p=Math.min(1,n/T);
+  $('ring').innerHTML=`<circle cx="55" cy="55" r="${R}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="10"/>
+    <circle cx="55" cy="55" r="${R}" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 55 55)"/>
+    <text x="55" y="61" text-anchor="middle" font-size="20">${pct}%</text>`;
+
+  // stats
+  const dayFiles=files.filter(f=>f.day===selDay);
+  const last7=lastDays(7).map(k=>c[k]||0), avg7=Math.round(last7.reduce((a,b)=>a+b,0)/7);
+  const hit=days.filter(k=>(c[k]||0)>=T).length;
+  let streak=0;for(const k of days.slice().reverse()){if(k===today&&(c[k]||0)<T)continue;if((c[k]||0)>=T)streak++;else break}
+  const lastUp=dayFiles[0]?fmtTime(dayFiles[0].created):'None yet', firstUp=dayFiles.length?fmtTime(dayFiles[dayFiles.length-1].created):'–';
+  let pace='–';
+  if(isToday&&dayFiles.length){const start=new Date(dayFiles[dayFiles.length-1].created).getTime();const hrs=Math.max(.25,(Date.now()-start)/36e5);pace=Math.round(n/hrs)+' / hr'}
+  $('snapSub').textContent=isToday?'Live for today':'For '+fmtDay(selDay,{day:'numeric',month:'short'});
+  $('stats').innerHTML=[
+    ['First upload',firstUp,''],['Last upload',lastUp,''],
+    ['7 day average',avg7.toLocaleString(),`${Math.round(avg7/T*100)}% of KPI`],
+    ['KPI days',`${hit} / ${days.length}`,streak?`${streak} day streak`:'No streak yet'],
+    ...(isToday?[['Pace now',pace,'since first upload']]:[]),
+    ['Remaining',left.toLocaleString(),n>=T?'Done':'designs']
+  ].map(([a,b,e])=>`<div class="stat"><small>${a}</small><b>${b}</b><em>${e||'&nbsp;'}</em></div>`).join('');
+
+  drawChart(days,c,T);
+
+  // per folder
+  const byF={};for(const f of dayFiles)byF[f.folder]=(byF[f.folder]||0)+1;
+  const fl=Object.entries(byF).sort((a,b)=>b[1]-a[1]), max=fl.length?fl[0][1]:1;
+  $('bars').innerHTML=fl.length?fl.map(([k,v])=>`<div class="bar"><div class="h">${esc(k)}<span>${v.toLocaleString()} · ${Math.round(v/n*100)}%</span></div><div class="t"><i style="width:${v/max*100}%"></i></div></div>`).join('')
+    :'<div class="empty">No designs uploaded on this day.</div>';
+
+  // gallery
+  const folders=['All',...fl.map(x=>x[0])];
+  if(!folders.includes(folderFilter))folderFilter='All';
+  $('chips').innerHTML=folders.length>2?folders.map(k=>`<button class="chip${k===folderFilter?' on':''}" data-folder="${esc(k)}">${esc(k)}${k==='All'?'':' · '+byF[k]}</button>`).join(''):'';
+  viewList=dayFiles.filter(f=>folderFilter==='All'||f.folder===folderFilter);
+  $('gTitle').textContent=isToday?"Today's designs":'Designs on '+fmtDay(selDay,{day:'numeric',month:'short'});
+  $('gCount').textContent=viewList.length.toLocaleString()+' items';
+  renderGallery();
+}
+function thumb(f,w){return `https://drive.google.com/thumbnail?id=${f.id}&sz=w${w}`}
+function renderGallery(){
+  const list=viewList.slice(0,shown);
+  $('gallery').innerHTML=list.length?list.map((f,i)=>`<button class="tile" data-i="${i}">
+    <img loading="lazy" src="${thumb(f,400)}" alt="${esc(f.name)}" onerror="if(this.dataset.t!=='1'&&'${f.thumb||''}'){this.dataset.t='1';this.src='${(f.thumb||'').replace(/'/g,'')}'}">
+    ${/^video/.test(f.mime)?'<span class="vid">▶ Video</span>':''}
+    <div class="cap"><span>${fmtTime(f.created)}</span>${folderFilter==='All'&&f.folder!=='Main folder'?`<span>${esc(f.folder)}</span>`:''}</div></button>`).join('')
+    :'<div class="empty">Nothing here yet. New designs show up as soon as they land in Drive.</div>';
+  $('more').style.display=viewList.length>shown?'block':'none';
+  $('more').textContent=`Show more (${(viewList.length-shown).toLocaleString()} left)`;
+}
+
+function drawChart(days,c,T){
+  const el=$('chart'), W=el.clientWidth||320, H=170, pb=22, pt=10;
+  const vals=days.map(k=>c[k]||0), max=Math.max(T*1.15,...vals,1);
+  const bw=W/days.length, y=v=>pt+(H-pb-pt)*(1-v/max), ty=y(T);
+  let s=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
+  days.forEach((k,i)=>{
+    const v=vals[i], x=i*bw+bw*.18, w=bw*.64, top=y(v), h=(H-pb)-top, sel=k===selDay;
+    if(v>0)s+=`<path d="M${x},${H-pb} V${top+Math.min(4,h)} q0,-4 4,-4 H${x+w-4} q4,0 4,4 V${H-pb} Z" fill="var(--blue)" opacity="${sel?1:.45}"/>`;
+    s+=`<rect class="hit" data-i="${i}" x="${i*bw}" y="0" width="${bw}" height="${H}" fill="transparent"/>`;
+    if(i%2===days.length%2||sel)s+=`<text x="${i*bw+bw/2}" y="${H-6}" text-anchor="middle" font-size="10" fill="var(--muted)" font-weight="${sel?700:500}">${fmtDay(k,{day:'numeric'})}</text>`;
+  });
+  s+=`<line x1="0" x2="${W}" y1="${H-pb}" y2="${H-pb}" stroke="var(--line)"/>`;
+  s+=`<line x1="0" x2="${W}" y1="${ty}" y2="${ty}" stroke="var(--orange)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  s+=`<text x="${W}" y="${ty-5}" text-anchor="end" font-size="10.5" font-weight="700" fill="var(--ink2)">KPI ${T}</text></svg>`;
+  el.innerHTML=s+'<div class="tip" id="tip"></div>';
+  el.querySelectorAll('.hit').forEach(r=>{
+    const i=+r.dataset.i, k=days[i];
+    r.addEventListener('mouseenter',()=>{const t=$('tip');t.innerHTML=`<b>${vals[i].toLocaleString()}</b> designs · ${fmtDay(k,{weekday:'short',day:'numeric',month:'short'})}<br>${Math.round(vals[i]/T*100)}% of KPI`;t.style.left=(i*bw+bw/2)+'px';t.style.top=y(vals[i])+'px';t.style.opacity=1});
+    r.addEventListener('mouseleave',()=>$('tip').style.opacity=0);
+    r.addEventListener('click',()=>{selDay=k;shown=PAGE;render()});
+  });
+}
+
+// ── Lightbox ──
+function openLb(i){
+  lbIdx=i;const f=viewList[i];if(!f)return;
+  $('lbMedia').innerHTML=/^video|pdf/.test(f.mime)?`<iframe src="https://drive.google.com/file/d/${f.id}/preview" allow="autoplay"></iframe>`:`<img src="${thumb(f,1600)}" alt="${esc(f.name)}">`;
+  $('lbMeta').innerHTML=`${esc(f.name)}<br>${esc(f.folder)} · ${fmtTime(f.created)} WIB · <a href="${f.link||'https://drive.google.com/file/d/'+f.id+'/view'}" target="_blank" rel="noopener">Open in Drive</a>`;
+  $('lb').classList.add('on');
+}
+$('lbX').onclick=()=>{$('lb').classList.remove('on');$('lbMedia').innerHTML=''};
+$('lbP').onclick=()=>openLb(Math.max(0,lbIdx-1));
+$('lbN').onclick=()=>openLb(Math.min(viewList.length-1,lbIdx+1));
+document.addEventListener('keydown',e=>{if(!$('lb').classList.contains('on'))return;if(e.key==='Escape')$('lbX').onclick();if(e.key==='ArrowLeft')$('lbP').onclick();if(e.key==='ArrowRight')$('lbN').onclick()});
+
+// ── Events ──
+document.addEventListener('click',e=>{
+  const d=e.target.closest('[data-day]');if(d){selDay=d.dataset.day;shown=PAGE;folderFilter='All';render();return}
+  const c=e.target.closest('[data-folder]');if(c){folderFilter=c.dataset.folder;shown=PAGE;render();return}
+  const t=e.target.closest('.tile[data-i]');if(t){openLb(+t.dataset.i);return}
+  if(e.target.closest('[data-close]')||e.target===$('sheet'))$('sheet').classList.remove('on');
+});
+$('more').onclick=()=>{shown+=PAGE;renderGallery()};
+$('refresh').onclick=load;
+$('openSettings').onclick=()=>{$('sheet').classList.add('on');$('lockBox').style.display='';$('setBox').style.display='none';$('pwd').value=''};
+$('unlock').onclick=()=>{
+  if($('pwd').value!==ADMIN_PWD){$('pwd').style.borderColor='var(--orange)';return}
+  $('lockBox').style.display='none';$('setBox').style.display='';
+  $('sTarget').value=cfg.target;$('sFolder').value=cfg.folderId;$('sKey').value=cfg.apiKey;
+};
+$('save').onclick=async()=>{
+  const v={target:Math.max(1,parseInt($('sTarget').value)||DEFAULTS.target),folderId:parseFolder($('sFolder').value)||DEFAULTS.folderId,apiKey:$('sKey').value.trim()||DEFAULTS.apiKey};
+  try{if(settingsRef)await settingsRef.update(v)}catch(e){alert('Could not save: '+e.message);return}
+  cfg=v;$('sheet').classList.remove('on');load();
+};
+window.addEventListener('resize',()=>{if(files.length&&$('dash').style.display!=='none')drawChart(lastDays(DAYS),counts(),cfg.target)});
+setInterval(()=>{if(!document.hidden)load()},5*60*1000);
+</script>
+</body>
+</html>
