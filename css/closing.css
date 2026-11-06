@@ -1,0 +1,158 @@
+/* FORM CLOSING (js/closing.js) — bottom sheet di HP, panel tengah di layar
+   lebar. Hitam pekat, aksen hijau (pilihan) & kuning (aksi utama), sama
+   dengan gaya Liquid Glass dashboard. Lapisan: overlay 1240 · sheet 1250 ·
+   modal konfirmasi dinaikkan ke 1300 saat dipakai · toast 9999. */
+
+html.hxk-lock,html.hxk-lock body{overflow:hidden!important;overscroll-behavior:none}
+
+.hxk-overlay{position:fixed;inset:0;z-index:1240;background:rgba(0,0,0,.66);opacity:0;transition:opacity .25s ease;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.hxk-overlay.on{opacity:1}
+
+.hxk-sheet{--hxk-g:#30d158;--hxk-gold:#ffd426;--hxk-red:#ff453a;--hxk-mut:#8e8e93;--hxk-line:rgba(255,255,255,.09);
+  position:fixed;left:0;right:0;bottom:0;z-index:1250;display:flex;flex-direction:column;max-height:92vh;max-height:92dvh;
+  background:#0b0b0d;color:#f5f5f7;border-radius:22px 22px 0 0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 -24px 60px rgba(0,0,0,.7);
+  font-family:'Space Grotesk',system-ui,-apple-system,sans-serif;
+  transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.9,.25,1);
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.hxk-sheet.on{transform:none}
+.hxk-handle{flex:0 0 auto;width:38px;height:5px;margin:8px auto 2px;border-radius:3px;background:rgba(255,255,255,.18)}
+.hxk-body{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 18px 0}
+
+@media (min-width:700px){
+  .hxk-sheet{left:50%;right:auto;bottom:auto;top:50%;width:560px;max-height:88vh;border-radius:22px;
+    transform:translate(-50%,-46%) scale(.98);opacity:0;transition:transform .26s cubic-bezier(.2,.9,.25,1),opacity .2s ease;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(255,255,255,.07),0 30px 90px rgba(0,0,0,.75)}
+  .hxk-sheet.on{transform:translate(-50%,-50%);opacity:1}
+  .hxk-handle{display:none}
+  .hxk-body{padding:6px 24px 0}
+}
+
+/* kepala */
+.hxk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 0 6px}
+.hxk-kick{font:700 10px/1 'Space Mono',monospace;letter-spacing:.14em;color:var(--hxk-gold)}
+.hxk-head h3{margin:6px 0 0;font:800 22px/1.1 'Space Grotesk',system-ui,sans-serif;color:#fff;letter-spacing:-.01em}
+.hxk-x{flex:0 0 auto;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#f5f5f7;font-size:24px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+/* bagian */
+.hxk-sec{padding:14px 0;border-top:1px solid var(--hxk-line)}
+.hxk-head+.hxk-sec{border-top:0}
+.hxk-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hxk-lbl{font:700 11px/1.2 'Space Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#c7c7cc;margin-bottom:8px}
+.hxk-lbl2{margin-top:14px}
+.hxk-sub{font-size:12.5px;line-height:1.45;color:var(--hxk-mut);margin-top:6px}
+.hxk-me{font-size:16px;color:#d1d1d6}.hxk-me b{color:#fff;font-weight:800}
+.hxk-link{border:0;background:none;padding:8px 0;min-height:38px;color:var(--hxk-g);font:700 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hxk-addon-btn{display:block;margin-top:10px}
+
+/* saklar 2–3 pilihan */
+.hxk-seg{display:flex;gap:4px;padding:4px;border-radius:14px;background:#161618;box-shadow:inset 0 0 0 1px var(--hxk-line)}
+.hxk-seg button{flex:1 1 0;min-height:42px;border:0;border-radius:11px;background:transparent;color:#aeaeb2;font:700 14px/1.1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
+.hxk-seg button.on{background:#2c2c2e;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 8px rgba(0,0,0,.4)}
+
+/* isian */
+.hxk-in{display:block;width:100%;box-sizing:border-box;height:46px;padding:0 14px;border:0;border-radius:12px;background:#161618;color:#fff;
+  font:600 16px/1 'Space Grotesk',system-ui,sans-serif;box-shadow:inset 0 0 0 1px var(--hxk-line);outline:none;-webkit-appearance:none;appearance:none}
+.hxk-in:focus{box-shadow:inset 0 0 0 1.5px var(--hxk-g)}
+.hxk-in::placeholder{color:#5a5a5f}
+.hxk-wa,.hxk-pin{letter-spacing:.3em;font-family:'Space Mono',monospace;font-weight:700}
+.hxk-date{margin-top:10px;color-scheme:dark}
+.hxk-grid2{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:10px;align-items:start}
+.hxk-exp .hxk-grid2{grid-template-columns:1fr 1fr}
+
+/* chip produk / SPV / sales */
+.hxk-fam{margin-top:10px}.hxk-fam:first-child{margin-top:0}
+.hxk-famlbl{font:700 10px/1 'Space Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6e6e73;margin:12px 0 7px}
+.hxk-fam .hxk-famlbl{margin-top:0}
+.hxk-chips{display:flex;flex-wrap:wrap;gap:7px}
+.hxk-chip{min-height:38px;padding:0 13px;border:0;border-radius:999px;background:#1c1c1e;color:#d1d1d6;font:600 13.5px/1.15 'Space Grotesk',system-ui,sans-serif;
+  box-shadow:inset 0 0 0 1px var(--hxk-line);cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:left;transition:background .15s,color .15s,box-shadow .15s}
+.hxk-chip.on{background:rgba(48,209,88,.16);color:#fff;box-shadow:inset 0 0 0 1.5px var(--hxk-g)}
+.hxk-chip.on::before{content:'✓ ';color:var(--hxk-g);font-weight:800}
+
+/* baris produk closing */
+.hxk-lines{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.hxk-line{padding:12px;border-radius:14px;background:#141416;box-shadow:inset 0 0 0 1px var(--hxk-line)}
+.hxk-line-top,.hxk-line-bot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hxk-line-bot{margin-top:8px}
+.hxk-line-name{font-weight:800;font-size:15px;color:#fff;min-width:0;overflow-wrap:anywhere}
+.hxk-line-name em{font-style:normal;font:700 9.5px/1 'Space Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--hxk-gold);
+  padding:3px 6px;border-radius:6px;background:rgba(255,212,38,.12);vertical-align:2px;margin-left:4px}
+.hxk-qty{flex:0 0 auto;display:flex;align-items:center;border-radius:11px;background:#1f1f22;box-shadow:inset 0 0 0 1px var(--hxk-line)}
+.hxk-qty button{width:38px;height:38px;border:0;background:none;color:#fff;font-size:20px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hxk-qty b{min-width:22px;text-align:center;font:700 15px/1 'Space Mono',monospace}
+.hxk-price{font:700 13px/1 'Space Mono',monospace;color:#c7c7cc}
+.hxk-sw{display:inline-flex;align-items:center;gap:8px;min-height:38px;font-size:13.5px;font-weight:600;color:#d1d1d6;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hxk-sw input{width:20px;height:20px;margin:0;accent-color:#30d158}
+.hxk-custom{display:flex;align-items:center;gap:8px;margin-top:8px}
+.hxk-custom span{font:700 14px/1 'Space Mono',monospace;color:var(--hxk-mut)}
+.hxk-custom input{flex:1;height:42px;padding:0 12px;border:0;border-radius:10px;background:#1f1f22;color:#fff;font:700 16px/1 'Space Mono',monospace;box-shadow:inset 0 0 0 1.5px rgba(255,212,38,.45);outline:none;min-width:0}
+.hxk-warn{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,212,38,.1);color:#ffd426;font-size:12px;line-height:1.4;font-weight:600}
+.hxk-err{margin-top:8px;color:#ff6961;font-size:12.5px;font-weight:700;line-height:1.35}
+.hxk-opts{display:flex;flex-wrap:wrap;gap:4px 18px}
+
+/* kaki: total + simpan (menempel di bawah) */
+.hxk-foot{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;margin:6px -18px 0;padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(11,11,13,.86),#0b0b0d 40%);border-top:1px solid var(--hxk-line);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+@media (min-width:700px){.hxk-foot{margin:6px -24px 0;padding:14px 24px 18px}}
+.hxk-sum{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
+.hxk-sum b{font:800 19px/1 'Space Grotesk',system-ui,sans-serif;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hxk-sum span{font:600 11px/1.2 'Space Mono',monospace;color:var(--hxk-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hxk-save{flex:0 0 auto;min-height:50px;padding:0 22px;border:0;border-radius:14px;background:#ffd426;color:#121000;font:800 15px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 22px -10px rgba(255,212,38,.7);-webkit-tap-highlight-color:transparent;transition:transform .12s,opacity .15s}
+.hxk-save:active{transform:scale(.97)}
+.hxk-save:disabled{opacity:.45;cursor:default;transform:none}
+
+/* banner di form lama */
+.hxk-legacy{display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap;width:100%;box-sizing:border-box;margin:0 0 12px;padding:12px 40px 12px 14px;position:relative;
+  border:0;border-radius:14px;background:rgba(48,209,88,.1);box-shadow:inset 0 0 0 1px rgba(48,209,88,.35);color:#fff;text-align:left;cursor:pointer;
+  font-family:'Space Grotesk',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+.hxk-legacy b{font-size:14.5px;font-weight:800;width:100%}
+.hxk-legacy span{font-size:12px;color:#aeaeb2;line-height:1.35}
+.hxk-legacy i{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-style:normal;font-size:24px;color:#30d158}
+
+/* tombol export di Monthly Recap (gaya sama dengan "Rekap 1 Tahun") */
+.hxk-recap-btn{position:relative;display:inline-flex;align-items:center;gap:7px;height:40px;margin:14px 0 0 8px;padding:0 15px 0 12px;border:0;border-radius:999px;cursor:pointer;
+  font:700 13px/1 'Space Grotesk',system-ui,-apple-system,sans-serif;color:#f5f5f7;
+  background:linear-gradient(180deg,rgba(48,209,88,.16),rgba(48,209,88,.05));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(48,209,88,.32),0 10px 24px -14px rgba(0,0,0,.9);
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;min-height:0}
+.hxk-recap-btn svg{width:17px;height:17px;color:#30d158}
+.hxk-recap-btn:active{transform:scale(.97)}
+
+/* admin */
+.hxk-adm .hxk-lbl{margin-top:4px}
+.hxk-adm-sub{font-size:12px;color:#8e8e93;line-height:1.45;margin:-4px 0 14px}
+.hxk-adm-seg{max-width:420px}
+.hxk-adm .hxk-in{max-width:520px}
+.hxk-adm-btn{margin-top:8px;height:40px;padding:0 16px;background:#252528!important;color:#f5f5f7!important;font-size:12px}
+.hxk-adm-go{background:#ffd426!important;color:#121000!important;font-weight:800}
+.hxk-ok{color:#30d158;text-transform:none;letter-spacing:0}
+.hxk-bad{color:#ff9f0a;text-transform:none;letter-spacing:0}
+
+/* My Sales: customer & SPV di kartu penjualan */
+.hxk-ms{flex-basis:100%;margin-top:4px;font:600 11.5px/1.35 'Space Grotesk',system-ui,sans-serif;color:#c7c7cc}
+
+@media (max-width:380px){
+  .hxk-body{padding-left:14px;padding-right:14px}
+  .hxk-foot{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  .hxk-grid2{grid-template-columns:minmax(0,1fr) 96px}
+  .hxk-save{padding:0 16px}
+  .hxk-head h3{font-size:20px}
+}
+@media (prefers-reduced-motion:reduce){.hxk-sheet,.hxk-overlay{transition:none}}
+
+/* jalan keluar ke form lama (mode uji coba) & status belum tersambung */
+.hxk-oldform{display:block;margin:2px 0 4px;color:#8e8e93;font-size:13px;font-weight:600}
+.hxk-foot{flex-wrap:wrap}
+.hxk-slow{flex:1 1 100%;margin:0;padding:12px 14px;border-radius:14px;background:#2a1d08;box-shadow:inset 0 0 0 1px rgba(255,159,10,.45)}
+.hxk-slow b{display:block;color:#ff9f0a;font-size:14px;font-weight:800}
+.hxk-slow span{display:block;margin-top:4px;color:#d1d1d6;font-size:12.5px;line-height:1.45}
+.hxk-slow .hxk-link{color:#ff9f0a;padding:6px 0 0;min-height:34px}
+.hxk-restored{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 8px;padding:9px 12px;border-radius:12px;background:rgba(255,212,38,.09);box-shadow:inset 0 0 0 1px rgba(255,212,38,.28)}
+.hxk-restored span{font-size:12.5px;line-height:1.4;color:#e5e5ea}
+.hxk-restored .hxk-link{flex:0 0 auto;color:#ffd426;font-size:13px;padding:6px 0;min-height:34px}
+/* saat menyimpan: isian terkunci (kaki & status tetap bisa dipakai) */
+.hxk-sheet.hxk-busy .hxk-sec,.hxk-sheet.hxk-busy .hxk-oldform,.hxk-sheet.hxk-busy .hxk-restored{opacity:.55;pointer-events:none}

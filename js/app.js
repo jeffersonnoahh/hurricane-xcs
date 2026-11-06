@@ -1223,7 +1223,8 @@ function renderAll(){
       ${e.chats?`<span class="et" style="color:#448aff">${e.chats}</span>`:''}
       ${e.prod?`<span class="et" style="color:#00e676">${e.units}×${e.prod}</span>`:''}
       ${e.priceMode==='custom'?'<span class="et" style="color:#ff6b1a">Custom</span>':''}
-      ${(Array.isArray(e.saleType)?e.saleType:e.saleType?[e.saleType]:[]).map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">Complete</span>':'').join('')}
+      ${e.customer?`<span class="et" style="color:#e8e8f8">${String(e.customer).replace(/&/g,'&amp;').replace(/</g,'&lt;')}${e.spv&&e.spv!=='Tanpa SPV'?' · SPV '+String(e.spv).replace(/&/g,'&amp;').replace(/</g,'&lt;'):''}</span>`:''}
+      ${(Array.isArray(e.saleType)?e.saleType:e.saleType?[e.saleType]:[]).map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">'+(e.src==='closing'?'Langsung Order':'Complete')+'</span>':'').join('')}
       ${e.revenue?`<span class="et" style="color:#f5c518">${fFull(e.revenue)}</span>`:''}
       ${isT()?`<span class="ed" onclick="removeEntry(${i})">✕</span>`:''}
     </div>`;
@@ -2395,7 +2396,7 @@ function renderInsights(){
   const recent=tagged.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,20);
   document.getElementById('insRecentBody').innerHTML=recent.length===0?'<tr><td colspan="6" style="text-align:center;color:#404065;padding:20px;">No tagged sales in this period</td></tr>':recent.map(e=>{
     const tagsHTML=(e.saleType||[]).map(t=>{
-      const lbl=t==='upsell'?'Upsell':t==='cross'?'Cross':t==='repeat'?'Repeat':t==='testdrive'?'Test Drive':t==='complete'?'Complete':t;
+      const lbl=t==='upsell'?'Upsell':t==='cross'?'Cross':t==='repeat'?'Repeat':t==='testdrive'?'Test Drive':t==='complete'?(e.src==='closing'?'Langsung Order':'Complete'):t;
       return `<span class="ins-tag ${t}">${lbl}</span>`;
     }).join('');
     const dateLbl=new Date(e._date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -3916,7 +3917,7 @@ function renderMySales(){
             <div class="ms-sale-meta">
               ${e.units>1?`<span class="ms-badge">×${e.units} units</span>`:''}
               ${e.priceMode==='custom'?'<span class="ms-badge ms-badge-custom">Custom price</span>':''}
-              ${tags.map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">Complete</span>':'').join('')}
+              ${tags.map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">'+(e.src==='closing'?'Langsung Order':'Complete')+'</span>':'').join('')}
               ${!hasTags&&!e.units>1?'<span class="ms-badge" style="color:#6060a0;border-color:#252540;">Regular sale</span>':''}
               ${e.notes?`<span class="ms-note">${e.notes}</span>`:''}
             </div>
