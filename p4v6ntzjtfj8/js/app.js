@@ -2567,6 +2567,7 @@
         if (del) del.onclick = function () {
           if (!confirm('Delete this transaction?')) return;
           (t.files || []).forEach(function (m) { if (!S.debts.some(function (d) { return (d.files || []).some(function (x) { return x.id === m.id; }) && d.bookTx !== t.id; })) fileDel(m.id); });
+          if (t.srcId) { S.gone = S.gone || {}; S.gone[t.srcId] = Date.now(); }
           S.tx = S.tx.filter(function (x) { return x.id !== t.id; });
           S.debts.forEach(function (d) { d.payments = (d.payments || []).filter(function (p) { return p.txId !== t.id; }); if (d.startTx === t.id) delete d.startTx; if (d.bookTx === t.id) { delete d.bookTx; delete d.prebooked; } });
           S.debts = S.debts.filter(function (d) { return !(d.ownBook && !d.bookTx && !(d.payments || []).length); });
@@ -2616,7 +2617,11 @@
     if (!s.startFrom) { s.startFrom = Date.now(); save(); }
     var since = rescanDays ? Date.now() - rescanDays * 864e5 : Math.max(s.startFrom, s.lastSync ? s.lastSync - 2 * 864e5 : 0);
     // Re-check: look again at recent emails, skipping only ones that already became a transaction or are waiting in review.
-    var done = function (em) { return rescanDays ? S.tx.some(function (t) { return t.srcId === em.id; }) : !!S.seen[em.id]; };
+    var done = function (em) { // skip only emails that became a transaction, were deleted/dismissed on purpose, or (normal sync) already wait in review
+      if (S.gone && S.gone[em.id]) return true;
+      if (S.tx.some(function (t) { return t.srcId === em.id; })) return true;
+      return !rescanDays && S.review.some(function (r) { return r.id === em.id; });
+    };
     var url = s.syncUrl + (s.syncUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(s.token) + '&since=' + since;
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
@@ -2634,7 +2639,7 @@
         emails.forEach(function (em) {
           if (!em || !em.id) return;
           var hit = S.tx.filter(function (t) { return t.srcId === em.id; })[0];
-          if (done(em)) { log(em, hit ? 'in ' + wallet(hit.wallet).name + ' · ' + cat(hit.cat).name + ' · ' + fmtDate(hit.date) : S.review.some(function (r) { return r.id === em.id; }) ? 'waiting in To review' : 'checked before'); return; }
+          if (done(em)) { log(em, hit ? 'in ' + wallet(hit.wallet).name + ' · ' + cat(hit.cat).name + ' · ' + fmtDate(hit.date) : S.review.some(function (r) { return r.id === em.id; }) ? 'waiting in To review' : 'deleted before, skipped'); return; }
           if (rescanDays) S.review = S.review.filter(function (r) { return r.id !== em.id; }); // looked at again from scratch
           if (em.date < (rescanDays ? since : s.startFrom)) { log(em, 'before sync started'); return; }
           S.seen[em.id] = Date.now();
@@ -3346,7 +3351,7 @@
       if (t.dataset.editWallet) walletSheet(wallet(t.dataset.editWallet));
       else if (t.dataset.editCat) catDetail(cat(t.dataset.editCat));
       else if (t.dataset.delRule != null) { S.rules.splice(+t.dataset.delRule, 1); save(); renderAll(); }
-      else if (t.dataset.delReview != null) { S.review.splice(+t.dataset.delReview, 1); save(); renderAll(); }
+      else if (t.dataset.delReview != null) { var rv = S.review[+t.dataset.delReview]; if (rv) { S.gone = S.gone || {}; S.gone[rv.id] = Date.now(); } S.review.splice(+t.dataset.delReview, 1); save(); renderAll(); }
       else if (t.dataset.review != null) {
         var i = +t.dataset.review, r = S.review[i], d = new Date(r.date);
         S.review.splice(i, 1); save();
