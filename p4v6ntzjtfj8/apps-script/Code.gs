@@ -42,13 +42,15 @@ function doGet(e) {
       var m = msgs[j];
       var t = m.getDate().getTime();
       if (t < since) continue;
-      var body = m.getPlainBody() || m.getBody() || '';
+      // Some banks (e.g. Paspor BCA) send HTML only: the plain text is just "-", so use the HTML instead.
+      var body = m.getPlainBody() || '';
+      if (body.replace(/\s/g, '').length < 40) body = (m.getBody() || '').replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, '').replace(/<!--[\s\S]*?-->/g, '');
       out.push({
         id: m.getId(),
         date: t,
         from: m.getFrom(),
         subject: m.getSubject(),
-        body: body.slice(0, 6000)
+        body: body.slice(0, 12000)
       });
     }
   }
