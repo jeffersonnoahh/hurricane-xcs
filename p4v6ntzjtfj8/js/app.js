@@ -156,7 +156,16 @@
     }).catch(function () { if (c && c.r) return c.r; throw new Error('no rate'); });
   }
   // Paspor BCA debit card (used abroad): shows up as its own row in "Which wallet each BCA account uses".
-  function ensurePaspor() { ensureAccounts(); if (S.pasporVer === 1) return; S.pasporVer = 1; if (!S.settings.bcaAccounts.some(function (x) { return /3632$/.test(x.mask); })) S.settings.bcaAccounts.push({ mask: '****3632', label: 'Paspor BCA card (ends 3632)', wallet: '' }); }
+  function ensurePaspor() {
+    ensureAccounts(); if (S.pasporVer === 2) return;
+    var res = S.wallets.filter(function (w) { return /^reserve$/i.test(String(w.name).trim()); })[0]; if (!res) return; // wait until RESERVE exists (e.g. after a restore)
+    S.pasporVer = 2;
+    var row = S.settings.bcaAccounts.filter(function (x) { return /3632$/.test(x.mask); })[0];
+    if (!row) { row = { mask: '****3632', label: 'Paspor BCA card (ends 3632)', wallet: '' }; S.settings.bcaAccounts.push(row); }
+    if (!row.wallet) row.wallet = res.id;
+    // Paspor payments already logged go to RESERVE too
+    S.tx.forEach(function (t) { if (t.src === 'bca' && /3632$/.test(t.srcAcct || '')) t.wallet = row.wallet; });
+  }
   function tripCatFor(date, type) { var tr = S.settings && S.settings.trip; return tr && tr.on && tr.cat && type === 'expense' && date >= tr.from && date <= tr.to && S.cats.some(function (c) { return c.id === tr.cat; }) ? tr.cat : null; }
   // Wallet for Mandiri emails: chosen in Account, else Personal Expense.
   function mandiriWalletId() {
@@ -4794,7 +4803,7 @@
     var M = { komisi: 'komisi_out', world: 'giving', business: 'bi', installments: 'my_home', insights: 'investment', upcoming: 'debt_collection', goals: 'bybit', bills: 'streaming', allocation: 'stocks', wallets: 'w_cash', cashflow: 'ajaib_essa', spending: 'shopping', month: 'fun_money', recent: 'uncat' };
     document.querySelectorAll('#homeSecs .sec').forEach(function (sec) { var k = M[sec.dataset.sec], h = sec.querySelector('.section-h > span, .card-h > h2, .card-h2 > h2, .cf-head > h2'); if (k && h && !h.querySelector('.h-3d')) h.insertAdjacentHTML('afterbegin', '<span class="h-3d">' + sprite(k) + '</span>'); });
   }
-  load(); fixBilliard(); zeroStart(); ensureTrip(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); hideOldCats(); if (S.wHideVer !== 1) { S.wHideVer = 1; S.wallets.forEach(function (w) { if (/^(ajaib|stocks|gold puter)$/i.test(String(w.name).trim())) w.hidden = true; }); } if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
+  load(); fixBilliard(); zeroStart(); ensureTrip(); ensurePaspor(); ownerWallets(); walletIcons(); defBiz(); linkBiz(); hurLink(); hideOldCats(); if (S.wHideVer !== 1) { S.wHideVer = 1; S.wallets.forEach(function (w) { if (/^(ajaib|stocks|gold puter)$/i.test(String(w.name).trim())) w.hidden = true; }); } if (!S.inst) S.inst = [{ id: 'rumah', name: 'RUMAH NOAH', sp: 'my_home', total: 0, monthly: 0, dueDay: 1, pays: [] }, { id: 'wedding', name: 'WEDDING AND ENGAGEMENT', sp: 'wedding', total: 0, monthly: 0, dueDay: 1, pays: [] }]; addKomisi(); useGenerated(); postRecurring(); save(); importFromHash(); bind(); bindFeatures(); bindPremium(); walletSel = homeWalletId(); renderAll(); applyHome(); secIcons(); setCloudStatus();
   $('hInsights').addEventListener('click', function (e) { if (e.target.closest('[data-wrap]')) { haptic(); openWrapped(new Date()); } });
   setTimeout(mlSeedFromHash, 1500);
   $('mlCode').onclick = function () { haptic(); mlSeedPrompt(); }; $('codeBtn').onclick = function () { haptic(); codeSheet(); }; setTimeout(function () { mountEarth(document.querySelector('.tile-earth .earth'), 0.012, false); }, 600);
