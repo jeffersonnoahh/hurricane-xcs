@@ -114,7 +114,9 @@
     var body = normalize(email.body || '');
     var all = subject + '\n' + body;
 
-    var card = /kartu\s*paspor|paspor\s*bca|terima\s*kasih\s*telah\s*bertransaksi/i.test(all); // card payment notices are always payments
+    var card = /terima\s*kasih\s*telah\s*bertransaksi/i.test(all) && /nominal/i.test(body); // a real card payment notice
+    // promo / marketing emails (e.g. "Double Cashback di Asia & Australia") show example amounts: never payments
+    if (!card && /cashback|promo|diskon|penawaran|syarat\s*(?:&|dan)?\s*ketentuan|s\s*&\s*k\b|periode\s*program|berlaku\s*(?:hingga|s\.?d)|unsubscribe|berhenti\s*berlangganan/i.test(all) && !/berhasil|successful|telah\s*(?:di)?(?:transfer|bayar|terima)/i.test(all)) { WHY = 'promo email'; return null; }
     if (FAILED_RE.test(subject) || (!card && FAILED_RE.test(body) && !/berhasil|successful/i.test(body))) { WHY = 'looks like a failed payment'; return null; }
     if (NOISE_RE.test(subject) && !TXN_HINT_RE.test(subject)) { WHY = 'promo or security email'; return null; }
     if (!TXN_HINT_RE.test(all)) { WHY = 'no payment words'; return null; }
@@ -122,8 +124,8 @@
     // Foreign currency (card used abroad, e.g. Paspor BCA "Nominal : JPY 1.300"): the app converts to rupiah.
     var fx = body.match(/(?:nominal|amount|jumlah|total(?:\s*transaksi)?)\s*[:=]?\s*\n?\s*(JPY|USD|SGD|MYR|THB|KRW|CNY|HKD|TWD|AUD|EUR|GBP|CHF|SAR|AED)\s*((?:\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d{1,2})?)/i);
     var CODES = '(JPY|USD|SGD|MYR|THB|KRW|CNY|HKD|TWD|AUD|EUR|GBP|CHF|SAR|AED)', NUM = '((?:\\d{1,3}(?:[.,]\\d{3})+|\\d+)(?:[.,]\\d{1,2})?)';
-    if (!fx) fx = all.match(new RegExp(CODES + '\\s*' + NUM)); // currency code anywhere, e.g. "JPY 1.300"
-    if (!fx) { var rev = all.match(new RegExp(NUM + '\\s*' + CODES)); if (rev) fx = [rev[0], rev[2], rev[1]]; } // "1.300 JPY"
+    if (!fx && card) fx = all.match(new RegExp(CODES + '\\s*' + NUM)); // currency code anywhere (card notices only), e.g. "JPY 1.300"
+    if (!fx && card) { var rev = all.match(new RegExp(NUM + '\\s*' + CODES)); if (rev) fx = [rev[0], rev[2], rev[1]]; } // "1.300 JPY"
     var cur = '', famt = 0;
     if (fx && !/^(idr|rp\.?)$/i.test(fx[1])) { cur = fx[1].toUpperCase(); var raw = fx[2], dm = raw.match(/[.,](\d{1,2})$/); famt = parseFloat(raw.replace(/[.,]\d{1,2}$/, '').replace(/[.,]/g, '') + (dm ? '.' + dm[1] : '')); }
     var amount = cur ? 0 : (findAmount(body) || findAmount(subject));

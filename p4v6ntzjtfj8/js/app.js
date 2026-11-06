@@ -164,6 +164,9 @@
   // Paspor BCA debit card (used abroad): shows up as its own row in "Which wallet each BCA account uses".
   function ensurePaspor() {
     ensureAccounts();
+    // one-off: remove the promo email that was wrongly logged as a payment (Double Cashback, KRW 40.000)
+    var PROMO_IDS = ["1a18b9975b538d0c","1a19b0edbee445a7","1a1af744e204935b"];
+    if (S.promoFix !== 2) { S.promoFix = 2; S.tx = S.tx.filter(function (t) { var bad = (t.src === 'bca' || t.src === 'mandiri') && t.srcId && (PROMO_IDS.indexOf(t.srcId) !== -1 || /^(double cashback|transaksi jadi ringan|potongan hingga)/i.test(t.merchant || '')); if (bad) { S.gone = S.gone || {}; S.gone[t.srcId] = Date.now(); } return !bad; }); }
     var rw = S.wallets.filter(function (w) { return /^reserve$/i.test(String(w.name).trim()); })[0];
     if (rw) { var pr = S.settings.bcaAccounts.filter(function (x) { return /3632$/.test(x.mask); })[0]; if (pr) pr.wallet = rw.id; S.tx.forEach(function (t) { if (t.src === 'bca' && (/3632$/.test(t.srcAcct || ''))) t.wallet = rw.id; }); }
     if (S.pasporVer === 2) return;
