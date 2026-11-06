@@ -2585,7 +2585,7 @@
 
   // ---------- BCA sync ----------
   var syncing = false;
-  function sync(manual) {
+  function sync(manual, rescanDays) {
     var s = S.settings;
     ensureTrip(); ensurePaspor();
     if (!s.syncUrl || !s.token) { if (manual) { toast('Set up BCA sync in Account first'); } return Promise.resolve(); }
@@ -2595,7 +2595,9 @@
     $('sStatus').textContent = 'Syncing…';
     // Only emails from the moment tracking started count (set on first connect or Start fresh).
     if (!s.startFrom) { s.startFrom = Date.now(); save(); }
-    var since = Math.max(s.startFrom, s.lastSync ? s.lastSync - 2 * 864e5 : 0);
+    var since = rescanDays ? Date.now() - rescanDays * 864e5 : Math.max(s.startFrom, s.lastSync ? s.lastSync - 2 * 864e5 : 0);
+    // Re-check: look again at recent emails, skipping only ones that already became a transaction or are waiting in review.
+    var done = function (em) { return rescanDays ? (S.tx.some(function (t) { return t.srcId === em.id; }) || S.review.some(function (r) { return r.id === em.id; })) : !!S.seen[em.id]; };
     var url = s.syncUrl + (s.syncUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(s.token) + '&since=' + since;
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
@@ -2603,15 +2605,15 @@
     return fetch(url, ctrl ? { signal: ctrl.signal } : {})
       .then(function (r) { return r.json(); })
       .then(function (data) { // get rupiah rates for any foreign-currency card payments first
-        var curs = {}; ((data && data.emails) || []).forEach(function (em) { if (!em || !em.id || S.seen[em.id]) return; var p = window.BcaParser.parseBcaEmail(em); if (p && p.cur) curs[p.cur] = 1; });
+        var curs = {}; ((data && data.emails) || []).forEach(function (em) { if (!em || !em.id || done(em)) return; var p = window.BcaParser.parseBcaEmail(em); if (p && p.cur) curs[p.cur] = 1; });
         return Promise.all(Object.keys(curs).map(function (c) { return fxToIdr(c).then(function (r) { FXR[c] = r; }, function () {}); })).then(function () { return data; });
       })
       .then(function (data) {
         if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'Unexpected reply');
         var added = 0, review = 0, emails = data.emails || [];
         emails.forEach(function (em) {
-          if (!em || !em.id || S.seen[em.id]) return;
-          if (em.date < s.startFrom) return;
+          if (!em || !em.id || done(em)) return;
+          if (em.date < (rescanDays ? since : s.startFrom)) return;
           S.seen[em.id] = Date.now();
           var p = window.BcaParser.parseBcaEmail(em);
           if (!p) {
@@ -3290,6 +3292,7 @@
       save(); renderAll(); toast(!wasOn && S.settings.autoSync ? 'Live BCA sync on ✓ New transactions from now on' : 'Saved ✓'); return true;
     };
     $('sSync').onclick = function () { if ($('sSave').onclick() !== false) sync(true); };
+    if ($('sRescan')) $('sRescan').onclick = function () { if ($('sSave').onclick() !== false) { haptic(); sync(true, 7); } };
 
     $('tRun').onclick = function () {
       var raw = $('tInput').value, nl = raw.indexOf('\n');
