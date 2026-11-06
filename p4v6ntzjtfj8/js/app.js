@@ -163,7 +163,10 @@
   }
   // Paspor BCA debit card (used abroad): shows up as its own row in "Which wallet each BCA account uses".
   function ensurePaspor() {
-    ensureAccounts(); if (S.pasporVer === 2) return;
+    ensureAccounts();
+    var rw = S.wallets.filter(function (w) { return /^reserve$/i.test(String(w.name).trim()); })[0];
+    if (rw) { var pr = S.settings.bcaAccounts.filter(function (x) { return /3632$/.test(x.mask); })[0]; if (pr) pr.wallet = rw.id; S.tx.forEach(function (t) { if (t.src === 'bca' && (/3632$/.test(t.srcAcct || ''))) t.wallet = rw.id; }); }
+    if (S.pasporVer === 2) return;
     var res = S.wallets.filter(function (w) { return /^reserve$/i.test(String(w.name).trim()); })[0]; if (!res) return; // wait until RESERVE exists (e.g. after a restore)
     S.pasporVer = 2;
     var row = S.settings.bcaAccounts.filter(function (x) { return /3632$/.test(x.mask); })[0];
@@ -2630,7 +2633,8 @@
         var log = function (em, r) { LG.push({ d: em.date, f: String(em.from || '').replace(/<.*>/, '').replace(/"/g, '').trim().slice(0, 28), s: String(em.subject || '').slice(0, 44), r: r }); };
         emails.forEach(function (em) {
           if (!em || !em.id) return;
-          if (done(em)) { log(em, S.tx.some(function (t) { return t.srcId === em.id; }) ? 'already in Apex' : S.review.some(function (r) { return r.id === em.id; }) ? 'waiting in To review' : 'checked before'); return; }
+          var hit = S.tx.filter(function (t) { return t.srcId === em.id; })[0];
+          if (done(em)) { log(em, hit ? 'in ' + wallet(hit.wallet).name + ' · ' + cat(hit.cat).name + ' · ' + fmtDate(hit.date) : S.review.some(function (r) { return r.id === em.id; }) ? 'waiting in To review' : 'checked before'); return; }
           if (rescanDays) S.review = S.review.filter(function (r) { return r.id !== em.id; }); // looked at again from scratch
           if (em.date < (rescanDays ? since : s.startFrom)) { log(em, 'before sync started'); return; }
           S.seen[em.id] = Date.now();
