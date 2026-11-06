@@ -1190,6 +1190,7 @@
   }
 
   function renderAccount() {
+    setTimeout(renderSyncLog, 0);
     var s = S.settings;
     if (document.activeElement !== $('sUrl')) $('sUrl').value = s.syncUrl;
     if (document.activeElement !== $('sToken')) $('sToken').value = s.token;
@@ -2610,13 +2611,15 @@
       })
       .then(function (data) {
         if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'Unexpected reply');
-        var added = 0, review = 0, emails = data.emails || [];
+        var added = 0, review = 0, emails = data.emails || [], LG = [];
+        var log = function (em, r) { LG.push({ d: em.date, f: String(em.from || '').replace(/<.*>/, '').replace(/"/g, '').trim().slice(0, 28), s: String(em.subject || '').slice(0, 44), r: r }); };
         emails.forEach(function (em) {
-          if (!em || !em.id || done(em)) return;
-          if (em.date < (rescanDays ? since : s.startFrom)) return;
+          if (!em || !em.id) return;
+          if (done(em)) { log(em, 'already in Apex'); return; }
+          if (em.date < (rescanDays ? since : s.startFrom)) { log(em, 'before sync started'); return; }
           S.seen[em.id] = Date.now();
           var p = window.BcaParser.parseBcaEmail(em);
-          if (!p) {
+          if (!p) { log(em, 'not a payment');
             if (/(rp\.?|idr)\s*[\d.,]+/i.test(em.body || '') && !/otp|promo/i.test(em.subject || '')) {
               S.review.unshift({ id: em.id, date: em.date, subject: em.subject, snippet: window.BcaParser.normalize(em.body).slice(0, 400) });
               review++;
@@ -2626,11 +2629,12 @@
           var fxNote = '';
           if (p.cur) {
             var rate = FXR[p.cur];
-            if (!rate) { S.review.unshift({ id: em.id, date: em.date, subject: em.subject, snippet: p.cur + ' ' + p.famt + ' at ' + (p.merchant || '') + ' (no exchange rate yet, add it by hand)' }); review++; return; }
+            if (!rate) { log(em, 'to review: no ' + p.cur + ' rate'); S.review.unshift({ id: em.id, date: em.date, subject: em.subject, snippet: p.cur + ' ' + p.famt + ' at ' + (p.merchant || '') + ' (no exchange rate yet, add it by hand)' }); review++; return; }
             p.amount = Math.round(p.famt * rate); fxNote = p.cur + ' ' + p.famt.toLocaleString('id-ID') + ' · 1 ' + p.cur + ' = Rp ' + rate.toLocaleString('id-ID', { maximumFractionDigits: 2 });
           }
           var bank = isMandiriEmail(em) ? 'mandiri' : 'bca';
-          if (p.ref && S.tx.some(function (t) { return t.src === bank && t.ref === p.ref && t.amount === p.amount; })) return;
+          if (p.ref && S.tx.some(function (t) { return t.src === bank && t.ref === p.ref && t.amount === p.amount; })) { log(em, 'already in Apex'); return; }
+          log(em, '✓ added ' + (p.cur ? p.cur + ' ' + p.famt.toLocaleString('id-ID') : '') + ' ' + (p.merchant || ''));
           var d = new Date(em.date);
           S.tx.push({
             id: uid(), type: p.type, amount: p.amount, cat: tripCatFor(ymd(d), p.type) || guessCat(p.merchant, p.type),
@@ -2645,6 +2649,8 @@
         save(); renderAll();
         var msg = added ? added + ' bank transaction' + (added > 1 ? 's' : '') + ' added' : 'No new bank transactions';
         if (review) msg += ' · ' + review + ' to review';
+        if (!emails.length) LG.push({ d: Date.now(), f: 'Your email reader', s: 'No bank emails found' + (rescanDays ? ' in the last ' + rescanDays + ' days' : ''), r: 'Google found 0 emails' });
+        S.syncLog = LG.slice(-25); renderSyncLog();
         $('sStatus').textContent = msg + ' (' + emails.length + ' emails checked, ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ')';
         if (manual || added || review) toast(msg);
       })
@@ -2653,6 +2659,14 @@
         if (manual) toast('Sync failed. Check URL and secret.');
       })
       .then(function () { clearTimeout(timer); syncing = false; busy(false); $('hSync').classList.remove('spin'); });
+  }
+  // "Last check" list under BCA Sync: every email the last sync looked at and what happened to it.
+  function renderSyncLog() {
+    var st = $('sStatus'); if (!st) return; var box = $('sLog');
+    if (!box) { box = document.createElement('div'); box.id = 'sLog'; box.className = 'sync-log'; st.parentNode.insertBefore(box, st.nextSibling); }
+    var L = S.syncLog || []; if (!L.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="sheet-sec" style="margin:10px 2px 6px">Last check · ' + L.length + ' email' + (L.length > 1 ? 's' : '') + '</div>' + L.slice().reverse().map(function (x) {
+      return '<div class="sl-row' + (/^✓/.test(x.r) ? ' ok' : '') + '"><span class="grow"><b>' + esc(x.s || '(no subject)') + '</b><small>' + esc(x.f) + ' · ' + fmtDate(ymd(new Date(x.d))) + '</small></span><em>' + esc(x.r) + '</em></div>'; }).join('');
   }
   function pruneSeen() {
     var cut = Date.now() - 120 * 864e5;
