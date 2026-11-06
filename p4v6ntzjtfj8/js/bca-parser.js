@@ -116,8 +116,12 @@
     if (NOISE_RE.test(subject) && !TXN_HINT_RE.test(subject)) return null;
     if (!TXN_HINT_RE.test(all)) return null;
 
-    var amount = findAmount(body) || findAmount(subject);
-    if (!amount) return null;
+    // Foreign currency (card used abroad, e.g. Paspor BCA "Nominal : JPY 1.300"): the app converts to rupiah.
+    var fx = body.match(/(?:nominal|amount|jumlah|total(?:\s*transaksi)?)\s*[:=]?\s*\n?\s*(JPY|USD|SGD|MYR|THB|KRW|CNY|HKD|TWD|AUD|EUR|GBP|CHF|SAR|AED)\s*((?:\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d{1,2})?)/i);
+    var cur = '', famt = 0;
+    if (fx && !/^(idr|rp\.?)$/i.test(fx[1])) { cur = fx[1].toUpperCase(); var raw = fx[2], dm = raw.match(/[.,](\d{1,2})$/); famt = parseFloat(raw.replace(/[.,]\d{1,2}$/, '').replace(/[.,]/g, '') + (dm ? '.' + dm[1] : '')); }
+    var amount = cur ? 0 : (findAmount(body) || findAmount(subject));
+    if (!amount && !famt) return null;
 
     var type = INCOME_RE.test(all) ? 'income' : 'expense';
     var line = '([^\\n|;]{2,80})';
@@ -129,7 +133,10 @@
     var ref = firstMatch(body, REF_LABELS, '([A-Za-z0-9\\-/]{4,40})');
 
     var src = firstMatch(body, SRC_LABELS, '([0-9][0-9*xX•\\-\\s]{5,24}[0-9])').replace(/[\s-]/g, '');
-    return { amount: amount, type: type, merchant: merchant, ref: ref, src: src };
+    var card = body.match(/(?:nomor|no\.?)\s*kartu\s*[:=]?\s*[xX*•]{2,}\s*(\d{4})/i); if (!src && card) src = '****' + card[1];
+    var out = { amount: amount, type: type, merchant: merchant, ref: ref, src: src };
+    if (cur) { out.cur = cur; out.famt = famt; }
+    return out;
   }
 
   var api = { parseBcaEmail: parseBcaEmail, parseAmount: parseAmount, normalize: normalize };

@@ -128,6 +128,8 @@
   function maskMatch(mask, src) {
     var a = String(mask || '').replace(/[^0-9*xX•]/g, ''), b = String(src || '').replace(/[^0-9*xX•]/g, '');
     if (!a || !b) return false;
+    var la = a.match(/(\d{4})$/), lb = b.match(/(\d{4})$/);
+    if ((/^[*xX•]/.test(a) || /^[*xX•]/.test(b)) && la && lb) return la[1] === lb[1];
     var pa = a.match(/^\d*/)[0], sa = a.match(/\d*$/)[0], pb = b.match(/^\d*/)[0], sb = b.match(/\d*$/)[0];
     var n = Math.min(pa.length, pb.length), m = Math.min(sa.length, sb.length);
     return n >= 2 && m >= 2 && pa.slice(0, n) === pb.slice(0, n) && sa.slice(-m) === sb.slice(-m);
@@ -145,6 +147,16 @@
     if (!tr.moved) { tr.moved = 1; S.tx.forEach(function (t) { if ((t.src === 'bca' || t.src === 'mandiri') && t.type === 'expense' && t.date >= tr.from && t.date <= tr.to) t.cat = c.id; }); }
     return tr;
   }
+  function fxToIdr(cur) {
+    var key = 'apex_fx_' + cur, c = null; try { c = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+    if (c && c.r && Date.now() - c.t < 6 * 3600e3) return Promise.resolve(c.r);
+    var sym = cur === 'USD' ? 'IDR=X' : cur + 'IDR=X';
+    return fetch('mkt?s=' + encodeURIComponent(sym)).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
+      if (!j || !j.price) throw 0; try { localStorage.setItem(key, JSON.stringify({ r: j.price, t: Date.now() })); } catch (e) {} return j.price;
+    }).catch(function () { if (c && c.r) return c.r; throw new Error('no rate'); });
+  }
+  // Paspor BCA debit card (used abroad): shows up as its own row in "Which wallet each BCA account uses".
+  function ensurePaspor() { ensureAccounts(); if (S.pasporVer === 1) return; S.pasporVer = 1; if (!S.settings.bcaAccounts.some(function (x) { return /3632$/.test(x.mask); })) S.settings.bcaAccounts.push({ mask: '****3632', label: 'Paspor BCA card (ends 3632)', wallet: '' }); }
   function tripCatFor(date, type) { var tr = S.settings && S.settings.trip; return tr && tr.on && tr.cat && type === 'expense' && date >= tr.from && date <= tr.to && S.cats.some(function (c) { return c.id === tr.cat; }) ? tr.cat : null; }
   // Wallet for Mandiri emails: chosen in Account, else Personal Expense.
   function mandiriWalletId() {
@@ -2575,7 +2587,7 @@
   var syncing = false;
   function sync(manual) {
     var s = S.settings;
-    ensureTrip();
+    ensureTrip(); ensurePaspor();
     if (!s.syncUrl || !s.token) { if (manual) { toast('Set up BCA sync in Account first'); } return Promise.resolve(); }
     if (syncing) return Promise.resolve();
     syncing = true; busy(true, 'Syncing bank emails…');
@@ -2587,8 +2599,13 @@
     var url = s.syncUrl + (s.syncUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(s.token) + '&since=' + since;
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
+    var FXR = {};
     return fetch(url, ctrl ? { signal: ctrl.signal } : {})
       .then(function (r) { return r.json(); })
+      .then(function (data) { // get rupiah rates for any foreign-currency card payments first
+        var curs = {}; ((data && data.emails) || []).forEach(function (em) { if (!em || !em.id || S.seen[em.id]) return; var p = window.BcaParser.parseBcaEmail(em); if (p && p.cur) curs[p.cur] = 1; });
+        return Promise.all(Object.keys(curs).map(function (c) { return fxToIdr(c).then(function (r) { FXR[c] = r; }, function () {}); })).then(function () { return data; });
+      })
       .then(function (data) {
         if (!data || !data.ok) throw new Error(data && data.error ? data.error : 'Unexpected reply');
         var added = 0, review = 0, emails = data.emails || [];
@@ -2604,13 +2621,19 @@
             }
             return;
           }
+          var fxNote = '';
+          if (p.cur) {
+            var rate = FXR[p.cur];
+            if (!rate) { S.review.unshift({ id: em.id, date: em.date, subject: em.subject, snippet: p.cur + ' ' + p.famt + ' at ' + (p.merchant || '') + ' (no exchange rate yet, add it by hand)' }); review++; return; }
+            p.amount = Math.round(p.famt * rate); fxNote = p.cur + ' ' + p.famt.toLocaleString('id-ID') + ' · 1 ' + p.cur + ' = Rp ' + rate.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+          }
           var bank = isMandiriEmail(em) ? 'mandiri' : 'bca';
           if (p.ref && S.tx.some(function (t) { return t.src === bank && t.ref === p.ref && t.amount === p.amount; })) return;
           var d = new Date(em.date);
           S.tx.push({
             id: uid(), type: p.type, amount: p.amount, cat: tripCatFor(ymd(d), p.type) || guessCat(p.merchant, p.type),
             wallet: (bank === 'mandiri' ? mandiriWalletId() : walletForSrc(p.src)) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || '',
-            toWallet: '', biz: bizForCat(guessCat(p.merchant, p.type)) || undefined, date: ymd(d), time: hm(d), merchant: p.merchant, note: '', src: bank, srcId: em.id, ref: p.ref || '', created: Date.now()
+            toWallet: '', biz: bizForCat(guessCat(p.merchant, p.type)) || undefined, date: ymd(d), time: hm(d), merchant: p.merchant, note: fxNote, fx: p.cur ? { cur: p.cur, amt: p.famt, rate: Math.round(p.amount / p.famt * 100) / 100 } : undefined, src: bank, srcId: em.id, ref: p.ref || '', created: Date.now()
           });
           added++;
         });

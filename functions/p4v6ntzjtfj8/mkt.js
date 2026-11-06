@@ -3,6 +3,8 @@
 // Only allow-listed symbols, so it can't be used as an open proxy.
 const ALLOW = { '^JKSE': 'IHSG', 'IDR=X': 'USD/IDR' };
 const STOOQ = { '^JKSE': '^jkse', 'IDR=X': 'usdidr' };
+// Travel currencies to rupiah (for card payments abroad, e.g. Paspor BCA in Japan).
+['JPY', 'SGD', 'MYR', 'THB', 'KRW', 'CNY', 'HKD', 'TWD', 'AUD', 'EUR', 'GBP', 'CHF', 'SAR', 'AED'].forEach((c) => { ALLOW[c + 'IDR=X'] = c + '/IDR'; STOOQ[c + 'IDR=X'] = c.toLowerCase() + 'idr'; });
 
 function json(body, status = 200, maxAge = 0) {
   return new Response(JSON.stringify(body), {
