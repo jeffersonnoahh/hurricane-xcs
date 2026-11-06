@@ -139,7 +139,7 @@
     var ref = firstMatch(body, REF_LABELS, '([A-Za-z0-9\\-/]{4,40})');
 
     var src = firstMatch(body, SRC_LABELS, '([0-9][0-9*xX•\\-\\s]{5,24}[0-9])').replace(/[\s-]/g, '');
-    var card = body.match(/(?:nomor|no\.?)\s*kartu\s*[:=]?\s*[xX*•]{2,}\s*(\d{4})/i); if (!src && card) src = '****' + card[1];
+    var card = body.match(/(?:nomor|no\.?)\s*kartu[\s:=]*[xX*•]{2,}\s*(\d{4})/i); if (!src && card) src = '****' + card[1];
     var out = { amount: amount, type: type, merchant: merchant, ref: ref, src: src };
     if (cur) { out.cur = cur; out.famt = famt; }
     return out;
