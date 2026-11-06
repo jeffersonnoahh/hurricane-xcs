@@ -670,6 +670,8 @@ function drawChart(days,c,still){
 }
 
 // ── Lightbox ──
+// tapping a photo opens it in Google Drive
+function openDrive(f){if(!f)return;const u=f.link||`https://drive.google.com/file/d/${f.id}/view`;const w=window.open(u,'_blank');if(w){try{w.opener=null}catch(e){}}else location.href=u}
 let lbList=[];
 function openLb(i,list){
   if(list)lbList=list;lbIdx=i;const f=lbList[i];if(!f)return;
@@ -687,8 +689,8 @@ document.addEventListener('keydown',e=>{if(!$('lb').classList.contains('on'))ret
 document.addEventListener('click',e=>{
   const d=e.target.closest('[data-day]');if(d){selDay=d.dataset.day;shown=PAGE;folderFilter='All';render();return}
   const c=e.target.closest('[data-folder]');if(c){folderFilter=c.dataset.folder;shown=PAGE;render();return}
-  const t=e.target.closest('.tile[data-i]');if(t){openLb(+t.dataset.i,viewList);return}
-  const ft=e.target.closest('.tile[data-fi]');if(ft){openLb(+ft.dataset.fi,fvSection(ft.dataset.sec));return}
+  const t=e.target.closest('.tile[data-i]');if(t){openDrive(viewList[+t.dataset.i]);return}
+  const ft=e.target.closest('.tile[data-fi]');if(ft){openDrive(fvSection(ft.dataset.sec)[+ft.dataset.fi]);return}
   const fc=e.target.closest('[data-open]');if(fc){openFolder(fc.dataset.open);return}
   const fm=e.target.closest('[data-fmore]');if(fm){fvOpen[fm.dataset.fmore]=1;renderFolder();return}
   const fs=e.target.closest('[data-fseg]');if(fs){fvType=fs.dataset.fseg;renderFolder();return}
