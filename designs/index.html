@@ -201,13 +201,55 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .tile .vid{position:absolute;top:8px;right:8px;font-size:11px;z-index:1}
 .more{display:block;margin:18px auto 0;padding:13px 24px;border-radius:99px;font-weight:700;font-size:14px}
 
+.tile{aspect-ratio:4/5}
+.tile.noimg:before{content:"🖼";position:absolute;inset:0;display:grid;place-items:center;font-size:28px;opacity:.4}
+.folders{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:700px){.folders{grid-template-columns:repeat(4,1fr)}}
+.fcard{display:block;text-align:left;padding:8px 8px 12px;border-radius:26px;animation:pop .7s var(--spring) both;animation-delay:calc(var(--i,0)*60ms)}
+.fcard .cov{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;aspect-ratio:1;border-radius:20px;overflow:hidden;background:var(--well);position:relative}
+.fcard .cov.one{grid-template-columns:1fr;grid-template-rows:1fr}
+.fcard .cov .tile{aspect-ratio:auto;border-radius:0;box-shadow:none;animation:none}
+.fcard .cov .tile:after{display:none}
+.fcard .cov.none{display:grid;place-items:center;color:var(--muted);font-size:12px;font-weight:700}
+.fcard .cov .ct{position:absolute;right:8px;bottom:8px;color:#fff;font-size:12px;font-weight:800;padding:5px 10px;border-radius:99px;z-index:2;
+  background:rgba(20,30,40,.35);-webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.fcard .fn{display:flex;align-items:center;gap:6px;margin:10px 6px 0;font-size:15px;font-weight:800;letter-spacing:-.01em}
+.fcard .fn:before{content:"";width:16px;height:12px;border-radius:3px 3px 3px 3px;background:linear-gradient(160deg,#3FB8F0,#0287C9);box-shadow:inset 0 2px 0 rgba(255,255,255,.4);flex:none}
+.fcard .fs{margin:3px 6px 0;font-size:11.5px;color:var(--muted);font-weight:600}
+.fcard .fs b{color:var(--ink2)}
+
+/* folder page: slides in from the right like an iPhone screen */
+.fv{position:fixed;inset:0;z-index:40;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);
+  transform:translateX(100%);transition:transform .55s var(--ease),visibility 0s .55s;visibility:hidden;box-shadow:-20px 0 40px rgba(2,7,10,.15)}
+.fv.on{transform:none;visibility:visible;transition:transform .55s var(--ease)}
+.fv:before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(60vmax 50vmax at 10% 0%,var(--b1),transparent 70%),radial-gradient(50vmax 40vmax at 100% 30%,var(--b2),transparent 70%),radial-gradient(50vmax 40vmax at 30% 100%,var(--b3),transparent 70%);opacity:.55;filter:blur(30px)}
+.fvbar{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:12px;margin:0;border-radius:0 0 24px 24px;padding:max(10px,env(safe-area-inset-top)) 14px 10px}
+.fvt b{display:block;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.fvt small{font-size:12px;color:var(--muted);font-weight:600}
+.fvbody{max-width:1100px;margin:0 auto;padding:14px 16px 90px}
+.seg{display:flex;padding:4px;border-radius:16px;gap:4px;margin-bottom:6px}
+.seg button{flex:1;padding:9px 6px;border-radius:12px;font-size:13px;font-weight:700;color:var(--ink2);transition:background .3s,color .3s,transform .45s var(--spring)}
+.seg button.on{background:linear-gradient(160deg,#3FB8F0,#0287C9);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 14px -6px rgba(2,151,222,.7)}
+.seg button:active{transform:scale(.95)}
+.fday{margin-top:22px;animation:pop .6s var(--spring) both}
+.fdh{position:sticky;top:calc(max(10px,env(safe-area-inset-top)) + 58px);z-index:2;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;margin:0 -4px 10px;border-radius:18px}
+.fdh b{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.fdh small{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.fdh .cnt{text-align:right;font-variant-numeric:tabular-nums}
+.fdh .cnt b{font-size:18px}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+@media(min-width:700px){.fgrid{grid-template-columns:repeat(6,1fr);gap:10px}}
+.fgrid .tile{border-radius:14px}
+.fgrid .tile .cap{left:5px;right:5px;bottom:5px}
+.fgrid .tile .cap span{font-size:9.5px;padding:3px 7px}
+.fmore{display:block;width:100%;margin-top:8px;padding:12px;border-radius:16px;font-size:13px;font-weight:700}
 .notice{border-radius:22px;padding:16px;font-size:13.5px;line-height:1.5;margin-bottom:14px;background:linear-gradient(160deg,rgba(252,115,77,.22),rgba(252,115,77,.1))}
 .notice b{color:var(--orange)}
 .notice ol{margin:8px 0 0 18px}
 .fallback{width:100%;height:70vh;border:0;border-radius:var(--r);background:#fff}
 
 /* ── lightbox: glass backdrop, image springs in ── */
-.lb{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;flex-direction:column;gap:14px;
+.lb{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:70;padding:16px;flex-direction:column;gap:14px;
   background:rgba(2,7,10,.55);-webkit-backdrop-filter:blur(30px) saturate(150%);backdrop-filter:blur(30px) saturate(150%);
   opacity:0;visibility:hidden;transition:opacity .35s var(--ease),visibility 0s .35s}
 .lb.on{opacity:1;visibility:visible;transition:opacity .35s var(--ease)}
@@ -301,10 +343,24 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
     </div>
   </div>
 
+  <div class="ghead"><h2>Team folders</h2><span class="sub" id="fCount" style="font-size:13px;color:var(--muted)"></span></div>
+  <div class="folders" id="folders"></div>
+
   <div class="ghead"><h2 id="gTitle">Gallery</h2><span class="sub" id="gCount" style="font-size:13px;color:var(--muted)"></span></div>
   <div class="chips" id="chips"></div>
   <div class="gallery" id="gallery"></div>
   <button class="more glass press" id="more" style="display:none">Show more</button>
+</div>
+
+<div class="fv" id="fv" aria-hidden="true">
+  <div class="fvbar glass">
+    <button class="iconbtn press" id="fvBack" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fvt"><b id="fvName"></b><small id="fvSub"></small></div>
+  </div>
+  <div class="fvbody">
+    <div class="seg glass" id="fvSeg"></div>
+    <div id="fvDays"></div>
+  </div>
 </div>
 
 <div class="lb" id="lb">
@@ -504,6 +560,8 @@ function render(){
   $('gTitle').textContent=isToday?"Today's designs":'Designs on '+fmtDay(selDay,{day:'numeric',month:'short'});
   $('gCount').textContent=viewList.length.toLocaleString()+' items';
   renderGallery();
+  renderFolders();
+  if($('fv').classList.contains('on'))renderFolder();
   animateIn();
 }
 function renderLog(days,c,today){
@@ -521,11 +579,66 @@ function renderLog(days,c,today){
       <span class="st ${st[0]}">${st[1]}</span></button>`;
   }).join('');
 }
-function thumb(f,w){return `https://drive.google.com/thumbnail?id=${f.id}&sz=w${w}`}
+// ── Team folders ──
+let fvName='', fvType='All', fvOpen={};
+function renderFolders(){
+  const days=lastDays(DAYS);
+  $('fCount').textContent=members.length+' team leaders';
+  $('folders').innerHTML=members.map((m,i)=>{
+    const mine=files.filter(f=>f.folder===m&&days.includes(f.day));
+    const latest=mine.reduce((a,f)=>f.day>a?f.day:a,'');
+    const cov=mine.filter(f=>f.day===latest).slice(0,4);
+    const coverHtml=cov.length?`<div class="cov${cov.length<4?' one':''}">${(cov.length<4?cov.slice(0,1):cov).map(f=>`<span class="tile">${img(f,cov.length<4?600:300)}</span>`).join('')}<span class="ct">${mine.length.toLocaleString()}</span></div>`
+      :`<div class="cov none">No photos yet</div>`;
+    const todayN=mine.filter(f=>f.day===selDay).length;
+    return `<button class="fcard glass press" data-open="${esc(m)}" style="--i:${i}">${coverHtml}
+      <div class="fn">${esc(m)}</div>
+      <div class="fs">${latest?`Latest ${fmtDay(latest,{day:'numeric',month:'short'})}`:'Nothing in 14 days'} · <b>${todayN}</b> on ${selDay===dayKey(new Date())?'today':fmtDay(selDay,{day:'numeric',month:'short'})}</div></button>`;
+  }).join('');
+}
+function fvFiles(){return files.filter(f=>f.folder===fvName&&(fvType==='All'||f.type===fvType))}
+function fvSection(k){return fvFiles().filter(f=>f.day===k)}
+function openFolder(m){
+  fvName=m;fvType='All';fvOpen={};renderFolder();
+  $('fv').scrollTop=0;$('fv').classList.add('on');$('fv').setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+  try{history.pushState({fv:m},'')}catch(e){}
+}
+function closeFolder(fromPop){
+  if(!$('fv').classList.contains('on'))return;
+  $('fv').classList.remove('on');$('fv').setAttribute('aria-hidden','true');document.body.style.overflow='';
+  if(!fromPop)try{history.back()}catch(e){}
+}
+$('fvBack').onclick=()=>closeFolder(false);
+addEventListener('popstate',()=>{if($('lb').classList.contains('on')){$('lbX').onclick();if($('fv').classList.contains('on'))try{history.pushState({fv:fvName},'')}catch(e){};return}closeFolder(true)});
+function renderFolder(){
+  if(!fvName)return;
+  const all=files.filter(f=>f.folder===fvName), list=fvFiles();
+  const types=['All',...['XCS','BUFFER','Unsorted'].filter(t=>all.some(f=>f.type===t))];
+  if(!types.includes(fvType))fvType='All';
+  $('fvName').textContent=fvName;
+  const byD={};for(const f of list)(byD[f.day]=byD[f.day]||[]).push(f);
+  const ds=Object.keys(byD).sort().reverse();
+  $('fvSub').textContent=`${all.length.toLocaleString()} photos · ${Object.keys(all.reduce((a,f)=>(a[f.day]=1,a),{})).length} days`;
+  $('fvSeg').style.display=types.length>2?'':'none';
+  $('fvSeg').innerHTML=types.map(t=>`<button class="${t===fvType?'on':''}" data-fseg="${t}">${t==='All'?'All':t==='BUFFER'?'Buffer':t==='Unsorted'?'Not split':t} · ${(t==='All'?all:all.filter(f=>f.type===t)).length}</button>`).join('');
+  $('fvDays').innerHTML=ds.length?ds.map((k,di)=>{
+    const L=byD[k], lim=fvOpen[k]?L.length:12;
+    const x=L.filter(f=>f.type==='XCS').length,b=L.filter(f=>f.type==='BUFFER').length;
+    return `<section class="fday" style="animation-delay:${Math.min(di,6)*70}ms">
+      <div class="fdh glass"><div><b>${k===dayKey(new Date())?'Today':fmtDay(k,{weekday:'long',day:'numeric',month:'short'})}</b><small>${fvType==='All'&&(x||b)?`XCS ${x} · Buffer ${b}`:esc(fvType==='All'?'Photos':fvType)}</small></div>
+        <div class="cnt"><b>${L.length.toLocaleString()}</b><small>photos</small></div></div>
+      <div class="fgrid">${L.slice(0,lim).map((f,i)=>`<button class="tile" data-fi="${i}" data-sec="${k}" style="--i:${Math.min(i,18)}">${img(f,400)}${fvType==='All'&&f.type!=='Unsorted'?`<div class="cap"><span>${esc(f.type)}</span></div>`:''}</button>`).join('')}</div>
+      ${L.length>lim?`<button class="fmore glass press" data-fmore="${k}">See all ${L.length.toLocaleString()} photos</button>`:''}
+    </section>`}).join(''):'<div class="empty">No photos in this folder in the last 14 days.</div>';
+}
+function thumb(f,w){return f.thumb?f.thumb.replace(/=s\d+(-[a-z]+)?$/,'')+'=s'+w:alt(f,w)}
+function alt(f,w){return `https://drive.google.com/thumbnail?id=${f.id}&sz=w${w}`}
+function img(f,w){return `<img loading="lazy" decoding="async" onload="this.parentNode.classList.add('ok')" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='${alt(f,w)}'}else{this.parentNode.classList.add('ok','noimg')}" src="${thumb(f,w)}" alt="${esc(f.name)}">`}
 function renderGallery(){
   const list=viewList.slice(0,shown);
   $('gallery').innerHTML=list.length?list.map((f,i)=>`<button class="tile" data-i="${i}" style="--i:${Math.min(i%PAGE,24)}">
-    <img loading="lazy" onload="this.parentNode.classList.add('ok')" src="${thumb(f,400)}" alt="${esc(f.name)}" onerror="if(this.dataset.t!=='1'&&'${f.thumb||''}'){this.dataset.t='1';this.src='${(f.thumb||'').replace(/'/g,'')}'}">
+    ${img(f,500)}
     ${/^video/.test(f.mime)?'<span class="vid">▶ Video</span>':''}
     <div class="cap"><span>${esc(f.type)}</span>${folderFilter==='All'&&f.folder!=='Main folder'?`<span>${esc(f.folder)}</span>`:''}</div></button>`).join('')
     :'<div class="empty">Nothing here yet. New designs show up as soon as they land in Drive.</div>';
@@ -557,23 +670,28 @@ function drawChart(days,c,still){
 }
 
 // ── Lightbox ──
-function openLb(i){
-  lbIdx=i;const f=viewList[i];if(!f)return;
-  $('lbMedia').innerHTML=/^video|pdf/.test(f.mime)?`<iframe src="https://drive.google.com/file/d/${f.id}/preview" allow="autoplay"></iframe>`:`<img src="${thumb(f,1600)}" alt="${esc(f.name)}">`;
+let lbList=[];
+function openLb(i,list){
+  if(list)lbList=list;lbIdx=i;const f=lbList[i];if(!f)return;
+  $('lbMedia').innerHTML=/^video|pdf/.test(f.mime)?`<iframe src="https://drive.google.com/file/d/${f.id}/preview" allow="autoplay"></iframe>`:`<img src="${thumb(f,1600)}" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='${alt(f,1600)}'}" alt="${esc(f.name)}">`;
   $('lbMeta').innerHTML=`${esc(f.name)}<br>${esc(f.folder)} · ${esc(f.type)} · uploaded ${fmtDay(dayKey(f.created),{day:'numeric',month:'short'})} ${fmtTime(f.created)} · <a href="${f.link||'https://drive.google.com/file/d/'+f.id+'/view'}" target="_blank" rel="noopener">Open in Drive</a>`;
   $('lb').classList.add('on');
 }
 $('lbX').onclick=()=>{$('lb').classList.remove('on');setTimeout(()=>{if(!$('lb').classList.contains('on'))$('lbMedia').innerHTML=''},400)};
 $('lb').addEventListener('click',e=>{if(e.target===$('lb'))$('lbX').onclick()});
 $('lbP').onclick=()=>openLb(Math.max(0,lbIdx-1));
-$('lbN').onclick=()=>openLb(Math.min(viewList.length-1,lbIdx+1));
+$('lbN').onclick=()=>openLb(Math.min(lbList.length-1,lbIdx+1));
 document.addEventListener('keydown',e=>{if(!$('lb').classList.contains('on'))return;if(e.key==='Escape')$('lbX').onclick();if(e.key==='ArrowLeft')$('lbP').onclick();if(e.key==='ArrowRight')$('lbN').onclick()});
 
 // ── Events ──
 document.addEventListener('click',e=>{
   const d=e.target.closest('[data-day]');if(d){selDay=d.dataset.day;shown=PAGE;folderFilter='All';render();return}
   const c=e.target.closest('[data-folder]');if(c){folderFilter=c.dataset.folder;shown=PAGE;render();return}
-  const t=e.target.closest('.tile[data-i]');if(t){openLb(+t.dataset.i);return}
+  const t=e.target.closest('.tile[data-i]');if(t){openLb(+t.dataset.i,viewList);return}
+  const ft=e.target.closest('.tile[data-fi]');if(ft){openLb(+ft.dataset.fi,fvSection(ft.dataset.sec));return}
+  const fc=e.target.closest('[data-open]');if(fc){openFolder(fc.dataset.open);return}
+  const fm=e.target.closest('[data-fmore]');if(fm){fvOpen[fm.dataset.fmore]=1;renderFolder();return}
+  const fs=e.target.closest('[data-fseg]');if(fs){fvType=fs.dataset.fseg;renderFolder();return}
   if(e.target.closest('[data-close]')||e.target===$('sheet'))$('sheet').classList.remove('on');
 });
 $('more').onclick=()=>{shown+=PAGE;renderGallery()};
