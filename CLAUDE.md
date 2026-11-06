@@ -109,7 +109,7 @@ One input per closing: customer (full name + last 4 WA digits, both required) ·
 - **Export:** Monthly Recap → "Export closing" (leader PIN; admin skips) → .xlsx (sheets `Closing` = 1 row/transaction, `Per Produk` = 1 row/product; SheetJS 0.18.5 lazy from cdnjs) or CSV (one file; `;` separator + BOM for Indonesian Excel; WA as `="0812"`; text starting with = + @ gets a `'`). "Produk Closing" = everything bought; "Produk Tambahan (tanpa test)" = the untested subset. Never blank cells: `Tanpa SPV`, `Tanpa test`, `-` for old-form rows.
 - **CSS prefix is `hxk-`** — `hxc-` is already taken by fx-card.css (a `.hxc-chips` clash clipped the chips once).
 - **No full repaint on `change`/blur** of text/date inputs — WebKit swallows the next tap (the click target is replaced between press and release). Update in place (`warnText`, `refreshFoot`).
-- Test: scratchpad `closing/test.mjs` (Playwright WebKit, Firebase writes stubbed; 116 checks incl. review regressions; `CLOSING_JS=<file>` serves another closing.js for A/B runs).
+- Test: scratchpad `closing/test.mjs` (Playwright WebKit, Firebase writes stubbed; 145 checks incl. 3 review rounds; `CLOSING_JS=<file>` serves another closing.js for A/B runs).
 
 ## Porting a change to all three dashboards
 
