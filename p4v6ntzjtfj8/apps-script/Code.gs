@@ -17,7 +17,7 @@
 var SECRET = 'CHANGE-ME-to-a-long-random-text';
 
 // Which emails count as bank notifications (BCA and Mandiri). Adjust if your BCA emails come from another address.
-var SEARCH = 'from:(bca.co.id OR klikbca.com OR mybca OR bankmandiri.co.id)';
+var SEARCH = 'from:(bca.co.id OR klikbca.com OR mybca OR paspor OR pasporbca OR bankmandiri.co.id)';
 
 // Never send more than this many emails per request.
 var MAX_MESSAGES = 200;
