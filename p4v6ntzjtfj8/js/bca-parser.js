@@ -48,7 +48,7 @@
   }
 
   function normalize(s) {
-    return stripHtml(s)
+    return stripHtml(s).replace(/\*([A-Za-z][^*\n]{0,40})\*/g, '$1') // *Bold label* from plain-text emails
       .replace(/\r/g, '')
       .replace(/[ \t\u00a0]+/g, ' ')
       .replace(/ *: *(: *)+/g, ': ')       // collapse "Label : : value" from table cells
@@ -106,22 +106,28 @@
       .slice(0, 60);
   }
 
+  var WHY = '';
   function parseBcaEmail(email) {
+    WHY = '';
     email = email || {};
     var subject = normalize(email.subject || '');
     var body = normalize(email.body || '');
     var all = subject + '\n' + body;
 
-    if (FAILED_RE.test(subject) || (FAILED_RE.test(body) && !/berhasil|successful/i.test(body))) return null;
-    if (NOISE_RE.test(subject) && !TXN_HINT_RE.test(subject)) return null;
-    if (!TXN_HINT_RE.test(all)) return null;
+    var card = /kartu\s*paspor|paspor\s*bca|terima\s*kasih\s*telah\s*bertransaksi/i.test(all); // card payment notices are always payments
+    if (FAILED_RE.test(subject) || (!card && FAILED_RE.test(body) && !/berhasil|successful/i.test(body))) { WHY = 'looks like a failed payment'; return null; }
+    if (NOISE_RE.test(subject) && !TXN_HINT_RE.test(subject)) { WHY = 'promo or security email'; return null; }
+    if (!TXN_HINT_RE.test(all)) { WHY = 'no payment words'; return null; }
 
     // Foreign currency (card used abroad, e.g. Paspor BCA "Nominal : JPY 1.300"): the app converts to rupiah.
     var fx = body.match(/(?:nominal|amount|jumlah|total(?:\s*transaksi)?)\s*[:=]?\s*\n?\s*(JPY|USD|SGD|MYR|THB|KRW|CNY|HKD|TWD|AUD|EUR|GBP|CHF|SAR|AED)\s*((?:\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d{1,2})?)/i);
+    var CODES = '(JPY|USD|SGD|MYR|THB|KRW|CNY|HKD|TWD|AUD|EUR|GBP|CHF|SAR|AED)', NUM = '((?:\\d{1,3}(?:[.,]\\d{3})+|\\d+)(?:[.,]\\d{1,2})?)';
+    if (!fx) fx = all.match(new RegExp(CODES + '\\s*' + NUM)); // currency code anywhere, e.g. "JPY 1.300"
+    if (!fx) { var rev = all.match(new RegExp(NUM + '\\s*' + CODES)); if (rev) fx = [rev[0], rev[2], rev[1]]; } // "1.300 JPY"
     var cur = '', famt = 0;
     if (fx && !/^(idr|rp\.?)$/i.test(fx[1])) { cur = fx[1].toUpperCase(); var raw = fx[2], dm = raw.match(/[.,](\d{1,2})$/); famt = parseFloat(raw.replace(/[.,]\d{1,2}$/, '').replace(/[.,]/g, '') + (dm ? '.' + dm[1] : '')); }
     var amount = cur ? 0 : (findAmount(body) || findAmount(subject));
-    if (!amount && !famt) return null;
+    if (!amount && !famt) { WHY = 'no amount found'; return null; }
 
     var type = INCOME_RE.test(all) ? 'income' : 'expense';
     var line = '([^\\n|;]{2,80})';
@@ -139,7 +145,7 @@
     return out;
   }
 
-  var api = { parseBcaEmail: parseBcaEmail, parseAmount: parseAmount, normalize: normalize };
+  var api = { why: function () { return WHY; }, parseBcaEmail: parseBcaEmail, parseAmount: parseAmount, normalize: normalize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.BcaParser = api;
 })(this);

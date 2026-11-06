@@ -2644,7 +2644,7 @@
           if (em.date < (rescanDays ? since : s.startFrom)) { log(em, 'before sync started'); return; }
           S.seen[em.id] = Date.now();
           var p = window.BcaParser.parseBcaEmail(em);
-          if (!p) { log(em, 'not a payment'); LG[LG.length - 1].x = window.BcaParser.normalize(em.body || '').replace(/\d{6,}/g, '••••').slice(0, 500);
+          if (!p) { log(em, 'not a payment' + (window.BcaParser.why() ? ' (' + window.BcaParser.why() + ')' : '')); LG[LG.length - 1].x = window.BcaParser.normalize(em.body || '').replace(/\d{6,}/g, '••••').slice(0, 500);
             if (/(rp\.?|idr)\s*[\d.,]+/i.test(em.body || '') && !/otp|promo/i.test(em.subject || '')) {
               S.review.unshift({ id: em.id, date: em.date, subject: em.subject, snippet: window.BcaParser.normalize(em.body).slice(0, 400) });
               review++;
@@ -2663,7 +2663,7 @@
           var d = new Date(em.date);
           S.tx.push({
             id: uid(), type: p.type, amount: p.amount, cat: tripCatFor(ymd(d), p.type) || guessCat(p.merchant, p.type),
-            wallet: (bank === 'mandiri' ? mandiriWalletId() : walletForSrc(p.src)) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || '',
+            wallet: (bank === 'mandiri' ? mandiriWalletId() : walletForSrc(p.src || (/paspor/i.test(em.from || '') ? ((S.settings.bcaAccounts || []).filter(function (x) { return /paspor/i.test(x.label || ''); })[0] || {}).mask : ''))) || (S.wallets.some(function (w) { return w.id === s.bcaWallet; }) ? s.bcaWallet : (S.wallets[0] || {}).id), srcAcct: p.src || (/paspor/i.test(em.from || '') ? '****3632' : ''),
             toWallet: '', biz: bizForCat(guessCat(p.merchant, p.type)) || undefined, date: ymd(d), time: hm(d), merchant: p.merchant, note: fxNote, fx: p.cur ? { cur: p.cur, amt: p.famt, rate: Math.round(p.amount / p.famt * 100) / 100 } : undefined, src: bank, srcId: em.id, ref: p.ref || '', created: Date.now()
           });
           added++;
