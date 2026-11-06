@@ -213,9 +213,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <script>
 // ── Config ──
 const TZ='Asia/Jakarta', DAYS=14, PAGE=120;
-const DEFAULTS={target:950,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyDfWkhwB3flykNloLRKaXwkNWfxbY22H2g'};
+const DEFAULTS={target:950,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyBk4nc2bXAaVyQQFYpYy26VZ8YBi96A7ro'};
 const ADMIN_PWD=(()=>{try{return localStorage.getItem('hxcs_admin_pwd')||'hurricane2026'}catch(e){return 'hurricane2026'}})();
-let cfg={...DEFAULTS}, files=[], selDay=dayKey(new Date()), folderFilter='All', shown=PAGE, viewList=[], lbIdx=-1, loading=false;
+let cfg={...DEFAULTS}, files=[], members=[], selDay=dayKey(new Date()), folderFilter='All', shown=PAGE, viewList=[], lbIdx=-1, loading=false;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -240,9 +240,9 @@ try{
 setTimeout(()=>{if(!files.length&&!loading)load()},4000);
 
 // ── Google Drive listing ──
-async function driveList(parent,since,key){
+async function driveList(parent,key){
   const out=[];let token='';
-  const q=`'${parent}' in parents and trashed=false and (mimeType='application/vnd.google-apps.folder' or createdTime > '${since}')`;
+  const q=`'${parent}' in parents and trashed=false`;
   do{
     const u=new URL('https://www.googleapis.com/drive/v3/files');
     u.search=new URLSearchParams({q,key,pageSize:'1000',supportsAllDrives:'true',includeItemsFromAllDrives:'true',
@@ -253,22 +253,33 @@ async function driveList(parent,since,key){
   }while(token);
   return out;
 }
+// "05-11-2026" or "XCS (02-11-2026)" -> "2026-11-05"
+function folderDate(name){const m=String(name).match(/(\d{1,2})[-.\/](\d{1,2})[-.\/](\d{4})/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:''}
+function folderType(name){const n=String(name).toUpperCase();return n.includes('BUFFER')?'BUFFER':n.includes('XCS')?'XCS':''}
 async function loadDrive(){
-  const since=new Date(Date.now()-(DAYS+1)*864e5).toISOString();
-  const all=[];let level=[{id:cfg.folderId,path:''}];
+  const oldest=lastDays(DAYS)[0];
+  const all=[];members=[];
+  let level=[{id:cfg.folderId,member:'',day:'',type:''}];
   for(let depth=0;depth<5&&level.length;depth++){
     const next=[];
-    for(let i=0;i<level.length;i+=6){
-      const res=await Promise.all(level.slice(i,i+6).map(f=>driveList(f.id,since,cfg.apiKey).then(r=>({f,r}))));
+    for(let i=0;i<level.length;i+=8){
+      const res=await Promise.all(level.slice(i,i+8).map(f=>driveList(f.id,cfg.apiKey).then(r=>({f,r}))));
       for(const {f,r} of res)for(const it of r){
-        if(it.mimeType==='application/vnd.google-apps.folder'){next.push({id:it.id,path:f.path||it.name});continue}
+        if(it.mimeType==='application/vnd.google-apps.folder'){
+          const member=f.member||it.name, day=folderDate(it.name)||f.day, type=folderType(it.name)||f.type;
+          if(!f.member)members.push(it.name);
+          if(day&&day<oldest)continue;           // skip date folders older than the chart window
+          next.push({id:it.id,member,day,type});continue;
+        }
         if(!/^(image|video)\//.test(it.mimeType)&&!/pdf|photoshop|illustrator/.test(it.mimeType))continue;
-        all.push({id:it.id,name:it.name,mime:it.mimeType,created:it.createdTime,day:dayKey(it.createdTime),folder:f.path||'Main folder',thumb:it.thumbnailLink,link:it.webViewLink});
+        all.push({id:it.id,name:it.name,mime:it.mimeType,created:it.createdTime,day:f.day||dayKey(it.createdTime),
+          folder:f.member||'Main folder',type:f.type||'Unsorted',thumb:it.thumbnailLink,link:it.webViewLink});
       }
     }
     level=next;
   }
-  return all.sort((a,b)=>b.created.localeCompare(a.created));
+  members.sort();
+  return all.sort((a,b)=>a.folder.localeCompare(b.folder)||a.type.localeCompare(b.type)||a.name.localeCompare(b.name,undefined,{numeric:true}));
 }
 
 async function load(){
@@ -277,7 +288,7 @@ async function load(){
   try{
     files=await loadDrive();
     $('notice').innerHTML='';$('dash').style.display='';
-    $('updated').textContent='Updated '+fmtTime(new Date())+' WIB · '+files.length+' designs in 14 days';
+    $('updated').textContent='Updated '+fmtTime(new Date())+' WIB · '+files.length.toLocaleString()+' designs · '+members.length+' team folders';
     render();
   }catch(e){showFallback(e.message)}
   loading=false;$('refresh').classList.remove('spin');
@@ -321,28 +332,32 @@ function render(){
   const last7=lastDays(7).map(k=>c[k]||0), avg7=Math.round(last7.reduce((a,b)=>a+b,0)/7);
   const hit=days.filter(k=>(c[k]||0)>=T).length;
   let streak=0;for(const k of days.slice().reverse()){if(k===today&&(c[k]||0)<T)continue;if((c[k]||0)>=T)streak++;else break}
-  const lastUp=dayFiles[0]?fmtTime(dayFiles[0].created):'None yet', firstUp=dayFiles.length?fmtTime(dayFiles[dayFiles.length-1].created):'–';
-  let pace='–';
-  if(isToday&&dayFiles.length){const start=new Date(dayFiles[dayFiles.length-1].created).getTime();const hrs=Math.max(.25,(Date.now()-start)/36e5);pace=Math.round(n/hrs)+' / hr'}
+  const byT={};for(const f of dayFiles)byT[f.type]=(byT[f.type]||0)+1;
+  const pc=v=>n?Math.round(v/n*100)+'% of the day':'';
+  const lastUp=dayFiles.length?fmtTime(dayFiles.reduce((a,b)=>a.created>b.created?a:b).created):'None yet';
+  const sent=members.filter(m=>dayFiles.some(f=>f.folder===m)).length;
   $('snapSub').textContent=isToday?'Live for today':'For '+fmtDay(selDay,{day:'numeric',month:'short'});
   $('stats').innerHTML=[
-    ['First upload',firstUp,''],['Last upload',lastUp,''],
+    ['XCS',(byT.XCS||0).toLocaleString(),pc(byT.XCS||0)],['Buffer',(byT.BUFFER||0).toLocaleString(),pc(byT.BUFFER||0)],
+    ...(byT.Unsorted?[['Not split',byT.Unsorted.toLocaleString(),'no XCS/BUFFER folder']]:[]),
+    ['Team covered',`${sent} / ${members.length}`,sent<members.length?(members.length-sent)+' got nothing':'Everyone got designs'],
     ['7 day average',avg7.toLocaleString(),`${Math.round(avg7/T*100)}% of KPI`],
     ['KPI days',`${hit} / ${days.length}`,streak?`${streak} day streak`:'No streak yet'],
-    ...(isToday?[['Pace now',pace,'since first upload']]:[]),
-    ['Remaining',left.toLocaleString(),n>=T?'Done':'designs']
+    ['Remaining',left.toLocaleString(),n>=T?'Done':'designs'],['Last upload',lastUp,'WIB']
   ].map(([a,b,e])=>`<div class="stat"><small>${a}</small><b>${b}</b><em>${e||'&nbsp;'}</em></div>`).join('');
 
   drawChart(days,c,T);
 
   // per folder
   const byF={};for(const f of dayFiles)byF[f.folder]=(byF[f.folder]||0)+1;
-  const fl=Object.entries(byF).sort((a,b)=>b[1]-a[1]), max=fl.length?fl[0][1]:1;
-  $('bars').innerHTML=fl.length?fl.map(([k,v])=>`<div class="bar"><div class="h">${esc(k)}<span>${v.toLocaleString()} · ${Math.round(v/n*100)}%</span></div><div class="t"><i style="width:${v/max*100}%"></i></div></div>`).join('')
-    :'<div class="empty">No designs uploaded on this day.</div>';
+  members.forEach(m=>{if(!(m in byF))byF[m]=0});
+  const fl=Object.entries(byF).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])), max=Math.max(1,...fl.map(x=>x[1]));
+  const split=m=>{const x=dayFiles.filter(f=>f.folder===m&&f.type==='XCS').length,b=dayFiles.filter(f=>f.folder===m&&f.type==='BUFFER').length;return (x||b)?` <small style="color:var(--muted);font-weight:500">XCS ${x} · Buffer ${b}</small>`:''};
+  $('bars').innerHTML=fl.length?fl.map(([k,v])=>`<div class="bar"><div class="h"><div>${esc(k)}${v?split(k):''}</div><span>${v?v.toLocaleString()+' · '+Math.round(v/n*100)+'%':'<b style="color:var(--orange)">0</b>'}</span></div><div class="t"><i style="width:${v/max*100}%"></i></div></div>`).join('')
+    :'<div class="empty">No team folders found.</div>';
 
   // gallery
-  const folders=['All',...fl.map(x=>x[0])];
+  const folders=['All',...fl.filter(x=>x[1]).map(x=>x[0])];
   if(!folders.includes(folderFilter))folderFilter='All';
   $('chips').innerHTML=folders.length>2?folders.map(k=>`<button class="chip${k===folderFilter?' on':''}" data-folder="${esc(k)}">${esc(k)}${k==='All'?'':' · '+byF[k]}</button>`).join(''):'';
   viewList=dayFiles.filter(f=>folderFilter==='All'||f.folder===folderFilter);
@@ -356,7 +371,7 @@ function renderGallery(){
   $('gallery').innerHTML=list.length?list.map((f,i)=>`<button class="tile" data-i="${i}">
     <img loading="lazy" src="${thumb(f,400)}" alt="${esc(f.name)}" onerror="if(this.dataset.t!=='1'&&'${f.thumb||''}'){this.dataset.t='1';this.src='${(f.thumb||'').replace(/'/g,'')}'}">
     ${/^video/.test(f.mime)?'<span class="vid">▶ Video</span>':''}
-    <div class="cap"><span>${fmtTime(f.created)}</span>${folderFilter==='All'&&f.folder!=='Main folder'?`<span>${esc(f.folder)}</span>`:''}</div></button>`).join('')
+    <div class="cap"><span>${esc(f.type)}</span>${folderFilter==='All'&&f.folder!=='Main folder'?`<span>${esc(f.folder)}</span>`:''}</div></button>`).join('')
     :'<div class="empty">Nothing here yet. New designs show up as soon as they land in Drive.</div>';
   $('more').style.display=viewList.length>shown?'block':'none';
   $('more').textContent=`Show more (${(viewList.length-shown).toLocaleString()} left)`;
@@ -389,7 +404,7 @@ function drawChart(days,c,T){
 function openLb(i){
   lbIdx=i;const f=viewList[i];if(!f)return;
   $('lbMedia').innerHTML=/^video|pdf/.test(f.mime)?`<iframe src="https://drive.google.com/file/d/${f.id}/preview" allow="autoplay"></iframe>`:`<img src="${thumb(f,1600)}" alt="${esc(f.name)}">`;
-  $('lbMeta').innerHTML=`${esc(f.name)}<br>${esc(f.folder)} · ${fmtTime(f.created)} WIB · <a href="${f.link||'https://drive.google.com/file/d/'+f.id+'/view'}" target="_blank" rel="noopener">Open in Drive</a>`;
+  $('lbMeta').innerHTML=`${esc(f.name)}<br>${esc(f.folder)} · ${esc(f.type)} · uploaded ${fmtDay(dayKey(f.created),{day:'numeric',month:'short'})} ${fmtTime(f.created)} · <a href="${f.link||'https://drive.google.com/file/d/'+f.id+'/view'}" target="_blank" rel="noopener">Open in Drive</a>`;
   $('lb').classList.add('on');
 }
 $('lbX').onclick=()=>{$('lb').classList.remove('on');$('lbMedia').innerHTML=''};
