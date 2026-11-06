@@ -153,6 +153,12 @@
     var sym = cur === 'USD' ? 'IDR=X' : cur + 'IDR=X';
     return fetch('mkt?s=' + encodeURIComponent(sym)).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
       if (!j || !j.price) throw 0; try { localStorage.setItem(key, JSON.stringify({ r: j.price, t: Date.now() })); } catch (e) {} return j.price;
+    }).catch(function () {
+      var lc = cur.toLowerCase();
+      return fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr,' + lc).then(function (r) { return r.json(); }).then(function (j) {
+        var t = j && j.tether; if (!t || !t.idr || !t[lc]) throw 0; var r = t.idr / t[lc];
+        try { localStorage.setItem(key, JSON.stringify({ r: r, t: Date.now() })); } catch (e) {} return r;
+      });
     }).catch(function () { if (c && c.r) return c.r; throw new Error('no rate'); });
   }
   // Paspor BCA debit card (used abroad): shows up as its own row in "Which wallet each BCA account uses".
@@ -2607,7 +2613,7 @@
     if (!s.startFrom) { s.startFrom = Date.now(); save(); }
     var since = rescanDays ? Date.now() - rescanDays * 864e5 : Math.max(s.startFrom, s.lastSync ? s.lastSync - 2 * 864e5 : 0);
     // Re-check: look again at recent emails, skipping only ones that already became a transaction or are waiting in review.
-    var done = function (em) { return rescanDays ? (S.tx.some(function (t) { return t.srcId === em.id; }) || S.review.some(function (r) { return r.id === em.id; })) : !!S.seen[em.id]; };
+    var done = function (em) { return rescanDays ? S.tx.some(function (t) { return t.srcId === em.id; }) : !!S.seen[em.id]; };
     var url = s.syncUrl + (s.syncUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(s.token) + '&since=' + since;
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
@@ -2624,11 +2630,12 @@
         var log = function (em, r) { LG.push({ d: em.date, f: String(em.from || '').replace(/<.*>/, '').replace(/"/g, '').trim().slice(0, 28), s: String(em.subject || '').slice(0, 44), r: r }); };
         emails.forEach(function (em) {
           if (!em || !em.id) return;
-          if (done(em)) { log(em, 'already in Apex'); return; }
+          if (done(em)) { log(em, S.tx.some(function (t) { return t.srcId === em.id; }) ? 'already in Apex' : S.review.some(function (r) { return r.id === em.id; }) ? 'waiting in To review' : 'checked before'); return; }
+          if (rescanDays) S.review = S.review.filter(function (r) { return r.id !== em.id; }); // looked at again from scratch
           if (em.date < (rescanDays ? since : s.startFrom)) { log(em, 'before sync started'); return; }
           S.seen[em.id] = Date.now();
           var p = window.BcaParser.parseBcaEmail(em);
-          if (!p) { log(em, 'not a payment');
+          if (!p) { log(em, 'not a payment'); LG[LG.length - 1].x = window.BcaParser.normalize(em.body || '').replace(/\d{6,}/g, '••••').slice(0, 500);
             if (/(rp\.?|idr)\s*[\d.,]+/i.test(em.body || '') && !/otp|promo/i.test(em.subject || '')) {
               S.review.unshift({ id: em.id, date: em.date, subject: em.subject, snippet: window.BcaParser.normalize(em.body).slice(0, 400) });
               review++;
@@ -2675,7 +2682,7 @@
     if (!box) { box = document.createElement('div'); box.id = 'sLog'; box.className = 'sync-log'; st.parentNode.insertBefore(box, st.nextSibling); }
     var L = S.syncLog || []; if (!L.length) { box.innerHTML = ''; return; }
     box.innerHTML = '<div class="sheet-sec" style="margin:10px 2px 6px">Last check · ' + L.length + ' email' + (L.length > 1 ? 's' : '') + '</div>' + L.slice().reverse().map(function (x) {
-      return '<div class="sl-row' + (/^✓/.test(x.r) ? ' ok' : '') + '"><span class="grow"><b>' + esc(x.s || '(no subject)') + '</b><small>' + esc(x.f) + ' · ' + fmtDate(ymd(new Date(x.d))) + '</small></span><em>' + esc(x.r) + '</em></div>'; }).join('');
+      return '<div class="sl-row' + (/^✓/.test(x.r) ? ' ok' : '') + '"><span class="grow"><b>' + esc(x.s || '(no subject)') + '</b><small>' + esc(x.f) + ' · ' + fmtDate(ymd(new Date(x.d))) + '</small>' + (x.x ? '<details><summary>Show email text</summary><pre>' + esc(x.x) + '</pre></details>' : '') + '</span><em>' + esc(x.r) + '</em></div>'; }).join('');
   }
   function pruneSeen() {
     var cut = Date.now() - 120 * 864e5;

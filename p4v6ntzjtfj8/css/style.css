@@ -1990,3 +1990,4 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 .sl-row .grow{min-width:0}
 .sl-row em{font-style:normal;font-size:11.5px;color:var(--muted);text-align:right;max-width:45%;flex:none}
 .sl-row.ok em{color:var(--pos);font-weight:600}
+.sl-row details{margin-top:6px}.sl-row summary{font-size:11.5px;color:var(--pos);cursor:pointer}.sl-row pre{white-space:pre-wrap;font:11px/1.4 ui-monospace,Menlo,monospace;color:var(--ink2);margin:6px 0 0;max-height:220px;overflow:auto}
