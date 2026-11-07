@@ -8,17 +8,19 @@
      Tanggal (Hari ini / Kemarin / tanggal lain s.d. 7 hari ke belakang)
      Nama customer (wajib) + 4 digit terakhir WA (wajib)
      Ada test? → Produk yang di-test (≥1)  |  Langsung order (tanpa test)
-     Produk closing (≥1; hanya dari produk yang di-test, + "produk tambahan
-       (tanpa test)" untuk yang ikut dibeli tanpa dicoba) + jumlah + harga
+     Produk closing (≥1; semua produk langsung tampil — produk yang tidak
+       di-test otomatis tercatat "tambahan (tanpa test)") + jumlah + harga
      SPV: Tanpa SPV | Ada SPV → pilih 1 nama (wajib bila Ada SPV)
-     Opsional: Repeat order, Upsell
+     Jenis order (centang; tombol ⓘ di tiap pilihan = penjelasan):
+       Test drive (= "Ada test", dua tombol satu jawaban) · Cross sell ·
+       Upsell · Repeat order
 
    DATA — tetap baris scores/{tanggal} biasa (1 baris per produk), jadi
    omzet, ranking, rekor, Command Center tidak berubah. Field baru di tiap baris:
      orderId, customer, wa4, custKey, tested[], addon(bool), spv ('Tanpa SPV'
      atau nama), test ('ya'|'tidak'), inputBy, src:'closing'
-   saleType dihitung otomatis: testdrive (ada test) / complete (= "Langsung
-   order"), + cross (2+ keluarga produk), + repeat / upsell bila dicentang.
+   saleType per baris: testdrive (produk di-test) / complete (= "Langsung
+   order"), + cross / upsell / repeat HANYA bila dicentang sales.
    Semua baris satu closing ditulis dalam SATU transaction (atomic, tidak
    pernah menimpa hari itu; idempoten per orderId → ketuk dua kali aman).
 
@@ -182,22 +184,23 @@
   function freshState(sp, team) {
     return {
       sp: sp || '', team: team || teamOf(sp), date: dkey(new Date()), dateMode: 'today',
-      customer: '', wa4: '', test: null, tested: [], lines: {}, addons: {}, showAddon: false,
-      spvMode: TANPA, spv: '', repeat: false, upsell: false, picking: !sp, err: {}, saving: false,
+      customer: '', wa4: '', test: null, tested: [], lines: {},
+      spvMode: TANPA, spv: '', repeat: false, upsell: false, cross: false, picking: !sp, err: {}, saving: false,
       orderId: null
     };
   }
-  function lineOf(prod, addon) {
-    var bag = addon ? S.addons : S.lines;
-    if (!bag[prod]) bag[prod] = { prod: prod, qty: 1, custom: false, price: prices()[prod] || 0 };
-    return bag[prod];
+  function lineOf(prod) {
+    if (!S.lines[prod]) S.lines[prod] = { prod: prod, qty: 1, custom: false, price: prices()[prod] || 0 };
+    return S.lines[prod];
   }
+  // produk closing yang tidak di-test (saat "Ada test") = tambahan tanpa test
+  function isAddon(p) { return S.test === 'ya' && S.tested.indexOf(p) < 0; }
   function chosen() {   // baris closing yang dipilih
     var out = [];
-    Object.keys(S.lines).forEach(function (p) { if (S.lines[p].on) out.push({ prod: p, addon: false, l: S.lines[p] }); });
-    Object.keys(S.addons).forEach(function (p) { if (S.addons[p].on) out.push({ prod: p, addon: true, l: S.addons[p] }); });
+    Object.keys(S.lines).forEach(function (p) { if (S.lines[p].on) out.push({ prod: p, addon: isAddon(p), l: S.lines[p] }); });
     return out;
   }
+  function famCount(cs) { var f = {}; cs.forEach(function (c) { f[fam(c.prod)] = 1; }); return Object.keys(f).length; }
   function linePrice(l) { return l.custom ? (+l.price || 0) : (prices()[l.prod] || 0); }
   function total() { return chosen().reduce(function (s, c) { return s + linePrice(c.l) * (c.l.qty || 1); }, 0); }
 
@@ -219,9 +222,9 @@
       return '<button type="button" class="hxk-chip' + (isOn(p) ? ' on' : '') + '" data-act="' + act + '" data-v="' + esc(p) + '">' + esc(p) + (extra ? extra(p) : '') + '</button>';
     }).join('');
   }
-  function grouped(isOn, act) {
+  function grouped(isOn, act, extra) {
     return productGroups().map(function (g) {
-      return '<div class="hxk-fam"><div class="hxk-famlbl">' + FAM_LABEL[g.fam] + '</div><div class="hxk-chips">' + chips(g.items, isOn, act) + '</div></div>';
+      return '<div class="hxk-fam"><div class="hxk-famlbl">' + FAM_LABEL[g.fam] + '</div><div class="hxk-chips">' + chips(g.items, isOn, act, extra) + '</div></div>';
     }).join('');
   }
   function warnText(l) {
@@ -230,8 +233,8 @@
   }
   function lineRow(c) {
     var l = c.l, base = prices()[c.prod] || 0, w = warnText(l);
-    return '<div class="hxk-line" data-p="' + esc(c.prod) + '" data-addon="' + (c.addon ? 1 : 0) + '">' +
-      '<div class="hxk-line-top"><div class="hxk-line-name">' + esc(c.prod) + (c.addon ? ' <em>tambahan</em>' : '') + '</div>' +
+    return '<div class="hxk-line" data-p="' + esc(c.prod) + '">' +
+      '<div class="hxk-line-top"><div class="hxk-line-name">' + esc(c.prod) + (c.addon ? ' <em>tanpa test</em>' : '') + '</div>' +
       '<div class="hxk-qty"><button type="button" data-act="qty" data-d="-1" aria-label="Kurangi">−</button><b>' + (l.qty || 1) + '</b><button type="button" data-act="qty" data-d="1" aria-label="Tambah">+</button></div></div>' +
       '<div class="hxk-line-bot"><span class="hxk-price">' + (l.custom ? 'Harga custom' : rp(base)) + '</span>' +
       '<label class="hxk-sw"><input type="checkbox" data-act="custom"' + (l.custom ? ' checked' : '') + '> Harga beda?</label></div>' +
@@ -239,6 +242,12 @@
         (w ? '<div class="hxk-warn">' + esc(w) + '</div>' : '') : '') +
       '</div>';
   }
+  var OPT_INFO = [
+    { k: 'td', t: 'Test drive', d: 'Customer test produk dulu sebelum beli. Sama dengan pilihan "Ada test" di atas — centang di sini, isi produk yang di-test di atas.' },
+    { k: 'cross', t: 'Cross sell', d: 'Klik jika customer awalnya sudah pasti ingin beli sebuah produk, lalu ikut beli produk dengan tipe lainnya.' },
+    { k: 'upsell', t: 'Upsell (naik paket)', d: 'Klik jika customer sudah yakin dengan suatu produk, tapi akhirnya ingin membeli produk yang di atasnya.' },
+    { k: 'repeat', t: 'Repeat order', d: 'Klik jika customer lama (pernah beli sebelumnya) beli lagi.' }
+  ];
   function errMsg(k) { return S.err[k] ? '<div class="hxk-err">' + esc(S.err[k]) + '</div>' : ''; }
 
   function html() {
@@ -304,33 +313,32 @@
       h += '<div class="hxk-lbl hxk-lbl2">Produk yang di-test</div>' + grouped(function (p) { return S.tested.indexOf(p) >= 0; }, 'tested') + errMsg('tested');
     }
     h += '</div>';
-    // closing
-    if (S.test) {
-      h += '<div class="hxk-sec"><div class="hxk-lbl">Produk yang closing</div>';
-      if (S.test === 'ya') {
-        if (!S.tested.length) h += '<div class="hxk-sub">Pilih dulu produk yang di-test di atas.</div>';
-        else h += '<div class="hxk-chips">' + chips(S.tested, function (p) { return !!(S.lines[p] && S.lines[p].on); }, 'line') + '</div>';
-        h += '<button type="button" class="hxk-link hxk-addon-btn" data-act="addon-toggle">' + (S.showAddon ? '− Sembunyikan produk tambahan' : '+ Produk tambahan (tanpa test)') + '</button>';
-        if (S.showAddon) {
-          h += '<div class="hxk-sub">Produk yang ikut dibeli tapi tidak dicoba.</div>' +
-            grouped(function (p) { return !!(S.addons[p] && S.addons[p].on); }, 'addon');
-        }
-      } else {
-        h += grouped(function (p) { return !!(S.lines[p] && S.lines[p].on); }, 'line');
-      }
-      var cs = chosen();
-      if (cs.length) h += '<div class="hxk-lines">' + cs.map(lineRow).join('') + '</div>';
-      h += errMsg('lines') + '</div>';
-    }
+    // closing — semua produk langsung tampil; yang di-test diberi tanda TEST
+    h += '<div class="hxk-sec"><div class="hxk-lbl">Produk yang closing</div>' +
+      '<div class="hxk-sub hxk-sub-top">Pilih semua produk yang dibeli customer.' + (S.test === 'ya' && S.tested.length ? ' Tanda <span class="hxk-tt">TEST</span> = produk yang di-test.' : '') + '</div>' +
+      grouped(function (p) { return !!(S.lines[p] && S.lines[p].on); }, 'line',
+        function (p) { return S.test === 'ya' && S.tested.indexOf(p) >= 0 ? ' <span class="hxk-tt">TEST</span>' : ''; });
+    var cs = chosen();
+    if (cs.length) h += '<div class="hxk-lines">' + cs.map(lineRow).join('') + '</div>';
+    h += errMsg('lines') + '</div>';
     // SPV
     h += '<div class="hxk-sec"><div class="hxk-lbl">SPV yang ikut jalan</div><div class="hxk-seg">' +
       '<button type="button" data-act="spvmode" data-v="' + TANPA + '" class="' + (S.spvMode === TANPA ? 'on' : '') + '">Tanpa SPV</button>' +
       '<button type="button" data-act="spvmode" data-v="ada" class="' + (S.spvMode === 'ada' ? 'on' : '') + '">Ada SPV</button></div>';
     if (S.spvMode === 'ada') h += '<div class="hxk-chips hxk-spv">' + chips(CFG.spv, function (n) { return S.spv === n; }, 'spv') + '</div>' + errMsg('spv');
     h += '</div>';
-    // opsional
-    h += '<div class="hxk-sec hxk-opts"><label class="hxk-sw"><input type="checkbox" data-act="repeat"' + (S.repeat ? ' checked' : '') + '> Repeat order</label>' +
-      '<label class="hxk-sw"><input type="checkbox" data-act="upsell"' + (S.upsell ? ' checked' : '') + '> Upsell (naik paket)</label></div>';
+    // jenis order — tombol ⓘ di tiap pilihan menampilkan penjelasan (supaya cross sell / upsell tidak terlewat)
+    var csNow = chosen(), info = OPT_INFO.filter(function (o) { return o.k === S.info; })[0];
+    h += '<div class="hxk-sec"><div class="hxk-lbl">Jenis order <span class="hxk-optl">centang yang sesuai · ketuk ⓘ untuk penjelasan</span></div><div class="hxk-opts">' +
+      OPT_INFO.map(function (o) {
+        var on = o.k === 'td' ? S.test === 'ya' : !!S[o.k];
+        return '<div class="hxk-optw"><label class="hxk-opt' + (on ? ' on' : '') + '"><input type="checkbox" data-act="' + o.k + '"' + (on ? ' checked' : '') + '><b>' + o.t + '</b></label>' +
+          '<button type="button" class="hxk-i' + (S.info === o.k ? ' on' : '') + '" data-act="info" data-v="' + o.k + '" aria-label="Penjelasan ' + o.t + '"><i>i</i></button></div>';
+      }).join('') + '</div>' +
+      (info ? '<div class="hxk-info"><b>' + info.t + '</b><span>' + info.d + '</span></div>' : '') +
+      (S.test === 'ya' && !S.tested.length ? '<div class="hxk-hint">Test drive dicentang → pilih produk yang di-test di bagian atas.</div>' : '') +
+      (!S.cross && famCount(csNow) >= 2 ? '<div class="hxk-hint">Customer beli 2 tipe produk — apakah ini cross sell? Kalau ya, centang Cross sell.</div>' : '') +
+      '</div>';
     if (CFG.mode === 'pilot') h += '<button type="button" class="hxk-link hxk-oldform" data-act="oldform">Pakai form lama (sales lain / tanggal &gt; 7 hari)</button>';
     // ringkasan
     var cs2 = chosen(), units = cs2.reduce(function (s, c) { return s + (c.l.qty || 1); }, 0);
@@ -405,7 +413,7 @@
   function paint(keepFocus) {
     if (!sheet || !S) return;
     var a = D.activeElement, act = a && a.getAttribute && a.getAttribute('data-act'), pos = null;
-    var line = a && a.closest && a.closest('.hxk-line'), lp = line && line.getAttribute('data-p'), la = line && line.getAttribute('data-addon');
+    var line = a && a.closest && a.closest('.hxk-line'), lp = line && line.getAttribute('data-p');
     if (keepFocus && a && a.selectionStart != null) pos = a.selectionStart;
     var sc = sheet.querySelector('.hxk-body') ? sheet.querySelector('.hxk-body').scrollTop : 0;
     sheet.querySelector('.hxk-body').innerHTML = html();
@@ -415,7 +423,7 @@
     draftSoon();
     if (keepFocus && act) {
       var sel = '[data-act="' + act + '"]';
-      var n = lp ? sheet.querySelector('.hxk-line[data-p="' + CSS.escape(lp) + '"][data-addon="' + la + '"] ' + sel) : sheet.querySelector(sel);
+      var n = lp ? sheet.querySelector('.hxk-line[data-p="' + CSS.escape(lp) + '"] ' + sel) : sheet.querySelector(sel);
       if (n) { try { n.focus({ preventScroll: true }); if (pos != null && n.setSelectionRange) n.setSelectionRange(pos, pos); } catch (e) { } }
     }
   }
@@ -431,6 +439,8 @@
     if (d && d.sp && (!W._cfgTeamsLoaded || canon(d.sp, d.team))) {
       for (var k in d) if (Object.prototype.hasOwnProperty.call(d, k)) S[k] = d[k];
       S.saving = false; S.slow = false; S.err = {}; S.picking = false; S.restored = true; S.view = ''; S.deleting = false;
+      if (S.addons) { Object.keys(S.addons).forEach(function (k) { if (S.addons[k] && S.addons[k].on && !(S.lines[k] && S.lines[k].on)) S.lines[k] = S.addons[k]; }); delete S.addons; delete S.showAddon; }
+      S.lines = S.lines || {}; S.tested = S.tested || []; S.cross = !!S.cross; S.info = '';
       // tanggal draft TIDAK digeser (lewat tengah malam tetap tanggal closing-nya; orderId tetap sama) — label ikut tanggal
       S.dateMode = S.date === dkey(new Date()) ? 'today' : S.date === dkey(addDays(new Date(), -1)) ? 'kemarin' : 'other';
     }
@@ -474,7 +484,7 @@
   function onClick(e) {
     var b = e.target.closest('[data-act]'); if (!b || !S) return;
     var act = b.getAttribute('data-act'), v = b.getAttribute('data-v');
-    var line = b.closest('.hxk-line'), lp = line && line.getAttribute('data-p'), la = line && line.getAttribute('data-addon') === '1';
+    var line = b.closest('.hxk-line'), lp = line && line.getAttribute('data-p');
     if (S.saving && act !== 'close' && act !== 'bg') { e.preventDefault(); return; }
     switch (act) {
       case 'close': close(); return;
@@ -493,20 +503,15 @@
         S.dateMode = v;
         if (v === 'today') S.date = dkey(new Date()); else if (v === 'kemarin') S.date = dkey(addDays(new Date(), -1));
         delete S.err.date; break;
-      case 'test':
-        if (S.test !== v) { S.test = v; S.lines = {}; S.addons = {}; S.showAddon = false; if (v === 'tidak') S.tested = []; }
-        delete S.err.test; break;
+      case 'info': e.preventDefault(); S.info = S.info === v ? '' : v; break;
+      case 'test': setTest(v); break;     // produk closing yang sudah dipilih tetap
       case 'tested':
         var i = S.tested.indexOf(v);
-        if (i >= 0) { S.tested.splice(i, 1); if (S.lines[v]) S.lines[v].on = false; } else { S.tested.push(v); if (S.addons[v]) S.addons[v].on = false; }
+        if (i >= 0) S.tested.splice(i, 1); else S.tested.push(v);
         delete S.err.tested; break;
-      case 'line': var l = lineOf(v, false); l.on = !l.on; delete S.err.lines; break;
-      case 'addon-toggle': S.showAddon = !S.showAddon; break;
-      case 'addon':
-        if (S.tested.indexOf(v) >= 0) { toast(v + ' sudah di daftar produk yang di-test — pilih di atas.', 'info'); return; }
-        var a = lineOf(v, true); a.on = !a.on; delete S.err.lines; break;
+      case 'line': var l = lineOf(v); l.on = !l.on; delete S.err.lines; break;
       case 'qty':
-        var L = (la ? S.addons : S.lines)[lp]; if (!L) return;
+        var L = S.lines[lp]; if (!L) return;
         L.qty = Math.max(1, Math.min(20, (L.qty || 1) + (+b.getAttribute('data-d') || 0))); break;
       case 'spvmode': S.spvMode = v; if (v === TANPA) S.spv = ''; delete S.err.spv; break;
       case 'spv': S.spv = v; delete S.err.spv; break;
@@ -515,13 +520,17 @@
     }
     paint();
   }
+  function setTest(v) {
+    if (S.test !== v) { S.test = v; if (v === 'tidak') { S.tested = []; delete S.err.tested; } }
+    delete S.err.test;
+  }
   function onInput(e) {
     var t = e.target, act = t.getAttribute('data-act'); if (!S || !act || S.saving) return;
     draftSoon();
     if (act === 'cust') { S.customer = t.value; if (S.err.customer) { delete S.err.customer; dropErr(t); } }
     else if (act === 'wa') { var v = t.value.replace(/\D/g, '').slice(0, 4); if (v !== t.value) t.value = v; S.wa4 = v; if (S.err.wa4) { delete S.err.wa4; dropErr(t); } }
     else if (act === 'price') {
-      var line = t.closest('.hxk-line'), L = (line.getAttribute('data-addon') === '1' ? S.addons : S.lines)[line.getAttribute('data-p')];
+      var line = t.closest('.hxk-line'), L = S.lines[line.getAttribute('data-p')];
       var n = +(t.value.replace(/\D/g, '')) || 0; L.price = n;
       var w = line.querySelector('.hxk-warn'), msg = warnText(L);
       if (msg) { if (!w) { w = D.createElement('div'); w.className = 'hxk-warn'; line.appendChild(w); } w.textContent = msg; } else if (w) w.remove();
@@ -553,11 +562,12 @@
       if (sub) sub.textContent = dLabel(S.date) + (S.date === today ? ' (hari ini)' : S.date === kemarin ? ' (kemarin)' : '');
       refreshFoot();
     } else if (act === 'custom') {
-      var line = t.closest('.hxk-line'), L = (line.getAttribute('data-addon') === '1' ? S.addons : S.lines)[line.getAttribute('data-p')];
+      var line = t.closest('.hxk-line'), L = S.lines[line.getAttribute('data-p')];
       L.custom = t.checked; if (L.custom && !L.price) L.price = prices()[L.prod] || 0; paint();
     }
-    else if (act === 'repeat') S.repeat = t.checked;
-    else if (act === 'upsell') S.upsell = t.checked;
+    else if (act === 'td') { setTest(t.checked ? 'ya' : 'tidak'); paint(); }   // satu jawaban dengan "Ada test / Langsung order"
+    else if (act === 'cross') { S.cross = t.checked; paint(); }
+    else if (act === 'repeat' || act === 'upsell') { S[act] = t.checked; t.closest('.hxk-opt').classList.toggle('on', t.checked); draftSoon(); }
   }
 
   /* ── validasi & simpan ──────────────────────────────────────────── */
@@ -568,7 +578,7 @@
     if (!S.test) e.test = 'Pilih: ada test atau langsung order.';
     if (S.test === 'ya' && !S.tested.length) e.tested = 'Pilih minimal 1 produk yang di-test.';
     var cs = chosen();
-    if (S.test && !cs.length) e.lines = 'Pilih minimal 1 produk yang closing.';
+    if (!cs.length) e.lines = 'Pilih minimal 1 produk yang closing.';
     if (cs.some(function (c) { return !linePrice(c.l); })) e.lines = 'Ada produk dengan harga Rp 0 — isi harga custom-nya.';
     if (S.spvMode === 'ada' && !S.spv) e.spv = 'Pilih nama SPV yang ikut.';
     var today = dkey(new Date()), minD = dkey(addDays(new Date(), -7));
@@ -634,16 +644,21 @@
     var date = S.date, base = Date.now(), name = titleCase(S.customer), key = custKey(), tested = S.test === 'ya' ? S.tested.slice() : [];
     // Tag per BARIS produk, supaya Insights/My Sales (menghitung per baris) tidak menghitung 1 closing berkali-kali:
     //   produk di-test → testdrive · tanpa test / produk tambahan → complete ("Langsung Order")
-    //   cross  → baris dengan keluarga produk lain dari produk utama
-    //   upsell → hanya baris utama (nilai terbesar) · repeat → semua baris (sifat customer)
+    //     (Test drive dicentang tapi produk yang dites tidak dibeli → baris utama tetap testdrive)
+    //   cross (dicentang) → baris dengan tipe produk lain dari produk utama; kalau semua satu tipe:
+    //     baris selain produk utama; kalau hanya 1 produk: baris itu
+    //   upsell (dicentang) → hanya baris utama (nilai terbesar) · repeat → semua baris (sifat customer)
     var catIdx = Object.keys(prices()), pool = cs.filter(function (c) { return !c.addon; }); if (!pool.length) pool = cs;
     var prim = pool.slice().sort(function (a, b) { return linePrice(b.l) * (b.l.qty || 1) - linePrice(a.l) * (a.l.qty || 1) || catIdx.indexOf(a.prod) - catIdx.indexOf(b.prod); })[0];
     var primFam = fam(prim.prod);   // baris utama = produk (bukan tambahan) dengan nilai terbesar → hasil sama apa pun urutan ketuknya
     var meNow = meLive();
+    var anyTested = cs.some(function (c) { return !c.addon; });
+    var crossSet = !S.cross ? [] : cs.filter(function (c) { return fam(c.prod) !== primFam; });
+    if (S.cross && !crossSet.length) crossSet = cs.length > 1 ? cs.filter(function (c) { return c !== prim; }) : [prim];
     var entries = cs.map(function (c, i) {
       var price = linePrice(c.l), qty = c.l.qty || 1;
-      var tags = [S.test === 'ya' && !c.addon ? 'testdrive' : 'complete'];
-      if (fam(c.prod) !== primFam) tags.push('cross');
+      var tags = [S.test === 'ya' && (!c.addon || (!anyTested && c === prim)) ? 'testdrive' : 'complete'];
+      if (crossSet.indexOf(c) >= 0) tags.push('cross');
       if (S.repeat) tags.push('repeat');
       if (S.upsell && c === prim) tags.push('upsell');
       return {
@@ -765,8 +780,8 @@
             date: k, time: r.ts ? hm(r.ts) : '-', ts: r.ts || 0, id: isNew ? r.orderId : '-', sp: r.sp || '-', team: r.team || '-',
             cust: isNew ? (r.customer || '-') : '-', wa: isNew ? (r.wa4 || '-') : '-', tested: isNew ? (r.tested || []) : null,
             closed: [], addon: [], units: 0, rev: 0, custom: false, spv: spv,
-            tipe: isNew ? (r.test === 'tidak' ? 'Langsung order' : 'Test') : '-',
-            repeat: (r.saleType || []).indexOf('repeat') >= 0, upsell: (r.saleType || []).indexOf('upsell') >= 0,
+            tipe: isNew ? (r.test === 'tidak' ? 'Langsung order' : 'Test drive') : '-',
+            repeat: false, upsell: false, cross: false,
             by: isNew ? (r.inputBy || '-') : '-', src: isNew ? 'Form baru' : 'Form lama'
           };
           orders.push(o);
@@ -776,13 +791,14 @@
         o.units += +r.units || 1; o.rev += +r.revenue || 0; if (r.priceMode === 'custom') o.custom = true;
         if ((r.saleType || []).indexOf('repeat') >= 0) o.repeat = true;
         if ((r.saleType || []).indexOf('upsell') >= 0) o.upsell = true;
+        if ((r.saleType || []).indexOf('cross') >= 0) o.cross = true;
       });
     });
     var head = ['Tanggal', 'Jam', 'ID Transaksi', 'Sales', 'Tim', 'Nama Customer', 'WA (4 digit)', 'Produk Di-test', 'Produk Closing', 'Produk Tambahan (tanpa test)',
-      'Total Unit', 'Omzet (Rp)', 'Harga Custom', 'SPV', 'Tipe', 'Repeat', 'Upsell', 'Input oleh', 'Sumber'];
+      'Total Unit', 'Omzet (Rp)', 'Harga Custom', 'SPV', 'Tipe', 'Cross Sell', 'Upsell', 'Repeat', 'Input oleh', 'Sumber'];
     var body = orders.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts; }).map(function (o) {
       return [o.date, o.time, o.id, o.sp, o.team, o.cust, o.wa, o.tested ? (o.tested.length ? o.tested.join(' + ') : 'Tanpa test') : '-', o.closed.join(' + ') || '-',
-        o.addon.join(' + ') || '-', o.units, Math.round(o.rev), o.custom ? 'Ya' : 'Tidak', o.spv, o.tipe, o.repeat ? 'Ya' : 'Tidak', o.upsell ? 'Ya' : 'Tidak', o.by, o.src];
+        o.addon.join(' + ') || '-', o.units, Math.round(o.rev), o.custom ? 'Ya' : 'Tidak', o.spv, o.tipe, o.cross ? 'Ya' : 'Tidak', o.upsell ? 'Ya' : 'Tidak', o.repeat ? 'Ya' : 'Tidak', o.by, o.src];
     });
     var lhead = ['Tanggal', 'Jam', 'ID Transaksi', 'Sales', 'Tim', 'Nama Customer', 'Produk', 'Status Produk', 'Unit', 'Harga Satuan (Rp)', 'Omzet (Rp)', 'Harga Custom', 'SPV'];
     var nNew = orders.filter(function (o) { return o.src === 'Form baru'; }).length;

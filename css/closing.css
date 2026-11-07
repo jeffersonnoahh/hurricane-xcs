@@ -44,7 +44,6 @@ html.hxk-lock,html.hxk-lock body{overflow:hidden!important;overscroll-behavior:n
 .hxk-sub{font-size:12.5px;line-height:1.45;color:var(--hxk-mut);margin-top:6px}
 .hxk-me{font-size:16px;color:#d1d1d6}.hxk-me b{color:#fff;font-weight:800}
 .hxk-link{border:0;background:none;padding:8px 0;min-height:38px;color:var(--hxk-g);font:700 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.hxk-addon-btn{display:block;margin-top:10px}
 
 /* saklar 2–3 pilihan */
 .hxk-seg{display:flex;gap:4px;padding:4px;border-radius:14px;background:#161618;box-shadow:inset 0 0 0 1px var(--hxk-line)}
@@ -90,7 +89,28 @@ html.hxk-lock,html.hxk-lock body{overflow:hidden!important;overscroll-behavior:n
 .hxk-custom input{flex:1;height:42px;padding:0 12px;border:0;border-radius:10px;background:#1f1f22;color:#fff;font:700 16px/1 'Space Mono',monospace;box-shadow:inset 0 0 0 1.5px rgba(255,212,38,.45);outline:none;min-width:0}
 .hxk-warn{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,212,38,.1);color:#ffd426;font-size:12px;line-height:1.4;font-weight:600}
 .hxk-err{margin-top:8px;color:#ff6961;font-size:12.5px;font-weight:700;line-height:1.35}
-.hxk-opts{display:flex;flex-wrap:wrap;gap:4px 18px}
+/* jenis order: 4 kotak centang, tombol ⓘ = penjelasan */
+.hxk-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.hxk-optw{position:relative;min-width:0}
+.hxk-opt{display:flex;align-items:center;gap:10px;min-height:50px;height:100%;padding:8px 42px 8px 12px;border-radius:13px;background:#151517;
+  box-shadow:inset 0 0 0 1px var(--hxk-line);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hxk-opt input{flex:0 0 auto;width:20px;height:20px;margin:0;accent-color:#30d158}
+.hxk-opt b{font-size:13.5px;line-height:1.2;font-weight:700;color:#e5e5ea}
+.hxk-opt.on{background:rgba(48,209,88,.12);box-shadow:inset 0 0 0 1.5px var(--hxk-g)}
+.hxk-opt.on b{color:#fff}
+.hxk-i{position:absolute;top:50%;right:2px;transform:translateY(-50%);width:40px;height:40px;border:0;background:none;padding:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.hxk-i i{width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #8e8e93;color:#c7c7cc;font:italic 700 12px/20px Georgia,'Times New Roman',serif;text-align:center}
+.hxk-i.on i{background:var(--hxk-gold);box-shadow:none;color:#121000}
+.hxk-info{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(255,212,38,.08);box-shadow:inset 0 0 0 1px rgba(255,212,38,.28);display:flex;flex-direction:column;gap:4px}
+.hxk-info b{font-size:13px;color:var(--hxk-gold)}
+.hxk-info span{font-size:13px;line-height:1.45;color:#e5e5ea}
+.hxk-hint{margin-top:10px;padding:9px 12px;border-radius:12px;background:rgba(10,132,255,.1);box-shadow:inset 0 0 0 1px rgba(10,132,255,.3);color:#9fd0ff;font-size:12.5px;line-height:1.4;font-weight:600}
+@media (max-width:340px){.hxk-opts{grid-template-columns:1fr}}
+/* tanda produk yang di-test di daftar produk closing */
+.hxk-tt{display:inline-block;margin-left:6px;padding:2px 5px;border-radius:5px;background:rgba(255,212,38,.14);color:var(--hxk-gold);
+  font:700 9px/1.1 'Space Mono',monospace;letter-spacing:.06em;vertical-align:1px}
+.hxk-sub-top{margin:0 0 8px}
 
 /* kaki: total + simpan (menempel di bawah) */
 .hxk-foot{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;margin:6px -18px 0;padding:12px 18px calc(12px + env(safe-area-inset-bottom));
