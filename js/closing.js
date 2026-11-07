@@ -146,7 +146,7 @@
     if (!S || S.picking) return;
     if (!dirty(S)) { if (S.touched || S.restored) ss(DRAFT_KEY, null); return; }   // form baru yang belum diisi tidak menghapus draft lain
     S.touched = true;
-    var d = JSON.parse(JSON.stringify(S)); d.saving = false; d.slow = false; d.err = {}; d.picking = false; d.restored = false; d.at = Date.now();
+    var d = JSON.parse(JSON.stringify(S)); d.saving = false; d.slow = false; d.err = {}; d.picking = false; d.restored = false; d.view = ''; d.recentCache = null; d.deleting = false; d.at = Date.now();
     ss(DRAFT_KEY, JSON.stringify(d));
   }
   function draftSoon() { clearTimeout(draftT); draftT = setTimeout(saveDraft, 250); }
@@ -264,6 +264,9 @@
     h += '<div class="hxk-sec hxk-row"><div><div class="hxk-lbl">Sales</div><div class="hxk-me"><b>' + esc(S.sp) + '</b> · ' + esc(S.team || '—') + '</div>' +
       (owner && (owner.leader || norm(owner.sp) !== norm(S.sp)) ? '<div class="hxk-sub">Diinput oleh ' + esc(ownerLabel(owner)) + '</div>' : '') + errMsg('sales') + '</div>' +
       '<button type="button" class="hxk-link" data-act="pickme">Ganti</button></div>';
+    var nRecent = recentList().length;
+    if (S.view === 'recent') return h + recentHtml();
+    if (nRecent) h += '<button type="button" class="hxk-link hxk-recent-btn" data-act="recent">Lihat / hapus input 24 jam terakhir (' + nRecent + ')</button>';
     // tanggal
     var today = dkey(new Date()), kemarin = dkey(addDays(new Date(), -1)), minD = dkey(addDays(new Date(), -7));
     h += '<div class="hxk-sec"><div class="hxk-lbl">Tanggal closing</div><div class="hxk-seg">' +
@@ -323,6 +326,63 @@
     return h;
   }
 
+  // input yang tersimpan ≤ 24 jam lalu: milik sales ini (HP leader: semua anggota timnya)
+  function recentList() {
+    if (!S) return [];
+    var own = meLive(), since = Date.now() - 24 * 3600e3, groups = {}, list = [];
+    for (var i = 0; i <= 8; i++) {
+      var k = dkey(addDays(new Date(), -i));
+      rows(k).forEach(function (r) {
+        if (!r || !r.prod || !r.ts || r.ts < since) return;
+        var mine = own && own.leader ? r.team === own.team : (norm(r.sp) === norm(S.sp) && r.team === S.team);
+        if (!mine) return;
+        var id = k + '|' + (r.orderId || ('t' + r.ts));
+        if (!groups[id]) { groups[id] = { k: k, rows: [] }; list.push(groups[id]); }
+        groups[id].rows.push(r);
+      });
+    }
+    list.sort(function (a, b) { return (b.rows[0].ts || 0) - (a.rows[0].ts || 0); });
+    S.recentCache = list;
+    return list;
+  }
+  function recentHtml() {
+    var own = meLive(), list = S.recentCache || recentList();
+    var h = '<div class="hxk-sec"><button type="button" class="hxk-link" data-act="back">‹ Kembali ke form</button>' +
+      '<div class="hxk-lbl hxk-lbl2">Input 24 jam terakhir · ' + esc(own && own.leader ? 'Tim ' + own.team : S.sp) + '</div>' +
+      '<div class="hxk-sub">Salah input? Hapus, lalu isi ulang dengan benar. Lebih lama dari 24 jam: minta admin (Admin → Edit Records).</div>';
+    if (!list.length) return h + '<div class="hxk-sub" style="margin-top:14px">Belum ada input dalam 24 jam terakhir.</div></div>';
+    h += '<div class="hxk-rcs">' + list.map(function (g, i) {
+      var r0 = g.rows[0], sum = g.rows.reduce(function (s, r) { return s + (+r.revenue || 0); }, 0);
+      var prods = g.rows.map(function (r) { return ((+r.units || 1) > 1 ? r.units + '× ' : '') + r.prod; }).join(' + ');
+      return '<div class="hxk-rc"><div class="hxk-rc-main"><b>' + esc(r0.customer || prods) + '</b><span>' + rp(sum) + '</span></div>' +
+        '<div class="hxk-rc-sub">' + esc(dLabel(g.k) + ' · jam ' + hm(r0.ts) + ' · ' + r0.sp + (r0.customer ? ' · ' + prods : '') + (r0.src === 'closing' ? '' : ' · form lama')) + '</div>' +
+        '<button type="button" class="hxk-rc-del" data-act="del" data-i="' + i + '"' + (S.deleting ? ' disabled' : '') + '>Hapus</button></div>';
+    }).join('') + '</div>';
+    return h + '</div>';
+  }
+  async function delRecent(i) {
+    var g = S && S.recentCache && S.recentCache[i]; if (!g || S.deleting || S.saving) return;
+    var mine = S, r0 = g.rows[0], sum = g.rows.reduce(function (s, r) { return s + (+r.revenue || 0); }, 0);
+    var desc = (r0.customer ? r0.customer + ' · ' : '') + r0.sp + ' · ' + g.rows.map(function (r) { return (+r.units || 1) + '× ' + r.prod; }).join(' + ') + ' · ' + rp(sum);
+    if (!(await confirmBox('Hapus closing ini?', desc + '\n\nOmzet ini hilang dari dashboard. Tidak bisa dibatalkan.', 'Hapus', true))) return;
+    if (S !== mine) return;
+    var tsSet = {}; g.rows.forEach(function (r) { tsSet[r.ts] = 1; });
+    var ref = dbRef('scores/' + g.k); if (!ref) { toast('Tidak terhubung ke database — coba lagi.', 'error'); return; }
+    S.deleting = true; paint();
+    try {
+      // sama seperti _txnDeleteByTs di app.js: transaction, hanya baris dengan ts itu yang dibuang
+      await ref.transaction(function (curr) {
+        if (!curr) return curr;
+        if (Array.isArray(curr)) { var out = curr.filter(function (e) { return !(e && tsSet[e.ts]); }); return out.length ? out : null; }
+        Object.keys(curr).forEach(function (k) { if (curr[k] && tsSet[curr[k].ts]) curr[k] = null; });
+        return curr;
+      });
+      data()[g.k] = rows(g.k).filter(function (r) { return !tsSet[r.ts]; });
+      try { renderAll(); } catch (e) { }
+      toast('Closing dihapus' + (r0.customer ? ' · ' + r0.customer : ''), 'success');
+    } catch (e) { toast('Gagal menghapus — cek internet lalu coba lagi.', 'error'); }
+    if (S === mine) { S.deleting = false; recentList(); paint(); }
+  }
   function paint(keepFocus) {
     if (!sheet || !S) return;
     var a = D.activeElement, act = a && a.getAttribute && a.getAttribute('data-act'), pos = null;
@@ -351,7 +411,7 @@
     if (d && d.orderId && pendingIds[d.orderId]) d = null;   // closing itu masih dikirim di latar
     if (d && d.sp && (!W._cfgTeamsLoaded || canon(d.sp, d.team))) {
       for (var k in d) if (Object.prototype.hasOwnProperty.call(d, k)) S[k] = d[k];
-      S.saving = false; S.slow = false; S.err = {}; S.picking = false; S.restored = true;
+      S.saving = false; S.slow = false; S.err = {}; S.picking = false; S.restored = true; S.view = ''; S.deleting = false;
       // tanggal draft TIDAK digeser (lewat tengah malam tetap tanggal closing-nya; orderId tetap sama) — label ikut tanggal
       S.dateMode = S.date === dkey(new Date()) ? 'today' : S.date === dkey(addDays(new Date(), -1)) ? 'kemarin' : 'other';
     }
@@ -400,6 +460,9 @@
     switch (act) {
       case 'close': close(); return;
       case 'bg': close('force'); return;
+      case 'recent': S.view = 'recent'; break;
+      case 'back': S.view = ''; break;
+      case 'del': delRecent(+b.getAttribute('data-i')); return;
       case 'fresh': ss(DRAFT_KEY, null); var own = meLive(); S = own ? (own.leader ? freshState('', '') : freshState(own.sp, own.team)) : freshState(S.sp, S.team); break;
       case 'oldform': close('drop'); bypassOnce = true; openLegacy(); return;
       case 'me':   // pertama kali = pemilik HP; sesudahnya "Ganti" hanya untuk closing ini (leader input untuk anggota tim)
@@ -520,15 +583,15 @@
     return { r: hit, rev: same.reduce(function (s, r) { return s + (+r.revenue || 0); }, 0) || +hit.revenue || 0 };
   }
   function dkeyOf(r) { var ks = Object.keys(data()); for (var i = 0; i < ks.length; i++) if (rows(ks[i]).indexOf(r) >= 0) return ks[i]; return S.date; }
-  async function confirmBox(title, msg, ok) {
+  async function confirmBox(title, msg, ok, danger) {
     // modal konfirmasi bawaan (.mo, z 999) harus tampil DI ATAS sheet ini (z 1250)
     var mo = D.getElementById('confirmMo'), z = mo ? mo.style.zIndex : '', btn = D.getElementById('confirmOkBtn');
     if (mo) mo.style.zIndex = '1300';
     confirmOpen = true;
     try {
-      var pr = showConfirm(title, msg, ok || 'Simpan', false);
-      // skin .btn memaksa latar hitam → teks hitam tombol "aman" tak terlihat; paksa kuning
-      if (btn) { btn.style.setProperty('background', '#ffd426', 'important'); btn.style.setProperty('color', '#121000', 'important'); btn.style.setProperty('font-weight', '800'); }
+      var pr = showConfirm(title, msg, ok || 'Simpan', !!danger);
+      // skin .btn memaksa latar hitam → paksa warna tombol (kuning = simpan, merah = hapus)
+      if (btn) { btn.style.setProperty('background', danger ? '#ff453a' : '#ffd426', 'important'); btn.style.setProperty('color', danger ? '#ffffff' : '#121000', 'important'); btn.style.setProperty('font-weight', '800'); }
       return await pr;
     }
     catch (e) { return W.confirm(title + '\n\n' + msg); }
