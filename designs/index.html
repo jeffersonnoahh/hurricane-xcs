@@ -563,6 +563,12 @@ body.leader .tabbar{display:none}
 .rmini{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;text-align:right}
 .rfoot{font-size:12px;color:var(--muted);font-weight:600;margin-top:10px;line-height:1.4}
 .tg{color:var(--good);font-weight:800}
+.hm{cursor:pointer;border-radius:18px;transition:transform .45s var(--spring)}
+.hm:active{transform:scale(.97)}
+.seeall{display:inline-flex;margin-top:10px;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:800;background:rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.avmore{display:flex;justify-content:center;align-items:center;gap:8px;padding:26px 0 40px;font-size:13px;font-weight:700;color:var(--muted)}
+.spin1{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--blue);animation:spin .8s linear infinite}
+
 .hint{font-size:11.5px;color:var(--muted);line-height:1.4}
 /* ── fits every iPhone: small outer screen, normal, Pro Max, and the foldable opened up ── */
 .grid.main{grid-template-columns:minmax(0,1fr)}
@@ -655,9 +661,9 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
 
   <div class="grid main" id="dash">
     <div class="card glass hero reveal" id="secToday"><span class="orb a"></span><span class="orb b"></span><span class="shine"></span>
-      <div class="hm"><div class="lbl" id="mLbl">This month</div>
+      <div class="hm press" data-allphotos role="button" tabindex="0"><div class="lbl" id="mLbl">This month</div>
       <div class="mbig" id="mBig">0</div>
-      <div class="msub" id="mHeroSub">photos made</div></div>
+      <div class="msub" id="mHeroSub">photos made</div><span class="seeall">See all photos ›</span></div>
       <div class="hdiv"></div>
       <div class="ht"><div class="row">
         <div><div class="lbl2" id="heroLbl">Today</div><div class="big" id="heroNum">0 <span>/ 900</span></div><div class="msg" id="heroMsg" style="margin-top:6px">&nbsp;</div></div>
@@ -731,6 +737,19 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
     <div id="fvRate"></div>
     <div class="seg glass" id="fvSeg"></div>
     <div id="fvDays"></div>
+  </div>
+</div>
+
+<!-- all photos page -->
+<div class="fv" id="av" aria-hidden="true">
+  <div class="fvbar glass">
+    <button class="iconbtn press" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fvt"><b id="avTitle">All photos</b><small id="avSub"></small></div>
+  </div>
+  <div class="fvbody">
+    <div class="chips" id="avChips"></div>
+    <div id="avList"></div>
+    <div class="avmore" id="avMore"></div>
   </div>
 </div>
 
@@ -1335,6 +1354,40 @@ function renderFolder(){
     </section>`}).join(''):'<div class="empty">No photos in this folder this month.</div>';
 }
 
+// ══ All photos (endless scroll) ══
+let avFilter='All', avList=[], avShown=0, avDayN={}, avIO=null;
+const AV_STEP=48;
+function openAll(){avFilter='All';buildAll();openOv('av')}
+function buildAll(){
+  const ms=monthStart(), all=files.filter(f=>f.day>=ms);
+  avList=all.filter(f=>avFilter==='All'||f.folder===avFilter)
+    .sort((a,b)=>b.day.localeCompare(a.day)||a.folder.localeCompare(b.folder)||a.name.localeCompare(b.name,undefined,{numeric:true}));
+  avDayN={};for(const f of avList)avDayN[f.day]=(avDayN[f.day]||0)+1;
+  avShown=0;$('avList').innerHTML='';$('av').scrollTop=0;
+  $('avTitle').textContent=fmtDay(ms,{month:'long'})+(avFilter==='All'?' · all photos':' · '+avFilter);
+  $('avSub').textContent=`${nf(avList.length)} photos · ${Object.keys(avDayN).length} days`;
+  const by={};for(const f of all)by[f.folder]=(by[f.folder]||0)+1;
+  $('avChips').innerHTML=['All',...members.filter(m=>by[m])].map(k=>`<button class="chip glass press${k===avFilter?' on':''}" data-avf="${esc(k)}">${esc(k)} · ${nf(k==='All'?all.length:by[k])}</button>`).join('');
+  appendAll();
+  if(!avIO&&'IntersectionObserver' in window){avIO=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting))appendAll()},{root:$('av'),rootMargin:'900px 0px'});avIO.observe($('avMore'))}
+}
+function appendAll(){
+  if(avShown>=avList.length){$('avMore').textContent=avList.length?`That's everything · ${nf(avList.length)} photos`:'No photos yet this month.';return}
+  const box=$('avList'), next=avList.slice(avShown,avShown+AV_STEP);
+  for(let j=0;j<next.length;j++){
+    const f=next[j], i=avShown+j;
+    let sec=box.lastElementChild;
+    if(!sec||sec.dataset.dsec!==f.day){
+      box.insertAdjacentHTML('beforeend',`<section class="fday" data-dsec="${f.day}"><div class="fdh glass"><div><b>${f.day===today()?'Today':fmtDay(f.day,{weekday:'long',day:'numeric',month:'short'})}</b><small>${avFilter==='All'?'All leaders':esc(avFilter)}</small></div><div class="cnt"><b>${nf(avDayN[f.day])}</b><small>photos</small></div></div><div class="fgrid"></div></section>`);
+      sec=box.lastElementChild;
+    }
+    sec.querySelector('.fgrid').insertAdjacentHTML('beforeend',`<button class="tile${ana.removed.has(f.id)?' dupe':''}" data-aid="${i}" style="--i:${j%12}">${img(f,400)}${badges(f,true)}<div class="cap"><span>${esc(f.folder)}</span></div></button>`);
+  }
+  avShown+=next.length;
+  $('avMore').innerHTML=avShown<avList.length?'<span class="spin1"></span> Loading more…':`That's everything · ${nf(avList.length)} photos`;
+}
+$('av').addEventListener('scroll',()=>{const a=$('av');if(a.scrollTop+a.clientHeight>a.scrollHeight-1200)appendAll()},{passive:true});
+
 // ══ Quality page ══
 let qTab='copies', qLim=40;
 function openQv(tab){qTab=tab||'copies';qLim=40;renderQv();openOv('qv')}
@@ -1533,6 +1586,9 @@ document.addEventListener('click',async e=>{
   if(x=g('[data-fmore]')){fvOpen[x.dataset.fmore]=1;renderFolder();return}
   if(x=g('[data-fseg]')){fvType=x.dataset.fseg;renderFolder();return}
   if(x=g('[data-q]')){openQv(x.dataset.q);return}
+  if(x=g('[data-allphotos]')){openAll();return}
+  if(x=g('[data-avf]')){avFilter=x.dataset.avf;buildAll();return}
+  if(x=g('.tile[data-aid]')){openDrive(avList[+x.dataset.aid]);return}
   if(x=g('[data-qtab]')){qTab=x.dataset.qtab;qLim=40;renderQv();$('qv').scrollTop=0;return}
   if(x=g('[data-qmore]')){qLim+=40;renderQv();return}
   if(x=g('[data-okid]')){
