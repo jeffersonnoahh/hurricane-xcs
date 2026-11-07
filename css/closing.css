@@ -170,3 +170,4 @@ html.hxk-lock,html.hxk-lock body{overflow:hidden!important;overscroll-behavior:n
 .hxk-rc-sub{grid-column:1;font-size:12px;line-height:1.4;color:#8e8e93}
 .hxk-rc-del{grid-column:2;grid-row:1/span 2;min-height:38px;padding:0 14px;border:0;border-radius:11px;background:rgba(255,69,58,.14);color:#ff6961;font:800 13px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .hxk-rc-del:disabled{opacity:.4}
+.hxk-recent-top{margin:4px 0 2px}

@@ -72,14 +72,24 @@
   /* ── siapa (diingat per HP) & apakah form baru aktif ─────────────── */
   function me() {
     var v = store(ME_KEY); if (!v) return null; var p = v.split('|');
-    if (p[0] === LEAD) return { leader: true, sp: '', team: p[1] || '' };      // HP leader: input untuk anggota timnya
+    if (p[0] === LEAD) { var ts = String(p[1] || '').split(',').filter(Boolean); return { leader: true, sp: '', team: ts[0] || '', teams: ts }; }   // HP leader: input untuk anggota timnya
     return { sp: p[0], team: p[1] || teamOf(p[0]) };
   }
   function setMe(sp, team) { store(ME_KEY, sp + '|' + (team || teamOf(sp) || '')); }
-  function setMeLeader(team) { store(ME_KEY, LEAD + '|' + team); }
-  function ownerLabel(o) { return !o ? '' : o.leader ? 'Leader ' + o.team : o.sp; }
+  function setMeLeader(teams) { store(ME_KEY, LEAD + '|' + [].concat(teams).join(',')); }
+  // tim dengan leader yang sama digabung: "Christ A" + "Christ B" → Leader Christ (nama tim tanpa huruf A/B di belakang)
+  function leadBase(t) { return String(t || '').replace(/\s+[A-Z]$/, ''); }
+  function leaderGroups() {
+    var out = [], idx = {};
+    Object.keys(roster()).forEach(function (t) { var k = leadBase(t); if (!(k in idx)) { idx[k] = out.length; out.push({ name: k, teams: [] }); } out[idx[k]].teams.push(t); });
+    return out;
+  }
+  function ownerLabel(o) { return !o ? '' : o.leader ? 'Leader ' + leadBase(o.team) : o.sp; }
   // channel marketplace (Tokopedia/Shopee/TikTok…) tidak punya WA customer → 4 digit WA opsional
-  function isCh(sp) { try { return !!(W.HX && HX.isChannel && HX.isChannel(sp)); } catch (e) { return false; } }
+  function isCh(sp) {
+    if (/shopee|tokopedia|tiktok|lazada|blibli/i.test(String(sp || ''))) return true;
+    try { return !!(W.HX && HX.isChannel && HX.isChannel(sp)); } catch (e) { return false; }
+  }
   function teamOf(sp) {
     var T = roster(), n = norm(sp);
     for (var t in T) { var m = (T[t] && T[t].m) || []; for (var i = 0; i < m.length; i++) if (norm(m[i]) === n) return t; }
@@ -97,7 +107,12 @@
   function meLive() {
     var m = me(); if (!m) return null;
     if (!W._cfgTeamsLoaded) return m;                 // roster live belum dimuat: jangan ubah apa-apa dulu
-    if (m.leader) { if (roster()[m.team]) return m; store(ME_KEY, null); return null; }
+    if (m.leader) {
+      var g = leaderGroups().filter(function (x) { return x.name === leadBase(m.team); })[0];
+      if (!g) { store(ME_KEY, null); return null; }
+      if (g.teams.join(',') !== m.teams.join(',')) setMeLeader(g.teams);     // HP lama "Leader Christ A" → ikut Christ B
+      return { leader: true, sp: '', team: g.teams[0], teams: g.teams.slice() };
+    }
     var c = canon(m.sp, m.team);
     if (!c) { store(ME_KEY, null); return null; }     // sudah tidak di roster → pilih ulang
     if (c.sp !== m.sp || c.team !== m.team) setMe(c.sp, c.team);
@@ -230,16 +245,17 @@
     var pick = S.picking, T = roster();
     var h = '<div class="hxk-head"><div><div class="hxk-kick">FORM CLOSING</div><h3>Closing baru</h3></div>' +
       '<button type="button" class="hxk-x" data-act="close" aria-label="Tutup">×</button></div>';
+    if (S.view === 'recent') return h + recentHtml();             // juga dari layar pilih nama (HP leader)
     if (S.restored && !pick) h += '<div class="hxk-restored"><span>' + (S.orderId ? 'Closing ini mungkin belum tersimpan (sinyal putus). Cek isinya lalu Simpan — tidak akan dobel.' : 'Isian terakhir yang belum disimpan dikembalikan.') + '</span>' +
       '<button type="button" class="hxk-link" data-act="fresh">Mulai baru</button></div>';
     // sales
     if (pick) {
-      var own = me();
+      var own = meLive();
       h += own
         ? '<div class="hxk-sec"><div class="hxk-lbl">Closing ini untuk sales siapa?</div><div class="hxk-sub">HP ini tercatat sebagai <b>' + esc(ownerLabel(own)) + '</b> (yang input).</div>'
         : '<div class="hxk-sec"><div class="hxk-lbl">Kamu siapa?</div><div class="hxk-sub">Dipilih sekali, nanti diingat di HP ini. Leader: pilih "Leader …" di bawah.</div>';
       var teams = Object.keys(T);
-      if (own && own.leader && T[own.team]) teams = [own.team].concat(teams.filter(function (t) { return t !== own.team; }));
+      if (own && own.leader) teams = own.teams.filter(function (t) { return T[t]; }).concat(teams.filter(function (t) { return own.teams.indexOf(t) < 0; }));
       teams.forEach(function (t) {
         var m = ((T[t] && T[t].m) || []).filter(function (n) {
           var lead = false; try { lead = _isLeader(n); } catch (e) { }   // team lead yang tidak berjualan (app.js)
@@ -252,11 +268,13 @@
       });
       if (CFG.mode === 'pilot' && !isAdmin()) h += '<div class="hxk-sub" style="margin-top:10px">Form baru sedang diuji coba oleh beberapa sales. Yang lain tetap memakai form lama.</div>';
       if (!own && (CFG.mode === 'all' || isAdmin())) {
-        h += '<div class="hxk-famlbl hxk-leadlbl">Leader (mencatat closing anggota tim)</div><div class="hxk-chips">' + Object.keys(T).map(function (t) {
-          return '<button type="button" class="hxk-chip hxk-lead" data-act="meleader" data-t="' + esc(t) + '">Leader ' + esc(t) + '</button>';
+        h += '<div class="hxk-famlbl hxk-leadlbl">Leader (mencatat closing anggota tim)</div><div class="hxk-chips">' + leaderGroups().map(function (g) {
+          return '<button type="button" class="hxk-chip hxk-lead" data-act="meleader" data-t="' + esc(g.teams.join(',')) + '">Leader ' + esc(g.name) + '</button>';
         }).join('') + '</div>';
       }
       if (own) h += '<button type="button" class="hxk-link" data-act="resetme" style="margin-top:8px">Bukan ' + esc(ownerLabel(own)) + '? Ganti nama HP ini</button>';
+      var nR = own ? recentList().length : 0;
+      if (nR) h = h.replace('(yang input).</div>', '(yang input).</div><button type="button" class="hxk-link hxk-recent-btn hxk-recent-top" data-act="recent">Lihat / hapus input 24 jam terakhir (' + nR + ')</button>');
       if (CFG.mode === 'pilot') h += '<button type="button" class="hxk-link hxk-oldform" data-act="oldform">Nama tidak ada? Pakai form lama</button>';
       return h + '</div>';
     }
@@ -265,7 +283,6 @@
       (owner && (owner.leader || norm(owner.sp) !== norm(S.sp)) ? '<div class="hxk-sub">Diinput oleh ' + esc(ownerLabel(owner)) + '</div>' : '') + errMsg('sales') + '</div>' +
       '<button type="button" class="hxk-link" data-act="pickme">Ganti</button></div>';
     var nRecent = recentList().length;
-    if (S.view === 'recent') return h + recentHtml();
     if (nRecent) h += '<button type="button" class="hxk-link hxk-recent-btn" data-act="recent">Lihat / hapus input 24 jam terakhir (' + nRecent + ')</button>';
     // tanggal
     var today = dkey(new Date()), kemarin = dkey(addDays(new Date(), -1)), minD = dkey(addDays(new Date(), -7));
@@ -334,7 +351,9 @@
       var k = dkey(addDays(new Date(), -i));
       rows(k).forEach(function (r) {
         if (!r || !r.prod || !r.ts || r.ts < since) return;
-        var mine = own && own.leader ? r.team === own.team : (norm(r.sp) === norm(S.sp) && r.team === S.team);
+        // HP sales: penjualan pemilik HP + yang diinput HP ini untuk orang lain (bukan nama yang sedang dipilih lewat Ganti)
+        var mine = own ? (own.leader ? own.teams.indexOf(r.team) >= 0 : ((norm(r.sp) === norm(own.sp) && r.team === own.team) || (r.inputBy && norm(r.inputBy) === norm(own.sp))))
+          : (norm(r.sp) === norm(S.sp) && r.team === S.team);
         if (!mine) return;
         var id = k + '|' + (r.orderId || ('t' + r.ts));
         if (!groups[id]) { groups[id] = { k: k, rows: [] }; list.push(groups[id]); }
@@ -348,7 +367,7 @@
   function recentHtml() {
     var own = meLive(), list = S.recentCache || recentList();
     var h = '<div class="hxk-sec"><button type="button" class="hxk-link" data-act="back">‹ Kembali ke form</button>' +
-      '<div class="hxk-lbl hxk-lbl2">Input 24 jam terakhir · ' + esc(own && own.leader ? 'Tim ' + own.team : S.sp) + '</div>' +
+      '<div class="hxk-lbl hxk-lbl2">Input 24 jam terakhir · ' + esc(own && own.leader ? 'Tim ' + own.teams.join(' + ') : own ? own.sp : S.sp) + '</div>' +
       '<div class="hxk-sub">Salah input? Hapus, lalu isi ulang dengan benar. Lebih lama dari 24 jam: minta admin (Admin → Edit Records).</div>';
     if (!list.length) return h + '<div class="hxk-sub" style="margin-top:14px">Belum ada input dalam 24 jam terakhir.</div></div>';
     h += '<div class="hxk-rcs">' + list.map(function (g, i) {
@@ -468,7 +487,7 @@
       case 'me':   // pertama kali = pemilik HP; sesudahnya "Ganti" hanya untuk closing ini (leader input untuk anggota tim)
         S.sp = v; S.team = b.getAttribute('data-t') || teamOf(v); S.picking = false; delete S.err.sales; if (!me()) setMe(S.sp, S.team); break;
       case 'resetme': store(ME_KEY, null); S.picking = true; break;
-      case 'meleader': setMeLeader(b.getAttribute('data-t')); S.picking = true; break;   // lanjut: pilih anggota tim
+      case 'meleader': setMeLeader(String(b.getAttribute('data-t') || '').split(',')); S.picking = true; break;   // lanjut: pilih anggota tim
       case 'pickme': S.picking = true; break;
       case 'date':
         S.dateMode = v;
@@ -766,7 +785,8 @@
         o.addon.join(' + ') || '-', o.units, Math.round(o.rev), o.custom ? 'Ya' : 'Tidak', o.spv, o.tipe, o.repeat ? 'Ya' : 'Tidak', o.upsell ? 'Ya' : 'Tidak', o.by, o.src];
     });
     var lhead = ['Tanggal', 'Jam', 'ID Transaksi', 'Sales', 'Tim', 'Nama Customer', 'Produk', 'Status Produk', 'Unit', 'Harga Satuan (Rp)', 'Omzet (Rp)', 'Harga Custom', 'SPV'];
-    return { head: head, body: body, lhead: lhead, lines: lines, n: orders.length, rev: orders.reduce(function (s, o) { return s + o.rev; }, 0) };
+    var nNew = orders.filter(function (o) { return o.src === 'Form baru'; }).length;
+    return { head: head, body: body, lhead: lhead, lines: lines, n: orders.length, nNew: nNew, nOld: orders.length - nNew, rev: orders.reduce(function (s, o) { return s + o.rev; }, 0) };
   }
   function loadXlsx() {
     if (W.XLSX) return Promise.resolve(W.XLSX);
@@ -835,7 +855,7 @@
         '<div class="hxk-sec"><div class="hxk-lbl">Tim</div><div class="hxk-chips"><button type="button" class="hxk-chip' + (!st.team ? ' on' : '') + '" data-a="t" data-v="">Semua</button>' +
         Object.keys(T).map(function (t) { return '<button type="button" class="hxk-chip' + (st.team === t ? ' on' : '') + '" data-a="t" data-v="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div></div>' +
         '<div class="hxk-sec"><div class="hxk-lbl">Format</div><div class="hxk-seg"><button type="button" data-a="f" data-v="xlsx" class="' + (st.fmt === 'xlsx' ? 'on' : '') + '">Excel (.xlsx)</button><button type="button" data-a="f" data-v="csv" class="' + (st.fmt === 'csv' ? 'on' : '') + '">CSV</button></div></div>' +
-        '<div class="hxk-foot"><div class="hxk-sum"><b>' + X.n + ' closing</b><span>' + rp(X.rev) + ' · ' + dLabel(st.from) + ' – ' + dLabel(st.to) + '</span></div>' +
+        '<div class="hxk-foot"><div class="hxk-sum"><b>' + X.nNew + ' closing' + (X.nOld ? ' + ' + X.nOld + ' baris lama' : '') + '</b><span>' + rp(X.rev) + ' · ' + dLabel(st.from) + ' – ' + dLabel(st.to) + '</span></div>' +
         '<button type="button" class="hxk-save" data-a="go"' + (X.n ? '' : ' disabled') + '>Download</button></div>';
     }
     exp.innerHTML = '<div class="hxk-handle"></div><div class="hxk-body">' + (locked ? pinBody() : body()) + '</div>';
