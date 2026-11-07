@@ -454,7 +454,8 @@ body.leader #dash,body.leader #days,body.leader .ownerOnly,body.leader #openSett
 .rdone p{font-size:14px;color:var(--ink2);margin-top:6px}
 .rdone .lstats{width:100%;max-width:360px}
 .tipbar{text-align:center;font-size:11.5px;color:var(--muted);font-weight:700;padding-bottom:2px}
-.still .cell,.still .tile,.still .fcard,.still .chart .cb,.still .chart .kpi,.still .fday,.still .pair,.still .issue,.still .alert{animation:none !important}
+.still .cell,.still .tile,.still .fcard,.still .chart .cb,.still .chart .kpi,.still .fday,.still .pair,.still .issue,.still .alert,.still .rcardx{animation:none !important}
+.still .rbar i{transition:none !important}
 .still .bar .t i,.still .lrow .t i,.still .fbrow .t i,.still .ring .arc{transition:none !important}
 .toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));z-index:90;translate:-50% 0;padding:11px 16px;border-radius:16px;font-size:13px;font-weight:700;
   transform:translateY(120px);transition:transform .5s var(--spring)}
@@ -541,6 +542,27 @@ body.leader .tabbar{display:none}
 .hero .row{margin-top:4px}
 .hero .lbl2{font-size:11.5px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.08em}
 .tabbar .go{color:var(--orange)}
+.rbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:4px 9px;border-radius:99px;white-space:nowrap}
+.rbadge.ok{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.rbadge.bad{color:var(--orange);background:color-mix(in srgb,var(--orange) 15%,transparent)}
+.rbadge.none{color:var(--muted);background:var(--line)}
+.frate{display:flex;align-items:center;gap:8px;margin:9px 6px 0}
+.rbar{position:relative;flex:1;height:6px;border-radius:99px;background:var(--line)}
+.rbar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;transition:width 1s var(--spring)}
+.rbar i.ok{background:linear-gradient(90deg,#0E9147,#3BC97A)}.rbar i.bad{background:linear-gradient(90deg,#E85A33,#FC8A68)}
+.rbar span{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:2px;background:var(--ink);opacity:.45}
+.rbar.big{height:10px;margin-top:14px}
+.fcard.lowrate{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--orange) 55%,transparent),var(--drop)}
+.rcardx{padding:16px;border-radius:22px;margin-bottom:12px;animation:pop .6s var(--spring) both}
+.rcardx .rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rcardx small{display:block;font-size:11.5px;font-weight:700;color:var(--muted)}
+.rcardx .rtop>div:first-child>b{display:block;font-size:40px;font-weight:800;letter-spacing:-.04em;line-height:1.05;margin-top:2px}
+.rcardx.ok .rtop>div:first-child>b{color:var(--good)}.rcardx.bad .rtop>div:first-child>b{color:var(--orange)}
+.rmini span{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap}.rmini b{font-size:16px;font-weight:800;min-width:20px;text-align:right}
+.rcardx em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--ink2)}
+.rmini{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;text-align:right}
+.rfoot{font-size:12px;color:var(--muted);font-weight:600;margin-top:10px;line-height:1.4}
+.tg{color:var(--good);font-weight:800}.tb{color:var(--orange);font-weight:800}
 .top{gap:10px}
 .top .sp{display:none}
 .ttl{flex:1;min-width:0}
@@ -664,6 +686,7 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
     <div class="fvt"><b id="fvName"></b><small id="fvSub"></small></div>
   </div>
   <div class="fvbody">
+    <div id="fvRate"></div>
     <div class="seg glass" id="fvSeg"></div>
     <div id="fvDays"></div>
   </div>
@@ -726,6 +749,8 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
       <div><div class="hint" style="margin:0 0 4px">Saturday</div><input id="sSat" type="number" min="0" inputmode="numeric"></div>
       <div><div class="hint" style="margin:0 0 4px">Sunday</div><input id="sSun" type="number" min="0" inputmode="numeric"></div>
     </div>
+    <label>Review target (% rated good by leaders)</label>
+    <input id="sGood" type="number" min="1" max="100" inputmode="numeric">
     <label>Look alike cut off (%)</label>
     <input id="sCut" type="number" min="80" max="100" inputmode="numeric">
     <div class="hint">Photos at least this similar to an earlier one don't count toward the target. Exact copies never count. 92 is a good start.</div>
@@ -743,7 +768,7 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
 <script>
 // ══ Config ══
 const TZ='Asia/Jakarta', DAYS=14, PAGE=120, FOLDER='application/vnd.google-apps.folder';
-const DEFAULTS={tWk:900,tSat:600,tSun:0,sim:92,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyBk4nc2bXAaVyQQFYpYy26VZ8YBi96A7ro'};
+const DEFAULTS={tWk:900,tSat:600,tSun:0,sim:92,good:65,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyBk4nc2bXAaVyQQFYpYy26VZ8YBi96A7ro'};
 const ADMIN_PWD=(()=>{try{return localStorage.getItem('hxcs_admin_pwd')||'hurricane2026'}catch(e){return 'hurricane2026'}})();
 const REASONS=['Boring','Text wrong','Off brand','Low quality','Looks like another','Wrong product'];
 const LOOK_SHOW=7;   // max differing bits (of 64) to list as a look alike (about 89%)
@@ -787,7 +812,7 @@ try{
   settingsRef.on('value',s=>{
     const v=s.val()||{}, prev=JSON.stringify(cfg);
     const num=(x,d)=>x===undefined||x===null||x===''||isNaN(+x)?d:+x;
-    cfg={tWk:num(v.tWk,DEFAULTS.tWk),tSat:num(v.tSat,DEFAULTS.tSat),tSun:num(v.tSun,DEFAULTS.tSun),sim:num(v.sim,DEFAULTS.sim),folderId:v.folderId||DEFAULTS.folderId,apiKey:v.apiKey||DEFAULTS.apiKey};
+    cfg={tWk:num(v.tWk,DEFAULTS.tWk),tSat:num(v.tSat,DEFAULTS.tSat),tSun:num(v.tSun,DEFAULTS.tSun),sim:num(v.sim,DEFAULTS.sim),good:num(v.good,DEFAULTS.good),folderId:v.folderId||DEFAULTS.folderId,apiKey:v.apiKey||DEFAULTS.apiKey};
     if(first||JSON.stringify(cfg)!==prev){first=false;if(prev&&JSON.parse(prev).folderId!==cfg.folderId)light.at=0;load()}
   },()=>load());
   const hq=db.ref('designs/hash').orderByKey().startAt(recentStart());
@@ -1146,16 +1171,27 @@ function fbStats(days){
     const v=voteOf(f,f.folder);if(!v)continue;p.rev++;if(v.v===2){p.love++;picks.push([f,v.t])}else if(v.v===1)p.like++;else{p.skip++;if(v.r)reasons[v.r]=(reasons[v.r]||0)+1}}
   return {per,reasons,picks:picks.sort((a,b)=>b[1]-a[1]).map(x=>x[0])};
 }
+// review score: share of rated photos the leader marked 👍 or ❤️
+function rateOf(list,who){
+  const r={got:list.length,rev:0,good:0,love:0,like:0,skip:0,reasons:{}};
+  for(const f of list){const v=voteOf(f,who||f.folder);if(!v)continue;r.rev++;
+    if(v.v===2){r.love++;r.good++}else if(v.v===1){r.like++;r.good++}else{r.skip++;if(v.r)r.reasons[v.r]=(r.reasons[v.r]||0)+1}}
+  r.pct=r.rev?Math.round(r.good/r.rev*100):null;r.ok=r.pct!==null&&r.pct>=cfg.good;return r;
+}
+function rateBadge(r,small){
+  if(!r.rev)return `<span class="rbadge none">Not reviewed yet</span>`;
+  return `<span class="rbadge ${r.ok?'ok':'bad'}">${r.ok?'✓':'↓'} ${r.pct}% good${small?'':` · ${nf(r.rev)} rated`}</span>`;
+}
 function reviewLink(){return location.origin+location.pathname+'?review'}
 function renderFeedback(){
   const {per,reasons,picks}=fbStats(lastDays(7));
   let rev=0,got=0,good=0;for(const m in per){rev+=per[m].rev;got+=per[m].got;good+=per[m].love+per[m].like}
-  $('fbSum').innerHTML=rev?`<small>Approval</small><b><span data-count="${pctOf(good,rev)}">0</span>%</b><em>${nf(rev)} of ${nf(got)} rated</em>`:`<small>Approval</small><b>–</b><em>no ratings yet</em>`;
+  $('fbSum').innerHTML=rev?`<small>Rated good</small><b style="color:${pctOf(good,rev)>=cfg.good?'var(--good)':'var(--orange)'}"><span data-count="${pctOf(good,rev)}">0</span>%</b><em>target ${cfg.good}% · ${nf(rev)} rated</em>`:`<small>Approval</small><b>–</b><em>no ratings yet</em>`;
   const rows=members.slice().sort((a,b)=>(per[b].got?per[b].rev/per[b].got:0)-(per[a].got?per[a].rev/per[a].got:0)).map(m=>{const p=per[m];
     return `<div class="fbrow"><span class="nm">${esc(m)}</span><div class="t"><i data-w="${p.got?p.rev/p.got*100:0}"></i></div>
-      <span class="ct">${p.rev?`${pctOf(p.rev,p.got)}% · ❤️${p.love} 👍${p.like} 👎${p.skip}`:`<span style="color:var(--orange)">0 of ${nf(p.got)}</span>`}</span></div>`}).join('');
+      <span class="ct">${p.rev?`<b style="color:${pctOf(p.love+p.like,p.rev)>=cfg.good?'var(--good)':'var(--orange)'}">${pctOf(p.love+p.like,p.rev)}% good</b> · ${pctOf(p.rev,p.got)}% rated`:`<span style="color:var(--muted)">not rated · 0 of ${nf(p.got)}</span>`}</span></div>`}).join('');
   const rs=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
-  $('fbBody').innerHTML=`<div class="h3" style="margin-top:12px">Share of their photos reviewed</div><div class="fbrows">${rows}</div>
+  $('fbBody').innerHTML=`<div class="h3" style="margin-top:12px">Per leader · bar shows how much they reviewed</div><div class="fbrows">${rows}</div>
     ${rs.length?`<div class="h3">Why leaders skip</div><div class="rsum">${rs.map(([r,n])=>`<span>${esc(r)} <b>${n}</b></span>`).join('')}</div>`:''}
     ${picks.length?`<div class="h3">Leaders' favourites ❤️</div><div class="picks">${picks.slice(0,14).map((f,i)=>`<button class="tile" data-pick="${i}">${img(f,240)}</button>`).join('')}</div>`:''}
     <div class="share"><code>${esc(reviewLink().replace(/^https?:\/\//,''))}</code><button class="btn-p press" id="shareLink">Share</button></div>
@@ -1211,10 +1247,11 @@ function renderFolders(){
     const cov=mine.filter(f=>f.day===latest).slice(0,4);
     const coverHtml=cov.length?`<div class="cov${cov.length<4?' one':''}">${(cov.length<4?cov.slice(0,1):cov).map(f=>`<span class="tile">${img(f,cov.length<4?600:300)}</span>`).join('')}<span class="ct">${nf(mine.length)}</span></div>`
       :`<div class="cov none">No photos yet</div>`;
-    const dayN=mine.filter(f=>f.day===selDay).length;
-    return `<button class="fcard glass press" data-open="${esc(m)}" style="--i:${i}">${coverHtml}
+    const dayN=mine.filter(f=>f.day===selDay).length, rr=rateOf(mine,m);
+    return `<button class="fcard glass press${rr.rev&&!rr.ok?' lowrate':''}" data-open="${esc(m)}" style="--i:${i}">${coverHtml}
       <div class="fn">${esc(m)}</div>
-      <div class="fs">${latest?`Latest ${fmtDay(latest,{day:'numeric',month:'short'})}`:'Nothing in 14 days'} · <b>${dayN}</b> on ${selDay===today()?'today':fmtDay(selDay,{day:'numeric',month:'short'})}</div></button>`;
+      <div class="fs">${latest?`Latest ${fmtDay(latest,{day:'numeric',month:'short'})}`:'Nothing in 14 days'} · <b>${dayN}</b> on ${selDay===today()?'today':fmtDay(selDay,{day:'numeric',month:'short'})}</div>
+      <div class="frate">${rateBadge(rr,true)}<div class="rbar"><i style="width:${rr.pct||0}%" class="${rr.ok?'ok':'bad'}"></i><span style="left:${cfg.good}%"></span></div></div></button>`;
   }).join('');
 }
 function fvFiles(){return files.filter(f=>f.folder===fvName&&(fvType==='All'||f.type===fvType))}
@@ -1236,13 +1273,20 @@ function renderFolder(){
   const ds=Object.keys(byD).sort().reverse();
   const rated=all.filter(f=>voteOf(f,fvName)).length;
   $('fvSub').textContent=`${nf(all.length)} photos · ${Object.keys(all.reduce((a,f)=>(a[f.day]=1,a),{})).length} days · ${nf(rated)} rated by ${fvName}`;
+  { const r=rateOf(all,fvName), rs=Object.entries(r.reasons).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    $('fvRate').innerHTML=`<div class="rcardx glass ${r.rev?(r.ok?'ok':'bad'):'none'}">
+      <div class="rtop"><div><small>${esc(fvName)}'s review score</small><b>${r.rev?r.pct+'%':'–'}</b><em>${r.rev?(r.ok?`✓ Above the ${cfg.good}% target`:`Below the ${cfg.good}% target · needs ${Math.max(1,Math.ceil(cfg.good/100*r.rev-r.good))} more good`):'No photos rated yet'}</em></div>
+        <div class="rmini"><span>❤️ <b>${r.love}</b></span><span>👍 <b>${r.like}</b></span><span>👎 <b>${r.skip}</b></span></div></div>
+      <div class="rbar big"><i style="width:${r.pct||0}%" class="${r.ok?'ok':'bad'}"></i><span style="left:${cfg.good}%"></span></div>
+      <div class="rfoot">${nf(r.rev)} of ${nf(r.got)} photos rated${rs.length?` · skipped for: ${rs.map(([k,n])=>`${esc(k)} ${n}`).join(', ')}`:''}</div></div>`;
+  }
   $('fvSeg').style.display=types.length>2?'':'none';
   $('fvSeg').innerHTML=types.map(t=>`<button class="${t===fvType?'on':''}" data-fseg="${t}">${t==='All'?'All':t==='BUFFER'?'Buffer':t==='Unsorted'?'Not split':t} · ${(t==='All'?all:all.filter(f=>f.type===t)).length}</button>`).join('');
   $('fvDays').innerHTML=ds.length?ds.map((k,di)=>{
     const L=byD[k], lim=fvOpen[k]?L.length:12;
     const x=L.filter(f=>f.type==='XCS').length,b=L.filter(f=>f.type==='BUFFER').length, cp=L.filter(f=>ana.removed.has(f.id)).length;
     return `<section class="fday" style="animation-delay:${Math.min(di,6)*70}ms">
-      <div class="fdh glass"><div><b>${k===today()?'Today':fmtDay(k,{weekday:'long',day:'numeric',month:'short'})}</b><small>${fvType==='All'&&(x||b)?`XCS ${x} · Buffer ${b}`:esc(fvType==='All'?'Photos':fvType)}${cp?` · ${cp} copies`:''}</small></div>
+      <div class="fdh glass"><div><b>${k===today()?'Today':fmtDay(k,{weekday:'long',day:'numeric',month:'short'})}</b><small>${fvType==='All'&&(x||b)?`XCS ${x} · Buffer ${b}`:esc(fvType==='All'?'Photos':fvType)}${cp?` · ${cp} copies`:''}${(()=>{const r=rateOf(L,fvName);return r.rev?` · <span class="${r.ok?'tg':'tb'}">${r.pct}% good</span>`:''})()}</small></div>
         <div class="cnt"><b>${nf(L.length)}</b><small>photos</small></div></div>
       <div class="fgrid">${L.slice(0,lim).map((f,i)=>`<button class="tile${ana.removed.has(f.id)?' dupe':''}" data-fi="${i}" data-sec="${k}" style="--i:${Math.min(i,18)}">${img(f,400)}${badges(f,true)}${fvType==='All'&&f.type!=='Unsorted'?`<div class="cap"><span>${esc(f.type)}</span></div>`:''}</button>`).join('')}</div>
       ${L.length>lim?`<button class="fmore glass press" data-fmore="${k}">See all ${nf(L.length)} photos</button>`:''}
@@ -1464,14 +1508,14 @@ document.addEventListener('keydown',e=>{if(!stack.includes('rv'))return;if(e.key
 $('more').onclick=()=>{shown+=PAGE;renderGallery()};
 $('refresh').onclick=()=>{light.at=0;load()};
 $('openSettings').onclick=()=>{$('sheet').classList.add('on');$('lockBox').style.display=adminOn?'none':'';$('setBox').style.display=adminOn?'':'none';$('pwd').value='';if(adminOn)fillSettings()};
-function fillSettings(){$('sWk').value=cfg.tWk;$('sSat').value=cfg.tSat;$('sSun').value=cfg.tSun;$('sCut').value=cfg.sim;$('sFolder').value=cfg.folderId;$('sKey').value=cfg.apiKey}
+function fillSettings(){$('sWk').value=cfg.tWk;$('sSat').value=cfg.tSat;$('sSun').value=cfg.tSun;$('sCut').value=cfg.sim;$('sGood').value=cfg.good;$('sFolder').value=cfg.folderId;$('sKey').value=cfg.apiKey}
 $('unlock').onclick=()=>{
   if($('pwd').value!==ADMIN_PWD){const i=$('pwd');i.style.boxShadow='inset 0 0 0 2px var(--orange)';i.classList.remove('shake');void i.offsetWidth;i.classList.add('shake');return}
   adminOn=true;$('lockBox').style.display='none';$('setBox').style.display='';fillSettings();
 };
 $('save').onclick=async()=>{
   const iv=(id,d,lo,hi)=>{const x=parseInt($(id).value);return isNaN(x)?d:Math.min(hi??1e9,Math.max(lo??0,x))};
-  const v={tWk:iv('sWk',DEFAULTS.tWk),tSat:iv('sSat',DEFAULTS.tSat),tSun:iv('sSun',DEFAULTS.tSun),sim:iv('sCut',DEFAULTS.sim,80,100),folderId:parseFolder($('sFolder').value)||DEFAULTS.folderId,apiKey:$('sKey').value.trim()||DEFAULTS.apiKey};
+  const v={tWk:iv('sWk',DEFAULTS.tWk),tSat:iv('sSat',DEFAULTS.tSat),tSun:iv('sSun',DEFAULTS.tSun),sim:iv('sCut',DEFAULTS.sim,80,100),good:iv('sGood',DEFAULTS.good,1,100),folderId:parseFolder($('sFolder').value)||DEFAULTS.folderId,apiKey:$('sKey').value.trim()||DEFAULTS.apiKey};
   try{if(settingsRef)await settingsRef.update(v)}catch(e){alert('Could not save: '+e.message);return}
   const reload=v.folderId!==cfg.folderId||v.apiKey!==cfg.apiKey;
   cfg=v;$('sheet').classList.remove('on');toast('✓ Saved');
