@@ -44,6 +44,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
+html,body{max-width:100%;overflow-x:hidden}
+@supports(overflow:clip){html,body{overflow-x:clip}}
 body{background:var(--bg);color:var(--ink);font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 
@@ -828,6 +830,7 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 // ══ Config ══
+const BUILD='20261107-fit2';  // bump on every change: open phones reload themselves when this changes
 const TZ='Asia/Jakarta', DAYS=14, PAGE=120, FOLDER='application/vnd.google-apps.folder';
 const DEFAULTS={tWk:900,tSat:600,tSun:0,sim:92,good:65,folderId:'1ZPRUzjPVTl8hC1CYncBGPpQfdVO2rJkt',apiKey:'AIzaSyBk4nc2bXAaVyQQFYpYy26VZ8YBi96A7ro'};
 const ADMIN_PWD=(()=>{try{return localStorage.getItem('hxcs_admin_pwd')||'hurricane2026'}catch(e){return 'hurricane2026'}})();
@@ -1604,7 +1607,7 @@ document.addEventListener('click',async e=>{
 $('rvUndo').onclick=undo;
 document.addEventListener('keydown',e=>{if(!stack.includes('rv'))return;if(e.key==='ArrowRight')vote(1);else if(e.key==='ArrowLeft')vote(-1);else if(e.key==='ArrowUp')vote(2);else if(e.key==='Backspace')undo()});
 $('more').onclick=()=>{shown+=PAGE;renderGallery()};
-$('refresh').onclick=()=>{light.at=0;load()};
+$('refresh').onclick=async()=>{if(await checkUpdate())return;light.at=0;load()};
 $('openSettings').onclick=()=>{$('sheet').classList.add('on');$('lockBox').style.display=adminOn?'none':'';$('setBox').style.display=adminOn?'':'none';$('pwd').value='';if(adminOn)fillSettings()};
 function fillSettings(){$('sWk').value=cfg.tWk;$('sSat').value=cfg.tSat;$('sSun').value=cfg.tSun;$('sCut').value=cfg.sim;$('sGood').value=cfg.good;$('sFolder').value=cfg.folderId;$('sKey').value=cfg.apiKey}
 $('unlock').onclick=()=>{
@@ -1660,6 +1663,20 @@ if(!calm&&window.DeviceOrientationEvent){
   addEventListener('deviceorientation',e=>{if(e.gamma==null)return;const x=Math.max(-1,Math.min(1,e.gamma/30)),y=Math.max(-1,Math.min(1,(e.beta-45)/30));
     hero.style.setProperty('--mx',(50+x*40)+'%');hero.style.setProperty('--my',(30+y*30)+'%');hero.style.setProperty('--lit',.8)},{passive:true});
 }
+
+// ══ Stay up to date: reload when a newer version of this page is live ══
+let updChecking=false;
+async function checkUpdate(){
+  if(updChecking||stack.length)return false;updChecking=true;
+  try{const r=await fetch(location.pathname+'?u='+Date.now(),{cache:'no-store'});const t=await r.text();
+    const m=t.match(/const BUILD='([^']+)'/);
+    if(m&&m[1]!==BUILD){toast('✨ Updating to the newest version…');setTimeout(()=>location.reload(),700);return true}
+  }catch(e){}finally{updChecking=false}
+  return false;
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
+addEventListener('pageshow',e=>{if(e.persisted)checkUpdate()});
+setTimeout(checkUpdate,8000);
 
 // ══ Logo eyes ══
 let eyeT=0;
@@ -1752,10 +1769,11 @@ addEventListener('touchmove',e=>{if(pY==null)return;const dy=e.touches[0].client
 addEventListener('touchend',async()=>{if(pY==null)return;pY=null;
   if(!ptr.classList.contains('ready')){ptrHide();return}
   ptr.style.transition='';ptr.classList.add('go');ptr.style.transform='translateY(64px)';
+  if(await checkUpdate())return;
   await load();toast('✓ Up to date');setTimeout(ptrHide,250)});
 
 window.addEventListener('resize',()=>{const el=$('chart');if(files.length&&!leaderMode&&$('dash').style.display!=='none'&&+el.dataset.w!==el.clientWidth)drawChart(lastDays(DAYS),counts().c,true)});
-setInterval(()=>{if(!document.hidden&&!stack.includes('rv'))load()},5*60*1000);
+setInterval(()=>{if(!document.hidden&&!stack.includes('rv')){load();checkUpdate()}},5*60*1000);
 </script>
 </body>
 </html>
