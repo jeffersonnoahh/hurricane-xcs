@@ -562,7 +562,49 @@ body.leader .tabbar{display:none}
 .rcardx em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--ink2)}
 .rmini{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;text-align:right}
 .rfoot{font-size:12px;color:var(--muted);font-weight:600;margin-top:10px;line-height:1.4}
-.tg{color:var(--good);font-weight:800}.tb{color:var(--orange);font-weight:800}
+.tg{color:var(--good);font-weight:800}
+.hint{font-size:11.5px;color:var(--muted);line-height:1.4}
+/* ── fits every iPhone: small outer screen, normal, Pro Max, and the foldable opened up ── */
+.grid.main{grid-template-columns:minmax(0,1fr)}
+.grid.main>*{min-width:0}
+@media(max-width:360px){
+  .wrap{padding-left:12px;padding-right:12px}
+  .top{gap:8px}.top #refresh{display:none}.ttl small{display:none}
+  .card{padding:16px}
+  .hero .mbig{font-size:52px}.hero .big{font-size:34px}.ring{width:92px;height:92px}
+  .qgrid{grid-template-columns:repeat(2,1fr)}.lstats{grid-template-columns:repeat(2,1fr)}
+  .stat b{font-size:20px}.mstats{grid-template-columns:repeat(2,1fr)}
+  .cell{border-radius:10px;padding:4px 3px}.cell .cn{font-size:10.5px}.cal{gap:3px}
+  .tabbar{width:calc(100% - 20px);padding:5px}.tabbar button{font-size:9.5px;padding:7px 1px 5px}.tabbar button svg{width:20px;height:20px}
+  .lrow{gap:8px;padding:8px 10px}.st{font-size:10px;padding:4px 7px}
+  .folders{gap:8px}.fgrid{gap:4px}
+  .rb{width:60px;height:60px;font-size:25px}.rvbtns{gap:12px}
+}
+@media(min-width:640px){
+  .wrap{padding-left:24px;padding-right:24px}
+  .grid.main{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #secToday{grid-column:1/-1;display:flex;align-items:center;gap:0}
+  #secToday .hm{flex:1;min-width:0}
+  #secToday .hdiv{align-self:stretch;width:1px;height:auto;margin:0 28px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.45),rgba(255,255,255,.08))}
+  #secToday .ht{flex:1.15;min-width:0}
+  .hero .mbig{font-size:76px}
+  #cChart{order:1}#secQuality{order:2}#cFb{order:3}#cSpread{order:4}#cSnap{order:5;grid-column:1/-1}#cLog{order:6}#secMonth{order:7}
+  #cSnap .stats{grid-template-columns:repeat(4,1fr)}
+  .rows{grid-template-columns:1fr 1fr;column-gap:14px}
+  .gallery{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .folders{grid-template-columns:repeat(3,1fr)}
+  .fvbody{padding-left:24px;padding-right:24px}
+  .fgrid{grid-template-columns:repeat(4,1fr)}
+  .leadercard{max-width:560px;margin-left:auto;margin-right:auto}
+}
+@media(min-width:900px){.folders{grid-template-columns:repeat(4,1fr)}.fgrid{grid-template-columns:repeat(6,1fr)}}
+/* foldable opened across the hinge: keep content off the fold */
+@media (horizontal-viewport-segments:2){
+  .wrap{max-width:none}
+  .grid.main{column-gap:calc(env(viewport-segment-left 1 0, 0px) - env(viewport-segment-right 0 0, 0px) + 28px)}
+}
+/* short screens (landscape or folded half open) */
+@media(max-height:560px){.rcard{width:min(100%,calc((100vh - 200px)*.8),360px)}.rvbtns{padding-top:6px}}.tb{color:var(--orange);font-weight:800}
 .top{gap:10px}
 .top .sp{display:none}
 .ttl{flex:1;min-width:0}
@@ -613,18 +655,18 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
 
   <div class="grid main" id="dash">
     <div class="card glass hero reveal" id="secToday"><span class="orb a"></span><span class="orb b"></span><span class="shine"></span>
-      <div class="lbl" id="mLbl">This month</div>
+      <div class="hm"><div class="lbl" id="mLbl">This month</div>
       <div class="mbig" id="mBig">0</div>
-      <div class="msub" id="mHeroSub">photos made</div>
+      <div class="msub" id="mHeroSub">photos made</div></div>
       <div class="hdiv"></div>
-      <div class="row">
+      <div class="ht"><div class="row">
         <div><div class="lbl2" id="heroLbl">Today</div><div class="big" id="heroNum">0 <span>/ 900</span></div><div class="msg" id="heroMsg" style="margin-top:6px">&nbsp;</div></div>
         <svg class="ring" viewBox="0 0 110 110" id="ring"></svg>
       </div>
-      <div class="pill" id="heroPill">&nbsp;</div>
+      <div class="pill" id="heroPill">&nbsp;</div></div>
     </div>
 
-    <div class="card glass reveal">
+    <div class="card glass reveal" id="cChart">
       <h2>Last 14 days</h2>
       <div class="sub">Unique photos per day. Orange dashes are each day's target, green bars hit it.</div>
       <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
@@ -638,24 +680,24 @@ body.leader .toast{bottom:max(24px,env(safe-area-inset-bottom))}
       <button class="qbtn glass press" data-q="copies"><span>Open quality report</span><span>›</span></button>
     </div>
 
-    <div class="card glass reveal">
+    <div class="card glass reveal" id="cFb">
       <div class="lh"><div><h2>Leader feedback</h2><div class="sub">Last 7 days · how leaders rate her photos</div></div><div class="wk" id="fbSum"></div></div>
       <div id="fbBody"></div>
     </div>
 
-    <div class="card glass reveal full log">
+    <div class="card glass reveal full log" id="cLog">
       <div class="lh"><div><h2>Daily log</h2><div class="sub">Unique photos completed vs target, each day</div></div>
         <div class="wk" id="wk"></div></div>
       <div class="rows" id="log"></div>
     </div>
 
-    <div class="card glass reveal">
+    <div class="card glass reveal" id="cSnap">
       <h2>Snapshot</h2>
       <div class="sub" id="snapSub">For the selected day</div>
       <div class="stats" id="stats"></div>
     </div>
 
-    <div class="card glass reveal">
+    <div class="card glass reveal" id="cSpread">
       <h2>Spread to the team</h2>
       <div class="sub" id="spreadSub">How the day's photos split across her folders</div>
       <div class="bars" id="bars"></div>
