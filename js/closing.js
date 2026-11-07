@@ -29,6 +29,12 @@
 
    EXPORT — Excel (.xlsx, 2 sheet) atau CSV (pemisah ';' untuk Excel
    Indonesia). Untuk leader lewat PIN (hash SHA-256 di config), admin langsung.
+
+   SATU FILE UNTUK 3 DASHBOARD (Hurricane / Maria / Calvin) — file ini identik
+   di ketiga repo. Bedanya dibaca dari window.DATA_NS (dipasang app.js; di Maria
+   baru ada setelah window.onload, jadi selalu dibaca saat dipakai, tidak saat
+   file dimuat). Maria/Calvin: satu tim "Sales" → tombol "Leader Maria" /
+   "Leader Calvin"; nama file export ikut nama dashboard.
    ══════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -69,6 +75,9 @@
     return Array.prototype.map.call(new Uint8Array(h), function (x) { return x.toString(16).padStart(2, '0'); }).join('');
   }
   function isAdmin() { try { return !!adminUnlocked; } catch (e) { return false; } }
+  // dashboard mana: '' = Hurricane (root), 'maria', 'calvin'
+  function org() { try { return typeof W.DATA_NS === 'string' ? W.DATA_NS : ''; } catch (e) { return ''; } }
+  var ORG_LEAD = { maria: 'Maria', calvin: 'Calvin' };
   function dbRef(p) { return W.db && W.db.ref ? W.db.ref(p) : null; }
 
   /* ── siapa (diingat per HP) & apakah form baru aktif ─────────────── */
@@ -79,14 +88,16 @@
   }
   function setMe(sp, team) { store(ME_KEY, sp + '|' + (team || teamOf(sp) || '')); }
   function setMeLeader(teams) { store(ME_KEY, LEAD + '|' + [].concat(teams).join(',')); }
-  // tim dengan leader yang sama digabung: "Christ A" + "Christ B" → Leader Christ (nama tim tanpa huruf A/B di belakang)
+  // tim dengan leader yang sama digabung: "Christ A" + "Christ B" → Leader Christ (nama tim tanpa huruf A/B di belakang).
+  // Maria / Calvin: semua tim di dashboard itu dipimpin satu orang → "Leader Maria" / "Leader Calvin".
   function leadBase(t) { return String(t || '').replace(/\s+[A-Z]$/, ''); }
+  function leadName(t) { return ORG_LEAD[org()] || leadBase(t); }
   function leaderGroups() {
     var out = [], idx = {};
-    Object.keys(roster()).forEach(function (t) { var k = leadBase(t); if (!(k in idx)) { idx[k] = out.length; out.push({ name: k, teams: [] }); } out[idx[k]].teams.push(t); });
+    Object.keys(roster()).forEach(function (t) { var k = leadName(t); if (!(k in idx)) { idx[k] = out.length; out.push({ name: k, teams: [] }); } out[idx[k]].teams.push(t); });
     return out;
   }
-  function ownerLabel(o) { return !o ? '' : o.leader ? 'Leader ' + leadBase(o.team) : o.sp; }
+  function ownerLabel(o) { return !o ? '' : o.leader ? 'Leader ' + leadName(o.team) : o.sp; }
   // channel marketplace (Tokopedia/Shopee/TikTok…) tidak punya WA customer → 4 digit WA opsional
   function isCh(sp) {
     if (/shopee|tokopedia|tiktok|lazada|blibli/i.test(String(sp || ''))) return true;
@@ -110,7 +121,7 @@
     var m = me(); if (!m) return null;
     if (!W._cfgTeamsLoaded) return m;                 // roster live belum dimuat: jangan ubah apa-apa dulu
     if (m.leader) {
-      var g = leaderGroups().filter(function (x) { return x.name === leadBase(m.team); })[0];
+      var g = leaderGroups().filter(function (x) { return x.name === leadName(m.team); })[0];
       if (!g) { store(ME_KEY, null); return null; }
       if (g.teams.join(',') !== m.teams.join(',')) setMeLeader(g.teams);     // HP lama "Leader Christ A" → ikut Christ B
       return { leader: true, sp: '', team: g.teams[0], teams: g.teams.slice() };
@@ -138,8 +149,11 @@
     n = n || 0;
     try {
       if (W.firebase && firebase.apps && firebase.apps.length) {
-        // langsung ke SDK (bukan W.db.ref): pembungkus namespace Maria/Calvin akan merusak path .info
-        firebase.database().ref('.info/connected').on('value', function (s) { online = !!s.val(); });
+        // .info/connected harus dari root. Di Maria/Calvin app.js menimpa ref() dengan pembungkus namespace
+        // LANGSUNG di instance database (firebase.database() mengembalikan instance yang sama) → pakai ref()
+        // asli dari prototype; di Hurricane itu fungsi yang sama.
+        var dbi = firebase.database(), base = Object.getPrototypeOf(dbi).ref;
+        (typeof base === 'function' ? base.call(dbi, '.info/connected') : dbi.ref('.info/connected')).on('value', function (s) { online = !!s.val(); });
         return;
       }
     } catch (e) { }
@@ -830,7 +844,7 @@
     return '\ufeff' + [head].concat(body).map(function (r) { return r.map(q).join(';'); }).join('\r\n');
   }
   async function doExport(from, to, team, fmt) {
-    var X = collect(from, to, team), brand = 'hurricane', base = 'closing_' + brand + '_' + from + '_sd_' + to + (team ? '_' + team.replace(/\s+/g, '') : '');
+    var X = collect(from, to, team), brand = org() || 'hurricane', base = 'closing_' + brand + '_' + from + '_sd_' + to + (team ? '_' + team.replace(/\s+/g, '') : '');
     if (!X.n) { toast('Tidak ada closing di periode ini.', 'info'); return X; }
     if (fmt === 'xlsx') {
       try {
@@ -1039,6 +1053,6 @@
   W.HXClosing = {
     open: open, close: close, exportOpen: openExport, collect: collect, doExport: doExport,
     cfg: function () { return JSON.parse(JSON.stringify(CFG)); }, me: me, setMe: setMe,
-    _state: function () { return S; }, _validate: function () { return S ? validate() : null; }, _applyCfg: applyCfg
+    _state: function () { return S; }, _online: function () { return online; }, _validate: function () { return S ? validate() : null; }, _applyCfg: applyCfg
   };
 })();
