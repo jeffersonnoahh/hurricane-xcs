@@ -34,7 +34,7 @@
   window.__hxClosing = true;
 
   var D = document, R = D.documentElement, W = window;
-  var ME_KEY = 'hx-closing-me', PIN_KEY = 'hx-closing-pin';
+  var ME_KEY = 'hx-closing-me', PIN_KEY = 'hx-closing-pin', LEAD = '@leader';
   var DEF_SPV = ['Devin', 'Agunk', 'Dimas', 'Willy', 'Roma', 'Purwandi', 'Eko', 'Harris'];
   var TANPA = 'Tanpa SPV';
   var BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -70,8 +70,16 @@
   function dbRef(p) { return W.db && W.db.ref ? W.db.ref(p) : null; }
 
   /* ── siapa (diingat per HP) & apakah form baru aktif ─────────────── */
-  function me() { var v = store(ME_KEY); if (!v) return null; var p = v.split('|'); return { sp: p[0], team: p[1] || teamOf(p[0]) }; }
+  function me() {
+    var v = store(ME_KEY); if (!v) return null; var p = v.split('|');
+    if (p[0] === LEAD) return { leader: true, sp: '', team: p[1] || '' };      // HP leader: input untuk anggota timnya
+    return { sp: p[0], team: p[1] || teamOf(p[0]) };
+  }
   function setMe(sp, team) { store(ME_KEY, sp + '|' + (team || teamOf(sp) || '')); }
+  function setMeLeader(team) { store(ME_KEY, LEAD + '|' + team); }
+  function ownerLabel(o) { return !o ? '' : o.leader ? 'Leader ' + o.team : o.sp; }
+  // channel marketplace (Tokopedia/Shopee/TikTok…) tidak punya WA customer → 4 digit WA opsional
+  function isCh(sp) { try { return !!(W.HX && HX.isChannel && HX.isChannel(sp)); } catch (e) { return false; } }
   function teamOf(sp) {
     var T = roster(), n = norm(sp);
     for (var t in T) { var m = (T[t] && T[t].m) || []; for (var i = 0; i < m.length; i++) if (norm(m[i]) === n) return t; }
@@ -89,6 +97,7 @@
   function meLive() {
     var m = me(); if (!m) return null;
     if (!W._cfgTeamsLoaded) return m;                 // roster live belum dimuat: jangan ubah apa-apa dulu
+    if (m.leader) { if (roster()[m.team]) return m; store(ME_KEY, null); return null; }
     var c = canon(m.sp, m.team);
     if (!c) { store(ME_KEY, null); return null; }     // sudah tidak di roster → pilih ulang
     if (c.sp !== m.sp || c.team !== m.team) setMe(c.sp, c.team);
@@ -227,9 +236,11 @@
     if (pick) {
       var own = me();
       h += own
-        ? '<div class="hxk-sec"><div class="hxk-lbl">Closing ini untuk sales siapa?</div><div class="hxk-sub">HP ini tetap tercatat sebagai <b>' + esc(own.sp) + '</b> (yang input).</div>'
-        : '<div class="hxk-sec"><div class="hxk-lbl">Kamu siapa?</div><div class="hxk-sub">Dipilih sekali, nanti diingat di HP ini.</div>';
-      Object.keys(T).forEach(function (t) {
+        ? '<div class="hxk-sec"><div class="hxk-lbl">Closing ini untuk sales siapa?</div><div class="hxk-sub">HP ini tercatat sebagai <b>' + esc(ownerLabel(own)) + '</b> (yang input).</div>'
+        : '<div class="hxk-sec"><div class="hxk-lbl">Kamu siapa?</div><div class="hxk-sub">Dipilih sekali, nanti diingat di HP ini. Leader: pilih "Leader …" di bawah.</div>';
+      var teams = Object.keys(T);
+      if (own && own.leader && T[own.team]) teams = [own.team].concat(teams.filter(function (t) { return t !== own.team; }));
+      teams.forEach(function (t) {
         var m = ((T[t] && T[t].m) || []).filter(function (n) {
           var lead = false; try { lead = _isLeader(n); } catch (e) { }   // team lead yang tidak berjualan (app.js)
           return !lead && (CFG.mode === 'all' || inPilot(n) || isAdmin());
@@ -240,13 +251,18 @@
         }).join('') + '</div>';
       });
       if (CFG.mode === 'pilot' && !isAdmin()) h += '<div class="hxk-sub" style="margin-top:10px">Form baru sedang diuji coba oleh beberapa sales. Yang lain tetap memakai form lama.</div>';
-      if (own) h += '<button type="button" class="hxk-link" data-act="resetme" style="margin-top:8px">Bukan ' + esc(own.sp) + '? Ganti nama HP ini</button>';
+      if (!own && (CFG.mode === 'all' || isAdmin())) {
+        h += '<div class="hxk-famlbl hxk-leadlbl">Leader (mencatat closing anggota tim)</div><div class="hxk-chips">' + Object.keys(T).map(function (t) {
+          return '<button type="button" class="hxk-chip hxk-lead" data-act="meleader" data-t="' + esc(t) + '">Leader ' + esc(t) + '</button>';
+        }).join('') + '</div>';
+      }
+      if (own) h += '<button type="button" class="hxk-link" data-act="resetme" style="margin-top:8px">Bukan ' + esc(ownerLabel(own)) + '? Ganti nama HP ini</button>';
       if (CFG.mode === 'pilot') h += '<button type="button" class="hxk-link hxk-oldform" data-act="oldform">Nama tidak ada? Pakai form lama</button>';
       return h + '</div>';
     }
     var owner = me();
     h += '<div class="hxk-sec hxk-row"><div><div class="hxk-lbl">Sales</div><div class="hxk-me"><b>' + esc(S.sp) + '</b> · ' + esc(S.team || '—') + '</div>' +
-      (owner && norm(owner.sp) !== norm(S.sp) ? '<div class="hxk-sub">Diinput oleh ' + esc(owner.sp) + '</div>' : '') + errMsg('sales') + '</div>' +
+      (owner && (owner.leader || norm(owner.sp) !== norm(S.sp)) ? '<div class="hxk-sub">Diinput oleh ' + esc(ownerLabel(owner)) + '</div>' : '') + errMsg('sales') + '</div>' +
       '<button type="button" class="hxk-link" data-act="pickme">Ganti</button></div>';
     // tanggal
     var today = dkey(new Date()), kemarin = dkey(addDays(new Date(), -1)), minD = dkey(addDays(new Date(), -7));
@@ -259,7 +275,7 @@
     // customer
     h += '<div class="hxk-sec"><div class="hxk-grid2"><div><div class="hxk-lbl">Nama customer</div>' +
       '<input type="text" class="hxk-in" data-act="cust" autocomplete="off" autocapitalize="words" placeholder="Nama lengkap" value="' + esc(S.customer) + '">' + errMsg('customer') + '</div>' +
-      '<div><div class="hxk-lbl">4 digit WA</div><input type="text" class="hxk-in hxk-wa" data-act="wa" inputmode="numeric" maxlength="4" placeholder="1234" value="' + esc(S.wa4) + '">' + errMsg('wa4') + '</div></div></div>';
+      '<div><div class="hxk-lbl">4 digit WA' + (isCh(S.sp) ? ' <span class="hxk-optl">opsional</span>' : '') + '</div><input type="text" class="hxk-in hxk-wa" data-act="wa" inputmode="numeric" maxlength="4" placeholder="' + (isCh(S.sp) ? '-' : '1234') + '" value="' + esc(S.wa4) + '">' + errMsg('wa4') + '</div></div></div>';
     // test
     h += '<div class="hxk-sec"><div class="hxk-lbl">Ada produk yang di-test?</div><div class="hxk-seg">' +
       '<button type="button" data-act="test" data-v="ya" class="' + (S.test === 'ya' ? 'on' : '') + '">Ada test</button>' +
@@ -328,6 +344,7 @@
   function open(sp, team) {
     if (sheet) return;
     var m = sp ? (canon(sp, team) || { sp: sp, team: team || teamOf(sp) }) : meLive();
+    if (m && m.leader) m = null;                               // HP leader → pilih anggota tim dulu
     S = freshState(m && m.sp, m && m.team);
     var d = loadDraft();
     if (d && sp && norm(d.sp) !== norm(m.sp)) d = null;      // dibuka untuk nama tertentu → hanya draft nama itu
@@ -383,11 +400,12 @@
     switch (act) {
       case 'close': close(); return;
       case 'bg': close('force'); return;
-      case 'fresh': ss(DRAFT_KEY, null); var own = meLive(); S = own ? freshState(own.sp, own.team) : freshState(S.sp, S.team); break;
+      case 'fresh': ss(DRAFT_KEY, null); var own = meLive(); S = own ? (own.leader ? freshState('', '') : freshState(own.sp, own.team)) : freshState(S.sp, S.team); break;
       case 'oldform': close('drop'); bypassOnce = true; openLegacy(); return;
       case 'me':   // pertama kali = pemilik HP; sesudahnya "Ganti" hanya untuk closing ini (leader input untuk anggota tim)
         S.sp = v; S.team = b.getAttribute('data-t') || teamOf(v); S.picking = false; delete S.err.sales; if (!me()) setMe(S.sp, S.team); break;
       case 'resetme': store(ME_KEY, null); S.picking = true; break;
+      case 'meleader': setMeLeader(b.getAttribute('data-t')); S.picking = true; break;   // lanjut: pilih anggota tim
       case 'pickme': S.picking = true; break;
       case 'date':
         S.dateMode = v;
@@ -464,7 +482,7 @@
   function validate() {
     var e = {}, name = titleCase(S.customer), letters = (name.match(/[A-Za-zÀ-ÿ]/g) || []).length;
     if (letters < 3) e.customer = 'Tulis nama customer (minimal 3 huruf).';
-    if (!/^\d{4}$/.test(S.wa4)) e.wa4 = 'Isi 4 digit terakhir nomor WA.';
+    if (isCh(S.sp) ? (S.wa4 && !/^\d{4}$/.test(S.wa4)) : !/^\d{4}$/.test(S.wa4)) e.wa4 = isCh(S.sp) ? 'Isi 4 digit, atau kosongkan (order marketplace).' : 'Isi 4 digit terakhir nomor WA.';
     if (!S.test) e.test = 'Pilih: ada test atau langsung order.';
     if (S.test === 'ya' && !S.tested.length) e.tested = 'Pilih minimal 1 produk yang di-test.';
     var cs = chosen();
@@ -526,7 +544,7 @@
     if (odd.length && !(await confirmBox('Harga jauh dari katalog', odd.map(function (c) { return c.prod + ': ' + rp(linePrice(c.l)) + ' (katalog ' + rp(prices()[c.prod] || 0) + ')'; }).join('\n') + '\n\nSudah disetujui leader?', 'Ya, simpan'))) return;
     if (S !== mine) return;                                   // form ditutup (Back) saat konfirmasi terbuka
     var dup = findDup();
-    if (dup && !(await confirmBox('Mungkin sudah tercatat', titleCase(S.customer) + ' (…' + S.wa4 + ') sudah dicatat oleh ' + dup.r.sp + ' jam ' + hm(dup.r.ts) + ' (' + rpShort(dup.rev) + ', ' + (dup.r.prod || '') + ').\n\nSimpan lagi sebagai closing baru?', 'Simpan lagi'))) return;
+    if (dup && !(await confirmBox('Mungkin sudah tercatat', titleCase(S.customer) + (S.wa4 ? ' (…' + S.wa4 + ')' : '') + ' sudah dicatat oleh ' + dup.r.sp + ' jam ' + hm(dup.r.ts) + ' (' + rpShort(dup.rev) + ', ' + (dup.r.prod || '') + ').\n\nSimpan lagi sebagai closing baru?', 'Simpan lagi'))) return;
     if (S !== mine) return;
     try { if (D.activeElement && sheet.contains(D.activeElement)) D.activeElement.blur(); } catch (e) { }
     S.saving = true; S.slow = online === false; paint();
@@ -550,7 +568,7 @@
         team: S.team, sp: S.sp, prod: c.prod, chats: 0, units: qty, price: price, revenue: price * qty,
         saleType: tags, notes: '', priceMode: c.l.custom ? 'custom' : 'normal', ts: base + i,
         orderId: '', customer: name, wa4: S.wa4, custKey: key, tested: tested, addon: !!c.addon,
-        spv: S.spvMode === 'ada' ? S.spv : TANPA, test: S.test, inputBy: meNow ? meNow.sp : S.sp, src: 'closing'
+        spv: S.spvMode === 'ada' ? S.spv : TANPA, test: S.test, inputBy: meNow ? ownerLabel(meNow) : S.sp, src: 'closing'
       };
     });
     // orderId yang sama HANYA kalau isi closing sama dengan percobaan yang gagal tadi
@@ -898,7 +916,7 @@
       for (var ci = 0; ci < cs.length; ci++) {
         var e = es[ci]; if (e.src !== 'closing' || cs[ci].querySelector('.hxk-ms')) continue;
         var t = D.createElement('div'); t.className = 'hxk-ms';
-        t.textContent = (e.customer || '-') + ' (…' + (e.wa4 || '----') + ') · ' + (e.spv || TANPA) + (e.addon ? ' · tambahan' : e.test === 'tidak' ? ' · langsung order' : ' · di-test');
+        t.textContent = (e.customer || '-') + (e.wa4 ? ' (…' + e.wa4 + ')' : '') + ' · ' + (e.spv || TANPA) + (e.addon ? ' · tambahan' : e.test === 'tidak' ? ' · langsung order' : ' · di-test');
         (cs[ci].querySelector('.ms-sale-meta') || cs[ci]).appendChild(t);
       }
     }
