@@ -663,11 +663,18 @@
       return '<div class="wcard" data-wallet="' + esc(w.id) + '" data-id="' + esc(w.id) + '" style="--a:' + g[0] + ';--b:' + g[1] + ';--i:' + i + '">' +
         '<span class="wc-3d">' + (spKey(w) ? sprite(spKey(w)) : '<b>' + esc(w.icon) + '</b>') + '</span>' +
         '<div class="wc-top"><span class="wc-name">' + esc(w.name) + '</span><span class="wc-grp">' + (GROUPS[groupOf(w)] || {}).name + '</span></div>' +
-        '<div class="wc-bot"><span class="wc-amt">' + resMoney(w.id, money(balance(w.id))) + '</span>' + (plTag(w) || (u ? '<span class="wc-sub">' + money(u, { rp: false }) + ' not received</span>' : '')) + '</div><i class="wc-shine"></i></div>';
+        '<div class="wc-bot"><span class="wc-amt">' + resMoney(w.id, money(balance(w.id))) + '</span>' + (plTag(w) || (u ? '<span class="wc-sub">' + money(u, { rp: false }) + ' not received</span>' : '')) + '</div>' + liqHtml(w, ws) + '<i class="wc-shine"></i></div>';
     }).join('') + '<button class="ws-close" type="button">Close</button><div class="ws-hint">' + ws.length + ' wallets · tap to open</div></div>';
     layoutStack();
     var st = $('hWallets').querySelector('.wstack');
     makeSortable(st, '.wcard', null, function (ids) { reorderWallets(ids); }, function () { return stackOpen; });
+  }
+  // 3. Liquid wallet cards: each card holds liquid up to its share of your biggest wallet.
+  function liqHtml(w, ws) {
+    if (netHidden && !S.settings.hide && isRes(w.id)) return '';
+    var mx = Math.max.apply(null, ws.map(function (x) { return Math.max(0, balance(x.id)); }).concat([1])), b = Math.max(0, balance(w.id));
+    var lv = Math.round(14 + b / mx * 70), gold = /gold/i.test(w.name) || (w.holding && w.holding.asset === 'gold');
+    return '<i class="wc-liq' + (gold ? ' gold' : '') + '" style="--lv:' + lv + '%"></i>';
   }
   function layoutStack() {
     var st = $('hWallets') && $('hWallets').querySelector('.wstack'); if (!st) return;
@@ -3732,7 +3739,7 @@
       cells += '<button class="cal-d' + (key === today() ? ' today' : '') + (v ? ' has' : '') + '" data-day="' + key + '" style="--a:' + lv.toFixed(2) + ';--i:' + d + '"><b>' + d + '</b>' + (v ? '<small>' + (S.settings.hide ? '•••' : short(v)) + '</small>' : '') + '</button>';
     }
     var tot = Object.keys(sums).reduce(function (a, k) { return a + sums[k]; }, 0), days = Object.keys(sums).length;
-    $('txCal').innerHTML = '<div class="card cal"><div class="cal-top"><div><div class="eyebrow">Spent in ' + MONTHS[mo] + ' <button type="button" class="yh-btn" id="yhBtn">Year view ›</button></div><div class="mid-money">' + money(tot) + '</div></div><div class="cal-key"><span>less</span><i style="--a:.15"></i><i style="--a:.45"></i><i style="--a:.75"></i><i style="--a:1"></i><span>more</span></div></div>' +
+    $('txCal').innerHTML = '<div class="card cal"><div class="cal-top"><div><div class="eyebrow">Spent in ' + MONTHS[mo] + ' <button type="button" class="yh-btn" id="yhBtn">Year view ›</button> <button type="button" class="yh-btn" id="calPlay">▶ Play</button></div><div class="mid-money">' + money(tot) + '</div></div><div class="cal-key"><span>less</span><i style="--a:.15"></i><i style="--a:.45"></i><i style="--a:.75"></i><i style="--a:1"></i><span>more</span></div></div>' +
       '<div class="cal-grid">' + cells + '</div><div class="muted small" style="margin-top:10px">' + days + ' spending day' + (days === 1 ? '' : 's') + ' · ' + (dim - days) + ' no-spend day' + (dim - days === 1 ? '' : 's') + '</div></div>';
   }
   function daySheet(day) {
@@ -3748,7 +3755,7 @@
     $('hBills').addEventListener('click', function (e) { if (e.target.closest('#billEmpty')) { recSheet(); return; } var b = e.target.closest('[data-rec]'); if (b) recSheet(S.recurring.filter(function (x) { return x.id === b.dataset.rec; })[0]); });
     $('txQ').addEventListener('input', function () { if (!this.value) renderTx(); renderTxExtras(); });
     $('txMode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; txMode = b.dataset.m; haptic(); renderTxExtras(); };
-    $('txCal').addEventListener('click', function (e) { if (e.target.closest('#yhBtn')) { haptic(); yearHeatSheet(); return; } var d = e.target.closest('[data-day]'); if (d) { haptic(); daySheet(d.dataset.day); } });
+    $('txCal').addEventListener('click', function (e) { if (e.target.closest('#calPlay')) { haptic(); playMonth($('txCal')); return; } if (e.target.closest('#yhBtn')) { haptic(); yearHeatSheet(); return; } var d = e.target.closest('[data-day]'); if (d) { haptic(); daySheet(d.dataset.day); } });
     bindViz();
     $('csvBtn').onclick = function () {
       var rows = [['Date', 'Time', 'Type', 'Category', 'Wallet', 'To wallet', 'Amount', 'Merchant', 'Note']].concat(S.tx.slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).map(function (t) {
@@ -4421,12 +4428,13 @@
   }
 
   // ---------- customizable home ----------
-  var SEC_NAMES = { widgets: 'Quick widgets', installments: 'Installments', business: 'Business', komisi: 'Komisi Noah', world: 'Invest to the World', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
+  var SEC_NAMES = { trip: 'Trip passport', widgets: 'Quick widgets', installments: 'Installments', business: 'Business', komisi: 'Komisi Noah', world: 'Invest to the World', insights: 'Insights', upcoming: 'Upcoming & overdue', goals: 'Goals', bills: 'Bills & subscriptions', allocation: 'Allocation', wallets: 'Wallets', cashflow: 'Cash flow', spending: 'Spending donut', month: 'This month', recent: 'Recent activity' };
   function homeLayout() {
     // Calm default: daily things first, duplicate charts off (turn on in Customize Home).
-    var DEF = ['widgets', 'wallets', 'upcoming', 'komisi', 'world', 'business', 'installments', 'insights', 'goals', 'bills', 'cashflow', 'recent', 'allocation', 'spending', 'month'], OFF = { allocation: 1, spending: 1, month: 1 };
+    var DEF = ['trip', 'widgets', 'wallets', 'upcoming', 'komisi', 'world', 'business', 'installments', 'insights', 'goals', 'bills', 'cashflow', 'recent', 'allocation', 'spending', 'month'], OFF = { allocation: 1, spending: 1, month: 1 };
     var L = (S.settings.home || []).filter(function (x) { return SEC_NAMES[x.k]; });
     if (S.settings.home && !L.some(function (x) { return x.k === 'widgets'; })) L.unshift({ k: 'widgets', on: true });
+    if (S.settings.home && !L.some(function (x) { return x.k === 'trip'; })) L.unshift({ k: 'trip', on: true });
     if (S.settings.home && !L.some(function (x) { return x.k === 'world'; })) { var ki = L.map(function (x) { return x.k; }).indexOf('komisi'); L.splice(ki + 1, 0, { k: 'world', on: true }); }
     DEF.concat(Object.keys(SEC_NAMES)).forEach(function (k) { if (SEC_NAMES[k] && !L.some(function (x) { return x.k === k; })) L.push({ k: k, on: !S.settings.home ? !OFF[k] : true }); });
     return L;
@@ -4707,6 +4715,7 @@
 
   // Report cards
   function renderViz() {
+    paintAura(); renderTripCard();
     var mKey = ym(cur), f = $('repFlow'), bb = $('repBubbles');
     if (f) f.innerHTML = flowSvg(mKey);
     if (bb) bb.innerHTML = bubblesHtml(mKey);
@@ -4717,6 +4726,9 @@
     if ($('repBubbles')) $('repBubbles').addEventListener('click', function (e) { var p = e.target.closest('[data-bcat]'); if (!p) return; haptic(); p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); if (p.dataset.bcat !== '_other') setTimeout(function () { catDetail(cat(p.dataset.bcat)); }, 180); });
     if ($('hWidgets')) $('hWidgets').addEventListener('click', function (e) { var w = e.target.closest('[data-wg]'); if (!w) return; haptic(); var k = w.dataset.wg; if (k === 'gold') goldSheet(); else if (k === 'km') komisiSheet(); else show('v-budget'); });
     if ($('tmBtn')) $('tmBtn').onclick = function () { haptic(); timeMachine(); };
+    if ($('skyBtn')) $('skyBtn').onclick = function () { haptic(); skySheet(); };
+    if ($('posterBtn')) $('posterBtn').onclick = function () { haptic(); posterSheet(cur); };
+    if ($('hTrip')) $('hTrip').onclick = function () { haptic(); passportSheet(); };
   }
 
   // ---------- Calculator keypad for money boxes (replaces the phone keyboard) ----------
@@ -4827,6 +4839,126 @@
     });
   }
 
+  // =================== ART PACK: aura, night sky, liquid cards, poster, passport, rhythm, time-of-day ===================
+  // 1. Money aura behind net worth: calm green (spending under your normal), amber (busy day), violet at night.
+  function paintAura() {
+    var el = $('hAura'); if (!el) return;
+    var now = new Date(), h = now.getHours(), td = today(), spentT = 0, last = {}, n = 0, tot = 0;
+    S.tx.forEach(function (t) { if (t.type !== 'expense' || !isFlow(t)) return; if (t.date === td) spentT += t.amount; else if (daysBetween(t.date, td) > 0 && daysBetween(t.date, td) <= 30) { tot += t.amount; last[t.date] = 1; } });
+    n = Math.max(1, Object.keys(last).length); var avg = tot / 30;
+    var mood = h >= 21 || h < 5 ? 'night' : spentT > avg * 1.3 && spentT > 0 ? 'busy' : 'calm';
+    el.className = 'aura ' + mood; el.dataset.mood = mood;
+  }
+  // 8. The whole app's light follows the time of day.
+  function todTheme() {
+    var h = new Date().getHours(), k = h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'day' : h >= 16 && h < 19 ? 'evening' : 'night';
+    var r = document.documentElement; ['morning', 'day', 'evening', 'night'].forEach(function (x) { r.classList.toggle('tod-' + x, x === k); });
+  }
+  todTheme(); setInterval(function () { todTheme(); paintAura(); }, 10 * 60e3);
+
+  // 2. Night sky: each transaction this month is a star; same category stars join into a constellation.
+  function skySheet() {
+    var m = ym(cur), w = walletSel || 'all', list = txIn(m, w).filter(function (t) { return (t.type === 'expense' || t.type === 'income') && isFlow(t); });
+    if (!list.length) { toast('No transactions this month yet'); return; }
+    var by = {}; list.forEach(function (t) { (by[t.cat] = by[t.cat] || []).push(t); });
+    var cats = Object.keys(by).sort(function (a, b) { return by[b].length - by[a].length; }).slice(0, 8);
+    var dim = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate(), W = 360, H = 460, mx = Math.max.apply(null, list.map(function (t) { return t.amount; }));
+    var rnd = function (s) { var x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
+    var stars = '', lines = '', labels = '', bg = '';
+    for (var k = 0; k < 90; k++) bg += '<circle cx="' + (rnd(k) * W).toFixed(1) + '" cy="' + (rnd(k + 500) * H).toFixed(1) + '" r="' + (rnd(k + 900) * .9 + .2).toFixed(2) + '" class="sky-dust" style="--d:' + (rnd(k + 70) * 4).toFixed(2) + 's"/>';
+    // spread over the days that actually have payments, and over the whole sky height
+    var ds = list.map(function (t) { return +t.date.slice(8, 10) + (+(t.time || '12:00').slice(0, 2)) / 24; }), d0 = Math.min.apply(null, ds), d1 = Math.max.apply(null, ds), span = Math.max(.6, d1 - d0);
+    var laneH = (H - 70) / cats.length;
+    cats.forEach(function (cid, ci) {
+      var col = VZ_COL[ci % VZ_COL.length], band = 35 + laneH * (ci + .5), pts = [];
+      by[cid].slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).forEach(function (t, j) {
+        var dd = +t.date.slice(8, 10) + (+(t.time || '12:00').slice(0, 2)) / 24, x = 26 + (dd - d0) / span * (W - 52) + (rnd(j + ci * 31) - .5) * 14, y = band + (rnd(j * 7 + ci) - .5) * laneH * .8;
+        var r = 1.6 + Math.sqrt(t.amount / mx) * 7; pts.push([x, y]);
+        stars += '<g class="star" data-tx="' + esc(t.id) + '" style="--c:' + col + ';--d:' + (rnd(j + ci) * 3).toFixed(2) + 's"><circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (r * 2.6).toFixed(1) + '" class="halo"/><circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(1) + '" class="core"/></g>';
+      });
+      if (pts.length > 1) lines += '<polyline class="sky-line" style="--c:' + col + ';--i:' + ci + '" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
+      labels += '<span style="--c:' + col + '"><i></i>' + esc(cat(cid).name) + ' · ' + by[cid].length + '</span>';
+    });
+    openSheet('<h3>Night sky · ' + MONTHS[cur.getMonth()] + '</h3><p class="muted small" style="text-align:center;margin-top:-8px">Every star is a payment. Brighter = bigger. Lines join the same category. Tap a star.</p>' +
+      '<div class="sky"><svg viewBox="0 0 ' + W + ' ' + H + '"><defs><radialGradient id="skg" cx="50%" cy="0%" r="90%"><stop offset="0" stop-color="#1b2550"/><stop offset="1" stop-color="#05060d"/></radialGradient></defs><rect width="' + W + '" height="' + H + '" fill="url(#skg)" rx="22"/>' + bg + lines + stars + '</svg></div><div class="sky-leg">' + labels + '</div>',
+      function (r) { r.querySelector('.sky svg').addEventListener('click', function (e) { var g = e.target.closest('[data-tx]'); if (!g) return; haptic(); sfx('pop'); var t = S.tx.filter(function (x) { return x.id === g.dataset.tx; })[0]; if (t) txSheet(t); }); });
+  }
+
+  // 4. Generative art poster: a one-of-a-kind abstract painting of the month's money (same month = same art).
+  function posterMake(mDate) {
+    var m = ym(mDate), list = txIn(m, 'all').filter(function (t) { return t.type === 'expense' && isFlow(t); });
+    var W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
+    var seed = 0; m.split('').forEach(function (ch) { seed = (seed * 31 + ch.charCodeAt(0)) % 2147483647; });
+    var rnd = function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    var by = {}, tot = 0; list.forEach(function (t) { by[t.cat] = (by[t.cat] || 0) + t.amount; tot += t.amount; });
+    var top = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).slice(0, 6), pal = ['#34d399', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#2dd4bf', '#fb7185'];
+    var g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#0b1020'); g.addColorStop(.55, '#121a33'); g.addColorStop(1, '#1d0f2a'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    // big soft colour fields, one per top category
+    top.forEach(function (cid, i) { var r = 260 + by[cid] / (tot || 1) * 700, cx = rnd() * W, cy = 200 + rnd() * (H - 520); var rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, pal[i] + 'aa'); rg.addColorStop(1, pal[i] + '00'); x.globalCompositeOperation = 'screen'; x.fillStyle = rg; x.fillRect(0, 0, W, H); });
+    x.globalCompositeOperation = 'source-over';
+    // swirls: one flowing ribbon per category
+    top.forEach(function (cid, i) { x.strokeStyle = pal[i] + 'cc'; x.lineWidth = 3 + by[cid] / (tot || 1) * 26; x.lineCap = 'round'; x.beginPath(); var px = rnd() * W, py = 150 + rnd() * (H - 450); x.moveTo(px, py); for (var k = 0; k < 4; k++) { var nx = rnd() * W, ny = 150 + rnd() * (H - 450); x.bezierCurveTo(px + (rnd() - .5) * 700, py + (rnd() - .5) * 700, nx + (rnd() - .5) * 700, ny + (rnd() - .5) * 700, nx, ny); px = nx; py = ny; } x.stroke(); });
+    // dots: every payment, placed by day, sized by amount
+    var mx = Math.max.apply(null, list.map(function (t) { return t.amount; }).concat([1]));
+    list.forEach(function (t) { var i = top.indexOf(t.cat), d = +t.date.slice(8, 10); x.fillStyle = (i >= 0 ? pal[i] : '#ffffff') + 'e6'; x.beginPath(); x.arc(60 + (d - 1) / 30 * (W - 120) + (rnd() - .5) * 40, 140 + rnd() * (H - 460), 4 + Math.sqrt(t.amount / mx) * 40, 0, Math.PI * 2); x.fill(); });
+    // grain
+    for (var k = 0; k < 9000; k++) { x.fillStyle = 'rgba(255,255,255,' + (rnd() * .05).toFixed(3) + ')'; x.fillRect(rnd() * W, rnd() * H, 1.5, 1.5); }
+    // caption
+    x.fillStyle = 'rgba(5,6,13,.72)'; x.fillRect(0, H - 270, W, 270);
+    x.fillStyle = '#fff'; x.font = '400 104px "Instrument Serif", Georgia, serif'; x.fillText(MONTHS[mDate.getMonth()] + ' ' + mDate.getFullYear(), 64, H - 150);
+    x.font = '600 34px -apple-system, Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,.75)'; x.fillText(list.length + ' payments  ·  ' + (S.settings.hide ? 'Rp ••••••' : 'Rp ' + fmt(tot)), 66, H - 92);
+    x.font = '500 28px -apple-system, Inter, sans-serif'; var lx = 66; top.slice(0, 4).forEach(function (cid, i) { var nm = cat(cid).name.slice(0, 16); x.fillStyle = pal[i]; x.beginPath(); x.arc(lx + 9, H - 46, 9, 0, Math.PI * 2); x.fill(); x.fillStyle = 'rgba(255,255,255,.8)'; x.fillText(nm, lx + 26, H - 37); lx += 40 + x.measureText(nm).width + 30; });
+    x.font = '700 26px -apple-system, Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,.55)'; x.textAlign = 'right'; x.fillText('APEX', W - 60, 80); x.textAlign = 'left';
+    return c;
+  }
+  function posterSheet(mDate) {
+    mDate = mDate || cur; var c = posterMake(mDate), url = c.toDataURL('image/jpeg', .9);
+    openSheet('<h3>Your month as art</h3><p class="muted small" style="text-align:center;margin-top:-8px">Painted from your spending: colours are categories, dots are payments, swirls are the flow. Every month is unique.</p>' +
+      '<img class="poster" src="' + url + '" alt=""><div class="two"><button type="button" class="btn" id="psPrev">‹ Previous month</button><button type="button" class="btn primary" id="psSave">Save / share</button></div>',
+      function (r) {
+        sfx('sparkle');
+        r.querySelector('#psSave').onclick = function () { haptic(); c.toBlob(function (b) { shareFile(b, 'Apex ' + ym(mDate) + ' art.jpg'); }, 'image/jpeg', .92); };
+        r.querySelector('#psPrev').onclick = function () { haptic(); posterSheet(new Date(mDate.getFullYear(), mDate.getMonth() - 1, 1)); };
+      });
+  }
+
+  // 5. Trip passport: every trip payment becomes a stamp, Tokyo areas light up.
+  var AREAS = [['SHIBUYA', 46, 62], ['HARAJUKU', 40, 50], ['SHINJUKU', 34, 36], ['GINZA', 70, 58], ['ASAKUSA', 76, 22], ['AKIHABARA', 66, 34], ['ROPPONGI', 56, 66], ['UENO', 70, 18], ['IKEBUKURO', 38, 14], ['ODAIBA', 80, 82], ['TOKYO', 64, 48], ['KYOTO', 18, 88], ['OSAKA', 10, 92]];
+  function tripTx() { var tr = S.settings.trip; if (!tr || !tr.cat) return []; return S.tx.filter(function (t) { return t.cat === tr.cat && t.type === 'expense'; }).sort(function (a, b) { return (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')); }); }
+  function tripActive() { var tr = S.settings.trip; if (!tr || !tr.on || !tr.from) return false; var td = today(), end = new Date(tr.to + 'T00:00:00'); end.setDate(end.getDate() + 10); return td >= tr.from && td <= ymd(end); }
+  function renderTripCard() {
+    var el = $('hTrip'), sec = el && el.closest('.sec'); if (!el) return;
+    var on = tripActive(); if (sec) { sec.hidden = false; sec.classList.toggle('trip-off', !on); } if (!on) return;
+    var tr = S.settings.trip, L = tripTx(), tot = L.reduce(function (a, t) { return a + t.amount; }, 0), d0 = new Date(tr.from + 'T00:00:00'), dn = Math.max(1, Math.round((new Date(today() + 'T00:00:00') - d0) / 864e5) + 1), days = Math.round((new Date(tr.to + 'T00:00:00') - d0) / 864e5) + 1;
+    el.innerHTML = '<div class="pp-mini"><div class="pp-emb">✈</div><div class="grow"><small>' + esc(tr.name).toUpperCase() + ' · PASSPORT</small><b>' + L.length + ' stamp' + (L.length === 1 ? '' : 's') + '</b><span>Day ' + Math.min(dn, days) + ' of ' + days + ' · ' + money(tot, { rp: false }) + ' spent</span></div><div class="pp-mini-st">' + L.slice(-3).map(function (t, i) { return '<i style="--r:' + ((i - 1) * 9) + 'deg;--c:' + VZ_COL[(i + 2) % VZ_COL.length] + '">' + esc((t.merchant || '').slice(0, 1)) + '</i>'; }).join('') + '</div></div>';
+  }
+  function passportSheet() {
+    var tr = S.settings.trip; if (!tr) return; var L = tripTx(), tot = L.reduce(function (a, t) { return a + t.amount; }, 0), yen = L.reduce(function (a, t) { return a + (t.fx && t.fx.cur === 'JPY' ? t.fx.amt : 0); }, 0);
+    var seen = {}; L.forEach(function (t) { var mm = (t.merchant || '').toUpperCase(); AREAS.forEach(function (a) { if (mm.indexOf(a[0]) !== -1 || (a[0] === 'HARAJUKU' && /HARAJU/.test(mm))) seen[a[0]] = (seen[a[0]] || 0) + 1; }); });
+    var inks = ['#c0392b', '#1f4e9c', '#127a5a', '#7b3fa0', '#b5651d', '#0f6b7a'];
+    var stamps = L.map(function (t, i) {
+      var ink = inks[i % inks.length], shape = ['round', 'rect', 'oval'][i % 3], rot = ((i * 37) % 21) - 10, d = new Date(t.date + 'T00:00:00');
+      return '<button type="button" class="stamp ' + shape + '" data-tx="' + esc(t.id) + '" style="--ink:' + ink + ';--rot:' + rot + 'deg;--i:' + i + '"><small>' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3).toUpperCase() + '</small><b>' + esc((t.merchant || cat(t.cat).name).slice(0, 18)) + '</b><em>' + (t.fx ? (t.fx.cur === 'JPY' ? '¥' : t.fx.cur + ' ') + t.fx.amt.toLocaleString('id-ID') : money(t.amount, { rp: true })) + '</em></button>';
+    }).join('');
+    var map = '<div class="pp-map">' + AREAS.map(function (a) { return '<span class="' + (seen[a[0]] ? 'on' : '') + '" style="left:' + a[1] + '%;top:' + a[2] + '%"><i></i>' + a[0].charAt(0) + a[0].slice(1).toLowerCase() + (seen[a[0]] ? ' · ' + seen[a[0]] : '') + '</span>'; }).join('') + '</div>';
+    openSheet('<div class="pp"><div class="pp-cover"><div class="pp-emb big">✈</div><small>TRAVEL PASSPORT</small><b>' + esc(tr.name).toUpperCase() + '</b><span>' + fmtDate(tr.from) + ' – ' + fmtDate(tr.to) + '</span></div>' +
+      '<div class="dd-stats"><div><small>Stamps</small><b>' + L.length + '</b></div><div><small>Spent</small><b>' + money(tot, { rp: false }) + '</b></div><div><small>Yen</small><b>¥' + yen.toLocaleString('id-ID') + '</b></div></div>' +
+      '<div class="sheet-sec">Where you went</div>' + map + '<div class="sheet-sec">Stamps</div><div class="pp-page">' + (stamps || '<p class="muted small" style="text-align:center">Your first payment here becomes your first stamp.</p>') + '</div></div>',
+      function (r) { sfx('sparkle'); r.querySelector('.pp-page').addEventListener('click', function (e) { var b = e.target.closest('[data-tx]'); if (!b) return; haptic(); var t = S.tx.filter(function (x) { return x.id === b.dataset.tx; })[0]; if (t) txSheet(t); }); });
+  }
+
+  // 7. Rhythm calendar: the month plays as music, one note per day (higher = more spent).
+  function playMonth(box) {
+    if (box.dataset.playing) return; box.dataset.playing = '1';
+    var cells = [].slice.call(box.querySelectorAll('.cal-d')), scale = [261.6, 293.7, 329.6, 392, 440, 523.3, 587.3, 659.3, 784, 880], c = sfxCtx(), i = 0;
+    (function step() {
+      if (i > 0) cells[i - 1].classList.remove('beat');
+      if (i >= cells.length || !box.isConnected) { delete box.dataset.playing; if (c) tone(c, { f: 1046.5, d: .6, v: .1 }); return; }
+      var el = cells[i], a = parseFloat(el.style.getPropertyValue('--a')) || 0; el.classList.add('beat');
+      if (c) { if (a > 0) tone(c, { f: scale[Math.min(9, Math.round(a * 9))], d: .22, v: .08 + a * .08, type: 'triangle' }); else tone(c, { f: 1800, d: .02, v: .02 }); }
+      i++; setTimeout(step, 150);
+    })();
+  }
   // ---------- onboarding ----------
   function onboarding() {
     if (S.onboarded) return;

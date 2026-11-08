@@ -2000,3 +2000,96 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 .ex-btns .btn{padding:12px 6px;font-size:14.5px}
 .ex-btns .btn:disabled{opacity:.4}
 .ex-seg button{border-radius:11px;transition:background .2s}.ex-seg button.on{background:rgba(255,255,255,.12);color:var(--ink);box-shadow:inset 0 0 0 .5px var(--line2)}
+
+/* =================== ART PACK =================== */
+/* 1. money aura (transform/opacity only, so it stays smooth) */
+.hero{position:relative;isolation:isolate}
+.aura{position:absolute;left:50%;top:44%;width:440px;height:300px;margin:-150px 0 0 -220px;z-index:-1;pointer-events:none;opacity:.9;transition:opacity 1.2s}
+.aura i{position:absolute;inset:0;border-radius:50%;opacity:.55;animation:auraDrift 14s ease-in-out infinite;will-change:transform}
+.aura i:nth-child(2){animation-duration:19s;animation-direction:reverse;inset:10% 18%}
+.aura i:nth-child(3){animation-duration:23s;inset:22% 6% 0 30%}
+.aura.calm i:nth-child(1){background:radial-gradient(closest-side,rgba(52,211,153,.30),transparent)}
+.aura.calm i:nth-child(2){background:radial-gradient(closest-side,rgba(45,212,191,.22),transparent)}
+.aura.calm i:nth-child(3){background:radial-gradient(closest-side,rgba(96,165,250,.16),transparent)}
+.aura.busy i:nth-child(1){background:radial-gradient(closest-side,rgba(251,191,36,.30),transparent)}
+.aura.busy i:nth-child(2){background:radial-gradient(closest-side,rgba(251,113,133,.22),transparent)}
+.aura.busy i:nth-child(3){background:radial-gradient(closest-side,rgba(249,115,22,.18),transparent)}
+.aura.night i:nth-child(1){background:radial-gradient(closest-side,rgba(129,90,255,.30),transparent)}
+.aura.night i:nth-child(2){background:radial-gradient(closest-side,rgba(59,130,246,.20),transparent)}
+.aura.night i:nth-child(3){background:radial-gradient(closest-side,rgba(236,72,153,.14),transparent)}
+@keyframes auraDrift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(14px,-10px) scale(1.08)}66%{transform:translate(-12px,8px) scale(.95)}}
+.view.vt-anim .aura i{animation-play-state:paused}
+
+/* 6. editorial net worth: serif numerals with depth and a slow light sweep */
+#hNet{font-family:"Instrument Serif",Georgia,serif;font-weight:400;letter-spacing:-.01em;text-shadow:0 1px 0 rgba(255,255,255,.12),0 2px 0 rgba(0,0,0,.25),0 14px 30px rgba(0,0,0,.45)}
+.hero-amt{position:relative;overflow:hidden}
+.hero-amt::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:30%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.09) 50%,rgba(255,255,255,0));transform:skewX(-18deg);animation:nwSweep 7s ease-in-out infinite;pointer-events:none}
+@keyframes nwSweep{0%,70%{transform:translateX(0) skewX(-18deg)}100%{transform:translateX(560%) skewX(-18deg)}}
+
+/* 3. liquid wallet cards */
+.wc-liq{position:absolute;left:0;right:0;bottom:0;height:var(--lv);pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));z-index:-1;transition:height 1.2s cubic-bezier(.2,.9,.25,1)}
+.wc-liq::before{content:"";position:absolute;left:0;top:-7px;width:200%;height:8px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'><path d='M0 4 Q15 0 30 4 T60 4 T90 4 T120 4 V8 H0Z' fill='rgba(255,255,255,0.16)'/></svg>") repeat-x;background-size:50% 100%;animation:liqWave 6s linear infinite;will-change:transform}
+.wc-liq.gold{background:linear-gradient(180deg,rgba(255,226,140,.38),rgba(212,160,40,.18))}
+.wc-liq.gold::before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'><path d='M0 4 Q15 0 30 4 T60 4 T90 4 T120 4 V8 H0Z' fill='rgba(255,226,140,0.38)'/></svg>")}
+@keyframes liqWave{to{transform:translateX(-50%)}}
+.wcard{isolation:isolate}
+
+/* 2. night sky */
+.sky{border-radius:22px;overflow:hidden;box-shadow:0 20px 40px -20px rgba(0,0,0,.7)}
+.sky svg{display:block;width:100%;height:auto}
+.sky-dust{fill:#fff;opacity:.5;animation:twinkle 3.6s ease-in-out infinite;animation-delay:var(--d)}
+.sky-line{fill:none;stroke:var(--c);stroke-width:.9;opacity:.45;stroke-dasharray:600;stroke-dashoffset:600;animation:skyDraw 2.4s ease forwards;animation-delay:calc(var(--i) * .25s + .3s)}
+.star .core{fill:#fff}
+.star .halo{fill:var(--c);opacity:.28;animation:twinkle 3s ease-in-out infinite;animation-delay:var(--d)}
+.star{cursor:pointer}
+@keyframes twinkle{50%{opacity:.08}}
+@keyframes skyDraw{to{stroke-dashoffset:0}}
+.sky-leg{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
+.sky-leg span{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.sky-leg i{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+
+/* 4. poster */
+.poster-btn{margin-top:12px}
+.poster{display:block;width:100%;border-radius:18px;margin:4px 0 12px;box-shadow:0 24px 50px -22px rgba(0,0,0,.8)}
+
+/* 5. passport */
+.pp-card{padding:0;overflow:hidden;background:linear-gradient(135deg,#0e2244,#1b3a6b 60%,#3b1f5c)!important;color:#fff;border:0!important}
+.pp-mini{display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left}
+.pp-mini small{display:block;font-size:10.5px;letter-spacing:.16em;color:rgba(255,226,140,.85);font-weight:700}
+.pp-mini b{display:block;font:400 26px/1.1 "Instrument Serif",Georgia,serif}
+.pp-mini span{font-size:12px;color:rgba(255,255,255,.7)}
+.pp-emb{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,226,140,.8);color:#ffe28c;font-size:20px;flex:none;box-shadow:inset 0 0 0 4px rgba(255,226,140,.12)}
+.pp-emb.big{width:76px;height:76px;font-size:32px;margin:0 auto 10px}
+.pp-mini-st{display:flex}
+.pp-mini-st i{width:30px;height:30px;margin-left:-8px;border-radius:50%;border:2px dashed var(--c);color:var(--c);font:700 13px/26px -apple-system,sans-serif;text-align:center;font-style:normal;transform:rotate(var(--r));background:rgba(255,255,255,.06)}
+.pp-cover{text-align:center;padding:26px 16px 22px;margin:-4px -4px 14px;border-radius:22px;background:linear-gradient(160deg,#0e2244,#1b3a6b 55%,#3b1f5c);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,226,140,.25)}
+.pp-cover small{display:block;letter-spacing:.3em;font-size:11px;color:rgba(255,226,140,.85);font-weight:700}
+.pp-cover b{display:block;font:400 44px/1.05 "Instrument Serif",Georgia,serif;margin:4px 0}
+.pp-cover span{font-size:12.5px;color:rgba(255,255,255,.7)}
+.pp-map{position:relative;height:200px;border-radius:18px;background:radial-gradient(120% 90% at 60% 40%,#173052,#0b1424);overflow:hidden;box-shadow:inset 0 0 0 .5px var(--line2)}
+.pp-map::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 1px,transparent 1px 22px)}
+.pp-map span{position:absolute;transform:translate(-50%,-50%);font-size:10.5px;color:rgba(255,255,255,.35);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.pp-map span i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)}
+.pp-map span.on{color:#ffe28c;font-weight:700}
+.pp-map span.on i{width:10px;height:10px;background:#ffe28c;box-shadow:0 0 0 4px rgba(255,226,140,.2),0 0 14px #ffe28c;animation:twinkle 2.4s ease-in-out infinite}
+.pp-page{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 10px;padding:14px 10px;border-radius:18px;background:#f3ead7;background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.025) 0 1px,transparent 1px 26px)}
+.stamp{color:var(--ink);border:2.5px solid var(--ink);padding:10px 8px;text-align:center;transform:rotate(var(--rot));opacity:.88;mix-blend-mode:multiply;animation:stampIn .5s cubic-bezier(.3,1.6,.5,1) both;animation-delay:calc(min(var(--i),16) * 60ms);background:transparent}
+.stamp.round{border-radius:50%;aspect-ratio:1;display:flex;flex-direction:column;justify-content:center;border-style:double;border-width:4px}
+.stamp.rect{border-radius:6px;border-style:dashed}
+.stamp.oval{border-radius:40% / 50%}
+.stamp small{display:block;font:700 9.5px/1 -apple-system,sans-serif;letter-spacing:.12em}
+.stamp b{display:block;font:800 11.5px/1.15 -apple-system,sans-serif;letter-spacing:.02em;margin:4px 0;text-transform:uppercase;word-break:break-word}
+.stamp em{display:block;font:700 13px/1 ui-monospace,Menlo,monospace;font-style:normal}
+@keyframes stampIn{from{transform:rotate(var(--rot)) scale(1.6);opacity:0}to{transform:rotate(var(--rot)) scale(1);opacity:.88}}
+.trip-off{display:none!important}
+
+/* 7. rhythm calendar */
+.cal-d.beat{transform:scale(1.18);box-shadow:0 0 0 2px #fff,0 0 18px rgba(52,211,153,.8);z-index:2;position:relative;transition:transform .08s}
+
+/* 8. time of day light (dark theme): a soft wash over the background */
+:root:not([data-theme=light]) .bg-mesh::after{content:"";position:absolute;inset:0;pointer-events:none;transition:background 2s,opacity 2s;opacity:.55}
+:root.tod-morning:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 80% 0%,rgba(251,146,120,.20),transparent 70%)}
+:root.tod-day:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 50% 0%,rgba(56,189,248,.16),transparent 70%)}
+:root.tod-evening:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 20% 0%,rgba(251,191,36,.20),transparent 70%)}
+:root.tod-night:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 50% 0%,rgba(99,102,241,.20),transparent 70%)}
+@media (prefers-reduced-motion:reduce){.aura i,.hero-amt::after,.wc-liq::before,.sky-dust,.star .halo,.stamp{animation:none!important}}
