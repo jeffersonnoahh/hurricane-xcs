@@ -2712,6 +2712,116 @@
   // ---------- small edit sheets ----------
   // Set a wallet so that its balance today equals `target`.
   // ---------- Import from Money Lover (Excel/CSV export). Runs fully on the phone: the file never leaves it. ----------
+  // ---------- Export transactions: day / week / month / custom · expenses / income / both · text, PDF or Excel ----------
+  function loadJS(src) { return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('Could not load ' + src)); }; document.head.appendChild(s); }); }
+  function loadPDF() {
+    if (window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable) return Promise.resolve(window.jspdf.jsPDF);
+    return loadJS('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(function () { return loadJS('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'); }).then(function () { return window.jspdf.jsPDF; });
+  }
+  function shareFile(blob, name, fallbackText) {
+    var file = null; try { file = new File([blob], name, { type: blob.type }); } catch (e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], title: name }).catch(function (e) { if (e && e.name !== 'AbortError') dl(); });
+    dl(); return Promise.resolve();
+    function dl() { var u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(u); a.remove(); }, 4000); }
+  }
+  var EXP = { per: 'day', kind: 'both', from: '', to: '', day: '' };
+  function expRange() {
+    var d = new Date((EXP.day || today()) + 'T00:00:00');
+    if (EXP.per === 'day') return [ymd(d), ymd(d)];
+    if (EXP.per === 'week') { var m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); var e = new Date(m); e.setDate(m.getDate() + 6); return [ymd(m), ymd(e)]; }
+    if (EXP.per === 'month') return [ymd(new Date(d.getFullYear(), d.getMonth(), 1)), ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
+    var a = EXP.from || today(), b = EXP.to || a; return a <= b ? [a, b] : [b, a];
+  }
+  function expRows() {
+    var r = expRange(), w = EXP.wallet || 'all';
+    return S.tx.filter(function (t) { return t.date >= r[0] && t.date <= r[1] && touches(t, w) && (EXP.kind === 'both' ? (t.type === 'expense' || t.type === 'income') : t.type === EXP.kind); })
+      .sort(function (a, b) { return (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')); });
+  }
+  function expTitle() {
+    var r = expRange(), f = function (k) { var x = new Date(k + 'T00:00:00'); return x.getDate() + ' ' + MONTHS[x.getMonth()].slice(0, 3) + ' ' + x.getFullYear(); };
+    return (EXP.kind === 'both' ? 'Transactions' : EXP.kind === 'expense' ? 'Expenses' : 'Income') + ' · ' + (EXP.wallet && EXP.wallet !== 'all' ? wallet(EXP.wallet).name : 'All wallets') + ' · ' + (r[0] === r[1] ? f(r[0]) : f(r[0]) + ' – ' + f(r[1]));
+  }
+  function expLine(t) { return { date: t.date, time: t.time || '', type: t.type === 'income' ? 'Income' : 'Expense', cat: cat(t.cat).name, what: t.merchant || t.note || '', wallet: wallet(t.wallet).name, amt: t.type === 'income' ? t.amount : -t.amount, fx: t.fx ? t.fx.cur + ' ' + t.fx.amt.toLocaleString('id-ID') : '', note: t.note || '' }; }
+  function expTotals(rows) { var i = 0, o = 0; rows.forEach(function (t) { if (t.type === 'income') i += t.amount; else o += t.amount; }); return { i: i, o: o }; }
+  function expFileBase() { var r = expRange(); return 'Apex ' + (EXP.kind === 'both' ? 'transactions' : EXP.kind) + ' ' + r[0] + (r[0] === r[1] ? '' : ' to ' + r[1]); }
+  function expText(rows) {
+    var T = expTotals(rows), out = ['Apex · ' + expTitle(), ''], cur = '';
+    rows.forEach(function (t) {
+      if (t.date !== cur) { cur = t.date; var d = new Date(t.date + 'T00:00:00'); out.push((out.length > 2 ? '\n' : '') + ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear()); }
+      var L = expLine(t); out.push((L.amt < 0 ? '−' : '+') + 'Rp ' + fmt(Math.abs(L.amt)) + '  ' + L.cat + (L.what ? ' · ' + L.what : '') + (L.fx ? ' (' + L.fx + ')' : '') + (L.time ? ' · ' + L.time : ''));
+    });
+    out.push('', '—', rows.length + ' transaction' + (rows.length === 1 ? '' : 's'));
+    if (EXP.kind !== 'income') out.push('Spent: Rp ' + fmt(T.o));
+    if (EXP.kind !== 'expense') out.push('Received: Rp ' + fmt(T.i));
+    if (EXP.kind === 'both') out.push('Net: ' + (T.i - T.o < 0 ? '−' : '+') + 'Rp ' + fmt(Math.abs(T.i - T.o)));
+    return out.join('\n');
+  }
+  function expExcel(rows) {
+    return loadXLSX().then(function (X) {
+      var T = expTotals(rows), aoa = [['Apex · ' + expTitle()], [], ['Date', 'Time', 'Type', 'Category', 'Merchant / note', 'Wallet', 'Amount (Rp)', 'Original amount']];
+      rows.forEach(function (t) { var L = expLine(t); aoa.push([L.date, L.time, L.type, L.cat, L.what, L.wallet, L.amt, L.fx]); });
+      aoa.push([]); if (EXP.kind !== 'income') aoa.push(['', '', '', '', 'Total spent', '', -T.o]); if (EXP.kind !== 'expense') aoa.push(['', '', '', '', 'Total received', '', T.i]); if (EXP.kind === 'both') aoa.push(['', '', '', '', 'Net', '', T.i - T.o]);
+      var ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 11 }, { wch: 6 }, { wch: 8 }, { wch: 22 }, { wch: 34 }, { wch: 18 }, { wch: 14 }, { wch: 14 }];
+      var wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Transactions');
+      var buf = X.write(wb, { bookType: 'xlsx', type: 'array' });
+      return shareFile(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), expFileBase() + '.xlsx');
+    });
+  }
+  function expPDF(rows) {
+    return loadPDF().then(function (J) {
+      var doc = new J({ unit: 'pt', format: 'a4' }), T = expTotals(rows), clean = function (x) { return String(x || '').replace(/[^\x20-\x7E]/g, '').trim(); };
+      doc.setFontSize(16); doc.text('Apex', 40, 46); doc.setFontSize(10); doc.setTextColor(110); doc.text(clean(expTitle().replace(/·/g, '|').replace(/–/g, '-')), 40, 64); doc.setTextColor(0);
+      doc.autoTable({ startY: 80, head: [['Date', 'Time', 'Category', 'Merchant / note', 'Wallet', 'Amount (Rp)']],
+        body: rows.map(function (t) { var L = expLine(t); return [L.date, L.time, clean(L.cat), clean(L.what) + (L.fx ? ' (' + L.fx + ')' : ''), clean(L.wallet), (L.amt < 0 ? '-' : '+') + fmt(Math.abs(L.amt))]; }),
+        styles: { fontSize: 8, cellPadding: 4 }, headStyles: { fillColor: [16, 120, 90] }, columnStyles: { 5: { halign: 'right' } },
+        didParseCell: function (d) { if (d.section === 'body' && d.column.index === 5) d.cell.styles.textColor = String(d.cell.raw).charAt(0) === '-' ? [200, 40, 60] : [16, 140, 90]; } });
+      var y = doc.lastAutoTable.finalY + 22; doc.setFontSize(10);
+      var line = function (k, v) { doc.text(k, 360, y); doc.text(v, 555, y, { align: 'right' }); y += 15; };
+      line(rows.length + ' transactions', ''); if (EXP.kind !== 'income') line('Total spent', 'Rp ' + fmt(T.o)); if (EXP.kind !== 'expense') line('Total received', 'Rp ' + fmt(T.i)); if (EXP.kind === 'both') line('Net', (T.i - T.o < 0 ? '-' : '+') + 'Rp ' + fmt(Math.abs(T.i - T.o)));
+      return shareFile(doc.output('blob'), expFileBase() + '.pdf');
+    });
+  }
+  function exportSheet() {
+    if (!EXP.day) EXP.day = today();
+    EXP.wallet = EXP.wallet || (walletSel && walletSel !== 'all' ? walletSel : 'all');
+    var segs = function (id, opts, val) { return '<div class="seg ex-seg" id="' + id + '" style="display:grid;grid-template-columns:repeat(' + opts.length + ',1fr)">' + opts.map(function (o) { return '<button type="button" data-v="' + o[0] + '" class="' + (o[0] === val ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
+    openSheet('<h3>Export transactions</h3>' +
+      '<div class="sheet-sec">Period</div>' + segs('exPer', [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['custom', 'Custom']], EXP.per) +
+      '<div id="exDates"></div>' +
+      '<div class="sheet-sec">Show</div>' + segs('exKind', [['expense', 'Expenses'], ['income', 'Income'], ['both', 'Both']], EXP.kind) +
+      '<label class="fld">Wallet<select id="exWallet"><option value="all">All wallets</option>' + S.wallets.filter(function (w) { return !w.hidden || w.id === EXP.wallet; }).map(function (w) { return '<option value="' + esc(w.id) + '"' + (w.id === EXP.wallet ? ' selected' : '') + '>' + esc(w.name) + '</option>'; }).join('') + '</select></label>' +
+      '<div class="card ex-sum" id="exSum"></div>' +
+      '<div class="ex-btns"><button type="button" class="btn" id="exTxt">📝 Text</button><button type="button" class="btn" id="exPdf">📄 PDF</button><button type="button" class="btn primary" id="exXls">📊 Excel</button></div>' +
+      '<p class="muted small" style="text-align:center;margin-top:10px">Files open the share sheet: save to Files, AirDrop or send on WhatsApp.</p>',
+      function (r) {
+        function dates() {
+          r.querySelector('#exDates').innerHTML = EXP.per === 'custom' ? '<div class="two"><label class="fld">From<input type="date" id="exFrom" value="' + (EXP.from || EXP.day) + '"></label><label class="fld">To<input type="date" id="exTo" value="' + (EXP.to || EXP.day) + '"></label></div>'
+            : '<label class="fld">' + (EXP.per === 'day' ? 'Day' : EXP.per === 'week' ? 'Any day in the week' : 'Any day in the month') + '<input type="date" id="exDay" value="' + EXP.day + '"></label>';
+        }
+        function sum() {
+          var rows = expRows(), T = expTotals(rows);
+          r.querySelector('#exSum').innerHTML = '<div class="ex-t">' + esc(expTitle()) + '</div><div class="dd-stats"><div><small>Transactions</small><b>' + rows.length + '</b></div>' + (EXP.kind !== 'income' ? '<div><small>Spent</small><b class="neg">' + money(T.o, { rp: false }) + '</b></div>' : '') + (EXP.kind !== 'expense' ? '<div><small>Received</small><b class="pos">' + money(T.i, { rp: false }) + '</b></div>' : '') + '</div>';
+          r.querySelectorAll('.ex-btns button').forEach(function (b) { b.disabled = !rows.length; });
+        }
+        r.addEventListener('click', function (e) {
+          var b = e.target.closest('.ex-seg button'); if (!b) return; haptic();
+          var g = b.parentNode; g.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+          if (g.id === 'exPer') { EXP.per = b.dataset.v; dates(); } else EXP.kind = b.dataset.v; sum();
+        });
+        r.addEventListener('change', function (e) {
+          if (e.target.id === 'exDay') EXP.day = e.target.value || today(); if (e.target.id === 'exFrom') EXP.from = e.target.value; if (e.target.id === 'exTo') EXP.to = e.target.value; if (e.target.id === 'exWallet') EXP.wallet = e.target.value; sum();
+        });
+        var run = function (fn, label) { return function () { var rows = expRows(); if (!rows.length) return; haptic(); busy(true, 'Making ' + label + '…'); Promise.resolve().then(function () { return fn(rows); }).catch(function (e) { toast(e.message || 'Export failed'); }).then(function () { busy(false); }); }; };
+        r.querySelector('#exXls').onclick = run(expExcel, 'Excel file');
+        r.querySelector('#exPdf').onclick = run(expPDF, 'PDF');
+        r.querySelector('#exTxt').onclick = function () {
+          var rows = expRows(); if (!rows.length) return; haptic(); var txt = expText(rows);
+          if (navigator.share) navigator.share({ title: expTitle(), text: txt }).catch(function (e) { if (e && e.name !== 'AbortError') copy(); }); else copy();
+          function copy() { (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast('Copied ✓ Paste it anywhere'); }, function () { shareFile(new Blob([txt], { type: 'text/plain' }), expFileBase() + '.txt'); }); }
+        };
+        dates(); sum();
+      });
+  }
   function loadXLSX() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
     return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = function () { res(window.XLSX); }; s.onerror = function () { rej(new Error('Could not load the Excel reader. Check your connection.')); }; document.head.appendChild(s); });
@@ -3343,6 +3453,7 @@
       if (!wasOn && S.settings.autoSync) { S.settings.startFrom = Date.now(); S.settings.lastSync = Date.now(); }
       save(); renderAll(); toast(!wasOn && S.settings.autoSync ? 'Live BCA sync on ✓ New transactions from now on' : 'Saved ✓'); return true;
     };
+    if ($('txExportBtn')) $('txExportBtn').onclick = function () { haptic(); exportSheet(); };
     $('sSync').onclick = function () { if ($('sSave').onclick() !== false) sync(true); };
     if ($('sRescan')) $('sRescan').onclick = function () { if ($('sSave').onclick() !== false) { haptic(); sync(true, 7); } };
 
