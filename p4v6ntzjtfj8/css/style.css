@@ -2020,12 +2020,6 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 @keyframes auraDrift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(14px,-10px) scale(1.08)}66%{transform:translate(-12px,8px) scale(.95)}}
 .view.vt-anim .aura i{animation-play-state:paused}
 
-/* 6. editorial net worth: serif numerals with depth and a slow light sweep */
-#hNet{font-family:"Instrument Serif",Georgia,serif;font-weight:400;letter-spacing:-.01em;text-shadow:0 1px 0 rgba(255,255,255,.12),0 2px 0 rgba(0,0,0,.25),0 14px 30px rgba(0,0,0,.45)}
-.hero-amt{position:relative;overflow:hidden}
-.hero-amt::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:30%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.09) 50%,rgba(255,255,255,0));transform:skewX(-18deg);animation:nwSweep 7s ease-in-out infinite;pointer-events:none}
-@keyframes nwSweep{0%,70%{transform:translateX(0) skewX(-18deg)}100%{transform:translateX(560%) skewX(-18deg)}}
-
 /* 3. liquid wallet cards */
 .wc-liq{position:absolute;left:0;right:0;bottom:0;height:var(--lv);pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));z-index:-1;transition:height 1.2s cubic-bezier(.2,.9,.25,1)}
 .wc-liq::before{content:"";position:absolute;left:0;top:-7px;width:200%;height:8px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'><path d='M0 4 Q15 0 30 4 T60 4 T90 4 T120 4 V8 H0Z' fill='rgba(255,255,255,0.16)'/></svg>") repeat-x;background-size:50% 100%;animation:liqWave 6s linear infinite;will-change:transform}
@@ -2033,20 +2027,6 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 .wc-liq.gold::before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'><path d='M0 4 Q15 0 30 4 T60 4 T90 4 T120 4 V8 H0Z' fill='rgba(255,226,140,0.38)'/></svg>")}
 @keyframes liqWave{to{transform:translateX(-50%)}}
 .wcard{isolation:isolate}
-
-/* 2. night sky */
-.sky{border-radius:22px;overflow:hidden;box-shadow:0 20px 40px -20px rgba(0,0,0,.7)}
-.sky svg{display:block;width:100%;height:auto}
-.sky-dust{fill:#fff;opacity:.5;animation:twinkle 3.6s ease-in-out infinite;animation-delay:var(--d)}
-.sky-line{fill:none;stroke:var(--c);stroke-width:.9;opacity:.45;stroke-dasharray:600;stroke-dashoffset:600;animation:skyDraw 2.4s ease forwards;animation-delay:calc(var(--i) * .25s + .3s)}
-.star .core{fill:#fff}
-.star .halo{fill:var(--c);opacity:.28;animation:twinkle 3s ease-in-out infinite;animation-delay:var(--d)}
-.star{cursor:pointer}
-@keyframes twinkle{50%{opacity:.08}}
-@keyframes skyDraw{to{stroke-dashoffset:0}}
-.sky-leg{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
-.sky-leg span{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px}
-.sky-leg i{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
 
 /* 4. poster */
 .poster-btn{margin-top:12px}
@@ -2080,11 +2060,9 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 .stamp small{display:block;font:700 9.5px/1 -apple-system,sans-serif;letter-spacing:.12em}
 .stamp b{display:block;font:800 11.5px/1.15 -apple-system,sans-serif;letter-spacing:.02em;margin:4px 0;text-transform:uppercase;word-break:break-word}
 .stamp em{display:block;font:700 13px/1 ui-monospace,Menlo,monospace;font-style:normal}
+@keyframes twinkle{50%{opacity:.08}}
 @keyframes stampIn{from{transform:rotate(var(--rot)) scale(1.6);opacity:0}to{transform:rotate(var(--rot)) scale(1);opacity:.88}}
 .trip-off{display:none!important}
-
-/* 7. rhythm calendar */
-.cal-d.beat{transform:scale(1.18);box-shadow:0 0 0 2px #fff,0 0 18px rgba(52,211,153,.8);z-index:2;position:relative;transition:transform .08s}
 
 /* 8. time of day light (dark theme): a soft wash over the background */
 :root:not([data-theme=light]) .bg-mesh::after{content:"";position:absolute;inset:0;pointer-events:none;transition:background 2s,opacity 2s;opacity:.55}
@@ -2092,4 +2070,4 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 :root.tod-day:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 50% 0%,rgba(56,189,248,.16),transparent 70%)}
 :root.tod-evening:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 20% 0%,rgba(251,191,36,.20),transparent 70%)}
 :root.tod-night:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 50% 0%,rgba(99,102,241,.20),transparent 70%)}
-@media (prefers-reduced-motion:reduce){.aura i,.hero-amt::after,.wc-liq::before,.sky-dust,.star .halo,.stamp{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.aura i,.wc-liq::before,.stamp{animation:none!important}}

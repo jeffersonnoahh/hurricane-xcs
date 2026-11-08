@@ -3739,7 +3739,7 @@
       cells += '<button class="cal-d' + (key === today() ? ' today' : '') + (v ? ' has' : '') + '" data-day="' + key + '" style="--a:' + lv.toFixed(2) + ';--i:' + d + '"><b>' + d + '</b>' + (v ? '<small>' + (S.settings.hide ? '•••' : short(v)) + '</small>' : '') + '</button>';
     }
     var tot = Object.keys(sums).reduce(function (a, k) { return a + sums[k]; }, 0), days = Object.keys(sums).length;
-    $('txCal').innerHTML = '<div class="card cal"><div class="cal-top"><div><div class="eyebrow">Spent in ' + MONTHS[mo] + ' <button type="button" class="yh-btn" id="yhBtn">Year view ›</button> <button type="button" class="yh-btn" id="calPlay">▶ Play</button></div><div class="mid-money">' + money(tot) + '</div></div><div class="cal-key"><span>less</span><i style="--a:.15"></i><i style="--a:.45"></i><i style="--a:.75"></i><i style="--a:1"></i><span>more</span></div></div>' +
+    $('txCal').innerHTML = '<div class="card cal"><div class="cal-top"><div><div class="eyebrow">Spent in ' + MONTHS[mo] + ' <button type="button" class="yh-btn" id="yhBtn">Year view ›</button></div><div class="mid-money">' + money(tot) + '</div></div><div class="cal-key"><span>less</span><i style="--a:.15"></i><i style="--a:.45"></i><i style="--a:.75"></i><i style="--a:1"></i><span>more</span></div></div>' +
       '<div class="cal-grid">' + cells + '</div><div class="muted small" style="margin-top:10px">' + days + ' spending day' + (days === 1 ? '' : 's') + ' · ' + (dim - days) + ' no-spend day' + (dim - days === 1 ? '' : 's') + '</div></div>';
   }
   function daySheet(day) {
@@ -3755,7 +3755,7 @@
     $('hBills').addEventListener('click', function (e) { if (e.target.closest('#billEmpty')) { recSheet(); return; } var b = e.target.closest('[data-rec]'); if (b) recSheet(S.recurring.filter(function (x) { return x.id === b.dataset.rec; })[0]); });
     $('txQ').addEventListener('input', function () { if (!this.value) renderTx(); renderTxExtras(); });
     $('txMode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; txMode = b.dataset.m; haptic(); renderTxExtras(); };
-    $('txCal').addEventListener('click', function (e) { if (e.target.closest('#calPlay')) { haptic(); playMonth($('txCal')); return; } if (e.target.closest('#yhBtn')) { haptic(); yearHeatSheet(); return; } var d = e.target.closest('[data-day]'); if (d) { haptic(); daySheet(d.dataset.day); } });
+    $('txCal').addEventListener('click', function (e) { if (e.target.closest('#yhBtn')) { haptic(); yearHeatSheet(); return; } var d = e.target.closest('[data-day]'); if (d) { haptic(); daySheet(d.dataset.day); } });
     bindViz();
     $('csvBtn').onclick = function () {
       var rows = [['Date', 'Time', 'Type', 'Category', 'Wallet', 'To wallet', 'Amount', 'Merchant', 'Note']].concat(S.tx.slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).map(function (t) {
@@ -4726,7 +4726,6 @@
     if ($('repBubbles')) $('repBubbles').addEventListener('click', function (e) { var p = e.target.closest('[data-bcat]'); if (!p) return; haptic(); p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop'); if (p.dataset.bcat !== '_other') setTimeout(function () { catDetail(cat(p.dataset.bcat)); }, 180); });
     if ($('hWidgets')) $('hWidgets').addEventListener('click', function (e) { var w = e.target.closest('[data-wg]'); if (!w) return; haptic(); var k = w.dataset.wg; if (k === 'gold') goldSheet(); else if (k === 'km') komisiSheet(); else show('v-budget'); });
     if ($('tmBtn')) $('tmBtn').onclick = function () { haptic(); timeMachine(); };
-    if ($('skyBtn')) $('skyBtn').onclick = function () { haptic(); skySheet(); };
     if ($('posterBtn')) $('posterBtn').onclick = function () { haptic(); posterSheet(cur); };
     if ($('hTrip')) $('hTrip').onclick = function () { haptic(); passportSheet(); };
   }
@@ -4856,34 +4855,6 @@
   }
   todTheme(); setInterval(function () { todTheme(); paintAura(); }, 10 * 60e3);
 
-  // 2. Night sky: each transaction this month is a star; same category stars join into a constellation.
-  function skySheet() {
-    var m = ym(cur), w = walletSel || 'all', list = txIn(m, w).filter(function (t) { return (t.type === 'expense' || t.type === 'income') && isFlow(t); });
-    if (!list.length) { toast('No transactions this month yet'); return; }
-    var by = {}; list.forEach(function (t) { (by[t.cat] = by[t.cat] || []).push(t); });
-    var cats = Object.keys(by).sort(function (a, b) { return by[b].length - by[a].length; }).slice(0, 8);
-    var dim = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate(), W = 360, H = 460, mx = Math.max.apply(null, list.map(function (t) { return t.amount; }));
-    var rnd = function (s) { var x = Math.sin(s * 9301 + 49297) * 233280; return x - Math.floor(x); };
-    var stars = '', lines = '', labels = '', bg = '';
-    for (var k = 0; k < 90; k++) bg += '<circle cx="' + (rnd(k) * W).toFixed(1) + '" cy="' + (rnd(k + 500) * H).toFixed(1) + '" r="' + (rnd(k + 900) * .9 + .2).toFixed(2) + '" class="sky-dust" style="--d:' + (rnd(k + 70) * 4).toFixed(2) + 's"/>';
-    // spread over the days that actually have payments, and over the whole sky height
-    var ds = list.map(function (t) { return +t.date.slice(8, 10) + (+(t.time || '12:00').slice(0, 2)) / 24; }), d0 = Math.min.apply(null, ds), d1 = Math.max.apply(null, ds), span = Math.max(.6, d1 - d0);
-    var laneH = (H - 70) / cats.length;
-    cats.forEach(function (cid, ci) {
-      var col = VZ_COL[ci % VZ_COL.length], band = 35 + laneH * (ci + .5), pts = [];
-      by[cid].slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).forEach(function (t, j) {
-        var dd = +t.date.slice(8, 10) + (+(t.time || '12:00').slice(0, 2)) / 24, x = 26 + (dd - d0) / span * (W - 52) + (rnd(j + ci * 31) - .5) * 14, y = band + (rnd(j * 7 + ci) - .5) * laneH * .8;
-        var r = 1.6 + Math.sqrt(t.amount / mx) * 7; pts.push([x, y]);
-        stars += '<g class="star" data-tx="' + esc(t.id) + '" style="--c:' + col + ';--d:' + (rnd(j + ci) * 3).toFixed(2) + 's"><circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (r * 2.6).toFixed(1) + '" class="halo"/><circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(1) + '" class="core"/></g>';
-      });
-      if (pts.length > 1) lines += '<polyline class="sky-line" style="--c:' + col + ';--i:' + ci + '" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
-      labels += '<span style="--c:' + col + '"><i></i>' + esc(cat(cid).name) + ' · ' + by[cid].length + '</span>';
-    });
-    openSheet('<h3>Night sky · ' + MONTHS[cur.getMonth()] + '</h3><p class="muted small" style="text-align:center;margin-top:-8px">Every star is a payment. Brighter = bigger. Lines join the same category. Tap a star.</p>' +
-      '<div class="sky"><svg viewBox="0 0 ' + W + ' ' + H + '"><defs><radialGradient id="skg" cx="50%" cy="0%" r="90%"><stop offset="0" stop-color="#1b2550"/><stop offset="1" stop-color="#05060d"/></radialGradient></defs><rect width="' + W + '" height="' + H + '" fill="url(#skg)" rx="22"/>' + bg + lines + stars + '</svg></div><div class="sky-leg">' + labels + '</div>',
-      function (r) { r.querySelector('.sky svg').addEventListener('click', function (e) { var g = e.target.closest('[data-tx]'); if (!g) return; haptic(); sfx('pop'); var t = S.tx.filter(function (x) { return x.id === g.dataset.tx; })[0]; if (t) txSheet(t); }); });
-  }
-
   // 4. Generative art poster: a one-of-a-kind abstract painting of the month's money (same month = same art).
   function posterMake(mDate) {
     var m = ym(mDate), list = txIn(m, 'all').filter(function (t) { return t.type === 'expense' && isFlow(t); });
@@ -4947,18 +4918,6 @@
       function (r) { sfx('sparkle'); r.querySelector('.pp-page').addEventListener('click', function (e) { var b = e.target.closest('[data-tx]'); if (!b) return; haptic(); var t = S.tx.filter(function (x) { return x.id === b.dataset.tx; })[0]; if (t) txSheet(t); }); });
   }
 
-  // 7. Rhythm calendar: the month plays as music, one note per day (higher = more spent).
-  function playMonth(box) {
-    if (box.dataset.playing) return; box.dataset.playing = '1';
-    var cells = [].slice.call(box.querySelectorAll('.cal-d')), scale = [261.6, 293.7, 329.6, 392, 440, 523.3, 587.3, 659.3, 784, 880], c = sfxCtx(), i = 0;
-    (function step() {
-      if (i > 0) cells[i - 1].classList.remove('beat');
-      if (i >= cells.length || !box.isConnected) { delete box.dataset.playing; if (c) tone(c, { f: 1046.5, d: .6, v: .1 }); return; }
-      var el = cells[i], a = parseFloat(el.style.getPropertyValue('--a')) || 0; el.classList.add('beat');
-      if (c) { if (a > 0) tone(c, { f: scale[Math.min(9, Math.round(a * 9))], d: .22, v: .08 + a * .08, type: 'triangle' }); else tone(c, { f: 1800, d: .02, v: .02 }); }
-      i++; setTimeout(step, 150);
-    })();
-  }
   // ---------- onboarding ----------
   function onboarding() {
     if (S.onboarded) return;

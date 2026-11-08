@@ -32,8 +32,8 @@
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261108-84" media="print" onload="this.media='all';var p=document.getElementById('preCss');if(p)p.remove();if(window.__cssOk)window.__cssOk()">
-<noscript><link rel="stylesheet" href="css/style.css?v=20261108-84"></noscript>
+<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261108-85" media="print" onload="this.media='all';var p=document.getElementById('preCss');if(p)p.remove();if(window.__cssOk)window.__cssOk()">
+<noscript><link rel="stylesheet" href="css/style.css?v=20261108-85"></noscript>
 </head>
 <body>
 <style>
@@ -254,7 +254,6 @@
     <div class="row end"><span class="muted">Net change</span><b id="pNet">0</b></div>
     <button class="link center" id="periodReport">View report for this period</button>
     <button class="link center ex-link" id="txExportBtn" type="button">⬇ Export transactions</button>
-    <button class="link center ex-link" id="skyBtn" type="button">✨ Night sky</button>
   </div>
   <div class="tx-tools"><input id="txQ" type="search" placeholder="Search" autocomplete="off"><div class="seg tx-mode" id="txMode"><button data-m="list" class="on">List</button><button data-m="cal">Calendar</button><i class="seg-ind"></i></div></div>
   <div id="txCal" hidden></div>
@@ -454,7 +453,7 @@
   var done = false;
   function boot() {
     if (done) return; done = true;
-    ['js/bca-parser.js?v=20261106-8', 'js/app.js?v=20261108-131'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
+    ['js/bca-parser.js?v=20261106-8', 'js/app.js?v=20261108-132'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
   }
   var l = document.getElementById('mainCss');
   if (l && l.media === 'all') { var p0 = document.getElementById('preCss'); if (p0) p0.remove(); boot(); } else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; var p = document.getElementById('preCss'); if (p) p.remove(); boot(); }, 5000); }
