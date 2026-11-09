@@ -119,9 +119,9 @@ One input per closing: customer (full name + last 4 WA digits, both required) ·
 2. Port via a **count-asserted patch script** (Python: assert exact number of replacements per file, write atomically) — the codebases are identical-lineage but not byte-identical (branding, DATA_NS, roster, password).
 3. `node --check js/app.js` in each repo → bump `?v=` in each index.html → commit & push each → verify each live URL.
 
-## Coach (js/coach.js + css/coach.css + functions/api/coach.js + .github/scripts/coach_crm.py — Hurricane since 2026-11-09)
+## Hurricane Assistant / Coach (assistant/ + functions/api/coach.js + .github/scripts/coach_crm.py — since 2026-11-09)
 
-Evaluation + to do list per seller, team view per leader. Entry: "Coach" card above the omzet hero on the dashboard, and first button in the More sheet.
+A SEPARATE page at `/assistant/` (owner's wish: the dashboard itself stays untouched, index.html does not load it). Evaluation + to do list per seller, team view per leader. `assistant/boot.js` initializes Firebase (read only: config/teams + scores/activities from this month minus 9 days) and defines the same globals app.js would (allData, allActs, TM, _warnThresh, _isLeader/_isActExcluded/_isWarnExcluded — keep those lists in sync with app.js); `assistant/coach.js` runs in full page mode when `<body data-standalone>` (no close button, no dashboard card) and still works as a sheet if ever loaded inside the dashboard. Bump `?v=` in assistant/index.html when changing its files.
 
 - **Who:** same phone owner as Form Closing (`localStorage hx-closing-me`, `sp|team` or `@leader|TeamA,TeamB`). No owner → picker (sets it). "Lihat orang lain" only views.
 - **Evaluation (browser, live, no writes):** this month from `scores` (omzet vs `_warnThresh.rev` prorated by date, closings = distinct `orderId||ts`, test drives), last 7 days from `activities` (avg chats/calls/fups per reported day vs `_warnThresh`, callback = calls/chats capped 100%, missed reports = due days without a report; day D is due D+1 at 14:00), team medians, CRM. Score /100: omzet 30, calls 18, chats 12, fups 12, callback 13, reports 10, CRM waiting 5. Gaps ranked by severity → "Kenapa skor segini" + to dos. Ticks are per phone (`hx-coach-done|date|who`).

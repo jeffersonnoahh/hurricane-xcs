@@ -1,4 +1,4 @@
-/* COACH (js/coach.js). Full height sheet on phones, centered panel on wide
+/* COACH (assistant/coach.js). Full height sheet on phones, centered panel on wide
    screens. Same black + green/yellow/red language as Form Closing.
    Layers: overlay 1230 · sheet 1235 (Form Closing stays above at 1240+). */
 
@@ -142,3 +142,9 @@ html.hxco-lock,html.hxco-lock body{overflow:hidden!important;overscroll-behavior
 .hxco-card-entry .hxco-chev{color:#ffd426}
 
 @media (prefers-reduced-motion:reduce){.hxco-sheet,.hxco-overlay,.hxco-ring .fg{transition:none}}
+
+/* /assistant/ page: Coach fills the screen */
+.hxco-sheet.hxco-full{top:0;bottom:0;height:auto;border-radius:0;transform:none;visibility:visible;opacity:1;box-shadow:none;transition:none}
+.hxco-full .hxco-handle{display:none}
+.hxco-full .hxco-body{padding-top:calc(10px + env(safe-area-inset-top))}
+@media (min-width:700px){.hxco-sheet.hxco-full{top:0;left:50%;width:640px;max-height:none;height:100%;transform:translateX(-50%);border-radius:0}}

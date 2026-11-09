@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   COACH (js/coach.js + css/coach.css)
+   COACH (assistant/coach.js + assistant/coach.css, page /assistant/)
    One screen that tells a seller how they are doing and what to do today,
    or tells a leader how the team is doing and who needs help.
 
@@ -28,6 +28,8 @@
   var view = null;          // {leader:true, teams:[..]} | {sp, team}
   var stack = [];           // back navigation (leader → member)
   var aiCache = {};
+  // /assistant/ page: Coach IS the page (full screen, no close, no dashboard card)
+  function standalone() { return D.body && D.body.hasAttribute('data-standalone'); }
 
   /* ── small helpers ─────────────────────────────────────────────── */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -279,7 +281,7 @@
   function ensureDom() {
     if (sh) return;
     ov = D.createElement('div'); ov.className = 'hxco-overlay';
-    sh = D.createElement('section'); sh.className = 'hxco-sheet'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-label', 'Coach');
+    sh = D.createElement('section'); sh.className = 'hxco-sheet' + (standalone() ? ' hxco-full' : ''); sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-label', 'Coach');
     sh.innerHTML = '<div class="hxco-handle"></div><div class="hxco-body"></div>';
     D.body.append(ov, sh);
     body = sh.querySelector('.hxco-body');
@@ -291,12 +293,12 @@
     ensureDom(); listenCRM();
     stack = [];
     view = v || owner();
-    D.documentElement.classList.add('hxco-lock');
+    if (!standalone()) D.documentElement.classList.add('hxco-lock');
     ov.classList.add('on'); sh.classList.add('on');
     render();
   }
   function close() {
-    if (!sh) return;
+    if (!sh || standalone()) return;
     ov.classList.remove('on'); sh.classList.remove('on');
     D.documentElement.classList.remove('hxco-lock');
   }
@@ -305,7 +307,7 @@
   function head(kick, title, sub, back) {
     return '<div class="hxco-head">' + (back ? '<button class="hxco-back" data-act="back" aria-label="Kembali">‹</button>' : '') +
       '<div class="hxco-ht"><div class="hxco-kick">' + esc(kick) + '</div><h3>' + esc(title) + '</h3>' + (sub ? '<div class="hxco-sub">' + sub + '</div>' : '') + '</div>' +
-      '<button class="hxco-x" data-act="close" aria-label="Tutup">×</button></div>';
+      (standalone() ? '' : '<button class="hxco-x" data-act="close" aria-label="Tutup">×</button>') + '</div>';
   }
   function crmStamp() {
     if (!CRM || !CRM.updatedAt) return '<span class="hxco-mut">CRM belum tersambung</span>';
@@ -500,6 +502,11 @@
   function scheduleRefresh() { clearTimeout(rT); rT = setTimeout(function () { refreshCard(); if (isOpen()) { var a = D.activeElement; if (!a || !sh.contains(a) || a.type !== 'checkbox') render(); } }, 400); }
 
   function mount() {
+    if (standalone()) {
+      if (typeof W.renderAll === 'function' && !W.renderAll.__coach) { var o = W.renderAll; W.renderAll = function () { var r = o.apply(this, arguments); scheduleRefresh(); return r; }; W.renderAll.__coach = true; }
+      if (W.db) listenCRM();
+      return !!W.db;
+    }
     var host = D.getElementById('dashboardContainer');
     if (host && !card) {
       card = D.createElement('button'); card.type = 'button'; card.className = 'hxco-card-entry';
