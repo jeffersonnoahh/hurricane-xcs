@@ -3,7 +3,8 @@
   "include": [
     "/p4v6ntzjtfj8/mkt",
     "/p4v6ntzjtfj8/files/*",
-    "/designs/thumb"
+    "/designs/thumb",
+    "/api/coach"
   ],
   "exclude": []
 }

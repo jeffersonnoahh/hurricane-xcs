@@ -118,3 +118,13 @@ One input per closing: customer (full name + last 4 WA digits, both required) ·
 1. Implement + verify in one repo (usually hurricane-xcs).
 2. Port via a **count-asserted patch script** (Python: assert exact number of replacements per file, write atomically) — the codebases are identical-lineage but not byte-identical (branding, DATA_NS, roster, password).
 3. `node --check js/app.js` in each repo → bump `?v=` in each index.html → commit & push each → verify each live URL.
+
+## Coach (js/coach.js + css/coach.css + functions/api/coach.js + .github/scripts/coach_crm.py — Hurricane since 2026-11-09)
+
+Evaluation + to do list per seller, team view per leader. Entry: "Coach" card above the omzet hero on the dashboard, and first button in the More sheet.
+
+- **Who:** same phone owner as Form Closing (`localStorage hx-closing-me`, `sp|team` or `@leader|TeamA,TeamB`). No owner → picker (sets it). "Lihat orang lain" only views.
+- **Evaluation (browser, live, no writes):** this month from `scores` (omzet vs `_warnThresh.rev` prorated by date, closings = distinct `orderId||ts`, test drives), last 7 days from `activities` (avg chats/calls/fups per reported day vs `_warnThresh`, callback = calls/chats capped 100%, missed reports = due days without a report; day D is due D+1 at 14:00), team medians, CRM. Score /100: omzet 30, calls 18, chats 12, fups 12, callback 13, reports 10, CRM waiting 5. Gaps ranked by severity → "Kenapa skor segini" + to dos. Ticks are per phone (`hx-coach-done|date|who`).
+- **CRM:** `.github/workflows/coach-crm.yml` runs `.github/scripts/coach_crm.py` every 30 min 07:00 to 22:59 WIB (GitHub secret `SENTARIS_TOKEN`; schedules only run from `main`). It pulls 3 days of Sentaris threads (~17 pages, 2.1 s apart, API limit 30/min), matches CRM seller → roster (exact name, prefix, 1 typo; other teams exact only; "A, B" = shared account) and PUTs `coach/crm`, `maria/coach/crm`, `calvin/coach/crm` (derived node, safe to overwrite). Fix a wrong match in `<ns>/coach/crmMap` `{"<crm seller>|<CRM TEAM>": "sp|team"}` (`"-"` = ignore). Only customer name + last 4 WA digits are stored, never message text. Run by hand: `SENTARIS_TOKEN=… python3 .github/scripts/coach_crm.py` (`DRY_RUN=/path/prefix_` writes JSON files instead).
+- **AI:** "Tanya Coach AI" → `POST /api/coach` (Pages Function, listed in `_routes.json`) → command center `/api/ai` server to server (Claude Haiku, max 700 tokens, fixed Indonesian coach prompt, no budget advice). Same summary is cached 6 h. No API key in this repo.
+- Maria/Calvin: CRM data is already written for them; porting coach.js needs the same 3 files + index.html tags (coach.js reads `coach/crm` through the namespaced `db.ref`).
