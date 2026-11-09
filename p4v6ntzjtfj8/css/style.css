@@ -2005,7 +2005,7 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 /* 1. money aura (transform/opacity only, so it stays smooth) */
 .hero{position:relative;isolation:isolate}
 .aura{position:absolute;left:50%;top:44%;width:440px;height:300px;margin:-150px 0 0 -220px;z-index:-1;pointer-events:none;opacity:.9;transition:opacity 1.2s}
-.aura i{position:absolute;inset:0;border-radius:50%;opacity:.55;animation:auraDrift 14s ease-in-out infinite;will-change:transform}
+.aura i{position:absolute;inset:0;border-radius:50%;opacity:.55;animation:auraDrift 14s ease-in-out infinite}
 .aura i:nth-child(2){animation-duration:19s;animation-direction:reverse;inset:10% 18%}
 .aura i:nth-child(3){animation-duration:23s;inset:22% 6% 0 30%}
 .aura.calm i:nth-child(1){background:radial-gradient(closest-side,rgba(52,211,153,.30),transparent)}
@@ -2022,7 +2022,7 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 
 /* 3. liquid wallet cards */
 .wc-liq{position:absolute;left:0;right:0;bottom:0;height:var(--lv);pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));z-index:-1;transition:height 1.2s cubic-bezier(.2,.9,.25,1)}
-.wc-liq::before{content:"";position:absolute;left:0;top:-7px;width:200%;height:8px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'><path d='M0 4 Q15 0 30 4 T60 4 T90 4 T120 4 V8 H0Z' fill='rgba(255,255,255,0.16)'/></svg>") repeat-x;background-size:50% 100%;animation:liqWave 6s linear infinite;will-change:transform}
+.wc-liq::before{content:"";position:absolute;left:0;top:-7px;width:200%;height:8px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'><path d='M0 4 Q15 0 30 4 T60 4 T90 4 T120 4 V8 H0Z' fill='rgba(255,255,255,0.16)'/></svg>") repeat-x;background-size:50% 100%;animation:liqWave 6s linear infinite}
 .wc-liq.gold{background:linear-gradient(180deg,rgba(255,226,140,.38),rgba(212,160,40,.18))}
 .wc-liq.gold::before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'><path d='M0 4 Q15 0 30 4 T60 4 T90 4 T120 4 V8 H0Z' fill='rgba(255,226,140,0.38)'/></svg>")}
 @keyframes liqWave{to{transform:translateX(-50%)}}
@@ -2071,3 +2071,9 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 :root.tod-evening:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 20% 0%,rgba(251,191,36,.20),transparent 70%)}
 :root.tod-night:not([data-theme=light]) .bg-mesh::after{background:radial-gradient(90% 55% at 50% 0%,rgba(99,102,241,.20),transparent 70%)}
 @media (prefers-reduced-motion:reduce){.aura i,.wc-liq::before,.stamp{animation:none!important}}
+
+/* smooth wallet deck: Home stays still under any full panel; only the front wallet card's wave moves */
+body.deck-open .aura i,body.deck-open .wc-liq::before,body.deck-open .bg-mesh i,body.deck-open .bg-mesh::before,
+body.sheet-open .aura i,body.sheet-open .wc-liq::before{animation-play-state:paused!important}
+body.deck-covered #v-home,body.deck-covered .bottom-nav,body.deck-covered .fab{visibility:hidden}
+.wstack:not(.open) .wcard:not(:first-child) .wc-liq::before{animation:none}

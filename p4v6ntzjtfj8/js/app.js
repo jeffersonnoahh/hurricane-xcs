@@ -779,11 +779,14 @@
     });
     if (homeStack) homeStack.style.visibility = 'hidden';
     setTimeout(function () { cards.forEach(function (c) { c.style.transition = ''; }); stack.style.transition = ''; }, longest + 30);
+    // Home keeps still under the deck (no aura / liquid / background animation), and is hidden once the deck fully covers it.
+    document.body.classList.add('deck-open'); var deckHideT = setTimeout(function () { document.body.classList.add('deck-covered'); }, 420);
     requestAnimationFrame(function () { ov.classList.add('show'); });
     haptic(); history.pushState({ deck: 1 }, '');
     var closed = false;
     function close(fromPop) {
       if (closed) return; closed = true; window.removeEventListener('popstate', pop); window.__deckLive = null;
+      clearTimeout(deckHideT); document.body.classList.remove('deck-covered'); setTimeout(function () { document.body.classList.remove('deck-open'); }, 460);
       ov.classList.remove('show'); ov.classList.add('hide');
       cards.forEach(function (c, i) { c.style.transitionDelay = (i * 15) + 'ms'; c.style.transform = 'translateY(' + (inEl.clientHeight + 40) + 'px)'; });
       setTimeout(function () { ov.remove(); }, 460);
