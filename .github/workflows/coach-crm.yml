@@ -1,0 +1,22 @@
+name: Coach CRM sync
+# Pulls Sentaris CRM chats and saves a short summary per seller to Firebase
+# (coach/crm, maria/coach/crm, calvin/coach/crm) for the Coach tab.
+on:
+  schedule:
+    - cron: "7,37 0-15 * * *"   # every 30 min, 07:00 to 22:59 WIB (UTC+7)
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: coach-crm
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync CRM summary to Firebase
+        run: python3 .github/scripts/coach_crm.py
+        env:
+          SENTARIS_TOKEN: ${{ secrets.SENTARIS_TOKEN }}
