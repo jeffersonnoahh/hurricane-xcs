@@ -107,7 +107,7 @@ body{
 <div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v5</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v6</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
@@ -361,11 +361,28 @@ body{
     if(prevA){
       var d=Math.sqrt(Math.pow(a.x-prevA.x,2)+Math.pow(a.y-prevA.y,2)+Math.pow(a.z-prevA.z,2));
       var g=Math.sqrt(Math.pow(R.x-prevR.x,2)+Math.pow(R.y-prevR.y,2)+Math.pow(R.z-prevR.z,2));
+      // A tap is a sharp spike that dies within a few samples. A tilt or a move rises slowly and stays up.
+      dB.push(d);gB.push(g);tB.push(t);
+      if(dB.length>24){dB.shift();gB.shift();tB.shift()}
+      rotEma=rotEma*0.85+Math.sqrt(R.x*R.x+R.y*R.y+R.z*R.z)*0.15;
+      if(rotEma>40)movingUntil=t+300;
       if(calOn){calD.push(d);calG.push(g)}
-      else if(((d>thr&&d>ema*1.5)||(g>thrG&&g>emaG*1.5))&&t-lastSpike>150&&t-lastTouch>250){lastSpike=t;feltTap(Math.max(d,g*thr/thrG))}
-      if(t-lastSpike>100){ema=ema*0.9+d*0.1;emaG=emaG*0.9+g*0.1}
+      else if(dB.length>=17){
+        var k=dB.length-4;
+        if((spike(dB,k,thr)||spike(gB,k,thrG))&&tB[k]-lastSpike>150&&tB[k]>movingUntil&&t-lastTouch>250){
+          lastSpike=tB[k];feltTap(Math.max(dB[k],gB[k]*thr/thrG));
+        }
+      }
     }
     prevA={x:a.x,y:a.y,z:a.z};prevR=R;
+  }
+  var dB=[],gB=[],tB=[],rotEma=0,movingUntil=0;
+  function spike(a,k,th){
+    var v=a[k];
+    if(!(v>th)||v<a[k-1]||v<a[k+1])return false;
+    var w=a.slice(k-12,k-2).sort(function(x,y){return x-y}),base=w[5]||0;
+    if(v<base*3)return false;
+    return (a[k+2]+a[k+3])/2<v*0.5;
   }
   function motionStart(){
     if(motionOn)return;
@@ -448,8 +465,8 @@ body{
       var pd=top5(calD),pg=top5(calG),nd=med(calD),ng=med(calG);
       var weakD=pd[pd.length-1],weakG=pg[pg.length-1];
       if(weakD<nd*4&&weakG<ng*4){out.textContent='The taps were too soft to tell apart from hand movement. Tap a little harder and try again.';return}
-      setThr(Math.max(0.15,nd*4,weakD*0.4));
-      thrG=Math.max(3,ng*4,weakG*0.4);
+      setThr(Math.max(0.2,nd*5,weakD*0.5));
+      thrG=Math.max(5,ng*5,weakG*0.5);
       try{localStorage.setItem('sw-thrg',String(thrG))}catch(e){}
       testCount=0;$('tapTest').textContent='Taps felt: 0';
       out.textContent='Done. Sensitivity set to '+thr.toFixed(2)+' and '+thrG.toFixed(1)+'. Test below: 5 taps should count 5.';
