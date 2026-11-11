@@ -87,7 +87,7 @@ body{
   border:0;border-radius:12px;padding:12px 22px;cursor:pointer;
 }
 #peek.big{font-size:30px;color:var(--muted)}
-#tapBtn,#calBtn{display:block;margin-top:10px;font:inherit;font-size:17px;color:var(--green);background:var(--green-fill);border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
+#tapBtn,#calBtn,#recBtn,#recCopy{display:block;margin-top:10px;font:inherit;font-size:17px;color:var(--green);background:var(--green-fill);border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
 #tapState{color:var(--muted)}
 #sens{width:100%;max-width:320px;margin-top:8px}
 #tapTest{font:600 28px/1.3 var(--ui);font-variant-numeric:tabular-nums;margin:8px 0}
@@ -107,7 +107,7 @@ body{
 <div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v3</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v4</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
@@ -132,6 +132,12 @@ body{
   <p id="tapSpike">Last tap strength: none yet</p>
   <label for="sens">Sensitivity: <span id="sensVal"></span> (lower feels lighter taps)</label><br>
   <input id="sens" type="range" min="0.2" max="6" step="0.1">
+  <h2>If taps fail: record a test</h2>
+  <p>Press the button, then tap the back exactly 5 times, about one tap per second. Send me a screenshot of the graph and the text under it.</p>
+  <button id="recBtn" type="button">Record 8 seconds</button>
+  <canvas id="recCanvas" width="640" height="220" style="width:100%;max-width:640px;height:auto;margin-top:10px;background:var(--sheet);border-radius:10px"></canvas>
+  <pre id="recOut" style="display:block;white-space:pre-wrap;font-size:12px;max-width:100%">No recording yet.</pre>
+  <button id="recCopy" type="button">Copy full data</button>
   <label class="row" for="bigPeek"><input id="bigPeek" type="checkbox"> Show the loaded number large (practice only)</label>
   <h2>What it does</h2>
   <ul>
@@ -349,6 +355,7 @@ body{
     var a=(e.acceleration&&e.acceleration.x!=null)?e.acceleration:e.accelerationIncludingGravity;
     if(!a||a.x==null)return;
     var t=now();
+    if(recOn){var r=e.rotationRate||{};rec.push([t,a.x,a.y,a.z,r.alpha||0,r.beta||0,r.gamma||0]);recSrc=(e.acceleration&&e.acceleration.x!=null)?'acc':'grav'}
     if(prevA){
       var d=Math.sqrt(Math.pow(a.x-prevA.x,2)+Math.pow(a.y-prevA.y,2)+Math.pow(a.z-prevA.z,2));
       if(calOn){
@@ -374,6 +381,51 @@ body{
         else $('tapState').textContent='Motion access was refused. Close the app fully, open it again and allow it.';
       }).catch(function(){$('tapState').textContent='Motion access failed. Try again.'});
     }else motionStart();
+  });
+  var recOn=false,rec=[],recSrc='?',recText='';
+  $('recBtn').addEventListener('click',function(){
+    var out=$('recOut');
+    if(!motionOn){out.textContent='Turn on back taps first.';return}
+    rec=[];recOn=true;out.textContent='Recording... tap the back 5 times, one per second.';
+    setTimeout(function(){
+      recOn=false;
+      var n=rec.length;
+      if(n<10){out.textContent='No motion data arrived ('+n+' samples). Motion access is not working.';return}
+      var d=[],g=[],i;
+      for(i=1;i<n;i++){
+        d.push(Math.sqrt(Math.pow(rec[i][1]-rec[i-1][1],2)+Math.pow(rec[i][2]-rec[i-1][2],2)+Math.pow(rec[i][3]-rec[i-1][3],2)));
+        g.push(Math.sqrt(Math.pow(rec[i][4]-rec[i-1][4],2)+Math.pow(rec[i][5]-rec[i-1][5],2)+Math.pow(rec[i][6]-rec[i-1][6],2)));
+      }
+      var dur=rec[n-1][0]-rec[0][0],hz=(n-1)/(dur/1000);
+      function med(a){var s=a.slice().sort(function(x,y){return x-y});return s[Math.floor(s.length/2)]}
+      function peaks(a){
+        var idx=a.map(function(v,k){return k}).sort(function(x,y){return a[y]-a[x]}),out=[];
+        for(var k=0;k<idx.length&&out.length<8;k++){
+          var ok=true;for(var m=0;m<out.length;m++)if(Math.abs(out[m]-idx[k])<8)ok=false;
+          if(ok)out.push(idx[k]);
+        }
+        return out.sort(function(x,y){return x-y}).map(function(k){return Math.round(rec[k+1][0]-rec[0][0])+'ms:'+a[k].toFixed(2)}).join('  ');
+      }
+      var c=$('recCanvas'),x=c.getContext('2d'),W=c.width,H=c.height,cs=getComputedStyle(document.documentElement);
+      var dm=Math.max.apply(null,d)||1,gm=Math.max.apply(null,g)||1;
+      x.clearRect(0,0,W,H);
+      function line(a,m,col){x.strokeStyle=col;x.lineWidth=1.5;x.beginPath();for(var k=0;k<a.length;k++){var px=k/(a.length-1)*W,py=H-4-(a[k]/m)*(H-10);k?x.lineTo(px,py):x.moveTo(px,py)}x.stroke()}
+      line(g,gm,cs.getPropertyValue('--red'));
+      line(d,dm,cs.getPropertyValue('--fg'));
+      x.strokeStyle=cs.getPropertyValue('--green');x.setLineDash([6,4]);x.beginPath();var ty=H-4-(Math.min(thr,dm)/dm)*(H-10);x.moveTo(0,ty);x.lineTo(W,ty);x.stroke();x.setLineDash([]);
+      var txt='samples '+n+'  rate '+hz.toFixed(0)+'Hz  source '+recSrc+'  threshold '+thr.toFixed(2)+
+        '\nwhite = movement, max '+dm.toFixed(2)+', resting '+med(d).toFixed(3)+
+        '\nred = rotation, max '+gm.toFixed(1)+', resting '+med(g).toFixed(2)+
+        '\nmovement peaks: '+peaks(d)+'\nrotation peaks: '+peaks(g);
+      out.textContent=txt;
+      recText=txt+'\nd='+d.map(function(v){return v.toFixed(2)}).join(',')+'\ng='+g.map(function(v){return v.toFixed(1)}).join(',');
+    },8000);
+  });
+  $('recCopy').addEventListener('click',function(){
+    var b=this;
+    if(!recText){b.textContent='Record first';return}
+    try{navigator.clipboard.writeText(recText).then(function(){b.textContent='Copied. Paste it to Claude.'},function(){b.textContent='Copy failed. Send a screenshot.'})}
+    catch(e){b.textContent='Copy failed. Send a screenshot.'}
   });
   $('calBtn').addEventListener('click',function(){
     var out=$('calState');
