@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stopwatch">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Stopwatch</title>
+<style>
+/* Layout: one fixed screen. Time on top, two round buttons, lap list fills the rest. Single dark look on purpose. */
+:root{
+  color-scheme:dark;
+  --bg:#000000;
+  --fg:#ffffff;
+  --muted:#8e8e93;
+  --line:#2c2c2e;
+  --grey-fill:#333336;
+  --grey-fill-dim:#1c1c1e;
+  --green:#30d158;
+  --green-fill:#0a2a12;
+  --red:#ff453a;
+  --red-fill:#330e0c;
+  --peek:#2a2a2d;
+  --sheet:#1c1c1e;
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --digits:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+html,body{height:100%;margin:0}
+html{background:#000}
+[hidden]{display:none!important}
+body{
+  background:var(--bg);color:var(--fg);font-family:var(--ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;
+  display:flex;flex-direction:column;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.face{flex:0 0 38%;display:flex;align-items:center;justify-content:center;min-height:150px}
+#time{
+  font-family:var(--digits);font-weight:200;font-size:clamp(64px,21vw,150px);
+  font-variant-numeric:tabular-nums;letter-spacing:-0.01em;line-height:1;white-space:nowrap;
+}
+.controls{display:flex;justify-content:space-between;align-items:center;padding-block:6px 14px}
+.btn{
+  width:84px;height:84px;border-radius:50%;border:0;font:inherit;font-size:17px;color:var(--fg);
+  background:var(--grey-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--grey-fill);
+  cursor:pointer;
+}
+.btn:focus-visible{outline:2px solid var(--fg);outline-offset:6px}
+.btn.dim{background:var(--grey-fill-dim);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--grey-fill-dim);color:var(--muted)}
+.btn.go{background:var(--green-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--green-fill);color:var(--green)}
+.btn.halt{background:var(--red-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--red-fill);color:var(--red)}
+#laps{flex:1 1 auto;min-height:0;overflow-y:auto;border-top:1px solid var(--line);position:relative}
+.lap{
+  display:flex;justify-content:space-between;padding-block:12px;border-bottom:1px solid var(--line);
+  font-size:17px;font-variant-numeric:tabular-nums;
+}
+.lap.best{color:var(--green)}
+.lap.worst{color:var(--red)}
+#peek{
+  position:fixed;right:max(10px,env(safe-area-inset-right,0px));
+  bottom:calc(6px + env(safe-area-inset-bottom,0px));
+  font-size:11px;color:var(--peek);font-variant-numeric:tabular-nums;pointer-events:none;
+}
+#help{
+  position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+  -webkit-user-select:text;user-select:text;
+}
+#help h1{font-size:22px;font-weight:600;margin:0 0 12px}
+#help h2{font-size:15px;font-weight:600;color:var(--muted);margin:20px 0 6px;text-transform:uppercase;letter-spacing:.06em}
+#help p,#help li{font-size:16px;line-height:1.5;max-width:60ch}
+#help ol,#help ul{padding-left:22px;margin:0}
+#help pre{font:15px/1.6 ui-monospace,Menlo,monospace;background:var(--sheet);padding:12px 16px;border-radius:10px;display:inline-block;margin:6px 0}
+#guide{position:fixed;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);pointer-events:none;z-index:5}
+#guide span{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);color:var(--muted);font-size:22px}
+#toggleGuide{display:block;margin-top:22px;font:inherit;font-size:17px;color:var(--green);background:var(--green-fill);border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
+#closeHelp{
+  margin-top:22px;font:inherit;font-size:17px;color:var(--fg);background:var(--grey-fill);
+  border:0;border-radius:12px;padding:12px 22px;cursor:pointer;
+}
+#peek.big{font-size:30px;color:var(--muted)}
+#tapBtn{display:block;margin-top:10px;font:inherit;font-size:17px;color:var(--green);background:var(--green-fill);border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
+#tapState{color:var(--muted)}
+#sens{width:100%;max-width:320px;margin-top:8px}
+#tapTest{font:600 28px/1.3 var(--ui);font-variant-numeric:tabular-nums;margin:8px 0}
+.row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:16px}
+.row input{width:22px;height:22px}
+</style>
+</head>
+<body>
+
+<div class="face"><div id="time">00:00.00</div></div>
+<div class="controls">
+  <button class="btn dim" id="left" type="button">Lap</button>
+  <button class="btn go" id="right" type="button">Start</button>
+</div>
+<div id="laps"></div>
+<div id="peek"></div>
+<div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
+
+<div id="help" hidden>
+  <h1>Performer notes</h1>
+  <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
+  <h2>Secret keypad</h2>
+  <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
+  <pre>1  2  3
+4  5  6
+7  8  9
+*  0  C</pre>
+  <p>C clears. What you typed shows for two seconds in very dim text at the bottom right corner.</p>
+  <h2>Back taps (no screen touch)</h2>
+  <p>Hold the phone normally and tap its back with one finger. Count the taps for each digit, and pause about one second between digits. Ten taps mean zero. Example for 73: seven taps, pause, three taps. Works only while the stopwatch shows 00:00.00 and no finger is on the screen.</p>
+  <button id="tapBtn" type="button">Turn on back taps</button>
+  <p id="tapState">Off. The phone asks for motion access once each time you open the app.</p>
+  <p>Test here: tap the back now.</p>
+  <div id="tapTest">Taps felt: 0</div>
+  <p id="tapSpike">Last tap strength: none yet</p>
+  <label for="sens">Sensitivity: <span id="sensVal"></span> (lower feels lighter taps)</label><br>
+  <input id="sens" type="range" min="0.2" max="4" step="0.1">
+  <label class="row" for="bigPeek"><input id="bigPeek" type="checkbox"> Show the loaded number large (practice only)</label>
+  <h2>What it does</h2>
+  <ul>
+    <li><b>Two digits (73):</b> whenever he stops, the hundredths are 73.</li>
+    <li><b>Four or six digits (1403, 140391):</b> each press of Lap, and the final Stop, shows the next pair. Lap 1 ends in 14, lap 2 in 03, lap 3 in 91.</li>
+    <li><b>Four digits then * (1973*):</b> exact mode. Stop always shows 00:19.73, however long it ran. Use it with the screen face down. The first two digits must be 59 or less.</li>
+  </ul>
+  <h2>Notes</h2>
+  <ul>
+    <li>The number stays loaded after Reset until you type a new one.</li>
+    <li>With no number loaded it is an honest stopwatch.</li>
+  </ul>
+  <button id="toggleGuide" type="button">Show keypad for practice</button>
+  <button id="closeHelp" type="button">Close</button>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var timeEl=$('time'),leftB=$('left'),rightB=$('right'),lapsEl=$('laps'),peekEl=$('peek'),helpEl=$('help');
+  var running=false,acc=0,startReal=0,laps=[],lapStart=0;
+  var digits='',exact=false,fresh=true,pressIdx=0,peekTimer=0,wake=null;
+
+  function now(){return performance.now()}
+  function elapsed(){return running?acc+(now()-startReal):acc}
+  function fmt(ms){
+    if(ms<0)ms=0;
+    var cs=Math.floor(ms/10),c=cs%100,s=Math.floor(cs/100)%60,m=Math.floor(cs/6000);
+    return (m<10?'0':'')+m+':'+(s<10?'0':'')+s+'.'+(c<10?'0':'')+c;
+  }
+  function pairs(){
+    var out=[],d=digits;
+    if(d.length%2)d=d.slice(0,-1)+'0'+d.slice(-1);
+    for(var i=0;i<d.length;i+=2)out.push(parseInt(d.substr(i,2),10));
+    return out;
+  }
+  // Move a duration to the nearest value whose hundredths equal p.
+  function snap(dur,p){
+    var base=Math.floor(dur/1000)*1000+p*10+5,best=null;
+    [base-1000,base,base+1000].forEach(function(c){
+      if(c<0)return;
+      if(best===null||Math.abs(c-dur)<Math.abs(best-dur))best=c;
+    });
+    return best;
+  }
+  function nextPair(){
+    var p=pairs();
+    if(!p.length)return null;
+    var v=p[Math.min(pressIdx,p.length-1)];
+    pressIdx++;
+    return v;
+  }
+  function setButtons(){
+    if(running){
+      rightB.textContent='Stop';rightB.className='btn halt';
+      leftB.textContent='Lap';leftB.className='btn';
+    }else{
+      rightB.textContent='Start';rightB.className='btn go';
+      if(acc>0){leftB.textContent='Reset';leftB.className='btn'}
+      else{leftB.textContent='Lap';leftB.className='btn dim'}
+    }
+  }
+  function renderLaps(){
+    var rows=[],done=laps.slice(),cur=elapsed()-lapStart;
+    var bi=-1,wi=-1;
+    if(done.length>=2){
+      bi=0;wi=0;
+      done.forEach(function(d,i){if(d<done[bi])bi=i;if(d>done[wi])wi=i});
+    }
+    if(running||acc>0){
+      if(done.length||running||acc>0)rows.push('<div class="lap" id="curLap"><span>Lap '+(done.length+1)+'</span><span id="curLapT">'+fmt(cur)+'</span></div>');
+    }
+    for(var i=done.length-1;i>=0;i--){
+      rows.push('<div class="lap'+(i===bi?' best':i===wi?' worst':'')+'"><span>Lap '+(i+1)+'</span><span>'+fmt(done[i])+'</span></div>');
+    }
+    lapsEl.innerHTML=rows.join('');
+  }
+  function tick(){
+    var t=elapsed();
+    timeEl.textContent=fmt(t);
+    var c=$('curLapT');
+    if(c)c.textContent=fmt(t-lapStart);
+    if(running)requestAnimationFrame(tick);
+  }
+  function start(){
+    startReal=now();running=true;setButtons();renderLaps();requestAnimationFrame(tick);
+    try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(w){wake=w}).catch(function(){})}catch(e){}
+  }
+  function stop(){
+    var t=elapsed();
+    if(exact&&digits.length===4&&laps.length===0){
+      t=parseInt(digits.substr(0,2),10)*1000+parseInt(digits.substr(2,2),10)*10+5;
+    }else{
+      var p=nextPair();
+      if(p!==null){var dur=t-lapStart;t=lapStart+snap(dur,p)}
+    }
+    acc=t;running=false;setButtons();renderLaps();tick();
+    try{if(wake){wake.release();wake=null}}catch(e){}
+  }
+  function lap(){
+    var t=elapsed(),dur=t-lapStart,p=nextPair();
+    if(p!==null){var d2=snap(dur,p);acc+=d2-dur;dur=d2;t=elapsed()}
+    laps.push(dur);lapStart+=dur;renderLaps();
+  }
+  function reset(){
+    acc=0;laps=[];lapStart=0;pressIdx=0;fresh=true;setButtons();renderLaps();tick();
+  }
+  function showPeek(){
+    peekEl.textContent=digits?(digits+(exact?'*':'')):'·';
+    clearTimeout(peekTimer);
+    peekTimer=setTimeout(function(){peekEl.textContent=''},2000);
+  }
+
+  rightB.addEventListener('pointerdown',function(e){e.preventDefault();running?stop():start()});
+  leftB.addEventListener('pointerdown',function(e){
+    e.preventDefault();
+    if(running)lap();else if(acc>0)reset();
+  });
+
+  // Invisible keypad, only while idle at zero.
+  lapsEl.addEventListener('pointerdown',function(e){
+    if(running||acc>0)return;
+    var r=lapsEl.getBoundingClientRect();
+    var col=Math.min(2,Math.max(0,Math.floor((e.clientX-r.left)/r.width*3)));
+    var row=Math.min(3,Math.max(0,Math.floor((e.clientY-r.top)/r.height*4)));
+    var key=[['1','2','3'],['4','5','6'],['7','8','9'],['*','0','C']][row][col];
+    if(key==='C'){digits='';exact=false;fresh=false}
+    else if(key==='*'){exact=!exact}
+    else{
+      if(fresh){digits='';exact=false;fresh=false}
+      if(digits.length<8)digits+=key;
+    }
+    pressIdx=0;showPeek();
+  });
+
+  // Hold the time for two seconds to open the notes.
+  var holdTimer=0;
+  timeEl.addEventListener('pointerdown',function(){
+    if(running)return;
+    holdTimer=setTimeout(function(){helpEl.hidden=false},2000);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(n){
+    timeEl.addEventListener(n,function(){clearTimeout(holdTimer)});
+  });
+  $('closeHelp').addEventListener('click',function(){helpEl.hidden=true});
+  document.addEventListener('contextmenu',function(e){if(helpEl.hidden)e.preventDefault()});
+
+  // Practice mode: draw the keypad so its position can be learned.
+  var guideOn=false,guideEl=$('guide'),baseButtons=setButtons;
+  function placeGuide(){
+    var show=guideOn&&!running&&acc===0;
+    guideEl.hidden=!show;
+    if(show){
+      var r=lapsEl.getBoundingClientRect();
+      guideEl.style.left=r.left+'px';guideEl.style.top=r.top+'px';
+      guideEl.style.width=r.width+'px';guideEl.style.height=r.height+'px';
+    }
+  }
+  setButtons=function(){baseButtons();placeGuide()};
+  window.addEventListener('resize',placeGuide);
+  $('toggleGuide').addEventListener('click',function(){
+    guideOn=!guideOn;
+    this.textContent=guideOn?'Hide keypad':'Show keypad for practice';
+    helpEl.hidden=true;placeGuide();
+  });
+
+  // Back taps: the motion sensor feels a finger tapping the back of the phone.
+  var thr=1.0,prevA=null,ema=0,lastSpike=0,lastTouch=0,group=0,groupTimer=0,sess='',sessOn=false,sessTimer=0,testCount=0,motionOn=false;
+  try{var sv=parseFloat(localStorage.getItem('sw-thr'));if(sv>0)thr=sv}catch(e){}
+  var sensEl=$('sens'),sensVal=$('sensVal');
+  sensEl.value=thr;sensVal.textContent=thr.toFixed(1);
+  sensEl.addEventListener('input',function(){
+    thr=parseFloat(sensEl.value)||1;sensVal.textContent=thr.toFixed(1);
+    try{localStorage.setItem('sw-thr',String(thr))}catch(e){}
+  });
+  $('bigPeek').addEventListener('change',function(){peekEl.className=this.checked?'big':''});
+  ['pointerdown','pointerup','pointermove'].forEach(function(n){
+    document.addEventListener(n,function(){lastTouch=now()},true);
+  });
+  function endGroup(){
+    var d=group>=10?0:group;group=0;
+    if(!sessOn){sessOn=true;sess=''}
+    if(sess.length<8)sess+=d;
+    digits=sess;exact=false;fresh=false;pressIdx=0;showPeek();
+    clearTimeout(sessTimer);sessTimer=setTimeout(function(){sessOn=false},2500);
+  }
+  function feltTap(d){
+    if(!helpEl.hidden){
+      testCount++;$('tapTest').textContent='Taps felt: '+testCount;
+      $('tapSpike').textContent='Last tap strength: '+d.toFixed(1);
+      return;
+    }
+    if(running||acc>0)return;
+    group++;clearTimeout(groupTimer);clearTimeout(sessTimer);
+    groupTimer=setTimeout(endGroup,650);
+  }
+  function onMotion(e){
+    var a=(e.acceleration&&e.acceleration.x!=null)?e.acceleration:e.accelerationIncludingGravity;
+    if(!a||a.x==null)return;
+    var t=now();
+    if(prevA){
+      var d=Math.sqrt(Math.pow(a.x-prevA.x,2)+Math.pow(a.y-prevA.y,2)+Math.pow(a.z-prevA.z,2));
+      if(d>thr&&d>ema*3&&t-lastSpike>130&&t-lastTouch>300){lastSpike=t;feltTap(d)}
+      ema=ema*0.9+d*0.1;
+    }
+    prevA={x:a.x,y:a.y,z:a.z};
+  }
+  function motionStart(){
+    if(motionOn)return;
+    motionOn=true;window.addEventListener('devicemotion',onMotion);
+    $('tapState').textContent='On. Tap the back of the phone to test.';
+    $('tapBtn').textContent='Back taps are on';
+  }
+  $('tapBtn').addEventListener('click',function(){
+    testCount=0;$('tapTest').textContent='Taps felt: 0';
+    if(typeof DeviceMotionEvent==='undefined'){$('tapState').textContent='This device has no motion sensor access.';return}
+    if(typeof DeviceMotionEvent.requestPermission==='function'){
+      DeviceMotionEvent.requestPermission().then(function(s){
+        if(s==='granted')motionStart();
+        else $('tapState').textContent='Motion access was refused. Close the app fully, open it again and allow it.';
+      }).catch(function(){$('tapState').textContent='Motion access failed. Try again.'});
+    }else motionStart();
+  });
+
+  setButtons();renderLaps();
+})();
+</script>
+</body>
+</html>

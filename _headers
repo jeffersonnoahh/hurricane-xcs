@@ -7,3 +7,7 @@
 # Private personal app: keep out of search engines.
 /p4v6ntzjtfj8/*
   X-Robots-Tag: noindex, nofollow
+
+# Private personal app: keep out of search engines.
+/clock-k7x2/*
+  X-Robots-Tag: noindex, nofollow
