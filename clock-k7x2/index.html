@@ -107,7 +107,7 @@ body{
 <div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v4</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v5</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
@@ -117,7 +117,7 @@ body{
 *  0  C</pre>
   <p>C clears. What you typed shows for two seconds in very dim text at the bottom right corner.</p>
   <h2>Back taps (no screen touch)</h2>
-  <p>Hold the phone normally and tap its back with one finger. Tap briskly and count the taps for each digit. Pause a full second and a half between the two digits. Ten taps mean zero. Example for 73: seven taps, pause, three taps.</p>
+  <p>Hold the phone normally and tap its back with one finger. Tap briskly and count the taps for each digit. Tap in a steady rhythm without stopping, then pause two full seconds between the two digits. Ten taps mean zero. Example for 73: seven taps, pause, three taps.</p>
   <ul>
     <li>Works only while the stopwatch shows 00:00.00 and no finger is on the screen.</li>
     <li>After two digits the number is <b>locked</b>. Bumps and handing the phone over cannot change it.</li>
@@ -317,7 +317,8 @@ body{
 
   // Back taps: the motion sensor feels a finger tapping the back of the phone.
   var thr=1.0,prevA=null,ema=0,lastSpike=0,lastTouch=0,group=0,groupTimer=0,sess='',locked=false,testCount=0,motionOn=false,big=false;
-  var calOn=false,calPeaks=[],calTimer=0;
+  var calOn=false,calD=[],calG=[],calTimer=0,thrG=15,prevR=null,emaG=0;
+  try{var sg=parseFloat(localStorage.getItem('sw-thrg'));if(sg>0)thrG=sg}catch(e){}
   try{var sv=parseFloat(localStorage.getItem('sw-thr'));if(sv>0)thr=sv}catch(e){}
   var sensEl=$('sens'),sensVal=$('sensVal');
   function setThr(v){
@@ -327,7 +328,7 @@ body{
   setThr(thr);
   sensEl.addEventListener('input',function(){setThr(parseFloat(sensEl.value)||1)});
   $('bigPeek').addEventListener('change',function(){big=this.checked;peekEl.className=big?'big':'';showPeek()});
-  ['pointerdown','pointerup','pointermove'].forEach(function(n){
+  ['pointerdown','pointerup'].forEach(function(n){
     document.addEventListener(n,function(){lastTouch=now()},true);
   });
   clearNum=function(){
@@ -348,7 +349,7 @@ body{
     if(running||acc>0||locked)return;
     if(!sess&&digits){digits=''}
     group++;clearTimeout(groupTimer);
-    groupTimer=setTimeout(endGroup,900);
+    groupTimer=setTimeout(endGroup,1000);
     showPeek();
   }
   function onMotion(e){
@@ -356,15 +357,15 @@ body{
     if(!a||a.x==null)return;
     var t=now();
     if(recOn){var r=e.rotationRate||{};rec.push([t,a.x,a.y,a.z,r.alpha||0,r.beta||0,r.gamma||0]);recSrc=(e.acceleration&&e.acceleration.x!=null)?'acc':'grav'}
+    var rr=e.rotationRate||{},R={x:rr.alpha||0,y:rr.beta||0,z:rr.gamma||0};
     if(prevA){
       var d=Math.sqrt(Math.pow(a.x-prevA.x,2)+Math.pow(a.y-prevA.y,2)+Math.pow(a.z-prevA.z,2));
-      if(calOn){
-        if(d>0.15&&t-lastSpike>170){lastSpike=t;calPeaks.push(d)}
-        else if(calPeaks.length&&t-lastSpike<80&&d>calPeaks[calPeaks.length-1])calPeaks[calPeaks.length-1]=d;
-      }else if(d>thr&&d>ema*3&&t-lastSpike>170&&t-lastTouch>500){lastSpike=t;feltTap(d)}
-      if(t-lastSpike>100)ema=ema*0.9+d*0.1;
+      var g=Math.sqrt(Math.pow(R.x-prevR.x,2)+Math.pow(R.y-prevR.y,2)+Math.pow(R.z-prevR.z,2));
+      if(calOn){calD.push(d);calG.push(g)}
+      else if(((d>thr&&d>ema*1.5)||(g>thrG&&g>emaG*1.5))&&t-lastSpike>150&&t-lastTouch>250){lastSpike=t;feltTap(Math.max(d,g*thr/thrG))}
+      if(t-lastSpike>100){ema=ema*0.9+d*0.1;emaG=emaG*0.9+g*0.1}
     }
-    prevA={x:a.x,y:a.y,z:a.z};
+    prevA={x:a.x,y:a.y,z:a.z};prevR=R;
   }
   function motionStart(){
     if(motionOn)return;
@@ -430,14 +431,28 @@ body{
   $('calBtn').addEventListener('click',function(){
     var out=$('calState');
     if(!motionOn){out.textContent='Turn on back taps first.';return}
-    calPeaks=[];calOn=true;out.textContent='Tap the back 5 times now, the way you will when performing...';
+    calD=[];calG=[];calOn=true;out.textContent='Tap the back 5 times now, the way you will when performing...';
     clearTimeout(calTimer);
     calTimer=setTimeout(function(){
       calOn=false;
-      var p=calPeaks.slice().sort(function(a,b){return b-a}).slice(0,5);
-      if(p.length<4){out.textContent='Felt only '+p.length+' taps. Tap a little harder and try again.';return}
-      setThr(p[p.length-1]*0.5);testCount=0;$('tapTest').textContent='Taps felt: 0';
-      out.textContent='Done. Sensitivity set to '+thr.toFixed(1)+'. Test below: 5 taps should count 5.';
+      function top5(a){
+        var idx=a.map(function(v,k){return k}).sort(function(x,y){return a[y]-a[x]}),o=[];
+        for(var k=0;k<idx.length&&o.length<5;k++){
+          var ok=true;for(var m=0;m<o.length;m++)if(Math.abs(o[m]-idx[k])<8)ok=false;
+          if(ok)o.push(idx[k]);
+        }
+        return o.map(function(k){return a[k]});
+      }
+      function med(a){var s=a.slice().sort(function(x,y){return x-y});return s[Math.floor(s.length/2)]||0}
+      if(calD.length<50){out.textContent='No motion data arrived. Motion access is not working.';return}
+      var pd=top5(calD),pg=top5(calG),nd=med(calD),ng=med(calG);
+      var weakD=pd[pd.length-1],weakG=pg[pg.length-1];
+      if(weakD<nd*4&&weakG<ng*4){out.textContent='The taps were too soft to tell apart from hand movement. Tap a little harder and try again.';return}
+      setThr(Math.max(0.15,nd*4,weakD*0.4));
+      thrG=Math.max(3,ng*4,weakG*0.4);
+      try{localStorage.setItem('sw-thrg',String(thrG))}catch(e){}
+      testCount=0;$('tapTest').textContent='Taps felt: 0';
+      out.textContent='Done. Sensitivity set to '+thr.toFixed(2)+' and '+thrG.toFixed(1)+'. Test below: 5 taps should count 5.';
     },6000);
   });
 
