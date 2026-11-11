@@ -107,7 +107,7 @@ body{
 <div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v7</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v8</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
@@ -366,7 +366,7 @@ body{
       dB.push(d);gB.push(g);tB.push(t);
       if(dB.length>12){dB.shift();gB.shift();tB.shift()}
       if(calOn){calD.push(d);calG.push(g)}
-      else if(dB.length>=6){
+      else if(dB.length>=7){
         var k=dB.length-3;
         if(onset(k)&&tB[k]-lastSpike>170&&t-lastTouch>250){lastSpike=tB[k];feltTap(dB[k])}
       }
@@ -379,7 +379,10 @@ body{
     if(!(v>thr))return false;
     var base=(dB[k-1]+dB[k-2]+dB[k-3])/3;
     if(v<2.5*Math.max(base,0.05))return false;
-    return Math.max(gB[k-1],gB[k],gB[k+1],gB[k+2])>thrG;
+    if(!(Math.max(gB[k-1],gB[k],gB[k+1],gB[k+2])>thrG))return false;
+    // Calm before the tap: while the phone is being tilted or moved the rotation sensor stays busy.
+    var w=[gB[k-4],gB[k-3],gB[k-2],gB[k-1]].sort(function(x,y){return x-y});
+    return w[1]<20;
   }
   function motionStart(){
     if(motionOn)return;
