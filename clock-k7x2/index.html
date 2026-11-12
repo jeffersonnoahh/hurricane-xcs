@@ -355,7 +355,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v20</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v21</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -378,7 +378,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li><b>Cards 1 to 6</b> (the first two rows): the hour. Halves count 1, 2, 3 ... 12.</li>
     <li><b>Cards 7 to 12:</b> the first minute digit. Halves count 1 to 5. The top part of card 7 is 0.</li>
     <li><b>Cards 13 to 18:</b> the last minute digit. Halves count 1 to 9. The top part of card 13 is 0.</li>
-    <li>After the third digit it locks. One of your alarms then becomes that time, switched on. It changes only while that card is off screen, so scroll away from it once.</li>
+    <li>After the third digit it locks. An alarm in the middle of the list becomes that time, switched on, and the list stays in time order. For a very early or very late time, some other alarms change too, so the chosen one is never the first or the last. Cards only change while they are off screen, so scroll back to the top before you hand it over.</li>
     <li>Tap <b>Edit</b> to switch to afternoon (adds 12 hours). Tap the <b>Alarms</b> title to clear and start again.</li>
     <li>The corner shows what you have entered, like 7:4_ and then 07.42.</li>
   </ul>
@@ -745,7 +745,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var h=sc.h%12+(sc.pm?12:0);if(!sc.pm&&sc.h===12)h=12;if(sc.pm&&sc.h===12)h=0;
     return (h<10?'0':'')+h+'.'+sc.t+sc.u;
   }
-  function scClear(){sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null}
+  function scClear(){sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null;pending=[]}
   function scDown(x,y,target){
     if(sc.locked)return;
     var card=target&&target.closest?target.closest('.al'):null;if(!card)return;
@@ -765,17 +765,65 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     if(sc.h!==null&&sc.t!==null&&sc.u!==null)sc.locked=true;
     scPeek();scApply();
   }
-  // Change one existing alarm into the chosen time, only while that card is off screen, so nothing is seen to move.
+  // Work out a full list of alarm times, in time order, with the chosen time somewhere in the middle
+  // (never first or last when that is possible). Early or late choices get neighbours made up around them.
+  function toMin(s){return +s.substr(0,2)*60+ +s.substr(3,2)}
+  function toStr(m){var h=Math.floor(m/60),x=m%60;return (h<10?'0':'')+h+'.'+(x<10?'0':'')+x}
+  function pick(pool,n){
+    var a=pool.slice(),out=[];
+    while(out.length<n&&a.length)out.push(a.splice(Math.floor(Math.random()*a.length),1)[0]);
+    return out;
+  }
+  function planTimes(target){
+    var T=toMin(target),base=AL.map(function(a){return toMin(a[0])}),N=base.length;
+    var before=base.filter(function(v){return v<T}),after=base.filter(function(v){return v>T});
+    var lo=Math.floor(N*0.35),hi=Math.floor(N*0.6),p=before.length,m=p;
+    // do not crowd a short stretch of the day with made up alarms: use at most half of its five minute slots
+    function cap(avail){return Math.max(Math.min(3,avail),Math.floor(avail/2))}
+    function fives(a,b,skip){var o=[];for(var v=Math.ceil(a/5)*5;v<=b;v+=5)if(skip.indexOf(v)<0)o.push(v);return o}
+    if(p>hi){
+      m=lo+Math.floor(Math.random()*(hi-lo+1));
+      m=Math.max(m,N-1-Math.max(after.length,cap(fives(T+1,1435,[]).length)));
+      before=pick(before,m);
+      var needA=N-1-m,extraA=pick(fives(T+1,1435,after),Math.max(0,needA-after.length));
+      after=after.concat(extraA);
+      if(after.length<needA){m=N-1-after.length;before=pick(base.filter(function(v){return v<T}),m)}
+      else after=pick(after,needA);
+    }else if(p<lo){
+      m=lo+Math.floor(Math.random()*(hi-lo+1));
+      m=Math.min(m,Math.max(before.length,cap(fives(0,T-1,[]).length)));
+      var extraB=pick(fives(0,T-1,before),Math.max(0,m-before.length));
+      before=before.concat(extraB);
+      if(before.length<m)m=before.length;else before=pick(before,m);
+      after=pick(after,N-1-m);
+    }else{
+      if(before.length+after.length<N-1)after=after.concat(pick(fives(T+1,1435,after),N-1-before.length-after.length));
+      before=pick(before,m);after=pick(after,N-1-m);
+    }
+    var num=function(x,y){return x-y};
+    return {times:before.sort(num).concat([T],after.sort(num)).map(toStr),index:before.length};
+  }
+  // Each card changes only while it is off screen, so nothing is seen to move.
+  var pending=[];
   function scApply(force){
     if(!sc.locked||sc.done)return;
-    var target=scTime(),cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al')).slice(1),el=null;
-    for(var i=0;i<cards.length;i++){if(cards[i].querySelector('.t').textContent>=target){el=cards[i];break}}
-    if(!el)el=cards[cards.length-1];
-    var r=el.getBoundingClientRect(),v=alScroll.getBoundingClientRect();
-    var hidden=$('s-alarms').hidden||r.bottom<=v.top||r.top>=Math.min(v.bottom,window.innerHeight);
-    if(!hidden&&!force)return;
-    el.querySelector('.t').textContent=target;el.className='al';el.querySelector('.sw').className='sw on';
-    sc.done=true;
+    var cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al')).slice(1);
+    if(!pending.length){
+      var plan=planTimes(scTime());
+      cards.forEach(function(el,i){
+        if(i>=plan.times.length)return;
+        if(el.querySelector('.t').textContent!==plan.times[i]||i===plan.index)pending.push({el:el,t:plan.times[i],on:i===plan.index});
+      });
+    }
+    var v=alScroll.getBoundingClientRect(),gone=$('s-alarms').hidden;
+    pending=pending.filter(function(c){
+      var r=c.el.getBoundingClientRect(),hidden=gone||r.bottom<=v.top||r.top>=Math.min(v.bottom,window.innerHeight);
+      if(!hidden&&!force)return true;
+      c.el.querySelector('.t').textContent=c.t;
+      c.el.className=c.on?'al':'al off';c.el.querySelector('.sw').className=c.on?'sw on':'sw';
+      return false;
+    });
+    if(!pending.length)sc.done=true;
   }
   window.__scApply=function(){scApply(true)};
   alScroll.addEventListener('touchstart',function(e){var t=e.touches[0];scDown(t.clientX,t.clientY,e.target)},{passive:true});
@@ -787,7 +835,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   document.querySelector('#s-alarms h1').addEventListener('click',function(){scClear();extraAlarm=null;buildAlarms();scPeek()});
   document.querySelector('#s-alarms .edit').addEventListener('click',function(){
     if(sc.h===null&&sc.t===null&&sc.u===null)return;
-    if(sc.done){buildAlarms();sc.done=false}
+    if(sc.locked){buildAlarms();sc.done=false;pending=[]}
     sc.pm=!sc.pm;scPeek();scApply();
   });
   window.__setAlarm=function(d){
