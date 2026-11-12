@@ -389,7 +389,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v38</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v39</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -423,7 +423,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   <h2>Right now</h2>
   <p>On the stopwatch keypad, tap <b>*</b> with nothing typed. The corner shows "now". He presses Start, Lap, Stop. The first press ends in the current hour and the second in the current minute, read from the clock at that moment. Phone open: read the TOTAL column. Plain Start and Stop runs before that stay honest.</p>
   <h2>Domino</h2>
-  <p>With a time loaded, on the Alarms tab tap the <b>+</b> button, or tap the bottom left corner of the screen. Every alarm turns into the chosen time and switches on, one after another. Clear afterwards with CHANGE.</p>
+  <p>With a time loaded, on the Alarms tab tap the bottom left corner of the screen. Nothing happens for one and a half seconds, so you can take your hand away. Then every alarm turns into the chosen time and switches on, one after another. The <b>+</b> button starts it at once. Clear afterwards with CHANGE.</p>
   <h2>Ghost wheels</h2>
   <p>With a number loaded, open the Timers tab. After a moment the three wheels turn by themselves and settle on the hours, minutes and seconds of that number. It happens once per number.</p>
   <h2>What it does</h2>
@@ -859,7 +859,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var h=sc.h%12+(sc.pm?12:0);if(!sc.pm&&sc.h===12)h=12;if(sc.pm&&sc.h===12)h=0;
     return (h<10?'0':'')+h+'.'+sc.t+sc.u;
   }
-  function scClear(){dominoOn=false;sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null;pending=[]}
+  function scClear(){dominoOn=false;clearTimeout(dominoWait);dominoWait=0;sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null;pending=[]}
   function scDown(x,y,target){
     var card=target&&target.closest?target.closest('.al'):null;if(!card)return;
     var cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al')),n=cards.indexOf(card);
@@ -937,7 +937,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     if(d.length>=4&&+d.substr(0,2)<24&&+d.substr(2,2)<60)return d.substr(0,2)+'.'+d.substr(2,2);
     return null;
   }
-  var dominoOn=false;
+  var dominoOn=false,dominoWait=0;
   function domino(){
     var t=chosenTime();if(!t||dominoOn)return;
     dominoOn=true;scApply(true);
@@ -969,7 +969,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var t=e.changedTouches[0];
     if(Math.abs(t.clientX-scX)<12&&Math.abs(t.clientY-scY)<12){
       sc.touch=null;
-      if(t.clientX<window.innerWidth*0.2&&t.clientY>window.innerHeight*0.86){domino();return}
+      if(t.clientX<window.innerWidth*0.2&&t.clientY>window.innerHeight*0.86){if(!dominoOn&&!dominoWait&&chosenTime()){dominoWait=setTimeout(function(){dominoWait=0;domino()},1500)}return}
       tapAt(e.target);
     }
   },{passive:true});
