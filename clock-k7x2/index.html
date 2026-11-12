@@ -355,7 +355,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v22</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v23</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -601,6 +601,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   }
   document.addEventListener('visibilitychange',function(){if(!document.hidden)checkUpdate()});
   window.addEventListener('pageshow',checkUpdate);
+  setInterval(function(){if(!document.hidden)checkUpdate()},30000);
 
   setButtons();renderLaps();
 })();
@@ -728,7 +729,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   world();setInterval(world,1000);
 
   // Alarms
-  var AL=[['00.00','Radial'],['04.00','Radial'],['04.15','Radial'],['04.45','Radial'],['04.50','Radial'],['05.00','Radar'],['05.10','Radial'],['05.20','Radial'],['05.30','Radar'],['05.35','Radial'],['05.45','Radar'],['06.00','Radial'],['06.15','Radial'],['06.30','Radar'],['07.00','Radial'],['07.30','Radial'],['08.00','Radar'],['09.00','Radial'],['10.30','Radial'],['12.00','Radial'],['13.00','Radar'],['15.00','Radial'],['17.30','Radial'],['20.00','Radial'],['22.00','Radar']];
+  // 44 alarms through the day, so there is plenty to scroll. Times up to 05.45 are from the real phone.
+  var RADAR=' 05.00 05.30 05.45 06.30 08.00 11.00 13.00 16.00 19.00 22.00 ';
+  var AL='00.00 04.00 04.15 04.45 04.50 05.00 05.10 05.20 05.30 05.35 05.45 06.00 06.15 06.30 06.45 07.00 07.15 07.30 07.45 08.00 08.30 09.00 09.30 10.00 10.30 11.00 11.30 12.00 12.30 13.00 13.30 14.00 15.00 15.30 16.00 17.00 17.30 18.00 19.00 20.00 21.00 21.30 22.00 23.00'.split(' ').map(function(t){return [t,RADAR.indexOf(' '+t+' ')>=0?'Radar':'Radial']});
   // The first four digits loaded on the stopwatch keypad, if they are a valid time, also appear here as an alarm.
   var extraAlarm=null;
   function buildAlarms(){
@@ -839,10 +842,12 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     if(!pending.length)sc.done=true;
   }
   window.__scApply=function(){scApply(true)};
-  alScroll.addEventListener('touchstart',function(e){var t=e.touches[0];scDown(t.clientX,t.clientY,e.target)},{passive:true});
+  var scY=0;
+  alScroll.addEventListener('touchstart',function(e){var t=e.touches[0];scY=t.clientY;scDown(t.clientX,t.clientY,e.target)},{passive:true});
+  alScroll.addEventListener('touchmove',function(e){if(sc.touch&&Math.abs(e.touches[0].clientY-scY)>8)scCommit()},{passive:true});
   alScroll.addEventListener('mousedown',function(e){scDown(e.clientX,e.clientY,e.target)});
   alScroll.addEventListener('scroll',function(){if(sc.touch)scCommit();scApply()},{passive:true});
-  alScroll.addEventListener('touchend',function(){sc.touch=null},{passive:true});
+  alScroll.addEventListener('touchend',function(){var t=sc.touch;setTimeout(function(){if(sc.touch===t)sc.touch=null},600)},{passive:true});
   alScroll.addEventListener('mouseup',function(){sc.touch=null});
   // Tap the title to clear, tap Edit to switch between morning and afternoon.
   document.querySelector('#s-alarms h1').addEventListener('click',function(){scClear();extraAlarm=null;buildAlarms();scPeek()});
