@@ -355,7 +355,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v19</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v20</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -372,6 +372,16 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   <label class="row" for="bigPeek"><input id="bigPeek" type="checkbox"> Show the loaded number large (practice only)</label>
   <h2>Alarm already set</h2>
   <p>Type a time as four digits on the stopwatch keypad, for example 0742. The Alarms tab then shows an alarm at 07.42, switched on, in its right place in the list. It stays until you clear the number with C or by holding Lap. It must be a real time: hours up to 23, minutes up to 59.</p>
+  <h2>Alarm by scrolling</h2>
+  <p>On the Alarms tab, the place where you put your finger down to start a scroll is the input. Each alarm card has a left half and a right half.</p>
+  <ul>
+    <li><b>Cards 1 to 6</b> (the first two rows): the hour. Halves count 1, 2, 3 ... 12.</li>
+    <li><b>Cards 7 to 12:</b> the first minute digit. Halves count 1 to 5. The top part of card 7 is 0.</li>
+    <li><b>Cards 13 to 18:</b> the last minute digit. Halves count 1 to 9. The top part of card 13 is 0.</li>
+    <li>After the third digit it locks. One of your alarms then becomes that time, switched on. It changes only while that card is off screen, so scroll away from it once.</li>
+    <li>Tap <b>Edit</b> to switch to afternoon (adds 12 hours). Tap the <b>Alarms</b> title to clear and start again.</li>
+    <li>The corner shows what you have entered, like 7:4_ and then 07.42.</li>
+  </ul>
   <h2>What it does</h2>
   <ul>
     <li><b>Two digits (73):</b> whenever he stops, the hundredths are 73.</li>
@@ -593,6 +603,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
       var id=b.getAttribute('data-s');
       Array.prototype.forEach.call(tabs,function(x){x.className=x===b?'on':'';$(x.getAttribute('data-s')).hidden=x!==b});
       $('plus').hidden=!(id==='s-world'||id==='s-alarms');
+      if(window.__scApply&&id!=='s-alarms')window.__scApply();
       if(id==='s-timers'&&!timerShown){timerShown=true;setCol($('colM'),47)}
       window.dispatchEvent(new Event('resize'));
     });
@@ -704,7 +715,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   world();setInterval(world,1000);
 
   // Alarms
-  var AL=[['00.00','Radial'],['04.00','Radial'],['04.15','Radial'],['04.45','Radial'],['04.50','Radial'],['05.00','Radar'],['05.10','Radial'],['05.20','Radial'],['05.30','Radar'],['05.35','Radial'],['05.45','Radar'],['06.00','Radial'],['06.15','Radial'],['06.30','Radar'],['07.00','Radial']];
+  var AL=[['00.00','Radial'],['04.00','Radial'],['04.15','Radial'],['04.45','Radial'],['04.50','Radial'],['05.00','Radar'],['05.10','Radial'],['05.20','Radial'],['05.30','Radar'],['05.35','Radial'],['05.45','Radar'],['06.00','Radial'],['06.15','Radial'],['06.30','Radar'],['07.00','Radial'],['07.30','Radial'],['08.00','Radar'],['09.00','Radial'],['10.30','Radial'],['12.00','Radial'],['13.00','Radar'],['15.00','Radial'],['17.30','Radial'],['20.00','Radial'],['22.00','Radar']];
   // The first four digits loaded on the stopwatch keypad, if they are a valid time, also appear here as an alarm.
   var extraAlarm=null;
   function buildAlarms(){
@@ -718,7 +729,69 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     $('alarms').innerHTML=ah;
   }
   buildAlarms();
+  // Scroll input (Jeff's design): the spot where a scroll starts is the input.
+  // Cards 1-6 give the hour (left half, right half = 1,2 ... 11,12), cards 7-12 the first minute digit,
+  // cards 13-18 the last minute digit. The top of the first card in a minute group is 0.
+  var sc={h:null,t:null,u:null,pm:false,locked:false,done:false,touch:null},alScroll=$('alarms').parentNode;
+  function scPeek(){
+    var pk=$('peek'),s;
+    if(sc.h===null&&sc.t===null&&sc.u===null)s='\u2013';
+    else if(sc.locked)s=scTime();
+    else s=(sc.h===null?'_':sc.h)+':'+(sc.t===null?'_':sc.t)+(sc.u===null?'_':sc.u);
+    pk.textContent=s+(sc.pm?' pm':'');
+    clearTimeout(scPeek.t);scPeek.t=setTimeout(function(){if(pk.className!=='big')pk.textContent=''},2500);
+  }
+  function scTime(){
+    var h=sc.h%12+(sc.pm?12:0);if(!sc.pm&&sc.h===12)h=12;if(sc.pm&&sc.h===12)h=0;
+    return (h<10?'0':'')+h+'.'+sc.t+sc.u;
+  }
+  function scClear(){sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null}
+  function scDown(x,y,target){
+    if(sc.locked)return;
+    var card=target&&target.closest?target.closest('.al'):null;if(!card)return;
+    var cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al')),n=cards.indexOf(card);
+    if(n<0||n>=18)return;
+    var r=card.getBoundingClientRect(),k=n%6,g=Math.floor(n/6);
+    var v=2*k+(x<r.left+r.width/2?1:2);
+    if(g>0&&k===0&&y<r.top+r.height*0.4)v=0;
+    sc.touch={g:g,v:v};
+  }
+  function scCommit(){
+    var t=sc.touch;sc.touch=null;
+    if(!t||sc.locked)return;
+    if(t.g===0)sc.h=t.v;
+    else if(t.g===1){if(t.v>5)return;sc.t=t.v}
+    else{if(t.v>9)return;sc.u=t.v}
+    if(sc.h!==null&&sc.t!==null&&sc.u!==null)sc.locked=true;
+    scPeek();scApply();
+  }
+  // Change one existing alarm into the chosen time, only while that card is off screen, so nothing is seen to move.
+  function scApply(force){
+    if(!sc.locked||sc.done)return;
+    var target=scTime(),cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al')).slice(1),el=null;
+    for(var i=0;i<cards.length;i++){if(cards[i].querySelector('.t').textContent>=target){el=cards[i];break}}
+    if(!el)el=cards[cards.length-1];
+    var r=el.getBoundingClientRect(),v=alScroll.getBoundingClientRect();
+    var hidden=$('s-alarms').hidden||r.bottom<=v.top||r.top>=Math.min(v.bottom,window.innerHeight);
+    if(!hidden&&!force)return;
+    el.querySelector('.t').textContent=target;el.className='al';el.querySelector('.sw').className='sw on';
+    sc.done=true;
+  }
+  window.__scApply=function(){scApply(true)};
+  alScroll.addEventListener('touchstart',function(e){var t=e.touches[0];scDown(t.clientX,t.clientY,e.target)},{passive:true});
+  alScroll.addEventListener('mousedown',function(e){scDown(e.clientX,e.clientY,e.target)});
+  alScroll.addEventListener('scroll',function(){if(sc.touch)scCommit();scApply()},{passive:true});
+  alScroll.addEventListener('touchend',function(){sc.touch=null},{passive:true});
+  alScroll.addEventListener('mouseup',function(){sc.touch=null});
+  // Tap the title to clear, tap Edit to switch between morning and afternoon.
+  document.querySelector('#s-alarms h1').addEventListener('click',function(){scClear();extraAlarm=null;buildAlarms();scPeek()});
+  document.querySelector('#s-alarms .edit').addEventListener('click',function(){
+    if(sc.h===null&&sc.t===null&&sc.u===null)return;
+    if(sc.done){buildAlarms();sc.done=false}
+    sc.pm=!sc.pm;scPeek();scApply();
+  });
   window.__setAlarm=function(d){
+    scClear();
     var t=null;
     if(d&&d.length>=4){var hh=d.substr(0,2),mm=d.substr(2,2);if(+hh<24&&+mm<60)t=hh+'.'+mm}
     if(t!==extraAlarm){extraAlarm=t;buildAlarms()}
