@@ -149,6 +149,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 #tabs button.on{color:var(--orange);background:var(--cap-on)}
 #tabs svg{width:calc(var(--u)*76);height:calc(var(--u)*76)}
 #tabs span{display:none}
+#tabs,#plus{-webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden}
 
 /* rail when the phone keeps the right strip: the tabs cannot sit in the strip, so keep them clear of the buttons */
 .rail.inset #tabs{top:calc(var(--sh,100vh) + var(--top,0px) - var(--u)*628)}
@@ -363,7 +364,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v28</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v29</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -633,6 +634,24 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
       window.dispatchEvent(new Event('resize'));
     });
   });
+  // The tab bar sits just below the area the phone reports as the window. After a list has been
+  // scrolled the phone can stop drawing it. Redraw it whenever scrolling or touching ends.
+  var redrawT=0;
+  function redrawBar(){
+    ['tabs','plus'].forEach(function(id){
+      var el=$(id);if(el.hidden)return;
+      el.style.display='none';void el.offsetHeight;el.style.display='';
+      el.style.opacity='0.999';requestAnimationFrame(function(){el.style.opacity=''});
+    });
+  }
+  function redrawSoon(){clearTimeout(redrawT);redrawT=setTimeout(redrawBar,180)}
+  Array.prototype.forEach.call(document.querySelectorAll('.scroll,#laps,.col'),function(el){
+    el.addEventListener('scroll',redrawSoon,{passive:true});
+  });
+  document.addEventListener('touchend',redrawSoon,{passive:true});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)redrawSoon()});
+  window.addEventListener('resize',redrawSoon);
+  setInterval(function(){if(!document.hidden)redrawBar()},4000);
   // Analog stopwatch page
   var dial=$('dial'),cx=564,cy=480,h='',i;
   function pol(r,deg,ox,oy){var a=(deg-90)*Math.PI/180;return [(ox||cx)+r*Math.cos(a),(oy||cy)+r*Math.sin(a)]}
