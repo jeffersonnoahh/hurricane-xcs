@@ -141,6 +141,12 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 #tabs svg{width:calc(var(--u)*76);height:calc(var(--u)*76)}
 #tabs span{display:none}
 
+/* rail when the phone keeps the right strip: the tabs cannot sit in the strip, so keep them clear of the buttons */
+.rail.inset #tabs{bottom:calc(var(--u)*5)}
+.rail.inset .lap{padding-right:calc(var(--u)*165)}
+.rail.inset #plus{left:calc(var(--u)*716);top:calc(var(--u)*71 + var(--top,0px))}
+.rail.inset .wrow,.rail.inset .al,.rail.inset .recent{padding-right:calc(var(--u)*10)}
+
 /* ===== port: upright, bar at the bottom ===== */
 .port .screen,.land .screen,.port #s-stop,.land #s-stop{padding:0}
 .port .screen{width:100%}
@@ -272,7 +278,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     if(w<sw*0.7||w>sw*1.02){sw=w;sh=h}
     var r=sw/sh,c=r>1?'land':r>=0.695?'port':r>=0.6?'rail':'narrow';
     var u=sw/({land:2000,port:1407,rail:1375,narrow:1128})[c],root=document.documentElement;
-    root.className=c;
+    // 'inset': the phone keeps its status strip for itself, so the page is narrower than the screen.
+    root.className=c+((c==='rail'&&sw-w>20)?' inset':'');
     root.style.setProperty('--u',u+'px');
     root.style.setProperty('--p',((c==='port'||c==='land')?u*0.711:u)+'px');
     // In a browser tab whose bars sit at the top, slide the app up by the height of those bars,
@@ -342,7 +349,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v15</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v16</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
