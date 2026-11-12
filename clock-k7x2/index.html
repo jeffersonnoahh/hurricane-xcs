@@ -295,7 +295,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     // Escape hatch from the notes: keep the bar inside the reported window.
     var safe=false;try{safe=localStorage.getItem('clk-bar')==='safe'}catch(e){}
     if(safe)st=false;
-    root.className=c+((c==='rail'&&sw-w>20&&!st)?' inset':'');
+    root.className=c+((c==='rail'&&sw-w>20)?' inset':'');
     root.style.setProperty('--u',u+'px');
     root.style.setProperty('--p',((c==='port'||c==='land')?u*0.711:u)+'px');
     // In a browser tab whose bars sit at the top, slide the app up by the height of those bars,
@@ -306,7 +306,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     // From the Home Screen the phone reports a window smaller than what it lets the app paint,
     // so the tab bar is placed from the real screen size. In a browser tab it follows the window.
     root.style.setProperty('--sh',(st?sh:h+gap)+'px');
-    root.style.setProperty('--cw',(st?sw:w)+'px');
+    root.style.setProperty('--cw',w+'px');
     window.__lay=lay;
   }
   lay();window.addEventListener('resize',lay);
@@ -370,7 +370,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v31</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v32</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
