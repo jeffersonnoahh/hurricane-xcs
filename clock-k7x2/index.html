@@ -110,6 +110,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .zn{position:absolute;top:56%;transform:translate(-50%,-50%);font-size:calc(var(--u)*84);font-weight:700;color:#ff453a;pointer-events:none;line-height:1}
 .zn.l{left:25%}.zn.r{left:75%}
 .zn.z{top:17%;left:50%}
+.zn.no{opacity:.35}
 .zn.bar{left:50%;top:6%;bottom:6%;transform:none;border-left:calc(var(--u)*5) solid #ff453a;width:0}
 .zn.cut{left:4%;right:4%;top:40%;transform:none;border-top:calc(var(--u)*5) solid #ff453a;height:0}
 /* Timers */
@@ -362,7 +363,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v24</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v25</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -759,7 +760,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var cards=$('alarms').querySelectorAll('.al');
     for(var n=0;n<cards.length&&n<18;n++){
       var k=n%6,g=Math.floor(n/6),max=g===0?12:g===1?5:9,a=2*k+1,b2=2*k+2;
-      var h='<i class="zn bar"></i><i class="zn l">'+(a<=max?a:'')+'</i><i class="zn r">'+(b2<=max?b2:'')+'</i>';
+      var h='<i class="zn bar"></i><i class="zn l'+(a<=max?'':' no')+'">'+a+'</i><i class="zn r'+(b2<=max?'':' no')+'">'+b2+'</i>';
       if(g>0&&k===0)h+='<i class="zn cut"></i><i class="zn z">0</i>';
       cards[n].insertAdjacentHTML('beforeend',h);
     }
@@ -778,6 +779,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     pk.textContent=s+(sc.pm?' pm':'');
     clearTimeout(scPeek.t);scPeek.t=setTimeout(function(){if(pk.className!=='big')pk.textContent=''},2500);
   }
+  function scBad(){var pk=$('peek');pk.textContent=(sc.h===null?'_':sc.h)+':'+(sc.t===null?'_':sc.t)+(sc.u===null?'_':sc.u)+' ?';clearTimeout(scPeek.t);scPeek.t=setTimeout(function(){if(pk.className!=='big')pk.textContent=''},2500)}
   function scTime(){
     var h=sc.h%12+(sc.pm?12:0);if(!sc.pm&&sc.h===12)h=12;if(sc.pm&&sc.h===12)h=0;
     return (h<10?'0':'')+h+'.'+sc.t+sc.u;
@@ -797,8 +799,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var t=sc.touch;sc.touch=null;
     if(!t||sc.locked)return;
     if(t.g===0)sc.h=t.v;
-    else if(t.g===1){if(t.v>5)return;sc.t=t.v}
-    else{if(t.v>9)return;sc.u=t.v}
+    else if(t.g===1){if(t.v>5){scBad();return}sc.t=t.v}
+    else{if(t.v>9){scBad();return}sc.u=t.v}
     if(sc.h!==null&&sc.t!==null&&sc.u!==null)sc.locked=true;
     scPeek();scApply();
   }
