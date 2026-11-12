@@ -363,7 +363,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v26</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v27</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -388,7 +388,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li><b>Cards 7 to 12:</b> the first minute digit. Halves count 1 to 5. The top part of card 7 is 0.</li>
     <li><b>Cards 13 to 18:</b> the last minute digit. Halves count 1 to 9. The top part of card 13 is 0.</li>
     <li>After the third digit it locks. An alarm in the middle of the list becomes that time, switched on, and the list stays in time order. For a very early or very late time, some other alarms change too, so the chosen one is never the first or the last. Cards only change while they are off screen, so scroll back to the top before you hand it over.</li>
-    <li><b>Clear and start again:</b> tap the orange <b>CHANGE</b> button on the first card, or the <b>Alarms</b> title.</li>
+    <li><b>C, clear and start again:</b> card 18, the last card of the third group, is the C key. Tap it, or start a scroll on it. It works at any time, also after the time has locked. The CHANGE button and the Alarms title clear too.</li>
     <li><b>Afternoon (adds 12 hours):</b> tap the big <b>11.00</b> on the first card, or <b>Edit</b>.</li>
     <li>The corner shows what you have entered, like 7:4_ and then 07.42.</li>
   </ul>
@@ -763,6 +763,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
       var k=n%6,g=Math.floor(n/6),max=g===0?12:g===1?5:9,a=2*k+1,b2=2*k+2;
       var h='<i class="zn bar"></i><i class="zn l'+(a<=max?'':' no')+'">'+a+'</i><i class="zn r'+(b2<=max?'':' no')+'">'+b2+'</i>';
       if(g>0&&k===0)h+='<i class="zn cut"></i><i class="zn z">0</i>';
+      if(n===17)h='<i class="zn" style="left:50%">C</i>';
       cards[n].insertAdjacentHTML('beforeend',h);
     }
   }
@@ -787,9 +788,10 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   }
   function scClear(){sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null;pending=[]}
   function scDown(x,y,target){
-    if(sc.locked)return;
     var card=target&&target.closest?target.closest('.al'):null;if(!card)return;
     var cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al')),n=cards.indexOf(card);
+    if(n===17){sc.touch={clear:true};return}
+    if(sc.locked)return;
     if(n<0||n>=18)return;
     var r=card.getBoundingClientRect(),k=n%6,g=Math.floor(n/6);
     var v=2*k+(x<r.left+r.width/2?1:2);
@@ -798,6 +800,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   }
   function scCommit(){
     var t=sc.touch;sc.touch=null;
+    if(t&&t.clear){scReset();return}
     if(!t||sc.locked)return;
     if(t.g===0)sc.h=t.v;
     else if(t.g===1){if(t.v>5){scBad();return}sc.t=t.v}
@@ -866,8 +869,21 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     if(!pending.length)sc.done=true;
   }
   window.__scApply=function(){scApply(true)};
-  var scY=0;
-  alScroll.addEventListener('touchstart',function(e){var t=e.touches[0];scY=t.clientY;scDown(t.clientX,t.clientY,e.target)},{passive:true});
+  var scY=0,scX=0,lastTap=0;
+  alScroll.addEventListener('touchstart',function(e){var t=e.touches[0];scY=t.clientY;scX=t.clientX;scDown(t.clientX,t.clientY,e.target)},{passive:true});
+  // Taps are read from the finger lifting, because some phones do not send a click here.
+  function tapAt(target){
+    var n=Date.now();if(n-lastTap<500)return;
+    var card=target&&target.closest?target.closest('.al'):null,first=$('alarms').querySelector('.al');
+    var cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al'));
+    if(card&&cards.indexOf(card)===17){lastTap=n;scReset()}
+    else if(target.className==='change'){lastTap=n;scReset()}
+    else if(target.className==='t'&&target.parentNode===first){lastTap=n;scAfternoon()}
+  }
+  alScroll.addEventListener('touchend',function(e){
+    var t=e.changedTouches[0];
+    if(Math.abs(t.clientX-scX)<12&&Math.abs(t.clientY-scY)<12){sc.touch=null;tapAt(e.target)}
+  },{passive:true});
   alScroll.addEventListener('touchmove',function(e){if(sc.touch&&Math.abs(e.touches[0].clientY-scY)>8)scCommit()},{passive:true});
   alScroll.addEventListener('mousedown',function(e){scDown(e.clientX,e.clientY,e.target)});
   alScroll.addEventListener('scroll',function(){if(sc.touch)scCommit();scApply()},{passive:true});
@@ -892,11 +908,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   onTap(document.querySelector('#s-alarms h1'),scReset);
   onTap(document.querySelector('#s-alarms .edit'),scAfternoon);
   // The same two actions inside the list, where taps are sure to arrive: CHANGE clears, the 11.00 time switches afternoon.
-  $('alarms').addEventListener('click',function(e){
-    var t=e.target;
-    if(t.className==='change')scReset();
-    else if(t.className==='t'&&t.parentNode===$('alarms').querySelector('.al'))scAfternoon();
-  });
+  $('alarms').addEventListener('click',function(e){tapAt(e.target)});
   window.__setAlarm=function(d){
     scClear();
     var t=null;
