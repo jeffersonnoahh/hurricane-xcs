@@ -37,7 +37,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);overflow:hidden;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;border:0;padding:0;cursor:pointer;background:none}
 button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
-.screen{position:fixed;left:0;top:var(--top,0px);bottom:0;width:calc(var(--u)*1085);box-sizing:border-box;display:flex;flex-direction:column;padding-left:calc(var(--u)*60);padding-right:calc(var(--u)*17)}
+.screen{position:fixed;left:0;top:var(--top,0px);height:var(--sh,100%);width:calc(var(--u)*1085);box-sizing:border-box;display:flex;flex-direction:column;padding-left:calc(var(--u)*60);padding-right:calc(var(--u)*17)}
 .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .scroll::-webkit-scrollbar{display:none}
 .hdr{display:flex;justify-content:space-between;align-items:center;margin-top:calc(var(--u)*72);height:calc(var(--u)*138);flex:0 0 auto;position:relative;z-index:2}
@@ -256,7 +256,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 
 /* ===== narrow: tall slim screen, a guess ===== */
 .narrow body{padding-top:env(safe-area-inset-top,0px)}
-.narrow .screen{width:100%;top:env(safe-area-inset-top,0px);bottom:calc(calc(var(--u)*190) + env(safe-area-inset-bottom,0px))}
+.narrow .screen{height:auto;width:100%;top:env(safe-area-inset-top,0px);bottom:calc(calc(var(--u)*190) + env(safe-area-inset-bottom,0px))}
 .narrow #tabs{left:calc(var(--u)*130);right:calc(var(--u)*130);top:auto;bottom:calc(calc(var(--u)*30) + env(safe-area-inset-bottom,0px));width:auto;height:calc(var(--u)*150);flex-direction:row}
 .narrow #plus{left:auto;right:calc(var(--u)*270);top:calc(calc(var(--u)*72) + env(safe-area-inset-top,0px))}
 .narrow #peek{bottom:calc(calc(var(--u)*195) + env(safe-area-inset-bottom,0px))}
@@ -289,7 +289,12 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var r=sw/sh,c=r>1?'land':r>=0.695?'port':r>=0.6?'rail':'narrow';
     var u=sw/({land:2000,port:1407,rail:1375,narrow:1128})[c],root=document.documentElement;
     // 'inset': the phone keeps its status strip for itself, so the page is narrower than the screen.
+    // Opened from the Home Screen? Some phones do not set navigator.standalone, so also ask the display mode.
     var st=window.navigator.standalone===true;
+    try{['standalone','fullscreen','minimal-ui'].forEach(function(m){if(window.matchMedia('(display-mode: '+m+')').matches)st=true})}catch(e){}
+    // Escape hatch from the notes: keep the bar inside the reported window.
+    var safe=false;try{safe=localStorage.getItem('clk-bar')==='safe'}catch(e){}
+    if(safe)st=false;
     root.className=c+((c==='rail'&&sw-w>20&&!st)?' inset':'');
     root.style.setProperty('--u',u+'px');
     root.style.setProperty('--p',((c==='port'||c==='land')?u*0.711:u)+'px');
@@ -302,6 +307,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     // so the tab bar is placed from the real screen size. In a browser tab it follows the window.
     root.style.setProperty('--sh',(st?sh:h+gap)+'px');
     root.style.setProperty('--cw',(st?sw:w)+'px');
+    window.__lay=lay;
   }
   lay();window.addEventListener('resize',lay);
 })();
@@ -364,7 +370,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v30</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v31</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -406,6 +412,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li>The number is used once. After the stop and Reset it is cleared.</li>
     <li>With no number loaded it is an honest stopwatch.</li>
   </ul>
+  <h2>Tab bar missing?</h2>
+  <label class="row" for="safeBar"><input id="safeBar" type="checkbox"> Keep the tab bar in the safe area (tick this if the bar at the bottom is missing)</label>
   <h2>Screen report</h2>
   <p>If the layout looks wrong, send a screenshot of these lines.</p>
   <pre id="diag" style="display:block;white-space:pre-wrap;font-size:13px"></pre>
@@ -562,6 +570,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     $('face').addEventListener(n,function(){clearTimeout(holdTimer)});
   });
   $('closeHelp').addEventListener('click',function(){helpEl.hidden=true});
+  try{$('safeBar').checked=localStorage.getItem('clk-bar')==='safe'}catch(e){}
+  $('safeBar').addEventListener('change',function(){try{localStorage.setItem('clk-bar',this.checked?'safe':'real')}catch(e){}if(window.__lay)window.__lay();window.dispatchEvent(new Event('resize'))});
   $('zoneBox').addEventListener('change',function(){if(window.__zones)window.__zones(this.checked)});
   function diag(){
     var p=document.createElement('div');
