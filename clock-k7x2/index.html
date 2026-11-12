@@ -350,7 +350,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v17</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v18</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -365,6 +365,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li>The number is used once. After the stop and Reset, the stopwatch is honest again.</li>
   </ul>
   <label class="row" for="bigPeek"><input id="bigPeek" type="checkbox"> Show the loaded number large (practice only)</label>
+  <h2>Alarm already set</h2>
+  <p>Type a time as four digits on the stopwatch keypad, for example 0742. The Alarms tab then shows an alarm at 07.42, switched on, in its right place in the list. It stays until you clear the number with C or by holding Lap. It must be a real time: hours up to 23, minutes up to 59.</p>
   <h2>What it does</h2>
   <ul>
     <li><b>Two digits (73):</b> whenever he stops, the hundredths are 73.</li>
@@ -479,7 +481,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   }
   function reset(){
     acc=0;laps=[];lapStart=0;pressIdx=0;fresh=true;
-    if(used){used=false;clearNum()}
+    if(used){used=false;clearNum(true)}
     setButtons();renderLaps();tick();
   }
   function showPeek(){
@@ -519,6 +521,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
       if(digits.length<8)digits+=key;
     }
     pressIdx=0;showPeek();
+    if(window.__setAlarm)window.__setAlarm(digits);
   });
 
   // Hold the time for two seconds to open the notes.
@@ -569,7 +572,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 
   var big=false;
   $('bigPeek').addEventListener('change',function(){big=this.checked;peekEl.className=big?'big':'';showPeek()});
-  clearNum=function(){digits='';exact=false;pressIdx=0;showPeek()};
+  clearNum=function(keepAlarm){digits='';exact=false;pressIdx=0;showPeek();if(keepAlarm!==true&&window.__setAlarm)window.__setAlarm('')};
 
   setButtons();renderLaps();
 })();
@@ -697,14 +700,29 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 
   // Alarms
   var AL=[['00.00','Radial'],['04.00','Radial'],['04.15','Radial'],['04.45','Radial'],['04.50','Radial'],['05.00','Radar'],['05.10','Radial'],['05.20','Radial'],['05.30','Radar'],['05.35','Radial'],['05.45','Radar'],['06.00','Radial'],['06.15','Radial'],['06.30','Radar'],['07.00','Radial']];
-  var ah='<div class="sect">'+BED+'Sleep | Wake Up</div><div class="al"><div class="t">11.00</div><small class="x">'+BED+'Sleep | Wake Up</small><small>Tomorrow Morning</small><button class="change" type="button">CHANGE</button></div><div class="sect gap">Other</div>';
-  AL.forEach(function(a){ah+='<div class="al off"><div class="t">'+a[0]+'</div><small>Alarm</small><small class="x">Repeat: Never</small><small class="x">Sound: '+a[1]+'</small><button class="sw" type="button" aria-label="Alarm '+a[0]+'"></button></div>'});
-  $('alarms').innerHTML=ah;
-  Array.prototype.forEach.call(document.querySelectorAll('.sw'),function(s){
-    s.addEventListener('click',function(){
-      var on=s.className.indexOf('on')<0;s.className=on?'sw on':'sw';
-      s.parentNode.className=on?'al':'al off';
-    });
+  // The first four digits loaded on the stopwatch keypad, if they are a valid time, also appear here as an alarm.
+  var extraAlarm=null;
+  function buildAlarms(){
+    var list=AL.map(function(a){return [a[0],a[1],false]}),hit=false;
+    if(extraAlarm){
+      list.forEach(function(a){if(a[0]===extraAlarm){a[2]=true;hit=true}});
+      if(!hit){list.push([extraAlarm,'Radial',true]);list.sort(function(x,y){return x[0]<y[0]?-1:1})}
+    }
+    var ah='<div class="sect">'+BED+'Sleep | Wake Up</div><div class="al"><div class="t">11.00</div><small class="x">'+BED+'Sleep | Wake Up</small><small>Tomorrow Morning</small><button class="change" type="button">CHANGE</button></div><div class="sect gap">Other</div>';
+    list.forEach(function(a){ah+='<div class="al'+(a[2]?'':' off')+'"><div class="t">'+a[0]+'</div><small>Alarm</small><small class="x">Repeat: Never</small><small class="x">Sound: '+a[1]+'</small><button class="sw'+(a[2]?' on':'')+'" type="button" aria-label="Alarm '+a[0]+'"></button></div>'});
+    $('alarms').innerHTML=ah;
+  }
+  buildAlarms();
+  window.__setAlarm=function(d){
+    var t=null;
+    if(d&&d.length>=4){var hh=d.substr(0,2),mm=d.substr(2,2);if(+hh<24&&+mm<60)t=hh+'.'+mm}
+    if(t!==extraAlarm){extraAlarm=t;buildAlarms()}
+  };
+  $('alarms').addEventListener('click',function(e){
+    var s=e.target;
+    if(!s.className||s.className.indexOf('sw')!==0)return;
+    var on=s.className.indexOf('on')<0;s.className=on?'sw on':'sw';
+    s.parentNode.className=on?'al':'al off';
   });
 
   // Timer
