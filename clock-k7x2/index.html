@@ -107,7 +107,7 @@ body{
 <div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v9</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v10</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
@@ -125,7 +125,7 @@ body{
   <h2>What it does</h2>
   <ul>
     <li><b>Two digits (73):</b> whenever he stops, the hundredths are 73.</li>
-    <li><b>Four or six digits (1403, 140391):</b> each press of Lap, and the final Stop, shows the next pair. Lap 1 ends in 14, lap 2 in 03, lap 3 in 91.</li>
+    <li><b>Four or six digits (1403, 140391):</b> each press of Lap, and the final Stop, shows the next pair. Lap 1 ends in 14, lap 2 in 03, lap 3 in 91. A long number waits for a run that uses Lap, so plain start and stop runs before it stay honest and he can test freely.</li>
     <li><b>Four digits then * (1973*):</b> exact mode. Stop always shows 00:19.73, however long it ran. Use it with the screen face down. The first two digits must be 59 or less.</li>
   </ul>
   <h2>Notes</h2>
@@ -213,13 +213,13 @@ body{
   function stop(){
     var t=elapsed();
     if(exact&&digits.length===4&&laps.length===0){
-      t=parseInt(digits.substr(0,2),10)*1000+parseInt(digits.substr(2,2),10)*10+5;
-    }else{
+      t=parseInt(digits.substr(0,2),10)*1000+parseInt(digits.substr(2,2),10)*10+5;used=true;
+    }else if(pairs().length<=1||laps.length>0){
+      // A long number waits for a run that uses Lap, so plain start and stop test runs stay honest.
       var p=nextPair();
-      if(p!==null){var dur=t-lapStart;t=lapStart+snap(dur,p)}
+      if(p!==null){var dur=t-lapStart;t=lapStart+snap(dur,p);used=true}
     }
     acc=t;running=false;setButtons();renderLaps();tick();
-    if(digits){used=true}
     try{if(wake){wake.release();wake=null}}catch(e){}
   }
   function lap(){
