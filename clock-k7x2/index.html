@@ -152,8 +152,13 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 #tabs,#plus{-webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden}
 
 /* rail when the phone keeps the right strip: the tabs cannot sit in the strip, so keep them clear of the buttons */
-.rail.inset #tabs{top:calc(var(--sh,100vh) + var(--top,0px) - var(--u)*628)}
-.rail.inset .lap{padding-right:calc(var(--u)*165)}
+/* folded: the tabs are a bar along the bottom, with labels, inside the window */
+.rail #tabs{left:calc((var(--cw,100vw) - var(--u)*900) / 2);top:calc(var(--sh,100vh) + var(--top,0px) - var(--u)*172);width:calc(var(--u)*900);height:calc(var(--u)*127);border-radius:calc(var(--u)*64);flex-direction:row;padding:calc(var(--u)*7)}
+.rail #tabs button{flex-direction:column;gap:calc(var(--u)*5);border-radius:calc(var(--u)*56);font-size:calc(var(--u)*22);font-weight:600}
+.rail #tabs span{display:block}
+.rail #tabs svg{width:calc(var(--u)*52);height:calc(var(--u)*52)}
+.rail #laps{margin-bottom:calc(var(--u)*190)}
+.rail .scroll{padding-bottom:calc(var(--u)*210);box-sizing:border-box}
 .rail.inset #plus{left:calc(var(--u)*716);top:calc(var(--u)*71 + var(--top,0px))}
 .rail.inset .wrow,.rail.inset .al,.rail.inset .recent{padding-right:calc(var(--u)*10)}
 
@@ -370,7 +375,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v32</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v33</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
