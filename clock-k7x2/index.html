@@ -105,6 +105,13 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .sw::after{content:"";position:absolute;top:5%;left:3%;width:59%;height:90%;border-radius:calc(var(--u)*40);background:#fff;transition:transform .2s}
 .sw.on{background:var(--green)}
 .sw.on::after{transform:translateX(60%)}
+/* practice only: the input zones drawn on the alarm cards */
+.al{position:relative}
+.zn{position:absolute;top:56%;transform:translate(-50%,-50%);font-size:calc(var(--u)*84);font-weight:700;color:#ff453a;pointer-events:none;line-height:1}
+.zn.l{left:25%}.zn.r{left:75%}
+.zn.z{top:17%;left:50%}
+.zn.bar{left:50%;top:6%;bottom:6%;transform:none;border-left:calc(var(--u)*5) solid #ff453a;width:0}
+.zn.cut{left:4%;right:4%;top:40%;transform:none;border-top:calc(var(--u)*5) solid #ff453a;height:0}
 /* Timers */
 #s-timers .hdr{margin-top:calc(var(--u)*72)}
 .picker{position:relative;height:calc(var(--p)*552);width:calc(var(--p)*1085);margin:calc(var(--u)*143) calc(var(--u)*-17) 0 calc(var(--u)*-60);flex:0 0 auto}
@@ -355,7 +362,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v23</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v24</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -369,13 +376,14 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li>Tap C on the keypad, or hold the grey Lap button for one second. The corner shows a dash.</li>
     <li>The number is used once. After the stop and Reset, the stopwatch is honest again.</li>
   </ul>
+  <label class="row" for="zoneBox"><input id="zoneBox" type="checkbox"> Draw the input zones on the alarm cards (practice only)</label>
   <label class="row" for="bigPeek"><input id="bigPeek" type="checkbox"> Show the loaded number large (practice only)</label>
   <h2>Alarm already set</h2>
   <p>Type a time as four digits on the stopwatch keypad, for example 0742. The Alarms tab then shows an alarm at 07.42, switched on, in its right place in the list. It stays until you clear the number with C or by holding Lap. It must be a real time: hours up to 23, minutes up to 59.</p>
   <h2>Alarm by scrolling</h2>
   <p>On the Alarms tab, the place where you put your finger down to start a scroll is the input. Each alarm card has a left half and a right half.</p>
   <ul>
-    <li><b>Cards 1 to 6</b> (the first two rows): the hour. Halves count 1, 2, 3 ... 12.</li>
+    <li><b>Cards 1 to 6</b> (the first two rows): the hour. Halves count 1, 2, 3 ... 12. One touch is the whole hour: 1 means 1 o'clock, 11 means 11 o'clock. You never enter a zero first.</li>
     <li><b>Cards 7 to 12:</b> the first minute digit. Halves count 1 to 5. The top part of card 7 is 0.</li>
     <li><b>Cards 13 to 18:</b> the last minute digit. Halves count 1 to 9. The top part of card 13 is 0.</li>
     <li>After the third digit it locks. An alarm in the middle of the list becomes that time, switched on, and the list stays in time order. For a very early or very late time, some other alarms change too, so the chosen one is never the first or the last. Cards only change while they are off screen, so scroll back to the top before you hand it over.</li>
@@ -549,6 +557,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     $('face').addEventListener(n,function(){clearTimeout(holdTimer)});
   });
   $('closeHelp').addEventListener('click',function(){helpEl.hidden=true});
+  $('zoneBox').addEventListener('change',function(){if(window.__zones)window.__zones(this.checked)});
   function diag(){
     var p=document.createElement('div');
     p.style.cssText='position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
@@ -743,7 +752,19 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var ah='<div class="sect">'+BED+'Sleep | Wake Up</div><div class="al"><div class="t">11.00</div><small class="x">'+BED+'Sleep | Wake Up</small><small>Tomorrow Morning</small><button class="change" type="button">CHANGE</button></div><div class="sect gap">Other</div>';
     list.forEach(function(a){ah+='<div class="al'+(a[2]?'':' off')+'"><div class="t">'+a[0]+'</div><small>Alarm</small><small class="x">Repeat: Never</small><small class="x">Sound: '+a[1]+'</small><button class="sw'+(a[2]?' on':'')+'" type="button" aria-label="Alarm '+a[0]+'"></button></div>'});
     $('alarms').innerHTML=ah;
+    if(zonesOn)drawZones();
   }
+  var zonesOn=false;
+  function drawZones(){
+    var cards=$('alarms').querySelectorAll('.al');
+    for(var n=0;n<cards.length&&n<18;n++){
+      var k=n%6,g=Math.floor(n/6),max=g===0?12:g===1?5:9,a=2*k+1,b2=2*k+2;
+      var h='<i class="zn bar"></i><i class="zn l">'+(a<=max?a:'')+'</i><i class="zn r">'+(b2<=max?b2:'')+'</i>';
+      if(g>0&&k===0)h+='<i class="zn cut"></i><i class="zn z">0</i>';
+      cards[n].insertAdjacentHTML('beforeend',h);
+    }
+  }
+  window.__zones=function(on){zonesOn=on;buildAlarms()};
   buildAlarms();
   // Scroll input (Jeff's design): the spot where a scroll starts is the input.
   // Cards 1-6 give the hour (left half, right half = 1,2 ... 11,12), cards 7-12 the first minute digit,
