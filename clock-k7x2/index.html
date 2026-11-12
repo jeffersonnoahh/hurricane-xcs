@@ -364,7 +364,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v29</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v30</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -393,6 +393,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li><b>Afternoon (adds 12 hours):</b> tap the big <b>11.00</b> on the first card, or <b>Edit</b>.</li>
     <li>The corner shows what you have entered, like 7:4_ and then 07.42.</li>
   </ul>
+  <h2>Both tricks from one input</h2>
+  <p>Either input loads both tabs. A time entered by scrolling on Alarms also loads the stopwatch: a run of Start, Lap, Stop then gives a lap ending in the hour and a lap ending in the minutes. A four digit time typed on the stopwatch keypad also appears in Alarms.</p>
   <h2>What it does</h2>
   <ul>
     <li><b>Two digits (73):</b> whenever he stops, the hundredths are 73.</li>
@@ -600,6 +602,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   var big=false;
   $('bigPeek').addEventListener('change',function(){big=this.checked;peekEl.className=big?'big':'';showPeek()});
   clearNum=function(keepAlarm){digits='';exact=false;pressIdx=0;showPeek();if(keepAlarm!==true&&window.__setAlarm)window.__setAlarm('')};
+
+  // The Alarms tab can load the stopwatch with the same time, so one secret input feeds both tricks.
+  window.__load=function(d){digits=d||'';exact=false;fresh=false;pressIdx=0;used=false};
 
   // Pick up a newer version by itself. The Home Screen app can keep showing an old copy, so each
   // time the app opens or comes back to the front it asks the server which version is current.
@@ -825,7 +830,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     else if(t.g===1){if(t.v>5){scBad();return}sc.t=t.v}
     else{if(t.v>9){scBad();return}sc.u=t.v}
     if(sc.h!==null&&sc.t!==null&&sc.u!==null)sc.locked=true;
-    scPeek();scApply();
+    scPeek();scApply();scSync();
   }
   // Work out a full list of alarm times, in time order, with the chosen time somewhere in the middle
   // (never first or last when that is possible). Early or late choices get neighbours made up around them.
@@ -907,11 +912,12 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     el.addEventListener('touchend',function(e){var t=e.changedTouches[0];if(Math.abs(t.clientX-sx)<12&&Math.abs(t.clientY-sy)<12)go()},{passive:true});
     el.addEventListener('click',go);
   }
-  function scReset(){scClear();extraAlarm=null;buildAlarms();scPeek()}
+  function scSync(){if(window.__load)window.__load(sc.locked?scTime().replace('.',''):'')}
+  function scReset(){scClear();extraAlarm=null;buildAlarms();scPeek();scSync()}
   function scAfternoon(){
     if(sc.h===null&&sc.t===null&&sc.u===null)return;
     if(sc.locked){buildAlarms();sc.done=false;pending=[]}
-    sc.pm=!sc.pm;scPeek();scApply();
+    sc.pm=!sc.pm;scPeek();scApply();scSync();
   }
   onTap(document.querySelector('#s-alarms h1'),scReset);
   onTap(document.querySelector('#s-alarms .edit'),scAfternoon);
