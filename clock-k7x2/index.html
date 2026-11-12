@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Clock">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="icon.png?v=3">
+<link rel="manifest" href="manifest.json">
 <title>Clock</title>
 <style>
 /* Sizes are read off real screenshots. "Nu" below means N screenshot pixels (turned into calc() at build time).
@@ -349,7 +350,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v16</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v17</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -375,6 +376,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li>The number is used once. After the stop and Reset it is cleared.</li>
     <li>With no number loaded it is an honest stopwatch.</li>
   </ul>
+  <h2>Screen report</h2>
+  <p>If the layout looks wrong, send a screenshot of these lines.</p>
+  <pre id="diag" style="display:block;white-space:pre-wrap;font-size:13px"></pre>
   <button id="toggleGuide" type="button">Show keypad for practice</button>
   <button id="closeHelp" type="button">Close</button>
 </div>
@@ -527,6 +531,21 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     $('face').addEventListener(n,function(){clearTimeout(holdTimer)});
   });
   $('closeHelp').addEventListener('click',function(){helpEl.hidden=true});
+  function diag(){
+    var p=document.createElement('div');
+    p.style.cssText='position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
+    document.body.appendChild(p);var cs=getComputedStyle(p);
+    var vv=window.visualViewport||{};
+    $('diag').textContent='layout '+document.documentElement.className+
+      '\nscreen '+screen.width+' x '+screen.height+'  ratio '+window.devicePixelRatio+
+      '\nwindow '+window.innerWidth+' x '+window.innerHeight+
+      '\nvisual '+Math.round(vv.width||0)+' x '+Math.round(vv.height||0)+' at '+Math.round(vv.offsetLeft||0)+','+Math.round(vv.offsetTop||0)+
+      '\nsafe top '+cs.paddingTop+' right '+cs.paddingRight+' bottom '+cs.paddingBottom+' left '+cs.paddingLeft+
+      '\nhome screen app '+(window.navigator.standalone===true?'yes':'no')+
+      '\ndisplay mode '+['fullscreen','standalone','minimal-ui','browser'].filter(function(m){return window.matchMedia('(display-mode: '+m+')').matches}).join(',');
+    document.body.removeChild(p);
+  }
+  new MutationObserver(function(){if(!helpEl.hidden)diag()}).observe(helpEl,{attributes:true,attributeFilter:['hidden']});
   document.addEventListener('contextmenu',function(e){if(helpEl.hidden)e.preventDefault()});
 
   // Practice mode: draw the keypad so its position can be learned.
