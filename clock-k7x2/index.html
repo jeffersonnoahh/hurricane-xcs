@@ -355,7 +355,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v21</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v22</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -588,6 +588,19 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   var big=false;
   $('bigPeek').addEventListener('change',function(){big=this.checked;peekEl.className=big?'big':'';showPeek()});
   clearNum=function(keepAlarm){digits='';exact=false;pressIdx=0;showPeek();if(keepAlarm!==true&&window.__setAlarm)window.__setAlarm('')};
+
+  // Pick up a newer version by itself. The Home Screen app can keep showing an old copy, so each
+  // time the app opens or comes back to the front it asks the server which version is current.
+  var MY_VERSION=(document.querySelector('#help h1 span')||{}).textContent||'';
+  function checkUpdate(){
+    if(location.protocol==='file:'||running||acc>0||digits)return;
+    fetch(location.pathname+'?fresh='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
+      var m=t.match(/>(v\d+)<\/span>/);
+      if(m&&MY_VERSION&&m[1]!==MY_VERSION&&!running&&acc===0&&!digits)location.replace(location.pathname+'?'+m[1]);
+    }).catch(function(){});
+  }
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)checkUpdate()});
+  window.addEventListener('pageshow',checkUpdate);
 
   setButtons();renderLaps();
 })();
