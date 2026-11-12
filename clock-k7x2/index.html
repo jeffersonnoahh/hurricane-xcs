@@ -7,107 +7,170 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Stopwatch">
+<meta name="apple-mobile-web-app-title" content="Clock">
 <meta name="theme-color" content="#000000">
-<link rel="apple-touch-icon" href="icon.png">
-<title>Stopwatch</title>
+<link rel="apple-touch-icon" href="icon.png?v=2">
+<title>Clock</title>
 <style>
-/* Layout: one fixed screen. Time on top, two round buttons, lap list fills the rest. Single dark look on purpose. */
+/* Four tabs like a phone clock app. One dark look on purpose. */
 :root{
   color-scheme:dark;
-  --bg:#000000;
-  --fg:#ffffff;
-  --muted:#8e8e93;
-  --line:#2c2c2e;
-  --grey-fill:#333336;
-  --grey-fill-dim:#1c1c1e;
-  --green:#30d158;
-  --green-fill:#0a2a12;
-  --red:#ff453a;
-  --red-fill:#330e0c;
-  --peek:#2a2a2d;
-  --sheet:#1c1c1e;
+  --bg:#000000;--fg:#ffffff;--muted:#8e8e93;--line:rgba(84,84,88,.65);
+  --grey-fill:#333333;--grey-fill-dim:#1c1c1e;
+  --green:#30d158;--green-fill:#0b2a13;--red:#ff453a;--red-fill:#330e0c;
+  --orange:#ff9f0a;--orange-fill:#3d2600;--peek:#2a2a2d;--sheet:#1c1c1e;--glass:rgba(44,44,46,.78);
   --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
   --digits:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --tabh:64px;--tabgap:calc(10px + env(safe-area-inset-bottom,0px));
 }
 html,body{height:100%;margin:0}
-html{background:#000}
+html{background:var(--bg)}
 [hidden]{display:none!important}
 body{
   background:var(--bg);color:var(--fg);font-family:var(--ui);
-  padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;
-  display:flex;flex-direction:column;overflow:hidden;
+  padding-top:env(safe-area-inset-top,0px);box-sizing:border-box;overflow:hidden;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
 }
-.face{flex:0 0 38%;display:flex;align-items:center;justify-content:center;min-height:150px}
-#time{
-  font-family:var(--digits);font-weight:200;font-size:clamp(64px,21vw,150px);
-  font-variant-numeric:tabular-nums;letter-spacing:-0.01em;line-height:1;white-space:nowrap;
+.screen{
+  height:100%;box-sizing:border-box;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-bottom:calc(var(--tabh) + var(--tabgap) + 8px);
 }
-.controls{display:flex;justify-content:space-between;align-items:center;padding-block:6px 14px}
-.btn{
-  width:84px;height:84px;border-radius:50%;border:0;font:inherit;font-size:17px;color:var(--fg);
-  background:var(--grey-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--grey-fill);
-  cursor:pointer;
-}
+.scroll{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.nav{display:flex;justify-content:space-between;align-items:center;height:44px;color:var(--orange);font-size:17px;flex:0 0 auto}
+.nav .plus{font-size:28px;font-weight:300;line-height:1}
+h1.big{font-size:34px;font-weight:700;margin:2px 0 8px;letter-spacing:.01em;flex:0 0 auto}
+/* Stopwatch */
+.face{flex:0 0 36%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;gap:18px}
+#time{font-family:var(--digits);font-weight:200;font-size:clamp(64px,21.5vw,150px);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
+.dots{display:flex;gap:8px}
+.dots i{width:7px;height:7px;border-radius:50%;background:#48484a}
+.dots i.on{background:var(--fg)}
+.controls{display:flex;justify-content:space-between;align-items:center;padding-block:4px 14px;flex:0 0 auto}
+.btn{width:80px;height:80px;border-radius:50%;border:0;font:inherit;font-size:17px;color:var(--fg);background:var(--grey-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--grey-fill);cursor:pointer;padding:0}
 .btn:focus-visible{outline:2px solid var(--fg);outline-offset:6px}
 .btn.dim{background:var(--grey-fill-dim);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--grey-fill-dim);color:var(--muted)}
 .btn.go{background:var(--green-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--green-fill);color:var(--green)}
 .btn.halt{background:var(--red-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--red-fill);color:var(--red)}
-#laps{flex:1 1 auto;min-height:0;overflow-y:auto;border-top:1px solid var(--line);position:relative}
-.lap{
-  display:flex;justify-content:space-between;padding-block:12px;border-bottom:1px solid var(--line);
-  font-size:17px;font-variant-numeric:tabular-nums;
-}
+.btn.warn{background:var(--orange-fill);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--orange-fill);color:var(--orange)}
+#laps{flex:1 1 auto;min-height:0;overflow-y:auto;border-top:.5px solid var(--line)}
+.lap{display:flex;justify-content:space-between;padding-block:11px;border-bottom:.5px solid var(--line);font-size:17px;font-variant-numeric:tabular-nums}
 .lap.best{color:var(--green)}
 .lap.worst{color:var(--red)}
-#peek{
-  position:fixed;right:max(10px,env(safe-area-inset-right,0px));
-  bottom:calc(6px + env(safe-area-inset-bottom,0px));
-  font-size:11px;color:var(--peek);font-variant-numeric:tabular-nums;pointer-events:none;
-}
-#help{
-  position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;
+#peek{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(var(--tabh) + var(--tabgap) + 4px);font-size:11px;color:var(--peek);font-variant-numeric:tabular-nums;pointer-events:none;z-index:4}
+#peek.big{font-size:30px;color:var(--muted)}
+#guide{position:fixed;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);pointer-events:none;z-index:5}
+#guide span{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);color:var(--muted);font-size:22px}
+/* World Clock */
+.wrow{display:flex;justify-content:space-between;align-items:center;padding-block:10px;border-bottom:.5px solid var(--line)}
+.wrow small{display:block;color:var(--muted);font-size:15px}
+.wrow b{font-weight:400;font-size:28px}
+.wrow .t{font-family:var(--digits);font-weight:300;font-size:52px;font-variant-numeric:tabular-nums;line-height:1.1}
+/* Alarms */
+.sect{font-size:20px;font-weight:600;margin:14px 0 4px;display:flex;align-items:center;gap:8px}
+.arow{display:flex;justify-content:space-between;align-items:center;padding-block:8px;border-bottom:.5px solid var(--line)}
+.arow .t{font-family:var(--digits);font-weight:300;font-size:56px;line-height:1.05;font-variant-numeric:tabular-nums}
+.arow small{display:block;font-size:15px}
+.arow.off .t,.arow.off small{color:var(--muted)}
+.pill{font:inherit;font-size:15px;color:var(--orange);background:var(--sheet);border:0;border-radius:16px;padding:6px 14px}
+.sw{width:51px;height:31px;border-radius:16px;background:#39393d;border:0;position:relative;flex:0 0 auto;padding:0;cursor:pointer;transition:background .2s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw.on{background:var(--green)}
+.sw.on::after{transform:translateX(20px)}
+/* Timers */
+.picker{display:flex;justify-content:center;gap:4px;height:216px;position:relative;margin-top:4px;flex:0 0 auto}
+.picker::before{content:"";position:absolute;left:0;right:0;top:90px;height:36px;border-radius:9px;background:var(--sheet)}
+.col{width:30%;max-width:120px;height:216px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;position:relative;
+  -webkit-mask-image:linear-gradient(transparent,#000 35%,#000 65%,transparent);mask-image:linear-gradient(transparent,#000 35%,#000 65%,transparent)}
+.col::-webkit-scrollbar{display:none}
+.col div{height:36px;line-height:36px;scroll-snap-align:center;font-size:23px;text-align:center;font-variant-numeric:tabular-nums;padding-right:44%}
+.col div.pad{height:90px;scroll-snap-align:none}
+.unit{position:absolute;top:90px;line-height:36px;font-size:17px;font-weight:600;pointer-events:none}
+#count{font-family:var(--digits);font-weight:200;font-size:clamp(64px,21.5vw,150px);font-variant-numeric:tabular-nums;text-align:center;height:216px;line-height:216px;margin-top:4px;flex:0 0 auto}
+.card{background:var(--sheet);border-radius:12px;margin-top:6px}
+.card div{display:flex;justify-content:space-between;padding:12px 16px;font-size:17px;border-bottom:.5px solid var(--line)}
+.card div:last-child{border-bottom:0}
+.card span{color:var(--muted)}
+/* Tab bar */
+#tabs{position:fixed;left:max(22px,env(safe-area-inset-left,0px));right:max(22px,env(safe-area-inset-right,0px));bottom:var(--tabgap);height:var(--tabh);
+  border-radius:32px;background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.14),0 8px 30px rgba(0,0,0,.5);display:flex;padding:4px;box-sizing:border-box;z-index:6}
+#tabs button{flex:1;border:0;background:none;color:var(--fg);font:inherit;font-size:10px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:28px;cursor:pointer;padding:0}
+#tabs button.on{color:var(--orange);background:rgba(255,255,255,.1)}
+#tabs svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* Performer notes */
+#help{position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;
   padding:calc(24px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
-  -webkit-user-select:text;user-select:text;
-}
+  -webkit-user-select:text;user-select:text}
 #help h1{font-size:22px;font-weight:600;margin:0 0 12px}
 #help h2{font-size:15px;font-weight:600;color:var(--muted);margin:20px 0 6px;text-transform:uppercase;letter-spacing:.06em}
 #help p,#help li{font-size:16px;line-height:1.5;max-width:60ch}
 #help ol,#help ul{padding-left:22px;margin:0}
 #help pre{font:15px/1.6 ui-monospace,Menlo,monospace;background:var(--sheet);padding:12px 16px;border-radius:10px;display:inline-block;margin:6px 0}
-#guide{position:fixed;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);pointer-events:none;z-index:5}
-#guide span{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);color:var(--muted);font-size:22px}
 #toggleGuide{display:block;margin-top:22px;font:inherit;font-size:17px;color:var(--green);background:var(--green-fill);border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
-#closeHelp{
-  margin-top:22px;font:inherit;font-size:17px;color:var(--fg);background:var(--grey-fill);
-  border:0;border-radius:12px;padding:12px 22px;cursor:pointer;
-}
-#peek.big{font-size:30px;color:var(--muted)}
-#tapBtn,#calBtn,#recBtn,#recCopy{display:block;margin-top:10px;font:inherit;font-size:17px;color:var(--green);background:var(--green-fill);border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
-#tapState{color:var(--muted)}
-#sens{width:100%;max-width:320px;margin-top:8px}
-#tapTest{font:600 28px/1.3 var(--ui);font-variant-numeric:tabular-nums;margin:8px 0}
+#closeHelp{margin-top:22px;font:inherit;font-size:17px;color:var(--fg);background:var(--grey-fill);border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
 .row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:16px}
 .row input{width:22px;height:22px}
 </style>
 </head>
 <body>
 
-<div class="face"><div id="time">00:00.00</div></div>
-<div class="controls">
-  <button class="btn dim" id="left" type="button">Lap</button>
-  <button class="btn go" id="right" type="button">Start</button>
-</div>
-<div id="laps"></div>
+<section class="screen" id="s-world" hidden>
+  <div class="nav"><span>Edit</span><span class="plus">+</span></div>
+  <h1 class="big">World Clock</h1>
+  <div class="scroll" id="world"></div>
+</section>
+
+<section class="screen" id="s-alarms" hidden>
+  <div class="nav"><span>Edit</span><span class="plus">+</span></div>
+  <h1 class="big">Alarms</h1>
+  <div class="scroll">
+    <div class="sect">Sleep | Wake Up</div>
+    <div class="arow off"><div><div class="t" style="font-size:34px">No Alarm</div></div><button class="pill" type="button">Change</button></div>
+    <div class="sect">Other</div>
+    <div class="arow off"><div><div class="t">05:30</div><small>Alarm</small></div><button class="sw" type="button" aria-label="Alarm 05:30"></button></div>
+    <div class="arow"><div><div class="t">06:15</div><small>Alarm, every weekday</small></div><button class="sw on" type="button" aria-label="Alarm 06:15"></button></div>
+    <div class="arow off"><div><div class="t">07:00</div><small>Alarm</small></div><button class="sw" type="button" aria-label="Alarm 07:00"></button></div>
+    <div class="arow off"><div><div class="t">13:45</div><small>Alarm</small></div><button class="sw" type="button" aria-label="Alarm 13:45"></button></div>
+  </div>
+</section>
+
+<section class="screen" id="s-stop">
+  <div class="face"><div id="time">00:00.00</div><div class="dots"><i class="on"></i><i></i></div></div>
+  <div class="controls">
+    <button class="btn dim" id="left" type="button">Lap</button>
+    <button class="btn go" id="right" type="button">Start</button>
+  </div>
+  <div id="laps"></div>
+</section>
+
+<section class="screen" id="s-timers" hidden>
+  <div class="nav"><span>Edit</span><span class="plus">+</span></div>
+  <h1 class="big">Timers</h1>
+  <div class="picker" id="picker">
+    <div class="col" id="colH"></div><div class="col" id="colM"></div><div class="col" id="colS"></div>
+  </div>
+  <div id="count" hidden>00:00</div>
+  <div class="controls">
+    <button class="btn dim" id="tCancel" type="button">Cancel</button>
+    <button class="btn go" id="tStart" type="button">Start</button>
+  </div>
+  <div class="card"><div>Label<span>Timer</span></div><div>When Timer Ends<span>Radar</span></div></div>
+</section>
+
 <div id="peek"></div>
 <div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
 
+<nav id="tabs">
+  <button type="button" data-s="s-world"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>World Clock</button>
+  <button type="button" data-s="s-alarms"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M4.5 6.5 7 4.2M19.5 6.5 17 4.2"/></svg>Alarms</button>
+  <button type="button" data-s="s-stop" class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 3h4M12 3v3M18.2 7.3l1.3-1.3"/></svg>Stopwatch</button>
+  <button type="button" data-s="s-timers"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 12V6.5M12 12l-3.2 2.4"/></svg>Timers</button>
+</nav>
+
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v10</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v11</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
@@ -303,6 +366,89 @@ body{
   clearNum=function(){digits='';exact=false;pressIdx=0;showPeek()};
 
   setButtons();renderLaps();
+})();
+</script>
+<script>
+// Tabs, world clock, alarms and timer: ordinary clock app behaviour.
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var tabs=document.querySelectorAll('#tabs button');
+  Array.prototype.forEach.call(tabs,function(b){
+    b.addEventListener('click',function(){
+      Array.prototype.forEach.call(tabs,function(x){x.className=x===b?'on':'';$(x.getAttribute('data-s')).hidden=x!==b});
+      if(b.getAttribute('data-s')==='s-timers'&&!timerShown){timerShown=true;$('colM').scrollTop=5*36}
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+  var timerShown=false;
+  // World clock
+  var zones=[['Jakarta','Asia/Jakarta'],['Singapore','Asia/Singapore'],['Tokyo','Asia/Tokyo'],['London','Europe/London'],['New York','America/New_York'],['Los Angeles','America/Los_Angeles']];
+  function world(){
+    var now=new Date(),html='';
+    zones.forEach(function(z){
+      var t,off=0,day='Today';
+      try{
+        t=now.toLocaleTimeString('en-GB',{timeZone:z[1],hour:'2-digit',minute:'2-digit'});
+        var there=new Date(now.toLocaleString('en-US',{timeZone:z[1]})),here=new Date(now.toLocaleString('en-US'));
+        off=Math.round((there-here)/3600000);
+        if(there.getDate()!==here.getDate())day=there>here?'Tomorrow':'Yesterday';
+      }catch(e){t='--:--'}
+      html+='<div class="wrow"><div><small>'+day+', '+(off>=0?'+':'')+off+'HRS</small><b>'+z[0]+'</b></div><div class="t">'+t+'</div></div>';
+    });
+    $('world').innerHTML=html;
+  }
+  world();setInterval(world,5000);
+  // Alarms
+  Array.prototype.forEach.call(document.querySelectorAll('.sw'),function(s){
+    s.addEventListener('click',function(){
+      var on=s.className.indexOf('on')<0;s.className=on?'sw on':'sw';
+      s.parentNode.className=on?'arow':'arow off';
+    });
+  });
+  // Timer
+  function fill(el,n,unit,start){
+    var h='<div class="pad"></div>';
+    for(var i=0;i<n;i++)h+='<div>'+i+'</div>';
+    el.innerHTML=h+'<div class="pad"></div>';
+    el.scrollTop=start*36;
+    var u=document.createElement('span');u.className='unit';u.textContent=unit;
+    el.parentNode.appendChild(u);
+    var place=function(){u.style.left=(el.offsetLeft+el.offsetWidth*0.58)+'px'};
+    place();window.addEventListener('resize',place);
+  }
+  fill($('colH'),24,'hours',0);fill($('colM'),60,'min',5);fill($('colS'),60,'sec',0);
+  function val(el){return Math.round(el.scrollTop/36)}
+  var tEnd=0,tLeft=0,tRun=false,tPaused=false,tTick=0;
+  function fmtT(ms){
+    var s=Math.ceil(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60,p=function(v){return (v<10?'0':'')+v};
+    return (h?h+':':'')+p(m)+':'+p(x);
+  }
+  function draw(){
+    var left=tPaused?tLeft:Math.max(0,tEnd-Date.now());
+    $('count').textContent=fmtT(left);
+    if(!tPaused&&left<=0)stopT();
+  }
+  function stopT(){
+    tRun=false;tPaused=false;clearInterval(tTick);
+    $('count').hidden=true;$('picker').hidden=false;
+    $('tStart').textContent='Start';$('tStart').className='btn go';$('tCancel').className='btn dim';
+    window.dispatchEvent(new Event('resize'));
+  }
+  $('tStart').addEventListener('click',function(){
+    if(!tRun){
+      var ms=(val($('colH'))*3600+val($('colM'))*60+val($('colS')))*1000;
+      if(!ms)return;
+      tRun=true;tPaused=false;tEnd=Date.now()+ms;
+      $('picker').hidden=true;$('count').hidden=false;
+      this.textContent='Pause';this.className='btn warn';$('tCancel').className='btn';
+      draw();tTick=setInterval(draw,200);
+    }else if(!tPaused){
+      tPaused=true;tLeft=Math.max(0,tEnd-Date.now());this.textContent='Resume';this.className='btn go';
+    }else{
+      tPaused=false;tEnd=Date.now()+tLeft;this.textContent='Pause';this.className='btn warn';
+    }
+  });
+  $('tCancel').addEventListener('click',function(){if(tRun)stopT()});
 })();
 </script>
 </body>
