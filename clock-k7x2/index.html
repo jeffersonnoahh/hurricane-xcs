@@ -363,7 +363,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v25</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v26</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -388,7 +388,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     <li><b>Cards 7 to 12:</b> the first minute digit. Halves count 1 to 5. The top part of card 7 is 0.</li>
     <li><b>Cards 13 to 18:</b> the last minute digit. Halves count 1 to 9. The top part of card 13 is 0.</li>
     <li>After the third digit it locks. An alarm in the middle of the list becomes that time, switched on, and the list stays in time order. For a very early or very late time, some other alarms change too, so the chosen one is never the first or the last. Cards only change while they are off screen, so scroll back to the top before you hand it over.</li>
-    <li>Tap <b>Edit</b> to switch to afternoon (adds 12 hours). Tap the <b>Alarms</b> title to clear and start again.</li>
+    <li><b>Clear and start again:</b> tap the orange <b>CHANGE</b> button on the first card, or the <b>Alarms</b> title.</li>
+    <li><b>Afternoon (adds 12 hours):</b> tap the big <b>11.00</b> on the first card, or <b>Edit</b>.</li>
     <li>The corner shows what you have entered, like 7:4_ and then 07.42.</li>
   </ul>
   <h2>What it does</h2>
@@ -873,11 +874,28 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   alScroll.addEventListener('touchend',function(){var t=sc.touch;setTimeout(function(){if(sc.touch===t)sc.touch=null},600)},{passive:true});
   alScroll.addEventListener('mouseup',function(){sc.touch=null});
   // Tap the title to clear, tap Edit to switch between morning and afternoon.
-  document.querySelector('#s-alarms h1').addEventListener('click',function(){scClear();extraAlarm=null;buildAlarms();scPeek()});
-  document.querySelector('#s-alarms .edit').addEventListener('click',function(){
+  // A tap that works on a phone even for plain text: listens for the finger lifting as well as a click.
+  function onTap(el,fn){
+    var last=0,sx=0,sy=0;
+    function go(){var n=Date.now();if(n-last<500)return;last=n;fn()}
+    el.style.cursor='pointer';
+    el.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+    el.addEventListener('touchend',function(e){var t=e.changedTouches[0];if(Math.abs(t.clientX-sx)<12&&Math.abs(t.clientY-sy)<12)go()},{passive:true});
+    el.addEventListener('click',go);
+  }
+  function scReset(){scClear();extraAlarm=null;buildAlarms();scPeek()}
+  function scAfternoon(){
     if(sc.h===null&&sc.t===null&&sc.u===null)return;
     if(sc.locked){buildAlarms();sc.done=false;pending=[]}
     sc.pm=!sc.pm;scPeek();scApply();
+  }
+  onTap(document.querySelector('#s-alarms h1'),scReset);
+  onTap(document.querySelector('#s-alarms .edit'),scAfternoon);
+  // The same two actions inside the list, where taps are sure to arrive: CHANGE clears, the 11.00 time switches afternoon.
+  $('alarms').addEventListener('click',function(e){
+    var t=e.target;
+    if(t.className==='change')scReset();
+    else if(t.className==='t'&&t.parentNode===$('alarms').querySelector('.al'))scAfternoon();
   });
   window.__setAlarm=function(d){
     scClear();
