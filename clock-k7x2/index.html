@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--ui);overflow:hidden;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;border:0;padding:0;cursor:pointer;background:none}
 button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
-.screen{position:fixed;left:0;top:0;bottom:0;width:calc(var(--u)*1085);box-sizing:border-box;display:flex;flex-direction:column;padding-left:calc(var(--u)*60);padding-right:calc(var(--u)*17)}
+.screen{position:fixed;left:0;top:var(--top,0px);bottom:0;width:calc(var(--u)*1085);box-sizing:border-box;display:flex;flex-direction:column;padding-left:calc(var(--u)*60);padding-right:calc(var(--u)*17)}
 .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .scroll::-webkit-scrollbar{display:none}
 .hdr{display:flex;justify-content:space-between;align-items:center;margin-top:calc(var(--u)*72);height:calc(var(--u)*138);flex:0 0 auto;position:relative;z-index:2}
@@ -133,7 +133,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .recent small{display:block;font-size:calc(var(--u)*46);color:var(--muted)}
 .recent .rbtn{width:calc(var(--u)*165);height:calc(var(--u)*165)}
 /* Rail and bar */
-#plus{position:fixed;left:min(calc(var(--u)*1163),calc(100vw - var(--u)*150));top:calc(var(--u)*514);width:calc(var(--u)*140);height:calc(var(--u)*140);border-radius:50%;z-index:6;display:flex;align-items:center;justify-content:center}
+#plus{position:fixed;left:min(calc(var(--u)*1163),calc(100vw - var(--u)*150));top:calc(var(--u)*514 + var(--top,0px));width:calc(var(--u)*140);height:calc(var(--u)*140);border-radius:50%;z-index:6;display:flex;align-items:center;justify-content:center}
 #plus svg{width:44%;height:44%;stroke:var(--fg);stroke-width:2.4;stroke-linecap:round}
 #tabs{position:fixed;left:min(calc(var(--u)*1165),calc(100vw - var(--u)*147));bottom:calc(var(--u)*72);width:calc(var(--u)*137);height:calc(var(--u)*623);border-radius:calc(var(--u)*69);display:flex;flex-direction:column;padding:calc(var(--u)*4);box-sizing:border-box;z-index:6}
 #tabs button{flex:1;border-radius:calc(var(--u)*65);display:flex;align-items:center;justify-content:center;color:var(--fg)}
@@ -166,7 +166,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .port #tabs button,.narrow #tabs button{flex-direction:column;gap:calc(var(--u)*5);border-radius:calc(var(--u)*56);font-size:calc(var(--u)*22);font-weight:600}
 .port #tabs span,.narrow #tabs span{display:block}
 .port #tabs svg,.land #tabs svg{width:calc(var(--u)*52);height:calc(var(--u)*52)}
-.port #plus{left:calc(var(--u)*1003);top:calc(var(--u)*51);width:calc(var(--u)*100);height:calc(var(--u)*100)}
+.port #plus{left:calc(var(--u)*1003);top:calc(var(--u)*51 + var(--top,0px));width:calc(var(--u)*100);height:calc(var(--u)*100)}
 /* headers */
 .port .hdr,.land .hdr{display:block;margin-top:calc(var(--u)*51);height:calc(var(--u)*100)}
 .port .hdr h1,.land .hdr h1{position:absolute;top:0;font-size:calc(var(--u)*40);font-weight:600;line-height:calc(var(--u)*100);letter-spacing:0}
@@ -221,7 +221,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .land #laps{margin:calc(var(--u)*33) calc(var(--u)*33) 0 calc(var(--u)*32);border-top-width:calc(var(--u)*2)}
 .land .lap{font-size:calc(var(--u)*38);padding:calc(var(--u)*24) calc(var(--u)*12);border-bottom-width:calc(var(--u)*2)}
 .land #tabs{left:min(calc(var(--u)*1850),calc(100vw - var(--u)*108));bottom:calc(var(--u)*52);width:calc(var(--u)*98);height:calc(var(--u)*443);border-radius:calc(var(--u)*49);padding:calc(var(--u)*3)}
-.land #plus{left:min(calc(var(--u)*1848),calc(100vw - var(--u)*110));top:calc(var(--u)*261);width:calc(var(--u)*100);height:calc(var(--u)*100)}
+.land #plus{left:min(calc(var(--u)*1848),calc(100vw - var(--u)*110));top:calc(var(--u)*261 + var(--top,0px));width:calc(var(--u)*100);height:calc(var(--u)*100)}
 .land .hdr h1{left:calc(var(--u)*43)}
 .land #s-world .edit,.land #s-alarms .edit{left:calc(var(--u)*1644)}
 .land #mapBox{height:calc(var(--u)*995);--mt:calc(var(--u)*178);--dy:calc(var(--u)*4.44)}
@@ -275,6 +275,11 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     root.className=c;
     root.style.setProperty('--u',u+'px');
     root.style.setProperty('--p',((c==='port'||c==='land')?u*0.711:u)+'px');
+    // In a browser tab whose bars sit at the top, slide the app up by the height of those bars,
+    // so everything below them lands where the real app has it. Not needed from the Home Screen.
+    var gap=0;
+    if(!window.navigator.standalone&&w>=sw*0.98&&sh>h&&sh-h<sh*0.3)gap=sh-h;
+    root.style.setProperty('--top',(-gap)+'px');
   }
   lay();window.addEventListener('resize',lay);
 })();
@@ -337,7 +342,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v14</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v15</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
