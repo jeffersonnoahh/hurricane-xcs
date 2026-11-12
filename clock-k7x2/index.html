@@ -32,8 +32,8 @@ html.land{--u:calc(100vw / 2000);--p:calc(100vw / 2000 * .711)}
 html.narrow{--u:calc(100vw / 1128)}
 html,body{height:100%;margin:0}
 html{background:var(--bg);overscroll-behavior:none}
-html.st{height:var(--sh);overflow:hidden}
-html.st body{height:var(--sh)}
+html.st{height:var(--sh);height:max(var(--sh),100lvh);min-height:100lvh;overflow:visible}
+html.st body{height:var(--sh);height:max(var(--sh),100lvh);min-height:100lvh}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--ui);overflow:hidden;position:relative;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -315,8 +315,10 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     root.style.setProperty('--sh',(st?sh:h+gap)+'px');
     root.style.setProperty('--cw',w+'px');
     window.__lay=lay;
+    window.__sizes={sw:sw,sh:sh,w:w,h:h,st:st,safe:safe,gap:gap,cls:c};
   }
   lay();window.addEventListener('resize',lay);
+  window.addEventListener('scroll',function(){if(window.scrollY||window.scrollX)window.scrollTo(0,0)});
 })();
 </script>
 
@@ -377,7 +379,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v34</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v35</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -590,6 +592,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
       '\nwindow '+window.innerWidth+' x '+window.innerHeight+
       '\nvisual '+Math.round(vv.width||0)+' x '+Math.round(vv.height||0)+' at '+Math.round(vv.offsetLeft||0)+','+Math.round(vv.offsetTop||0)+
       '\nsafe top '+cs.paddingTop+' right '+cs.paddingRight+' bottom '+cs.paddingBottom+' left '+cs.paddingLeft+
+      '\nlvh '+(function(){var d=document.createElement('div');d.style.cssText='position:absolute;height:100lvh;width:0;visibility:hidden';document.body.appendChild(d);var v=d.offsetHeight;document.body.removeChild(d);var e=document.createElement('div');e.style.cssText='position:absolute;height:100vh;width:0;visibility:hidden';document.body.appendChild(e);var x=e.offsetHeight;document.body.removeChild(e);return v+'  vh '+x})()+
+      '\npage '+document.documentElement.offsetHeight+'  body '+document.body.offsetHeight+'  scroll '+document.documentElement.scrollHeight+
+      '\nused '+JSON.stringify(window.__sizes||{})+
       '\nhome screen app '+(window.navigator.standalone===true?'yes':'no')+
       '\ndisplay mode '+['fullscreen','standalone','minimal-ui','browser'].filter(function(m){return window.matchMedia('(display-mode: '+m+')').matches}).join(',');
     document.body.removeChild(p);
