@@ -107,7 +107,7 @@ body{
 <div id="guide" hidden><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>C</span></div>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v8</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v9</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00:00.00, the empty area under the buttons is an invisible keypad:</p>
@@ -116,28 +116,11 @@ body{
 7  8  9
 *  0  C</pre>
   <p>C clears. What you typed shows for two seconds in very dim text at the bottom right corner.</p>
-  <h2>Back taps (no screen touch)</h2>
-  <p>Hold the phone normally and tap its back with one finger. Tap briskly and count the taps for each digit. Tap in a steady rhythm without stopping, then pause two full seconds between the two digits. Ten taps mean zero. Example for 73: seven taps, pause, three taps.</p>
+  <h2>Fixing a wrong number</h2>
   <ul>
-    <li>Works only while the stopwatch shows 00:00.00 and no finger is on the screen.</li>
-    <li>After two digits the number is <b>locked</b>. Bumps and handing the phone over cannot change it.</li>
-    <li><b>Wrong number?</b> Hold the grey Lap button for one second. The corner shows a dash. Tap again.</li>
+    <li>Tap C on the keypad, or hold the grey Lap button for one second. The corner shows a dash.</li>
     <li>The number is used once. After the stop and Reset, the stopwatch is honest again.</li>
   </ul>
-  <button id="tapBtn" type="button">Turn on back taps</button>
-  <p id="tapState">Off. The phone asks for motion access once each time you open the app.</p>
-  <button id="calBtn" type="button">Calibrate</button>
-  <p id="calState">Optional. The app is already tuned from your recording. Calibrate only if taps are missed.</p>
-  <div id="tapTest">Taps felt: 0</div>
-  <p id="tapSpike">Last tap strength: none yet</p>
-  <label for="sens">Sensitivity: <span id="sensVal"></span> (lower feels lighter taps)</label><br>
-  <input id="sens" type="range" min="0.2" max="6" step="0.1">
-  <h2>If taps fail: record a test</h2>
-  <p>Press the button, then tap the back exactly 5 times, about one tap per second. Send me a screenshot of the graph and the text under it.</p>
-  <button id="recBtn" type="button">Record 8 seconds</button>
-  <canvas id="recCanvas" width="640" height="220" style="width:100%;max-width:640px;height:auto;margin-top:10px;background:var(--sheet);border-radius:10px"></canvas>
-  <pre id="recOut" style="display:block;white-space:pre-wrap;font-size:12px;max-width:100%">No recording yet.</pre>
-  <button id="recCopy" type="button">Copy full data</button>
   <label class="row" for="bigPeek"><input id="bigPeek" type="checkbox"> Show the loaded number large (practice only)</label>
   <h2>What it does</h2>
   <ul>
@@ -315,163 +298,9 @@ body{
     helpEl.hidden=true;placeGuide();
   });
 
-  // Back taps: the motion sensor feels a finger tapping the back of the phone.
-  var thr=1.1,prevA=null,ema=0,lastSpike=0,lastTouch=0,group=0,groupTimer=0,sess='',locked=false,testCount=0,motionOn=false,big=false;
-  var calOn=false,calD=[],calG=[],calTimer=0,thrG=20,prevR=null,emaG=0;
-  try{var sg=parseFloat(localStorage.getItem('sw-thrg7'));if(sg>0)thrG=sg}catch(e){}
-  try{var sv=parseFloat(localStorage.getItem('sw-thr7'));if(sv>0)thr=sv}catch(e){}
-  var sensEl=$('sens'),sensVal=$('sensVal');
-  function setThr(v){
-    thr=Math.max(0.2,Math.min(6,v));sensEl.value=thr;sensVal.textContent=thr.toFixed(1);
-    try{localStorage.setItem('sw-thr7',String(thr))}catch(e){}
-  }
-  setThr(thr);
-  sensEl.addEventListener('input',function(){setThr(parseFloat(sensEl.value)||1)});
+  var big=false;
   $('bigPeek').addEventListener('change',function(){big=this.checked;peekEl.className=big?'big':'';showPeek()});
-  ['pointerdown','pointerup'].forEach(function(n){
-    document.addEventListener(n,function(){lastTouch=now()},true);
-  });
-  clearNum=function(){
-    digits='';exact=false;sess='';locked=false;group=0;pressIdx=0;clearTimeout(groupTimer);showPeek();
-  };
-  function endGroup(){
-    var d=group>=10?0:group;group=0;
-    sess+=d;
-    if(sess.length>=2){digits=sess.slice(0,2);exact=false;fresh=false;pressIdx=0;locked=true}
-    showPeek();
-  }
-  function feltTap(d){
-    if(!helpEl.hidden){
-      testCount++;$('tapTest').textContent='Taps felt: '+testCount;
-      $('tapSpike').textContent='Last tap strength: '+d.toFixed(1);
-      return;
-    }
-    if(running||acc>0||locked)return;
-    if(!sess&&digits){digits=''}
-    group++;clearTimeout(groupTimer);
-    groupTimer=setTimeout(endGroup,1000);
-    showPeek();
-  }
-  function onMotion(e){
-    var a=(e.acceleration&&e.acceleration.x!=null)?e.acceleration:e.accelerationIncludingGravity;
-    if(!a||a.x==null)return;
-    var t=now();
-    if(recOn){var r=e.rotationRate||{};rec.push([t,a.x,a.y,a.z,r.alpha||0,r.beta||0,r.gamma||0]);recSrc=(e.acceleration&&e.acceleration.x!=null)?'acc':'grav'}
-    var rr=e.rotationRate||{},R={x:rr.alpha||0,y:rr.beta||0,z:rr.gamma||0};
-    if(prevA){
-      var d=Math.sqrt(Math.pow(a.x-prevA.x,2)+Math.pow(a.y-prevA.y,2)+Math.pow(a.z-prevA.z,2));
-      var g=Math.sqrt(Math.pow(R.x-prevR.x,2)+Math.pow(R.y-prevR.y,2)+Math.pow(R.z-prevR.z,2));
-      // Tuned on a real recording: a tap starts with a sudden jump over the last three samples,
-      // and the rotation sensor jumps at the same moment. The phone keeps ringing for a while after.
-      dB.push(d);gB.push(g);tB.push(t);
-      if(dB.length>12){dB.shift();gB.shift();tB.shift()}
-      if(calOn){calD.push(d);calG.push(g)}
-      else if(dB.length>=7){
-        var k=dB.length-3;
-        if(onset(k)&&tB[k]-lastSpike>170&&t-lastTouch>250){lastSpike=tB[k];feltTap(dB[k])}
-      }
-    }
-    prevA={x:a.x,y:a.y,z:a.z};prevR=R;
-  }
-  var dB=[],gB=[],tB=[];
-  function onset(k){
-    var v=dB[k];
-    if(!(v>thr))return false;
-    var base=(dB[k-1]+dB[k-2]+dB[k-3])/3;
-    if(v<2.5*Math.max(base,0.05))return false;
-    if(!(Math.max(gB[k-1],gB[k],gB[k+1],gB[k+2])>thrG))return false;
-    // Calm before the tap: while the phone is being tilted or moved the rotation sensor stays busy.
-    var w=[gB[k-4],gB[k-3],gB[k-2],gB[k-1]].sort(function(x,y){return x-y});
-    return w[1]<20;
-  }
-  function motionStart(){
-    if(motionOn)return;
-    motionOn=true;window.addEventListener('devicemotion',onMotion);
-    $('tapState').textContent='On. Tap the back to test.';
-    $('tapBtn').textContent='Back taps are on';
-  }
-  $('tapBtn').addEventListener('click',function(){
-    testCount=0;$('tapTest').textContent='Taps felt: 0';
-    if(typeof DeviceMotionEvent==='undefined'){$('tapState').textContent='This device has no motion sensor access.';return}
-    if(typeof DeviceMotionEvent.requestPermission==='function'){
-      DeviceMotionEvent.requestPermission().then(function(s){
-        if(s==='granted')motionStart();
-        else $('tapState').textContent='Motion access was refused. Close the app fully, open it again and allow it.';
-      }).catch(function(){$('tapState').textContent='Motion access failed. Try again.'});
-    }else motionStart();
-  });
-  var recOn=false,rec=[],recSrc='?',recText='';
-  $('recBtn').addEventListener('click',function(){
-    var out=$('recOut');
-    if(!motionOn){out.textContent='Turn on back taps first.';return}
-    rec=[];recOn=true;out.textContent='Recording... tap the back 5 times, one per second.';
-    setTimeout(function(){
-      recOn=false;
-      var n=rec.length;
-      if(n<10){out.textContent='No motion data arrived ('+n+' samples). Motion access is not working.';return}
-      var d=[],g=[],i;
-      for(i=1;i<n;i++){
-        d.push(Math.sqrt(Math.pow(rec[i][1]-rec[i-1][1],2)+Math.pow(rec[i][2]-rec[i-1][2],2)+Math.pow(rec[i][3]-rec[i-1][3],2)));
-        g.push(Math.sqrt(Math.pow(rec[i][4]-rec[i-1][4],2)+Math.pow(rec[i][5]-rec[i-1][5],2)+Math.pow(rec[i][6]-rec[i-1][6],2)));
-      }
-      var dur=rec[n-1][0]-rec[0][0],hz=(n-1)/(dur/1000);
-      function med(a){var s=a.slice().sort(function(x,y){return x-y});return s[Math.floor(s.length/2)]}
-      function peaks(a){
-        var idx=a.map(function(v,k){return k}).sort(function(x,y){return a[y]-a[x]}),out=[];
-        for(var k=0;k<idx.length&&out.length<8;k++){
-          var ok=true;for(var m=0;m<out.length;m++)if(Math.abs(out[m]-idx[k])<8)ok=false;
-          if(ok)out.push(idx[k]);
-        }
-        return out.sort(function(x,y){return x-y}).map(function(k){return Math.round(rec[k+1][0]-rec[0][0])+'ms:'+a[k].toFixed(2)}).join('  ');
-      }
-      var c=$('recCanvas'),x=c.getContext('2d'),W=c.width,H=c.height,cs=getComputedStyle(document.documentElement);
-      var dm=Math.max.apply(null,d)||1,gm=Math.max.apply(null,g)||1;
-      x.clearRect(0,0,W,H);
-      function line(a,m,col){x.strokeStyle=col;x.lineWidth=1.5;x.beginPath();for(var k=0;k<a.length;k++){var px=k/(a.length-1)*W,py=H-4-(a[k]/m)*(H-10);k?x.lineTo(px,py):x.moveTo(px,py)}x.stroke()}
-      line(g,gm,cs.getPropertyValue('--red'));
-      line(d,dm,cs.getPropertyValue('--fg'));
-      x.strokeStyle=cs.getPropertyValue('--green');x.setLineDash([6,4]);x.beginPath();var ty=H-4-(Math.min(thr,dm)/dm)*(H-10);x.moveTo(0,ty);x.lineTo(W,ty);x.stroke();x.setLineDash([]);
-      var txt='samples '+n+'  rate '+hz.toFixed(0)+'Hz  source '+recSrc+'  threshold '+thr.toFixed(2)+
-        '\nwhite = movement, max '+dm.toFixed(2)+', resting '+med(d).toFixed(3)+
-        '\nred = rotation, max '+gm.toFixed(1)+', resting '+med(g).toFixed(2)+
-        '\nmovement peaks: '+peaks(d)+'\nrotation peaks: '+peaks(g);
-      out.textContent=txt;
-      recText=txt+'\nd='+d.map(function(v){return v.toFixed(2)}).join(',')+'\ng='+g.map(function(v){return v.toFixed(1)}).join(',');
-    },8000);
-  });
-  $('recCopy').addEventListener('click',function(){
-    var b=this;
-    if(!recText){b.textContent='Record first';return}
-    try{navigator.clipboard.writeText(recText).then(function(){b.textContent='Copied. Paste it to Claude.'},function(){b.textContent='Copy failed. Send a screenshot.'})}
-    catch(e){b.textContent='Copy failed. Send a screenshot.'}
-  });
-  $('calBtn').addEventListener('click',function(){
-    var out=$('calState');
-    if(!motionOn){out.textContent='Turn on back taps first.';return}
-    calD=[];calG=[];calOn=true;out.textContent='Tap the back 5 times now, the way you will when performing...';
-    clearTimeout(calTimer);
-    calTimer=setTimeout(function(){
-      calOn=false;
-      function top5(a){
-        var idx=a.map(function(v,k){return k}).sort(function(x,y){return a[y]-a[x]}),o=[];
-        for(var k=0;k<idx.length&&o.length<5;k++){
-          var ok=true;for(var m=0;m<o.length;m++)if(Math.abs(o[m]-idx[k])<8)ok=false;
-          if(ok)o.push(idx[k]);
-        }
-        return o.map(function(k){return a[k]});
-      }
-      function med(a){var s=a.slice().sort(function(x,y){return x-y});return s[Math.floor(s.length/2)]||0}
-      if(calD.length<50){out.textContent='No motion data arrived. Motion access is not working.';return}
-      var pd=top5(calD),pg=top5(calG),nd=med(calD),ng=med(calG);
-      var weakD=pd[pd.length-1],weakG=pg[pg.length-1];
-      if(weakD<nd*4&&weakG<ng*4){out.textContent='The taps were too soft to tell apart from hand movement. Tap a little harder and try again.';return}
-      setThr(Math.min(1.6,Math.max(0.6,weakD*0.35)));
-      thrG=Math.min(30,Math.max(12,weakG*0.3));
-      try{localStorage.setItem('sw-thrg7',String(thrG))}catch(e){}
-      testCount=0;$('tapTest').textContent='Taps felt: 0';
-      out.textContent='Done. Sensitivity set to '+thr.toFixed(2)+' and '+thrG.toFixed(1)+'. Test below: 5 taps should count 5.';
-    },6000);
-  });
+  clearNum=function(){digits='';exact=false;pressIdx=0;showPeek()};
 
   setButtons();renderLaps();
 })();
