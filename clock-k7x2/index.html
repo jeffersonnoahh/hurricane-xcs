@@ -389,7 +389,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v36</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v37</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -423,7 +423,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   <h2>What it does</h2>
   <ul>
     <li><b>Two digits (73):</b> whenever he stops, the hundredths are 73.</li>
-    <li><b>Four or six digits (1403, 140391):</b> each press of Lap, and the final Stop, shows the next pair. Lap 1 ends in 14, lap 2 in 03, lap 3 in 91. A long number waits for a run that uses Lap, so plain start and stop runs before it stay honest and he can test freely.</li>
+    <li><b>Four or six digits (1403, 140391):</b> each press of Lap, and the final Stop, shows the next pair. Lap 1 ends in 14, lap 2 in 03, lap 3 in 91. A long number waits for a run that uses Lap, so plain start and stop runs before it stay honest and he can test freely. <b>With the phone open,</b> the pairs appear in the TOTAL column, and the last pair is also in the big digits when he stops. Folded or sideways, they appear in the lap time.</li>
     <li><b>Four digits then * (1973*):</b> exact mode. Stop always shows 00.19,73, however long it ran. Use it with the screen face down. The first two digits must be 59 or less.</li>
   </ul>
   <h2>Notes</h2>
@@ -470,6 +470,10 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     });
     return best;
   }
+  // Open phone: the lap table has a TOTAL column and the big digits show the total, so the chosen
+  // digits go into the total. Other layouts only show the lap time, so they go there.
+  function totalMode(){return document.documentElement.className.indexOf('port')>=0}
+  function snapAfter(t,p){var v=snap(t,p);while(v<=lapStart+20)v+=1000;return v}
   function nextPair(){
     var p=pairs();
     if(!p.length)return null;
@@ -524,14 +528,17 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     }else if(pairs().length<=1||laps.length>0){
       // A long number waits for a run that uses Lap, so plain start and stop test runs stay honest.
       var p=nextPair();
-      if(p!==null){var dur=t-lapStart;t=lapStart+snap(dur,p);used=true}
+      if(p!==null){if(totalMode()){t=snapAfter(t,p)}else{var dur=t-lapStart;t=lapStart+snap(dur,p)}used=true}
     }
     acc=t;running=false;setButtons();renderLaps();tick();
     try{if(wake){wake.release();wake=null}}catch(e){}
   }
   function lap(){
     var t=elapsed(),dur=t-lapStart,p=nextPair();
-    if(p!==null){var d2=snap(dur,p);acc+=d2-dur;dur=d2;t=elapsed()}
+    if(p!==null){
+      if(totalMode()){var t2=snapAfter(t,p);acc+=t2-t;dur=t2-lapStart;t=elapsed()}
+      else{var d2=snap(dur,p);acc+=d2-dur;dur=d2;t=elapsed()}
+    }
     laps.push(dur);lapStart+=dur;renderLaps();
   }
   function reset(){
