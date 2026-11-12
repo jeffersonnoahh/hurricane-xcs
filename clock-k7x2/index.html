@@ -300,8 +300,18 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var st=window.navigator.standalone===true;
     try{['standalone','fullscreen','minimal-ui'].forEach(function(m){if(window.matchMedia('(display-mode: '+m+')').matches)st=true})}catch(e){}
     // Escape hatch from the notes: keep the bar inside the reported window.
-    var safe=false;try{safe=localStorage.getItem('clk-bar2')==='safe'}catch(e){}
+    var safe=false;try{safe=localStorage.getItem('clk-bar3')==='safe'}catch(e){}
     if(safe)st=false;
+    var full=h;
+    try{
+      var probe=document.createElement('div');
+      probe.style.cssText='position:absolute;left:0;top:0;width:0;height:100vh;height:100lvh;visibility:hidden;pointer-events:none';
+      (document.body||document.documentElement).appendChild(probe);
+      var ph=probe.getBoundingClientRect().height;probe.parentNode.removeChild(probe);
+      if(ph>h&&ph<h*1.3)full=ph;
+    }catch(e){}
+    var forced=/[?&]fullh=(\d+)/.exec(location.search);if(forced)full=+forced[1];
+    if(st&&full>sh)sh=full;
     root.className=c+((c==='rail'&&sw-w>20)?' inset':'')+(st?' st':'');
     root.style.setProperty('--u',u+'px');
     root.style.setProperty('--p',((c==='port'||c==='land')?u*0.711:u)+'px');
@@ -379,7 +389,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v35</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v36</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -579,8 +589,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     $('face').addEventListener(n,function(){clearTimeout(holdTimer)});
   });
   $('closeHelp').addEventListener('click',function(){helpEl.hidden=true});
-  try{$('safeBar').checked=localStorage.getItem('clk-bar2')==='safe'}catch(e){}
-  $('safeBar').addEventListener('change',function(){try{localStorage.setItem('clk-bar2',this.checked?'safe':'real')}catch(e){}if(window.__lay)window.__lay();window.dispatchEvent(new Event('resize'))});
+  try{$('safeBar').checked=localStorage.getItem('clk-bar3')==='safe'}catch(e){}
+  $('safeBar').addEventListener('change',function(){try{localStorage.setItem('clk-bar3',this.checked?'safe':'real')}catch(e){}if(window.__lay)window.__lay();window.dispatchEvent(new Event('resize'))});
   $('zoneBox').addEventListener('change',function(){if(window.__zones)window.__zones(this.checked)});
   function diag(){
     var p=document.createElement('div');
