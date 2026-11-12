@@ -31,13 +31,15 @@ html.port{--u:calc(100vw / 1407);--p:calc(100vw / 1407 * .711)}
 html.land{--u:calc(100vw / 2000);--p:calc(100vw / 2000 * .711)}
 html.narrow{--u:calc(100vw / 1128)}
 html,body{height:100%;margin:0}
-html{background:var(--bg)}
+html{background:var(--bg);overscroll-behavior:none}
+html.st{height:var(--sh);overflow:hidden}
+html.st body{height:var(--sh)}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--fg);font-family:var(--ui);overflow:hidden;
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);overflow:hidden;position:relative;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;border:0;padding:0;cursor:pointer;background:none}
 button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
-.screen{position:fixed;left:0;top:var(--top,0px);height:var(--sh,100%);width:calc(var(--u)*1085);box-sizing:border-box;display:flex;flex-direction:column;padding-left:calc(var(--u)*60);padding-right:calc(var(--u)*17)}
+.screen{position:absolute;left:0;top:var(--top,0px);height:var(--sh,100%);width:calc(var(--u)*1085);box-sizing:border-box;display:flex;flex-direction:column;padding-left:calc(var(--u)*60);padding-right:calc(var(--u)*17)}
 .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .scroll::-webkit-scrollbar{display:none}
 .hdr{display:flex;justify-content:space-between;align-items:center;margin-top:calc(var(--u)*72);height:calc(var(--u)*138);flex:0 0 auto;position:relative;z-index:2}
@@ -142,9 +144,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .recent small{display:block;font-size:calc(var(--u)*46);color:var(--muted)}
 .recent .rbtn{width:calc(var(--u)*165);height:calc(var(--u)*165)}
 /* Rail and bar */
-#plus{position:fixed;left:min(calc(var(--u)*1163),calc(var(--cw,100vw) - var(--u)*150));top:calc(var(--u)*514 + var(--top,0px));width:calc(var(--u)*140);height:calc(var(--u)*140);border-radius:50%;z-index:6;display:flex;align-items:center;justify-content:center}
+#plus{position:absolute;left:min(calc(var(--u)*1163),calc(var(--cw,100vw) - var(--u)*150));top:calc(var(--u)*514 + var(--top,0px));width:calc(var(--u)*140);height:calc(var(--u)*140);border-radius:50%;z-index:6;display:flex;align-items:center;justify-content:center}
 #plus svg{width:44%;height:44%;stroke:var(--fg);stroke-width:2.4;stroke-linecap:round}
-#tabs{position:fixed;left:min(calc(var(--u)*1165),calc(var(--cw,100vw) - var(--u)*147));top:calc(var(--sh,100vh) + var(--top,0px) - var(--u)*695);width:calc(var(--u)*137);height:calc(var(--u)*623);border-radius:calc(var(--u)*69);display:flex;flex-direction:column;padding:calc(var(--u)*4);box-sizing:border-box;z-index:6}
+#tabs{position:absolute;left:min(calc(var(--u)*1165),calc(var(--cw,100vw) - var(--u)*147));top:calc(var(--sh,100vh) + var(--top,0px) - var(--u)*695);width:calc(var(--u)*137);height:calc(var(--u)*623);border-radius:calc(var(--u)*69);display:flex;flex-direction:column;padding:calc(var(--u)*4);box-sizing:border-box;z-index:6}
 #tabs button{flex:1;border-radius:calc(var(--u)*65);display:flex;align-items:center;justify-content:center;color:var(--fg)}
 #tabs button.on{color:var(--orange);background:var(--cap-on)}
 #tabs svg{width:calc(var(--u)*76);height:calc(var(--u)*76)}
@@ -255,9 +257,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 .land .recents{margin:calc(var(--u)*95) 0 0 calc(var(--u)*64);width:calc(var(--u)*549)}
 .land .recent{margin:0 0 0 calc(var(--u)*64);width:calc(var(--u)*549)}
 .land #recents{padding-bottom:calc(var(--u)*200)}
-.land .picker,.land #count{position:fixed;left:calc(var(--u)*848);top:calc(var(--u)*325);margin:0}
-.land .tctl{position:fixed;left:calc(var(--u)*840);top:calc(var(--u)*952);width:calc(var(--u)*816);margin:0}
-.land .card{position:fixed;left:calc(var(--u)*840);top:calc(var(--u)*1147);width:calc(var(--u)*816);margin:0;box-sizing:border-box}
+.land .picker,.land #count{position:absolute;left:calc(var(--u)*848);top:calc(var(--u)*325);margin:0}
+.land .tctl{position:absolute;left:calc(var(--u)*840);top:calc(var(--u)*952);width:calc(var(--u)*816);margin:0}
+.land .card{position:absolute;left:calc(var(--u)*840);top:calc(var(--u)*1147);width:calc(var(--u)*816);margin:0;box-sizing:border-box}
 
 /* ===== narrow: tall slim screen, a guess ===== */
 .narrow body{padding-top:env(safe-area-inset-top,0px)}
@@ -298,9 +300,9 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var st=window.navigator.standalone===true;
     try{['standalone','fullscreen','minimal-ui'].forEach(function(m){if(window.matchMedia('(display-mode: '+m+')').matches)st=true})}catch(e){}
     // Escape hatch from the notes: keep the bar inside the reported window.
-    var safe=false;try{safe=localStorage.getItem('clk-bar')==='safe'}catch(e){}
+    var safe=false;try{safe=localStorage.getItem('clk-bar2')==='safe'}catch(e){}
     if(safe)st=false;
-    root.className=c+((c==='rail'&&sw-w>20)?' inset':'');
+    root.className=c+((c==='rail'&&sw-w>20)?' inset':'')+(st?' st':'');
     root.style.setProperty('--u',u+'px');
     root.style.setProperty('--p',((c==='port'||c==='land')?u*0.711:u)+'px');
     // In a browser tab whose bars sit at the top, slide the app up by the height of those bars,
@@ -375,7 +377,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v33</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v34</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -575,8 +577,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     $('face').addEventListener(n,function(){clearTimeout(holdTimer)});
   });
   $('closeHelp').addEventListener('click',function(){helpEl.hidden=true});
-  try{$('safeBar').checked=localStorage.getItem('clk-bar')==='safe'}catch(e){}
-  $('safeBar').addEventListener('change',function(){try{localStorage.setItem('clk-bar',this.checked?'safe':'real')}catch(e){}if(window.__lay)window.__lay();window.dispatchEvent(new Event('resize'))});
+  try{$('safeBar').checked=localStorage.getItem('clk-bar2')==='safe'}catch(e){}
+  $('safeBar').addEventListener('change',function(){try{localStorage.setItem('clk-bar2',this.checked?'safe':'real')}catch(e){}if(window.__lay)window.__lay();window.dispatchEvent(new Event('resize'))});
   $('zoneBox').addEventListener('change',function(){if(window.__zones)window.__zones(this.checked)});
   function diag(){
     var p=document.createElement('div');
