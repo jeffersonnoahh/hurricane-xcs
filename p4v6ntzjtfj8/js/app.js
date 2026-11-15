@@ -4115,10 +4115,23 @@
         '<p class="muted small" style="text-align:center">Encrypted on this phone with your passphrase before upload. Nobody else can read it.</p>' +
         (c.mode === 'passkey' ? '<div class="card fid-on"><b>🔐 Face ID sync is on</b><div class="muted small">On another iPhone, iPad or Mac with your Apple account: open the Apex link → More → Encrypted cloud backup → Sign in with Face ID.</div></div>' : '') + '<div class="card"' + (c.mode === 'passkey' ? ' hidden' : '') + '><div class="eyebrow">Your sync code</div><div class="sync-code" id="syncCode">' + esc(c.id) + '</div><div class="muted small">Use this code + your passphrase to open your data on another device.</div><button class="btn block" id="copyCode">Copy code</button></div>' +
         '<div class="fs-st" id="fsSt">Photos & PDFs: checking…</div>' +
+        (c.pass && String(c.pass).indexOf('prf:') !== 0 ? '<button class="btn block" id="cShowPass" type="button">🔑 Show my passphrase</button><div class="card pass-box" id="cPassBox" hidden></div>' : '') +
         '<button class="btn primary block" id="cNow">Back up now</button><button class="btn block" id="cSnap">🕘 Restore an earlier version</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
         function (r) {
           r.querySelector('#copyCode').onclick = function () { try { navigator.clipboard.writeText(c.id); toast('Code copied'); } catch (e) { toast(c.id); } };
           r.querySelector('#cNow').onclick = function () { cloudPush(true).then(function () { toast('Backed up ✓'); closeSheet(); }); };
+          var sp = r.querySelector('#cShowPass');
+          if (sp) sp.onclick = function () {
+            haptic();
+            confirmBox('Show your passphrase?', 'Make sure nobody is looking at your screen. With this passphrase and your sync code, anyone could open your backup.', 'Show it').then(function (ok) {
+              if (!ok) return; faceGate().then(function (ok2) {
+                if (!ok2) return; var box = r.querySelector('#cPassBox');
+                box.innerHTML = '<div class="eyebrow">Your passphrase</div><div class="sync-code pass-code">' + esc(c.pass) + '</div><div class="muted small" style="margin:6px 0 10px">Save it in the Passwords app or Notes now, so you never lose it.</div><button class="btn block" id="cCopyPass" type="button">Copy passphrase</button>';
+                box.hidden = false; sp.hidden = true;
+                box.querySelector('#cCopyPass').onclick = function () { haptic(); (navigator.clipboard ? navigator.clipboard.writeText(c.pass) : Promise.reject()).then(function () { toast('Passphrase copied'); }, function () { toast(c.pass); }); };
+              });
+            });
+          };
           r.querySelector('#cSnap').onclick = function () { haptic(); snapSheet(); };
           var ids = fsAllIds(), up = ids.filter(function (x) { return fsDone()[x]; }).length, st = r.querySelector('#fsSt');
           fsToken(c).then(function (tk) { return fetch(FS + c.id, { headers: { 'x-apex-token': tk }, cache: 'no-store' }); }).then(function (res) {

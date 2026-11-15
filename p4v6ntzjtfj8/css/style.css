@@ -2077,3 +2077,4 @@ body.deck-open .aura i,body.deck-open .wc-liq::before,body.deck-open .bg-mesh i,
 body.sheet-open .aura i,body.sheet-open .wc-liq::before{animation-play-state:paused!important}
 body.deck-covered #v-home,body.deck-covered .bottom-nav,body.deck-covered .fab{visibility:hidden}
 .wstack:not(.open) .wcard:not(:first-child) .wc-liq::before{animation:none}
+.pass-box{margin:8px 0 10px;padding:14px;box-shadow:inset 0 0 0 1px rgba(251,191,36,.35)!important}.pass-code{word-break:break-all;font-size:22px}
