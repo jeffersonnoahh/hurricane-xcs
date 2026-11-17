@@ -451,7 +451,7 @@
   }
   // ---------- render ----------
   function renderAll() {
-    BAL = {};
+    BAL = {}; if (typeof schedSync === 'function') schedSync();
     applyTheme(); renderEye();
     renderHome(); renderTx(); renderBudgets(); renderReport(); renderAccount(); renderDebts(); renderFeatures();
   }
@@ -1273,6 +1273,20 @@
   function debtById(id) { return S.debts.filter(function (d) { return d.id === id; })[0]; }
   function dPaid(d) { return (d.payments || []).reduce(function (a, p) { return a + p.amount; }, 0); }
   function dRemain(d) { return Math.max(0, d.amount - dPaid(d)); }
+  // Monthly plan on a debt (d.sched = [{due, amount}]): the next unpaid month sets the due date.
+  function schedNext(d) {
+    if (!d.sched || !d.sched.length) return null; var paid = dPaid(d), cum = 0;
+    for (var i = 0; i < d.sched.length; i++) { cum += d.sched[i].amount; if (cum > paid) return { i: i, due: d.sched[i].due, amount: Math.min(d.sched[i].amount, cum - paid) }; }
+    return null;
+  }
+  function schedSync() { (S.debts || []).forEach(function (d) { var n = schedNext(d); if (n && d.due !== n.due) d.due = n.due; }); }
+  function schedHtml(d) {
+    if (!d.sched || !d.sched.length) return ''; var paid = dPaid(d), cum = 0, nx = schedNext(d);
+    return '<div class="sheet-sec">Monthly plan</div><div class="card list-card sched">' + d.sched.map(function (x, i) {
+      var before = cum; cum += x.amount; var done = paid >= cum, part = !done && paid > before, dt = new Date(x.due + 'T00:00:00');
+      return '<div class="sch-row' + (done ? ' done' : '') + (nx && nx.i === i ? ' next' : '') + '"><span class="sch-dot">' + (done ? '✓' : '') + '</span><span class="grow"><b>' + MONTHS[dt.getMonth()] + ' ' + dt.getFullYear() + '</b><small>' + (done ? 'Paid' : part ? money(paid - before, { rp: false }) + ' paid so far' : nx && nx.i === i ? 'Next · due ' + fmtDate(x.due) : 'Due ' + fmtDate(x.due)) + '</small></span><b>' + money(x.amount, { rp: false }) + '</b></div>';
+    }).join('') + '</div>';
+  }
   function dStatus(d) {
     if (d.closed === 'cancelled') return 'cancelled';
     if (d.closed === 'writtenoff') return 'writtenoff';
@@ -2049,6 +2063,7 @@
       '<div class="d-prog ' + (st === 'overdue' ? 'overdue' : st === 'partial' ? 'partial' : '') + '" style="margin-top:12px"><i data-w="' + pc + '"></i></div>' +
       '<div class="d-meta"><span>' + pc + '% ' + (inn ? 'collected' : 'paid') + '</span><span>' + dueText(d) + '</span></div>' +
       '<div class="dd-stats"><div><small>Total ' + (inn ? 'owed' : 'borrowed') + '</small><b>' + money(d.amount, { rp: false }) + '</b></div><div><small>' + (inn ? 'Received' : 'Paid') + '</small><b>' + money(p, { rp: false }) + '</b></div><div><small>Remaining</small><b>' + money(dRemain(d), { rp: false }) + '</b></div></div>' +
+      schedHtml(d) +
       '<div class="sheet-sec">Payment timeline</div><div class="timeline">' +
         '<div class="tl start"><div><b>' + (inn ? 'Owed' : 'Borrowed') + ' ' + money(d.amount) + '</b><small>' + fmtDate(d.created) + (d.startTx ? ' · moved via ' + esc(wallet(d.wallet).name) : '') + '</small></div></div>' +
         pays.map(function (x) { return '<div class="tl"><div><b class="pos">+ ' + money(x.amount) + '</b><small>' + fmtDate(x.date) + ' · ' + esc(wallet(x.wallet).name) + (x.note ? ' · ' + esc(x.note) : '') + '</small></div><button class="x" data-delpay="' + esc(x.id) + '" aria-label="Delete payment">×</button></div>'; }).join('') +
@@ -3040,7 +3055,8 @@
       function (r) {
         var b = r.querySelector('#owImp'); if (!b) return;
         b.onclick = function () {
-          todo.forEach(function (o) { S.debts.push({ id: uid(), dir: 'in', person: o.person, title: o.title, amount: o.amount, created: o.created, due: o.due, wallet: (S.wallets.filter(function (w) { return /^reserve$/i.test(w.name); })[0] || S.wallets[0] || {}).id, tags: o.tags || '', notes: o.notes || '', payments: [], seedKey: o.key, ts: Date.now() }); });
+          todo.forEach(function (o) { S.debts.push({ id: uid(), dir: 'in', person: o.person, title: o.title, amount: o.amount, created: o.created, due: o.due, wallet: (S.wallets.filter(function (w) { return /^reserve$/i.test(w.name); })[0] || S.wallets[0] || {}).id, tags: o.tags || '', notes: o.notes || '', payments: [], sched: o.sched || undefined, seedKey: o.key, ts: Date.now() }); });
+          schedSync();
           haptic(); save(); closeSheet(); renderAll(); toast(todo.length + ' records added to Owed ✓'); show('v-debts');
         };
       });
