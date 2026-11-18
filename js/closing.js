@@ -1,7 +1,8 @@
 /* ══════════════════════════════════════════════════════════════════════
-   FORM CLOSING (js/closing.js) — satu titik input closing untuk sales.
-   Dibuka dari tombol "+ SALE" / "Log a sale" (menggantikan Log Entry lama)
-   untuk sales yang ikut uji coba, atau untuk semua bila mode = 'all'.
+   FORM CLOSING (js/closing.js) — SATU-SATUNYA form input closing untuk sales.
+   Dibuka dari tombol "+ SALE" / "Log a sale". Form lama (drawer "Log Entry")
+   DIHAPUS 18 Nov 2026 atas permintaan Jeff: tidak ada lagi mode uji coba /
+   peserta / "Pakai form lama" — drawer lama tidak pernah tampil (CSS + hook).
 
    Isian per closing:
      Sales (diingat per HP; "Ganti" untuk leader yang input atas nama tim)
@@ -24,8 +25,8 @@
    Semua baris satu closing ditulis dalam SATU transaction (atomic, tidak
    pernah menimpa hari itu; idempoten per orderId → ketuk dua kali aman).
 
-   CONFIG — config/closing = {mode:'off'|'pilot'|'all', pilot:[nama],
-   spv:[nama], pinHash:'sha256'} — HANYA ditulis lewat .update() dari Admin.
+   CONFIG — config/closing = {spv:[nama], pinHash:'sha256'} — HANYA ditulis lewat
+   .update() dari Admin. (mode/pilot lama masih ada di database tapi tidak dipakai.)
 
    EXPORT — Excel (.xlsx, 2 sheet) atau CSV (pemisah ';' untuk Excel
    Indonesia). Untuk leader lewat PIN (hash SHA-256 di config), admin langsung.
@@ -131,9 +132,8 @@
     if (c.sp !== m.sp || c.team !== m.team) setMe(c.sp, c.team);
     return c;
   }
-  function inPilot(sp) { return (CFG.pilot || []).some(function (x) { return norm(x) === norm(sp); }); }
-  function enabledFor(sp) { return CFG.mode === 'all' || (CFG.mode === 'pilot' && !!sp && inPilot(sp)); }
-  function anyEnabled() { return CFG.mode === 'all' || (CFG.mode === 'pilot' && (CFG.pilot || []).length > 0); }
+  // form lama sudah dihapus: form baru dipakai SEMUA sales, apa pun isi config/closing/mode
+  function anyEnabled() { return true; }
 
   /* ── config ─────────────────────────────────────────────────────── */
   function applyCfg(c) {
@@ -142,7 +142,6 @@
     CFG.pilot = Array.isArray(c.pilot) ? c.pilot.filter(Boolean) : [];
     CFG.spv = Array.isArray(c.spv) && c.spv.filter(Boolean).length ? c.spv.filter(Boolean) : DEF_SPV.slice();
     CFG.pinHash = typeof c.pinHash === 'string' ? c.pinHash : '';
-    paintLegacyBanner();
     if (adminBox) paintAdmin();
   }
   function watchOnline(n) {
@@ -159,10 +158,19 @@
     } catch (e) { }
     if (n < 120) setTimeout(function () { watchOnline(n + 1); }, 1000);
   }
+  var CFG_KEY = 'hx-closing-cfg';
   function watchCfg() {
     var r = dbRef('config/closing');
     if (!r || !r.on) return setTimeout(watchCfg, 800);
-    r.on('value', function (snap) { applyCfg(snap.val()); });
+    r.on('value', function (snap) {
+      var v = snap.val(); applyCfg(v);
+      // diingat per HP (tanpa PIN) → kunjungan berikutnya "+ Sale" langsung membuka form baru, sebelum config tiba
+      try { store(CFG_KEY, JSON.stringify({ ns: org(), mode: CFG.mode, pilot: CFG.pilot, spv: CFG.spv })); } catch (e) { }
+    });
+  }
+  function cachedCfg() {
+    try { var c = JSON.parse(store(CFG_KEY) || 'null'); if (c && (c.ns || '') === org()) return c; } catch (e) { }
+    return null;
   }
 
   /* ── draft: isian yang belum disimpan tidak hilang kalau form tertutup tak sengaja
@@ -186,6 +194,36 @@
     try { var d = JSON.parse(v); if (d && d.at && Date.now() - d.at < DRAFT_MAX && dirty(d)) return d; } catch (e) { }
     ss(DRAFT_KEY, null); return null;
   }
+  // closing yang sedang dikirim (sinyal putus) disimpan terpisah dari draft — draft hanya 1 slot dan
+  // ditimpa closing berikutnya; tanpa ini closing pertama hilang kalau Safari memuat ulang tab
+  var PEND_KEY = 'hx-closing-pending';
+  function pendAll() { try { return JSON.parse(store(PEND_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function pendSet(id, v) { var a = pendAll(); if (v) a[id] = v; else delete a[id]; store(PEND_KEY, Object.keys(a).length ? JSON.stringify(a) : null); }
+  // satu transaction untuk semua baris satu closing; batal kalau orderId sudah ada (tidak pernah dobel)
+  function appendClosing(ref, orderId, entries) {
+    return ref.transaction(function (curr) {
+      var list = Array.isArray(curr) ? curr : curr && typeof curr === 'object' ? curr : null;
+      var has = list && (Array.isArray(list) ? list : Object.keys(list).map(function (k) { return list[k]; })).some(function (r) { return r && r.orderId === orderId; });
+      if (has) return;
+      if (!list) return entries.slice();
+      if (Array.isArray(list)) { entries.forEach(function (en) { list.push(en); }); return list; }
+      entries.forEach(function (en) { list['k' + en.ts] = en; }); return list;
+    });
+  }
+  function replayPending(n) {
+    var a = pendAll(), ids = Object.keys(a); if (!ids.length) return;
+    if (!dbRef('scores') || !W._cfgTeamsLoaded) { if ((n || 0) < 180) setTimeout(function () { replayPending((n || 0) + 1); }, 1000); return; }
+    ids.forEach(function (id) {
+      var p = a[id];
+      if (pendingIds[id]) return;                                  // masih dikirim dari tab ini
+      if (!p || (p.ns || '') !== org() || !/^\d{4}-\d\d-\d\d$/.test(p.date || '') || !Array.isArray(p.entries) || !p.entries.length || Date.now() - (p.at || 0) > 864e5) { pendSet(id, null); return; }
+      pendingIds[id] = 1;
+      appendClosing(dbRef('scores/' + p.date), id, p.entries).then(function (res) {
+        delete pendingIds[id]; pendSet(id, null); dropDraft(id);
+        if (res && res.committed !== false) { try { renderAll(); } catch (e) { } toast('Closing ' + (p.entries[0].customer || '') + ' tersimpan (dikirim ulang setelah sinyal putus).', 'success'); }
+      }).catch(function () { delete pendingIds[id]; });
+    });
+  }
   function dropDraft(orderId) {
     clearTimeout(draftT);
     var d = loadDraft(); if (!d || !orderId || d.orderId === orderId) ss(DRAFT_KEY, null);
@@ -194,7 +232,7 @@
   /* ══ FORM ══════════════════════════════════════════════════════════ */
   var S = null;           // status form yang terbuka
   var sheet = null, overlay = null, histTok = null, popSkip = 0, overlayAdded = false;
-  var confirmOpen = false, bypassOnce = false, expShut = null, online = null, spTouched = false, pendingIds = {};
+  var confirmOpen = false, expShut = null, online = null, pendingIds = {}, openedAt = 0;
   function freshState(sp, team) {
     return {
       sp: sp || '', team: team || teamOf(sp), date: dkey(new Date()), dateMode: 'today',
@@ -272,6 +310,7 @@
     if (S.restored && !pick) h += '<div class="hxk-restored"><span>' + (S.orderId ? 'Closing ini mungkin belum tersimpan (sinyal putus). Cek isinya lalu Simpan — tidak akan dobel.' : 'Isian terakhir yang belum disimpan dikembalikan.') + '</span>' +
       '<button type="button" class="hxk-link" data-act="fresh">Mulai baru</button></div>';
     // sales
+    if (pick && !W._cfgTeamsLoaded) return h + '<div class="hxk-sec"><div class="hxk-lbl">Kamu siapa?</div><div class="hxk-sub hxk-wait">Memuat daftar sales… (sinyal lambat)</div></div>';
     if (pick) {
       var own = meLive();
       h += own
@@ -282,15 +321,14 @@
       teams.forEach(function (t) {
         var m = ((T[t] && T[t].m) || []).filter(function (n) {
           var lead = false; try { lead = _isLeader(n); } catch (e) { }   // team lead yang tidak berjualan (app.js)
-          return !lead && (CFG.mode === 'all' || inPilot(n) || isAdmin());
+          return !lead;
         });
         if (!m.length) return;
         h += '<div class="hxk-famlbl">' + esc(t) + '</div><div class="hxk-chips">' + m.map(function (n) {
           return '<button type="button" class="hxk-chip' + (n === S.sp ? ' on' : '') + '" data-act="me" data-v="' + esc(n) + '" data-t="' + esc(t) + '">' + esc(n) + '</button>';
         }).join('') + '</div>';
       });
-      if (CFG.mode === 'pilot' && !isAdmin()) h += '<div class="hxk-sub" style="margin-top:10px">Form baru sedang diuji coba oleh beberapa sales. Yang lain tetap memakai form lama.</div>';
-      if (!own && (CFG.mode === 'all' || isAdmin())) {
+      if (!own) {
         h += '<div class="hxk-famlbl hxk-leadlbl">Leader (mencatat closing anggota tim)</div><div class="hxk-chips">' + leaderGroups().map(function (g) {
           return '<button type="button" class="hxk-chip hxk-lead" data-act="meleader" data-t="' + esc(g.teams.join(',')) + '">Leader ' + esc(g.name) + '</button>';
         }).join('') + '</div>';
@@ -298,7 +336,6 @@
       if (own) h += '<button type="button" class="hxk-link" data-act="resetme" style="margin-top:8px">Bukan ' + esc(ownerLabel(own)) + '? Ganti nama HP ini</button>';
       var nR = own ? recentList().length : 0;
       if (nR) h = h.replace('(yang input).</div>', '(yang input).</div><button type="button" class="hxk-link hxk-recent-btn hxk-recent-top" data-act="recent">Lihat / hapus input 24 jam terakhir (' + nR + ')</button>');
-      if (CFG.mode === 'pilot') h += '<button type="button" class="hxk-link hxk-oldform" data-act="oldform">Nama tidak ada? Pakai form lama</button>';
       return h + '</div>';
     }
     var owner = me();
@@ -309,16 +346,18 @@
     if (nRecent) h += '<button type="button" class="hxk-link hxk-recent-btn" data-act="recent">Lihat / hapus input 24 jam terakhir (' + nRecent + ')</button>';
     // tanggal
     var today = dkey(new Date()), kemarin = dkey(addDays(new Date(), -1)), minD = dkey(addDays(new Date(), -7));
+    // tombol yang menyala mengikuti tanggal yang AKAN disimpan (form dibiarkan terbuka melewati tengah malam)
+    var dm = S.dateMode === 'other' ? 'other' : S.date === today ? 'today' : S.date === kemarin ? 'kemarin' : 'other';
     h += '<div class="hxk-sec"><div class="hxk-lbl">Tanggal closing</div><div class="hxk-seg">' +
-      '<button type="button" data-act="date" data-v="today" class="' + (S.dateMode === 'today' ? 'on' : '') + '">Hari ini</button>' +
-      '<button type="button" data-act="date" data-v="kemarin" class="' + (S.dateMode === 'kemarin' ? 'on' : '') + '">Kemarin</button>' +
-      '<button type="button" data-act="date" data-v="other" class="' + (S.dateMode === 'other' ? 'on' : '') + '">Lainnya</button></div>' +
-      (S.dateMode === 'other' ? '<input type="date" class="hxk-in hxk-date" data-act="dateval" min="' + minD + '" max="' + today + '" value="' + S.date + '">' : '') +
+      '<button type="button" data-act="date" data-v="today" class="' + (dm === 'today' ? 'on' : '') + '">Hari ini</button>' +
+      '<button type="button" data-act="date" data-v="kemarin" class="' + (dm === 'kemarin' ? 'on' : '') + '">Kemarin</button>' +
+      '<button type="button" data-act="date" data-v="other" class="' + (dm === 'other' ? 'on' : '') + '">Lainnya</button></div>' +
+      (dm === 'other' ? '<input type="date" class="hxk-in hxk-date" data-act="dateval" min="' + minD + '" max="' + today + '" value="' + S.date + '">' : '') +
       '<div class="hxk-sub">' + dLabel(S.date) + (S.date === today ? ' (hari ini)' : S.date === kemarin ? ' (kemarin)' : '') + '</div>' + errMsg('date') + '</div>';
     // customer
     h += '<div class="hxk-sec"><div class="hxk-grid2"><div><div class="hxk-lbl">Nama customer</div>' +
       '<input type="text" class="hxk-in" data-act="cust" autocomplete="off" autocapitalize="words" placeholder="Nama lengkap" value="' + esc(S.customer) + '">' + errMsg('customer') + '</div>' +
-      '<div><div class="hxk-lbl">4 digit WA' + (isCh(S.sp) ? ' <span class="hxk-optl">opsional</span>' : '') + '</div><input type="text" class="hxk-in hxk-wa" data-act="wa" inputmode="numeric" maxlength="4" placeholder="' + (isCh(S.sp) ? '-' : '1234') + '" value="' + esc(S.wa4) + '">' + errMsg('wa4') + '</div></div></div>';
+      '<div><div class="hxk-lbl">4 digit WA' + (isCh(S.sp) ? ' <span class="hxk-optl">opsional</span>' : '') + '</div><input type="text" class="hxk-in hxk-wa" data-act="wa" inputmode="numeric" autocomplete="off" placeholder="' + (isCh(S.sp) ? '-' : '1234') + '" value="' + esc(S.wa4) + '">' + errMsg('wa4') + '</div></div></div>';
     // test
     h += '<div class="hxk-sec"><div class="hxk-lbl">Ada produk yang di-test?</div><div class="hxk-seg">' +
       '<button type="button" data-act="test" data-v="ya" class="' + (S.test === 'ya' ? 'on' : '') + '">Ada test</button>' +
@@ -353,7 +392,6 @@
       (S.test === 'ya' && !S.tested.length ? '<div class="hxk-hint">Test drive dicentang → pilih produk yang di-test di bagian atas.</div>' : '') +
       (!S.cross && famCount(csNow) >= 2 ? '<div class="hxk-hint">Customer beli 2 tipe produk — apakah ini cross sell? Kalau ya, centang Cross sell.</div>' : '') +
       '</div>';
-    if (CFG.mode === 'pilot') h += '<button type="button" class="hxk-link hxk-oldform" data-act="oldform">Pakai form lama (sales lain / tanggal &gt; 7 hari)</button>';
     // ringkasan
     var cs2 = chosen(), units = cs2.reduce(function (s, c) { return s + (c.l.qty || 1); }, 0);
     h += '<div class="hxk-foot">' +
@@ -374,7 +412,7 @@
       rows(k).forEach(function (r) {
         if (!r || !r.prod || !r.ts || r.ts < since) return;
         // HP sales: penjualan pemilik HP + yang diinput HP ini untuk orang lain (bukan nama yang sedang dipilih lewat Ganti)
-        var mine = own ? (own.leader ? own.teams.indexOf(r.team) >= 0 : ((norm(r.sp) === norm(own.sp) && r.team === own.team) || (r.inputBy && norm(r.inputBy) === norm(own.sp))))
+        var mine = own ? (own.leader ? (own.teams.indexOf(r.team) >= 0 || (r.inputBy && norm(r.inputBy) === norm(ownerLabel(own)))) : ((norm(r.sp) === norm(own.sp) && r.team === own.team) || (r.inputBy && norm(r.inputBy) === norm(own.sp))))
           : (norm(r.sp) === norm(S.sp) && r.team === S.team);
         if (!mine) return;
         var id = k + '|' + (r.orderId || ('t' + r.ts));
@@ -419,6 +457,7 @@
         return curr;
       });
       data()[g.k] = rows(g.k).filter(function (r) { return !tsSet[r.ts]; });
+      g.rows.forEach(function (r) { if (r.orderId) pendSet(r.orderId, null); });   // dihapus → jangan pernah dikirim ulang
       try { renderAll(); } catch (e) { }
       toast('Closing dihapus' + (r0.customer ? ' · ' + r0.customer : ''), 'success');
     } catch (e) { toast('Gagal menghapus — cek internet lalu coba lagi.', 'error'); }
@@ -449,7 +488,9 @@
     S = freshState(m && m.sp, m && m.team);
     var d = loadDraft();
     if (d && sp && norm(d.sp) !== norm(m.sp)) d = null;      // dibuka untuk nama tertentu → hanya draft nama itu
-    if (d && d.orderId && pendingIds[d.orderId]) d = null;   // closing itu masih dikirim di latar
+    // closing itu masih dikirim di latar (tab ini, atau antrean kirim-ulang setelah reload) → milik antrean saja;
+    // kalau dipulihkan sebagai draft lalu diubah, closing yang sama bisa tercatat dua kali
+    if (d && d.orderId && (pendingIds[d.orderId] || pendAll()[d.orderId])) { toast('Closing ' + (d.customer || '') + ' sedang dikirim ulang — cek di daftar 24 jam setelah tersimpan.', 'info'); d = null; }
     if (d && d.sp && (!W._cfgTeamsLoaded || canon(d.sp, d.team))) {
       for (var k in d) if (Object.prototype.hasOwnProperty.call(d, k)) S[k] = d[k];
       S.saving = false; S.slow = false; S.err = {}; S.picking = false; S.restored = true; S.view = ''; S.deleting = false;
@@ -458,14 +499,14 @@
       // tanggal draft TIDAK digeser (lewat tengah malam tetap tanggal closing-nya; orderId tetap sama) — label ikut tanggal
       S.dateMode = S.date === dkey(new Date()) ? 'today' : S.date === dkey(addDays(new Date(), -1)) ? 'kemarin' : 'other';
     }
-    if (S.sp && !enabledFor(S.sp) && !isAdmin()) S.picking = true;
     overlay = D.createElement('div'); overlay.className = 'hxk-overlay';
     sheet = D.createElement('section'); sheet.className = 'hxk-sheet'; sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', 'Form closing');
     sheet.innerHTML = '<div class="hxk-handle"></div><div class="hxk-body"></div>';
     D.body.appendChild(overlay); D.body.appendChild(sheet);
     if (!R.classList.contains('hx-overlay-open')) { R.classList.add('hx-overlay-open'); overlayAdded = true; }
     R.classList.add('hxk-lock');
-    overlay.addEventListener('click', function () { close(); });
+    openedAt = Date.now();
+    overlay.addEventListener('click', function () { if (Date.now() - openedAt < 450) return; close(); });   // ketukan kedua dari "+ Sale" (ketuk dua kali)
     sheet.addEventListener('click', onClick);
     sheet.addEventListener('input', onInput);
     sheet.addEventListener('change', onChange);
@@ -473,6 +514,7 @@
     try { histTok = 'hxk' + Date.now(); history.pushState({ hxk: histTok }, ''); } catch (e) { histTok = null; }
     paint();
     void sheet.offsetWidth; sheet.classList.add('on'); overlay.classList.add('on');
+    if (!W._cfgTeamsLoaded) { var mySheet = sheet; (function waitRoster() { if (sheet !== mySheet) return; if (W._cfgTeamsLoaded) { if (S && S.picking) paint(); return; } setTimeout(waitRoster, 300); })(); }
   }
   function close(how) {
     if (!sheet) return;
@@ -482,7 +524,7 @@
       return;
     }
     if (confirmOpen) { try { closeConfirmMo(false); } catch (e) { } }
-    if (how === 'saved' || how === 'drop') dropDraft(); else saveDraft();   // 'drop' = pindah ke form lama, dicatat di sana
+    if (how === 'saved') dropDraft(); else saveDraft();
     clearTimeout(draftT);
     var s = sheet, o = overlay; sheet = null; overlay = null; S = null;
     s.classList.remove('on'); o.classList.remove('on');
@@ -496,6 +538,7 @@
   W.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sheet) close(); });
 
   function onClick(e) {
+    if (Date.now() - openedAt < 450) { e.preventDefault(); e.stopPropagation(); return; }   // sheet masih bergeser naik: ketukan kedua dari "+ Sale"
     var b = e.target.closest('[data-act]'); if (!b || !S) return;
     var act = b.getAttribute('data-act'), v = b.getAttribute('data-v');
     var line = b.closest('.hxk-line'), lp = line && line.getAttribute('data-p');
@@ -507,11 +550,11 @@
       case 'back': S.view = ''; break;
       case 'del': delRecent(+b.getAttribute('data-i')); return;
       case 'fresh': ss(DRAFT_KEY, null); var own = meLive(); S = own ? (own.leader ? freshState('', '') : freshState(own.sp, own.team)) : freshState(S.sp, S.team); break;
-      case 'oldform': close('drop'); bypassOnce = true; openLegacy(); return;
       case 'me':   // pertama kali = pemilik HP; sesudahnya "Ganti" hanya untuk closing ini (leader input untuk anggota tim)
+        if (!W._cfgTeamsLoaded) return;
         S.sp = v; S.team = b.getAttribute('data-t') || teamOf(v); S.picking = false; delete S.err.sales; if (!me()) setMe(S.sp, S.team); break;
       case 'resetme': store(ME_KEY, null); S.picking = true; break;
-      case 'meleader': setMeLeader(String(b.getAttribute('data-t') || '').split(',')); S.picking = true; break;   // lanjut: pilih anggota tim
+      case 'meleader': if (!W._cfgTeamsLoaded) return; setMeLeader(String(b.getAttribute('data-t') || '').split(',')); S.picking = true; break;   // lanjut: pilih anggota tim
       case 'pickme': S.picking = true; break;
       case 'date':
         S.dateMode = v;
@@ -542,7 +585,10 @@
     var t = e.target, act = t.getAttribute('data-act'); if (!S || !act || S.saving) return;
     draftSoon();
     if (act === 'cust') { S.customer = t.value; if (S.err.customer) { delete S.err.customer; dropErr(t); } }
-    else if (act === 'wa') { var v = t.value.replace(/\D/g, '').slice(0, 4); if (v !== t.value) t.value = v; S.wa4 = v; if (S.err.wa4) { delete S.err.wa4; dropErr(t); } }
+    else if (act === 'wa') {
+      // tempel / isi otomatis nomor lengkap → 4 digit TERAKHIR; mengetik digit ke-5 tidak menggeser yang sudah diketik
+      var dg = t.value.replace(/\D/g, ''), pasted = /insertFromPaste|insertReplacementText|insertFromDrop/.test(e.inputType || '') || dg.length > 5;
+      var v = dg.length > 4 ? (pasted ? dg.slice(-4) : dg.slice(0, 4)) : dg; if (v !== t.value) t.value = v; S.wa4 = v; if (S.err.wa4) { delete S.err.wa4; dropErr(t); } }
     else if (act === 'price') {
       var line = t.closest('.hxk-line'), L = S.lines[line.getAttribute('data-p')];
       var n = +(t.value.replace(/\D/g, '')) || 0; L.price = n;
@@ -689,17 +735,11 @@
     S.orderId = orderId; S.orderSig = sig;
     entries.forEach(function (e) { e.orderId = orderId; });
     pendingIds[orderId] = 1; saveDraft();                      // draft ikut membawa orderId → coba ulang setelah reload tidak dobel
+    pendSet(orderId, { ns: org(), date: date, entries: entries, at: Date.now() });
     var ref = dbRef('scores/' + date);
-    if (!ref) { delete pendingIds[orderId]; clearTimeout(slowT); S.saving = false; S.slow = false; paint(); toast('Tidak terhubung ke database — coba lagi.', 'error'); return; }
+    if (!ref) { delete pendingIds[orderId]; pendSet(orderId, null); clearTimeout(slowT); S.saving = false; S.slow = false; paint(); toast('Tidak terhubung ke database — coba lagi.', 'error'); return; }
     try {
-      var res = await ref.transaction(function (curr) {
-        var list = Array.isArray(curr) ? curr : curr && typeof curr === 'object' ? curr : null;
-        var has = list && (Array.isArray(list) ? list : Object.keys(list).map(function (k) { return list[k]; })).some(function (r) { return r && r.orderId === orderId; });
-        if (has) return;                                     // sudah tersimpan (ketuk dua kali / coba ulang): batal, tidak dobel
-        if (!list) return entries.slice();
-        if (Array.isArray(list)) { entries.forEach(function (en) { list.push(en); }); return list; }
-        entries.forEach(function (en) { list['k' + en.ts] = en; }); return list;
-      });
+      var res = await appendClosing(ref, orderId, entries);   // sudah tersimpan (ketuk dua kali / coba ulang) → batal, tidak dobel
       var committed = res && (res.committed !== false);
       var okStored = committed || rows(date).some(function (r) { return r.orderId === orderId; });
       if (!okStored && res && res.snapshot) { var v = res.snapshot.val(); okStored = !!v && JSON.stringify(v).indexOf(orderId) >= 0; }
@@ -708,12 +748,12 @@
       var arr = data()[date] = Array.isArray(data()[date]) ? data()[date] : rows(date);
       entries.forEach(function (en) { if (!arr.some(function (r) { return r && r.ts === en.ts && r.orderId === en.orderId; })) arr.push(en); });
       try { renderAll(); } catch (e) { }
-      delete pendingIds[orderId]; dropDraft(orderId);
+      delete pendingIds[orderId]; pendSet(orderId, null); dropDraft(orderId);
       toast('Closing tersimpan · ' + name + ' · ' + rp(entries.reduce(function (s, x) { return s + x.revenue; }, 0)), 'success');
       try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) { }
       if (S === mine) close('saved');                          // form lain yang sedang dibuka tidak ikut tertutup
     } catch (err) {
-      delete pendingIds[orderId];
+      delete pendingIds[orderId]; pendSet(orderId, null);   // gagal sungguhan (bukan antre offline): draft tetap ada untuk Simpan lagi
       if (S === mine) { S.saving = false; S.slow = false; paint(); toast('Gagal menyimpan — cek internet lalu ketuk Simpan lagi (tidak akan dobel).', 'error'); }
       else toast('Closing ' + name + ' GAGAL tersimpan — buka form dan isi ulang.', 'error');
       try { console.warn('[closing] save', err); } catch (e) { }
@@ -722,48 +762,18 @@
 
   /* ── membuka form: tombol + SALE / Log a sale ───────────────────── */
   function hookOpen() {
-    // premium-ui membuka drawer lama dengan class body 'premium-form-open'. Untuk
-    // sales yang memakai form baru, drawer lama langsung ditutup lagi (sebelum
-    // tergambar) dan form closing yang dibuka.
+    // premium-ui membuka drawer lama ("Log Entry") dengan class body 'premium-form-open'.
+    // Form lama sudah dihapus: class itu langsung dicabut lagi (MutationObserver jalan
+    // sebelum layar digambar) dan form closing yang dibuka — juga sebelum config dimuat.
+    // closing.css menyembunyikan drawer lama sepenuhnya kalau-kalau hook ini terlambat.
     var b = D.body; if (!b || !W.MutationObserver) return;
-    var was = b.classList.contains('premium-form-open');
+    if (b.classList.contains('premium-form-open')) { b.classList.remove('premium-form-open'); open(); }
     new MutationObserver(function () {
-      var now = b.classList.contains('premium-form-open');
-      if (!now || was) { was = now; return; }                // hanya saat drawer BARU dibuka
-      was = true; spTouched = false;
-      if (bypassOnce) { bypassOnce = false; paintLegacyBanner(); return; }
-      var m = meLive();
-      if (CFG.mode === 'all' || (m && enabledFor(m.sp))) { b.classList.remove('premium-form-open'); was = false; open(); }
-      else paintLegacyBanner();
+      if (!b.classList.contains('premium-form-open')) return;
+      b.classList.remove('premium-form-open');
+      open();                                                  // sudah terbuka → tidak dibuka dua kali
     }).observe(b, { attributes: true, attributeFilter: ['class'] });
-    // nilai bawaan select (nama pertama) tidak dihitung: banner baru muncul setelah user sendiri memilih tim/nama
-    ['inSP', 'inTeam'].forEach(function (id) { var el = D.getElementById(id); if (el) el.addEventListener('change', function () { spTouched = true; setTimeout(paintLegacyBanner, 0); }); });
-  }
-  // buka drawer lama lewat tombol premium-ui (pindah ke Dashboard + hari ini, seperti biasa)
-  function openLegacy() {
-    var btn = D.querySelector('.premium-quick-add') || D.querySelector('.premium-add-fab');
-    setTimeout(function () { if (btn) btn.click(); else D.body.classList.add('premium-form-open'); setTimeout(function () { bypassOnce = false; }, 400); }, 60);
-  }
-  // banner di drawer lama: hanya untuk peserta uji coba (nama terpilih / HP ini)
-  function paintLegacyBanner() {
-    var rb = D.querySelector('.hxk-recap-btn'); if (rb) rb.style.display = anyEnabled() ? '' : 'none';
-    var panel = D.getElementById('saleEntryPanel'); if (!panel) return;
-    var bn = panel.querySelector('.hxk-legacy');
-    var sel = (D.getElementById('inSP') || {}).value, m = me();
-    var show = CFG.mode === 'all' || (CFG.mode === 'pilot' && ((m && inPilot(m.sp)) || (spTouched && sel && inPilot(sel))));
-    if (!show) { if (bn) bn.remove(); return; }
-    if (!bn) {
-      bn = D.createElement('button'); bn.type = 'button'; bn.className = 'hxk-legacy';
-      bn.addEventListener('click', function () {
-        var sp = (D.getElementById('inSP') || {}).value, team = (D.getElementById('inTeam') || {}).value;
-        D.body.classList.remove('premium-form-open');
-        // pemilik HP TIDAK pernah diambil dari pilihan drawer lama (bawaannya selalu nama pertama).
-        // Belum ada pemilik → form bertanya "Kamu siapa?". Sudah ada → nama terpilih hanya untuk closing ini.
-        if (meLive() && spTouched && sp && enabledFor(sp)) open(sp, team); else open();
-      });
-      var title = panel.querySelector('.pt'); if (title && title.nextSibling) panel.insertBefore(bn, title.nextSibling); else panel.insertBefore(bn, panel.firstChild);
-    }
-    bn.innerHTML = '<b>Pakai form closing baru</b><span>Customer, produk di-test, produk closing, SPV — satu kali isi</span><i>›</i>';
+    var old = D.getElementById('saleEntryPanel'); if (old) old.setAttribute('aria-hidden', 'true');
   }
 
   /* ══ EXPORT ════════════════════════════════════════════════════════ */
@@ -948,26 +958,13 @@
   }
   var admDraft = { spv: null, pin: '' };
   // set keanggotaan 1 nama di config/closing/pilot secara atomik (transaction di daun itu saja)
-  function pilotSet(name, on) {
-    if (!W._cfgTeamsLoaded) { toast('Tunggu config dimuat dulu…', 'info'); return Promise.reject(new Error('cfg')); }
-    var r = dbRef('config/closing/pilot'); if (!r) return Promise.reject(new Error('db'));
-    return r.transaction(function (cur) {
-      var list = Array.isArray(cur) ? cur.filter(Boolean) : cur && typeof cur === 'object' ? Object.keys(cur).map(function (k) { return cur[k]; }).filter(Boolean) : [];
-      var i = list.findIndex(function (x) { return norm(x) === norm(name); });
-      if (on && i < 0) list.push(name); else if (!on && i >= 0) list.splice(i, 1);
-      return list;
-    });
-  }
   function paintAdmin() {
     if (!adminBox) return;
-    var T = roster(), a = D.activeElement, fk = a && adminBox.contains(a) && a.getAttribute('data-adm-in'), pos = fk && a.selectionStart != null ? a.selectionStart : null;
+    var a = D.activeElement, fk = a && adminBox.contains(a) && a.getAttribute('data-adm-in'), pos = fk && a.selectionStart != null ? a.selectionStart : null;
     adminBox.innerHTML =
       '<div class="omset-section-title" style="color:#30d158;">Form Closing (baru)</div>' +
       '<div class="hxk-adm-sub">Input closing: customer, produk di-test, produk closing, SPV. Data tetap masuk omzet seperti biasa.</div>' +
-      '<div class="hxk-lbl">Mode</div><div class="hxk-seg hxk-adm-seg">' +
-      [['off', 'Mati'], ['pilot', 'Uji coba'], ['all', 'Semua sales']].map(function (m) { return '<button type="button" data-adm="mode" data-v="' + m[0] + '" class="' + (CFG.mode === m[0] ? 'on' : '') + '">' + m[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="hxk-lbl hxk-lbl2">Peserta uji coba (' + CFG.pilot.length + ')</div><div class="hxk-chips">' +
-      Object.keys(T).map(function (t) { return ((T[t] && T[t].m) || []).map(function (n) { return '<button type="button" class="hxk-chip' + (inPilot(n) ? ' on' : '') + '" data-adm="pilot" data-v="' + esc(n) + '">' + esc(n) + '</button>'; }).join(''); }).join('') + '</div>' +
+      '<div class="hxk-adm-sub">Dipakai semua sales lewat tombol + Sale (form lama sudah dihapus).</div>' +
       '<div class="hxk-lbl hxk-lbl2">Daftar SPV</div><input type="text" class="hxk-in" data-adm-in="spv" value="' + esc(admDraft.spv != null ? admDraft.spv : CFG.spv.join(', ')) + '"><button type="button" class="btn hxk-adm-btn" data-adm="spv">Simpan daftar SPV</button>' +
       '<div class="hxk-lbl hxk-lbl2">PIN leader untuk export ' + (CFG.pinHash ? '<span class="hxk-ok">· sudah diatur</span>' : '<span class="hxk-bad">· belum diatur</span>') + '</div>' +
       '<input type="password" class="hxk-in" data-adm-in="pin" inputmode="numeric" placeholder="PIN baru (4–8 angka)" autocomplete="new-password"><button type="button" class="btn hxk-adm-btn" data-adm="pin">Simpan PIN</button>' +
@@ -985,8 +982,7 @@
       var b = e.target.closest('[data-adm]'); if (!b) return;
       var a = b.getAttribute('data-adm'), v = b.getAttribute('data-v');
       try {
-        if (a === 'mode') { await cfgWrite({ mode: v }); toast('Mode form closing: ' + b.textContent, 'success'); }
-        else if (a === 'pilot') await pilotSet(v, !inPilot(v)); else if (a === 'spv') {
+        if (a === 'spv') {
           var names = adminBox.querySelector('[data-adm-in="spv"]').value.split(',').map(function (s) { return s.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
           var uniq = names.filter(function (n, i) { return names.map(norm).indexOf(norm(n)) === i; });
           if (!uniq.length) { toast('Daftar SPV tidak boleh kosong.', 'error'); return; }
@@ -1040,8 +1036,10 @@
     try { if (history.state && (history.state.hxk || history.state.hxkx)) { popSkip++; history.back(); } } catch (e) { }
     watchOnline();
     var dr = loadDraft();
-    if (dr) setTimeout(function () { var m = meLive(); if (!sheet && (CFG.mode === 'all' || (m && enabledFor(m.sp)))) toast('Ada closing yang belum disimpan (' + (dr.customer || 'tanpa nama') + ') — ketuk + Sale untuk melanjutkan.', 'info'); }, 3500);
-    watchCfg(); hookOpen(); paintLegacyBanner();
+    if (dr) setTimeout(function () { var d2 = loadDraft(); if (!sheet && d2 && !(d2.orderId && pendAll()[d2.orderId])) toast('Ada closing yang belum disimpan (' + (dr.customer || 'tanpa nama') + ') — ketuk + Sale untuk melanjutkan.', 'info'); }, 3500);
+    var cc = cachedCfg(); if (cc) applyCfg(Object.assign({}, cc, { pinHash: CFG.pinHash }));
+    watchCfg(); hookOpen();
+    replayPending();
     var tries = 0;
     (function mount() { mountAdmin(); mountRecapBtn(); if ((!adminBox || !D.querySelector('.hxk-recap-btn')) && tries++ < 40) setTimeout(mount, 500); })();
     try { if (W.HX && HX.on) HX.on('page', function () { setTimeout(mountRecapBtn, 60); }); } catch (e) { }
@@ -1053,6 +1051,7 @@
   W.HXClosing = {
     open: open, close: close, exportOpen: openExport, collect: collect, doExport: doExport,
     cfg: function () { return JSON.parse(JSON.stringify(CFG)); }, me: me, setMe: setMe,
-    _state: function () { return S; }, _online: function () { return online; }, _validate: function () { return S ? validate() : null; }, _applyCfg: applyCfg
+    repaintAdmin: function () { if (adminBox) paintAdmin(); },
+    _state: function () { return S; }, _online: function () { return online; }, _pending: pendAll, _validate: function () { return S ? validate() : null; }, _applyCfg: applyCfg
   };
 })();

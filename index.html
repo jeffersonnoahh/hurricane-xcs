@@ -91,7 +91,8 @@
 <link rel="stylesheet" href="css/fx-year.css?v=20261029-yr1">
 <link rel="stylesheet" href="css/fx-egg.css?v=20261030-egg3">
 <link rel="stylesheet" href="css/fx-duo.css?v=20261103-duo2">
-<link rel="stylesheet" href="css/closing.css?v=20261107-cl6">
+<link rel="stylesheet" href="css/fixes.css?v=20261113-fix1">
+<link rel="stylesheet" href="css/closing.css?v=20261118-cl11">
 </head>
 
 <body>
@@ -745,9 +746,9 @@
       <div class="ins-kpi-sub" id="insAvgUpsellSub">vs Rp 0 regular</div>
     </div>
     <div class="ins-kpi-card" style="border-color:rgba(68,138,255,0.3);">
-      <div class="ins-kpi-lbl">Tagged Coverage</div>
+      <div class="ins-kpi-lbl">Upsell · Cross · Repeat</div>
       <div class="ins-kpi-val" id="insCoverage" style="color:#448aff;">0<span class="u">%</span></div>
-      <div class="ins-kpi-sub" id="insCoverageSub">data hygiene</div>
+      <div class="ins-kpi-sub" id="insCoverageSub">share of orders</div>
     </div>
   </div>
 
@@ -1092,7 +1093,7 @@
     <div class="omset-section">
       <div class="omset-section-title" style="color:#ff3b5c;">Danger Zone</div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;margin-bottom:14px;">These actions cannot be undone. Use with caution.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="hx-adm-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">
         <button class="btn" style="background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:42px;" onclick="exportAllData()">Export All Data (CSV)</button>
         <button class="btn" style="background:rgba(255,107,26,0.1);border:1px solid rgba(255,107,26,0.3);color:#ff6b1a;height:42px;" onclick="resetTodayData()">Reset Today's Data</button>
         <button class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:42px;grid-column:span 2;" onclick="resetAllData()">Delete ALL Data</button>
@@ -1102,7 +1103,7 @@
     <!-- Section: Change Password -->
     <div class="omset-section">
       <div class="omset-section-title">Change Admin Password</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+      <div class="hx-adm-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:end;">
         <div class="ig"><div class="igl">Current Password</div><input type="password" id="currentPwd"/></div>
         <div class="ig"><div class="igl">New Password</div><input type="password" id="newPwd"/></div>
         <button class="btn bg-gold" onclick="changePassword()">Update</button>
@@ -1222,10 +1223,10 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20261106-cl2"></script>
+<script src="js/app.js?v=20261118-fix2"></script>
 <script src="js/watchlist.js?v=20261029-yr1"></script>
 <script src="js/sp-notes.js?v=20261029-yr1"></script>
-<script src="js/premium-ui.js?v=20261029-yr1"></script>
+<script src="js/premium-ui.js?v=20261118-nolama"></script>
 <script src="js/reference-dashboard.js?v=20261029-yr1"></script>
 <script src="js/motion.js?v=20261029-yr1"></script>
 <script src="js/fx-core.js?v=20261029-yr1"></script>
@@ -1241,6 +1242,6 @@
 <script src="js/fx-stars.js?v=20261029-yr1"></script>
 <script src="js/fx-year.js?v=20261029-yr1"></script>
 <script src="js/fx-egg.js?v=20261030-egg3"></script>
-<script src="js/closing.js?v=20261107-cl8"></script>
+<script src="js/closing.js?v=20261118-cl11"></script>
 </body>
 </html>

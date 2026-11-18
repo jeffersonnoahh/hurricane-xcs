@@ -58,15 +58,21 @@ window.onload = function(){
       appId:"1:13981949759:web:356458e60883bf36ab3d8a"
     });
     window.db = firebase.database();
+    // config (roster, products, form settings) first: the server answers listens in order,
+    // so the small config node arrives before the full sales history
+    if(typeof loadGlobalConfig==='function')loadGlobalConfig();
 
+    // lubang di array hari itu (record dihapus per indeks lewat REST/console) atau baris
+    // tanpa objek dibuang di sini — dulu satu lubang membuat renderAll berhenti di tengah
+    const _rowsOf=v=>(Array.isArray(v)?v:Object.values(v||{})).filter(e=>e&&typeof e==='object');
     db.ref('scores').on('value', snap=>{
       const data=snap.val()||{};
       allData={};
       Object.keys(data).forEach(k=>{
-        const v=data[k];
-        allData[k]=Array.isArray(v)?v:Object.values(v);
+        allData[k]=_rowsOf(data[k]);
       });
       renderAll();
+      _refreshOpenPage();
       if(adminUnlocked&&document.getElementById('page-admin')&&document.getElementById('page-admin').classList.contains('active')){
         if(typeof renderEditRecords==='function')renderEditRecords();
       }
@@ -75,10 +81,10 @@ window.onload = function(){
       const data=snap.val()||{};
       allActs={};
       Object.keys(data).forEach(k=>{
-        const v=data[k];
-        allActs[k]=Array.isArray(v)?v:Object.values(v);
+        allActs[k]=_rowsOf(data[k]);
       });
       renderAll();
+      _refreshOpenPage();
       if(adminUnlocked&&document.getElementById('page-admin')&&document.getElementById('page-admin').classList.contains('active')){
         if(typeof renderEditRecords==='function')renderEditRecords();
       }
@@ -114,29 +120,31 @@ window.onload = function(){
   setupMidnightRefresh();
 };
 
+let _lastDayKey=dk(new Date()),_midnightT=null;
 function setupMidnightRefresh(){
+  // setTimeout ke tengah malam BERIKUTNYA setiap kali (bukan setInterval 24 jam yang
+  // bergeser kalau HP tidur), plus cek saat tab kembali terlihat
   const now=new Date();
-  const tomorrow=new Date(now);
-  tomorrow.setDate(now.getDate()+1);
-  tomorrow.setHours(0,0,0,500); // 00:00:00.500 to ensure we're past midnight
-  const msUntilMidnight=tomorrow.getTime()-now.getTime();
-
-  console.log('Next auto-refresh at midnight in '+Math.round(msUntilMidnight/60000)+' minutes');
-
-  setTimeout(()=>{
-    // At midnight: refresh everything
-    midnightRefresh();
-    // Then schedule every 24 hours
-    setInterval(midnightRefresh,24*60*60*1000);
-  },msUntilMidnight);
+  const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,0,500);
+  clearTimeout(_midnightT);
+  _midnightT=setTimeout(()=>{midnightRefresh();setupMidnightRefresh();},tomorrow.getTime()-now.getTime());
+  if(!window.__hxDayWatch){
+    window.__hxDayWatch=true;
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dk(new Date())!==_lastDayKey){midnightRefresh();setupMidnightRefresh();}});
+  }
 }
 
 function midnightRefresh(){
-  console.log('Midnight auto-refresh triggered');
+  const nowKey=dk(new Date());
+  if(nowKey===_lastDayKey)return;
+  // sedang melihat hari lampau → tetap di tanggal yang sama (vOff relatif terhadap hari ini)
+  const passed=Math.round((new Date(nowKey+'T00:00:00')-new Date(_lastDayKey+'T00:00:00'))/864e5);
+  if(vOff!==0)vOff=Math.max(-365,vOff-passed);
+  _lastDayKey=nowKey;
   // Update active date keys
   if(typeof initActDate==='function')initActDate();
-  // Re-render everything for new day
-  renderAll();
+  // Re-render everything for new day (labels too)
+  if(typeof updateDayUI==='function')updateDayUI();else renderAll();
   if(typeof renderNotReported==='function')renderNotReported();
   // Show a friendly toast
   if(typeof showToast==='function'){
@@ -437,6 +445,17 @@ function jumpToToday(){
   updateDayUI();closeCal();
 }
 
+// halaman yang tidak ikut renderAll() digambar ulang saat data baru masuk
+// (tidak saat sedang mengetik di halaman itu)
+function _refreshOpenPage(){
+  const a=document.querySelector('.page.active');if(!a)return;
+  const f=document.activeElement;if(f&&a.contains(f)&&/^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName))return;
+  try{
+    if(a.id==='page-insights')renderInsights();
+    else if(a.id==='page-warning')renderWarning();
+    else if(a.id==='page-mysales')renderMySales();
+  }catch(e){console.warn('[refresh]',e);}
+}
 // ══ PAGES ══
 function showPage(p,el){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
@@ -448,7 +467,7 @@ function showPage(p,el){
   else if(p==='warning')renderWarning();
   else if(p==='activity'){renderAll();renderNotReported();}
   else if(p==='omset')initOmset();
-  else if(p==='admin'){if(adminUnlocked){loadAdminSettings();renderEditRecords();}}
+  else if(p==='admin'){if(adminUnlocked){loadAdminSettings();renderEditRecords();}if(window.HXClosing&&HXClosing.repaintAdmin)HXClosing.repaintAdmin();}
   else if(p==='mysales'){populateMsSPSelect();renderMySales();}
   else renderAll();
 }
@@ -742,6 +761,7 @@ function updatePP(){updatePriceMode();}
 // ══ ADD ENTRY ══
 function addEntry(){
   try{
+    if(window.db&&!window._cfgTeamsLoaded){showToast('Data tim belum dimuat — tunggu sebentar lalu ulangi.','error');return;}
     const team=document.getElementById('inTeam').value;
     const sp=document.getElementById('inSP').value;
     if(!team||!sp){showToast('Pilih team & nama sales dulu!','error');return;}
@@ -866,6 +886,7 @@ function addActivity(){
     const fupsEl=document.getElementById('aFups');
     const notesEl=document.getElementById('aNotes');
 
+    if(window.db&&!window._cfgTeamsLoaded){showToast('Data tim belum dimuat — tunggu sebentar lalu ulangi.','error');return;}
     if(!teamEl||!spEl||!callsEl||!fupsEl){
       showToast('Form not loaded — please refresh','error');return;
     }
@@ -960,12 +981,25 @@ async function removeActivity(i){
   }
 }
 
+// close rate yang bisa dipercaya: tanpa chat, channel tanpa laporan, atau closing > chat tercatat → "—"
+function _rateOk(sp,closes,chats){
+  if(!(chats>0)||closes>chats)return false;
+  if(typeof _isActExcluded==='function'&&_isActExcluded(sp))return false;
+  return true;
+}
 // ══ AGGREGATORS ══
+// tim record yang sudah tidak ada di roster (mis. nama tim lama) → tim sales itu sekarang,
+// supaya tabel tim tetap berjumlah sama dengan total di atasnya
+function _teamFor(sp,team){
+  if(TM[team])return team;
+  const k=(typeof rosterKey==='function')?rosterKey(sp,team):null;
+  return k?k.slice(k.indexOf('|')+1):team;
+}
 function aggTeams(entries,acts){
   const t={};
   Object.keys(TM).forEach(k=>t[k]={chats:0,closes:0,revenue:0,calls:0,fups:0});
-  entries.forEach(e=>{if(t[e.team]){t[e.team].chats+=e.chats;t[e.team].closes+=e.units;t[e.team].revenue+=e.revenue;}});
-  acts.forEach(a=>{if(t[a.team]){t[a.team].calls+=a.calls;t[a.team].fups+=a.fups;t[a.team].chats+=a.chats;}});
+  entries.forEach(e=>{const tk=_teamFor(e.sp,e.team);if(t[tk]){t[tk].chats+=e.chats||0;t[tk].closes+=e.units||0;t[tk].revenue+=e.revenue||0;}});
+  acts.forEach(a=>{const tk=_teamFor(a.sp,a.team);if(t[tk]){t[tk].calls+=a.calls||0;t[tk].fups+=a.fups||0;t[tk].chats+=a.chats||0;}});
   return Object.entries(t).map(([n,d])=>({n,...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue);
 }
 function aggSP(entries,acts){
@@ -1195,7 +1229,7 @@ function renderAll(){
       const isEmpty=s.chats===0&&s.closes===0&&s.calls===0&&s.fups===0;
       return`<tr data-k="${_htmlEsc(s.sp+'|'+s.team)}" onclick="openSPModal('${_js(s.sp)}','${_js(s.team)}')" style="${isEmpty?'opacity:0.5':''}">
         <td><span class="rnk ${rcl(i,s.revenue>0)}">${md(i)}</span></td>
-        <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
+        <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${String(s.sp||'?')[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.closes}</span></td>
         <td><span class="rc">${fFull(s.revenue)}</span></td>
@@ -1245,7 +1279,7 @@ function renderAll(){
       let sub,right;
       if(_actK.has(k)||s.chats>0){
         sub=`Team ${s.team} · ${s.closes}x · ${s.chats} chats`;
-        right=`<div class="lbr2">${(_isLeader(s.sp)&&!s.chats)?'— rate':s.rate.toFixed(1)+'% rate'}</div>`;
+        right=`<div class="lbr2">${!_rateOk(s.sp,s.closes,s.chats)?'— rate':s.rate.toFixed(1)+'% rate'}</div>`;
       }else{
         const ts=_lastSaleTs(entries,s.sp,s.team,_dayK);
         sub=`Team ${s.team} · ${s.closes}x`;
@@ -1356,7 +1390,7 @@ function renderActLog(acts){
           <div class="av" style="color:#f5c518">${a.chats||0}</div>
           <div class="av" style="color:#448aff">${a.calls}</div>
           <div class="av" style="color:#ff6b1a">${a.fups}</div>
-          <div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:4px;">${a.notes||'—'} ${lateBadge}</div>
+          <div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:4px;">${_htmlEsc(a.notes||'—')} ${lateBadge}</div>
           <div><span class="ed" onclick="removeActivityByDate('${a.dateKey}',${a.ts})">✕</span></div>
         </div>`;
       }).join('');
@@ -1493,7 +1527,7 @@ function _spModalPaint(sp,team,d,reopen){
   const n=v=>excl?'—':String(v);
   const s=t=>t?'<div class="mksub">'+t+'</div>':'';
   // tanpa chat, close rate tidak punya penyebut — "0%" itu menyesatkan
-  const rate=(!excl&&d.chats>0)?(d.closes/d.chats*100).toFixed(1)+'%':'—';
+  const rate=(!excl&&_rateOk(sp,d.closes,d.chats))?(d.closes/d.chats*100).toFixed(1)+'%':'—';
 
   document.getElementById('mKPIs').innerHTML=
     '<div class="mk"><div class="mkl">Omset / Revenue</div><div class="mkv go" style="font-size:20px">'+fFull(d.revenue)+'</div>'+s(d.sub.rev)+'</div>'+
@@ -1683,7 +1717,7 @@ function renderMonthly(){
     entries.forEach(e=>{
       dayChats+=e.chats; dayCloses+=e.units; dayRev+=e.revenue;
       totalChats+=e.chats; totalCloses+=e.units; totalRev+=e.revenue;
-      if(teamTotals[e.team]){teamTotals[e.team].chats+=e.chats;teamTotals[e.team].closes+=e.units;teamTotals[e.team].revenue+=e.revenue;}
+      {const tk=_teamFor(e.sp,e.team);if(teamTotals[tk]){teamTotals[tk].chats+=e.chats||0;teamTotals[tk].closes+=e.units||0;teamTotals[tk].revenue+=e.revenue||0;}}
       const sk=e.sp+'|'+e.team;
       if(!spTotals[sk])spTotals[sk]={sp:e.sp,team:e.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
       spTotals[sk].chats+=e.chats;spTotals[sk].closes+=e.units;spTotals[sk].revenue+=e.revenue;
@@ -1699,7 +1733,7 @@ function renderMonthly(){
     acts.forEach(a=>{
       totalCalls+=a.calls;totalFups+=a.fups;totalChats+=a.chats;
       dayChats+=a.chats;
-      if(teamTotals[a.team]){teamTotals[a.team].calls+=a.calls;teamTotals[a.team].fups+=a.fups;teamTotals[a.team].chats+=a.chats;}
+      {const tk=_teamFor(a.sp,a.team);if(teamTotals[tk]){teamTotals[tk].calls+=a.calls||0;teamTotals[tk].fups+=a.fups||0;teamTotals[tk].chats+=a.chats||0;}}
       const sk=a.sp+'|'+a.team;
       if(!spTotals[sk])spTotals[sk]={sp:a.sp,team:a.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
       spTotals[sk].calls+=a.calls;spTotals[sk].fups+=a.fups;spTotals[sk].chats+=a.chats;
@@ -1796,11 +1830,11 @@ function renderMonthly(){
       const tc=TM[s.team]||{c:'#888'};
       return`<tr data-k="${_htmlEsc(s.sp+'|'+s.team)}" onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
         <td><span class="rnk ${rcl(i,s.revenue>0)}">${md(i)}</span></td>
-        <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${s.sp[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
+        <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${String(s.sp||'?')[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.calls}</span></td>
         <td><span class="nb">${s.closes}</span></td>
-        <td>${(_isLeader(s.sp)&&!s.chats)?'<span class="nb">—</span>':`<span class="rb ${rc(s.rate)}">${s.rate.toFixed(1)}%</span>`}</td>
+        <td>${!_rateOk(s.sp,s.closes,s.chats)?'<span class="nb">—</span>':`<span class="rb ${rc(s.rate)}">${s.rate.toFixed(1)}%</span>`}</td>
         <td><span class="rc">${fFull(s.revenue)}</span></td>
       </tr>`;
     }).join('');
@@ -1861,7 +1895,7 @@ function renderSpLookup(){
 
   resultEl.innerHTML=matches.map(s=>{
     const tc=TM[s.team]||{c:'#888',bg:'#161624',e:''};
-    const rate=s.chats>0?(s.closes/s.chats*100).toFixed(1):'0';
+    const rate=_rateOk(s.sp,s.closes,s.chats)?(s.closes/s.chats*100).toFixed(1):'—';
     return `<div class="sp-lookup-card" style="border-left:4px solid ${tc.c}" onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
       <div class="sp-lookup-head">
         <div class="sp-lookup-av" style="background:${tc.bg};color:${tc.c}">${s.sp[0].toUpperCase()}</div>
@@ -1879,7 +1913,7 @@ function renderSpLookup(){
         <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Calls</div><div class="sp-lookup-stat-val" style="color:#448aff">${s.calls||0}</div></div>
         <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Follow-ups</div><div class="sp-lookup-stat-val" style="color:#ff6b1a">${s.fups||0}</div></div>
         <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Closes</div><div class="sp-lookup-stat-val" style="color:#00e676">${s.closes||0}</div></div>
-        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Close Rate</div><div class="sp-lookup-stat-val" style="color:#7c4dff">${rate}%</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Close Rate</div><div class="sp-lookup-stat-val" style="color:#7c4dff">${rate}${rate==='—'?'':'%'}</div></div>
       </div>
     </div>`;
   }).join('');
@@ -2232,7 +2266,8 @@ function renderInsights(){
   const taggedRev=tagged.reduce((s,e)=>s+(e.revenue||0),0);
   const untaggedRev=totalRev-taggedRev;
 
-  const regularEntries=entries.filter(e=>!Array.isArray(e.saleType)||e.saleType.length===0);
+  // sejak Agustus setiap order wajib punya tipe (Test Drive / Langsung Order …) → "regular" = tanpa upsell/cross/repeat
+  const regularEntries=entries.filter(e=>!['upsell','cross','repeat'].some(t=>_hasTag(e,t)));
   const regularRev=regularEntries.reduce((s,e)=>s+(e.revenue||0),0);
 
   const pct=(a,b)=>b>0?Math.round(a/b*1000)/10:0;
@@ -2249,17 +2284,20 @@ function renderInsights(){
   const avgRegular=avg(regularEntries,'revenue');
   document.getElementById('insAvgUpsell').textContent=fRp(avgUpsell);
   document.getElementById('insAvgUpsellSub').textContent=`vs ${fRp(avgRegular)} regular`;
-  document.getElementById('insCoverage').innerHTML=pct(tagged.length,totalOrders)+'<span class="u">%</span>';
-  document.getElementById('insCoverageSub').textContent=`${untagged} untagged orders`;
+  document.getElementById('insCoverage').innerHTML=pct(totalOrders-regularEntries.length,totalOrders)+'<span class="u">%</span>';
+  document.getElementById('insCoverageSub').textContent=`${totalOrders-regularEntries.length} of ${totalOrders} orders`+(untagged?` · ${untagged} untagged`:'');
 
   // Revenue Mix Stacked Bar
+  // tiap order masuk SATU segmen (Upsell > Cross > Repeat > Regular) supaya totalnya = omzet periode ini
+  const mixOf=e=>_hasTag(e,'upsell')?0:_hasTag(e,'cross')?1:_hasTag(e,'repeat')?2:3;
+  const mixRev=[0,0,0,0];entries.forEach(e=>{mixRev[mixOf(e)]+=e.revenue||0;});
   const segs=[
-    {label:'Upsell',val:upsellRev,color:'#ff6b1a'},
-    {label:'Cross',val:crossRev,color:'#7c4dff'},
-    {label:'Repeat',val:repeatRev,color:'#00e676'},
-    {label:'Untagged',val:untaggedRev,color:'#404065'},
+    {label:'Upsell',val:mixRev[0],color:'#ff6b1a'},
+    {label:'Cross',val:mixRev[1],color:'#7c4dff'},
+    {label:'Repeat',val:mixRev[2],color:'#00e676'},
+    {label:'Regular',val:mixRev[3],color:'#404065'},
   ];
-  const segMax=segs.reduce((s,x)=>s+x.val,0)||1;
+  const segMax=totalRev||1;
   document.getElementById('insRevBar').innerHTML=segs.map(s=>{
     const w=Math.max(0,s.val/segMax*100);
     return w<0.5?'':`<div class="ins-stacked-seg" style="width:${w}%;background:${s.color}">${w>8?Math.round(w)+'%':''}</div>`;
@@ -2361,7 +2399,7 @@ function renderInsights(){
   // 6-Month Trend
   const trend=[];
   for(let i=5;i>=0;i--){
-    const d=new Date();d.setMonth(d.getMonth()-i);
+    const _n=new Date(),d=new Date(_n.getFullYear(),_n.getMonth()-i,1);   // tanggal 1: setMonth dari tgl 29–31 melompati bulan
     const y=d.getFullYear(),mo=d.getMonth();
     const monthEntries=Object.keys(allData||{}).filter(k=>{
       const dd=new Date(k+'T00:00:00');return dd.getFullYear()===y&&dd.getMonth()===mo;
@@ -2383,7 +2421,7 @@ function renderInsights(){
         <div class="ins-trend-bar cr" style="height:${t.crossRate/trendMax*100}%" title="Cross ${t.crossRate}%"></div>
         <div class="ins-trend-bar rp" style="height:${t.repeatRate/trendMax*100}%" title="Repeat ${t.repeatRate}%"></div>
       </div>
-      <div class="ins-trend-month">${t.label}<br><span style="color:#404065">${t.total}o</span></div>
+      <div class="ins-trend-month">${t.label}<br><span style="color:#404065;text-transform:none">${t.total} order</span></div>
     </div>
   `).join('')}</div>
   <div style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-family:'Space Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:0.5px;">
@@ -2461,7 +2499,7 @@ function saveWarnThresh(){
 }
 
 // Marketplace / channel accounts excluded from Warning page (not real reps)
-const _WARN_EXCLUDE=['Tokopedia','Live tiktok','Shopee live','Shopee'];
+const _WARN_EXCLUDE=['Tokopedia','Live tiktok','Shopee live','Shopee','TIKTOK'];
 const _isWarnExcluded=(sp)=>_WARN_EXCLUDE.some(x=>x.toLowerCase()===String(sp||'').toLowerCase());
 // Channels that do NOT need to log daily calls/follow-ups — hidden from the
 // "belum laporan" tracker and the activity form (sales/omset unaffected)
@@ -2893,7 +2931,7 @@ let adminUnlocked=false;
 const DEFAULT_ADMIN_PWD='hurricane2026';
 
 function getAdminPwd(){
-  return localStorage.getItem('hxcs_admin_pwd')||DEFAULT_ADMIN_PWD;
+  try{return localStorage.getItem('hxcs_admin_pwd')||window.__hxAdminPwd||DEFAULT_ADMIN_PWD;}catch(e){return window.__hxAdminPwd||DEFAULT_ADMIN_PWD;}
 }
 
 function checkAdminPwd(){
@@ -2920,7 +2958,7 @@ function adminLogout(){
 
 function loadAdminSettings(){
   // Load targets
-  const cfg=JSON.parse(localStorage.getItem('hxcs_config')||'{}');
+  let cfg={};try{cfg=JSON.parse(localStorage.getItem('hxcs_config')||'{}');}catch(e){}
   document.getElementById('setChatTarget').value=cfg.chatTarget||TC;
   document.getElementById('setRevTarget').value=cfg.revTarget||TR;
   document.getElementById('setDeadline').value=cfg.deadlineHour||14;
@@ -3017,7 +3055,7 @@ function renderEditRecords(){
         </div>
         <div style="display:flex;gap:6px;">
           <button onclick="openEditMo('sale','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">Edit</button>
-          <button onclick="deleteRecord('sale','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;"></button>
+          <button onclick="deleteRecord('sale','${r._date}',${r._idx})" class="btn" aria-label="Hapus" title="Hapus" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;font-size:14px;">✕</button>
         </div>
       </div>`;
     } else {
@@ -3033,10 +3071,10 @@ function renderEditRecords(){
           <div><span style="color:#6060a0;">Calls:</span><br/><b style="color:#448aff;">${r.calls||0}</b></div>
           <div><span style="color:#6060a0;">Followups:</span><br/><b style="color:#ff6b1a;">${r.fups||0}</b></div>
         </div>
-        ${r.notes?`<div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;margin-bottom:10px;">${r.notes}</div>`:''}
+        ${r.notes?`<div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;margin-bottom:10px;">${_htmlEsc(r.notes)}</div>`:''}
         <div style="display:flex;gap:6px;">
           <button onclick="openEditMo('activity','${r._date}',${r._idx})" class="btn" style="flex:1;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;height:32px;font-size:11px;">Edit</button>
-          <button onclick="deleteRecord('activity','${r._date}',${r._idx})" class="btn" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;"></button>
+          <button onclick="deleteRecord('activity','${r._date}',${r._idx})" class="btn" aria-label="Hapus" title="Hapus" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.3);color:#ff3b5c;height:32px;width:50px;font-size:14px;">✕</button>
         </div>
       </div>`;
     }
@@ -3047,8 +3085,36 @@ function renderEditRecords(){
 let _editMoCtx=null;
 const _editMoTypes=new Set();
 
+// Record yang diedit/dihapus dicari ulang DI SERVER saat simpan (transaction), dengan isi
+// persis saat modal dibuka — indeks bisa bergeser kalau ada yang menghapus record lain
+// di tanggal itu (Form Closing "Hapus", ✕ di log), dan dulu itu mengubah/menghapus
+// penjualan orang lain.
+function _recSig(r){try{return JSON.stringify(r,Object.keys(r).filter(k=>k.charAt(0)!=='_').sort());}catch(e){return '';}}
+function _txnRecord(node,date,sig,fn){
+  let found=false;
+  return window.db.ref(node+'/'+date).transaction(curr=>{
+    found=false;
+    if(curr==null)return curr;               // cache kosong: biarkan server mengulang dengan data asli
+    const isArr=Array.isArray(curr);
+    const keys=isArr?curr.map((_,i)=>i):Object.keys(curr);
+    for(const k of keys){
+      const r=curr[k];
+      if(r&&typeof r==='object'&&_recSig(r)===sig){
+        found=true;
+        const nv=fn(r);
+        if(nv===null){
+          if(isArr){curr.splice(k,1);return curr.length?curr:null;}
+          curr[k]=null;return curr;
+        }
+        curr[k]=nv;return curr;
+      }
+    }
+    return;                                  // tidak ketemu: batal, jangan sentuh apa pun
+  }).then(res=>{if(!found||(res&&res.committed===false))throw new Error('changed');return res;});
+}
 function openEditMo(type,date,idx){
-  _editMoCtx={type,date,idx};
+  const _src=type==='sale'?allData[date]:allActs[date];
+  _editMoCtx={type,date,idx,sig:_recSig((_src||[])[idx]||{})};
   _editMoTypes.clear();
 
   if(type==='sale'){
@@ -3112,41 +3178,39 @@ function closeEditMo(){
 
 function saveEditMo(){
   if(!_editMoCtx)return;
-  const {type,date,idx}=_editMoCtx;
+  const {type,date,idx,sig}=_editMoCtx;
+  const _changed=err=>showToast(err&&err.message==='changed'?'Record ini sudah berubah / terhapus di HP lain — buka ulang Edit Records.':'Save failed: '+(err&&err.message),'error');
   if(type==='sale'){
-    const r=allData[date][idx];
-    r.prod=document.getElementById('erProd').value;
-    r.units=parseInt(document.getElementById('erUnits').value)||1;
-    r.price=parseInt(String(document.getElementById('erPrice').value||'').replace(/[^0-9]/g,''))||0;
-    r.revenue=r.price*r.units;
-    r.notes=document.getElementById('erNotes').value.trim();
-    r.saleType=[..._editMoTypes];
-    r.editedAt=Date.now();
+    const prod=document.getElementById('erProd').value;
+    const units=parseInt(document.getElementById('erUnits').value)||1;
+    const price=parseInt(String(document.getElementById('erPrice').value||'').replace(/[^0-9]/g,''))||0;
+    const notes=document.getElementById('erNotes').value.trim();
+    // tipe lain (Test Drive / Langsung Order) dipertahankan DARI RECORD YANG DIEDIT (dicari di server);
+    // tombol modal hanya mengatur upsell/cross/repeat
+    const urc=[..._editMoTypes].filter(t=>['upsell','cross','repeat'].includes(t));
+    const patch=r=>Object.assign(r,{prod,units,price,revenue:price*units,notes,
+      saleType:(Array.isArray(r.saleType)?r.saleType:(r.saleType?[r.saleType]:[])).filter(t=>!['upsell','cross','repeat'].includes(t)).concat(urc),editedAt:Date.now()});
     if(window.db){
       showToast('Saving...','info');
-      window.db.ref('scores/'+date).set(allData[date]).then(()=>{
+      _txnRecord('scores',date,sig,patch).then(()=>{
         showToast('Sale updated!','success');
         renderEditRecords();renderAll();
-      }).catch(err=>showToast('Save failed: '+err.message,'error'));
+      }).catch(_changed);
     } else {
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
       showToast('Updated (local)','success');
       renderEditRecords();renderAll();
     }
   } else {
-    const r=allActs[date][idx];
     const pn=v=>parseInt(String(v||'').replace(/[^0-9]/g,''))||0;
-    r.chats=pn(document.getElementById('erChats').value);
-    r.calls=pn(document.getElementById('erCalls').value);
-    r.fups=pn(document.getElementById('erFups').value);
-    r.notes=document.getElementById('erNotes').value.trim();
-    r.editedAt=Date.now();
+    const chats=pn(document.getElementById('erChats').value),calls=pn(document.getElementById('erCalls').value),fups=pn(document.getElementById('erFups').value);
+    const notes=document.getElementById('erNotes').value.trim();
     if(window.db){
       showToast('Saving...','info');
-      window.db.ref('activities/'+date).set(allActs[date]).then(()=>{
+      _txnRecord('activities',date,sig,r=>Object.assign(r,{chats,calls,fups,notes,editedAt:Date.now()})).then(()=>{
         showToast('Activity updated!','success');
         renderEditRecords();renderAll();
-      }).catch(err=>showToast('Save failed: '+err.message,'error'));
+      }).catch(_changed);
     } else {
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
       showToast('Updated (local)','success');
@@ -3157,8 +3221,14 @@ function saveEditMo(){
 }
 
 async function deleteRecord(type,date,idx){
+  const sig=_recSig(((type==='sale'?allData[date]:allActs[date])||[])[idx]||{});   // isi record saat tombol diketuk
   const ok=await showConfirm('Delete Record','Delete this record? This cannot be undone.','Delete',true);
   if(!ok)return;
+  if(window.db){
+    _txnRecord(type==='sale'?'scores':'activities',date,sig,()=>null).then(()=>{showToast('Record deleted','success');renderEditRecords();renderAll();})
+      .catch(err=>showToast(err&&err.message==='changed'?'Record ini sudah berubah / terhapus di HP lain — tidak ada yang dihapus.':'Delete failed: '+(err&&err.message),'error'));
+    return;
+  }
   if(type==='sale'){
     allData[date].splice(idx,1);
     if(window.db){
@@ -3219,7 +3289,7 @@ function saveTargets(){
     TR=revTarget;
 
     // Save locally always
-    localStorage.setItem('hxcs_config',JSON.stringify(cfg));
+    try{localStorage.setItem('hxcs_config',JSON.stringify(cfg));}catch(e){}
     window._cfgChatTarget=chatTarget;
     window._cfgRevTarget=revTarget;
 
@@ -3262,20 +3332,21 @@ function renderAdminProducts(){
         <span style="font-family:'Space Mono',monospace;font-size:10px;color:#6060a0;">Rp</span>
         <input type="number" value="${price}" id="prodPrice_${name.replace(/[^a-zA-Z0-9]/g,'_')}" style="background:transparent;border:none;color:white;font-family:'Space Grotesk',sans-serif;font-size:13px;width:100%;outline:none;" onchange="updateProductPrice('${name}',this.value)"/>
       </div>
-      <button onclick="deleteProduct('${name}')" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.2);color:#ff3b5c;width:32px;height:32px;border-radius:6px;cursor:pointer;"></button>
+      <button onclick="deleteProduct('${name}')" aria-label="Hapus produk" title="Hapus" style="background:rgba(255,59,92,0.1);border:1px solid rgba(255,59,92,0.2);color:#ff3b5c;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;">✕</button>
     </div>`).join('');
 }
 
 function updateProductPrice(name,newPrice){
-  P[name]=parseInt(newPrice)||0;
-  saveProductsToFirebase();
+  const v=parseInt(newPrice)||0;
+  if(!saveProductsToFirebase(name,v))return;
+  P[name]=v;
 }
 
 async function deleteProduct(name){
   const ok=await showConfirm('Delete Product',`Delete product "${name}"?`,'Delete',true);
   if(!ok)return;
+  if(!saveProductsToFirebase(name,null))return;
   delete P[name];
-  saveProductsToFirebase();
   renderAdminProducts();
   refreshProductDropdown();
 }
@@ -3284,9 +3355,10 @@ function addNewProduct(){
   const name=document.getElementById('newProdName').value.trim().toUpperCase();
   const price=parseInt(document.getElementById('newProdPrice').value);
   if(!name||!price){showToast('Enter both name and price','error');return;}
+  if(/[.#$\[\]\/]/.test(name)){showToast('Nama produk tidak boleh berisi . # $ [ ] /','error');return;}
   if(P[name]){showToast('Product already exists!','error');return;}
+  if(!saveProductsToFirebase(name,price))return;
   P[name]=price;
-  saveProductsToFirebase();
   document.getElementById('newProdName').value='';
   document.getElementById('newProdPrice').value='';
   renderAdminProducts();
@@ -3294,12 +3366,23 @@ function addNewProduct(){
   showToast('Product added: '+name,'success');
 }
 
-function saveProductsToFirebase(){
+// satu produk per tulisan (null = hapus) — tidak pernah set() seluruh katalog (aturan insiden 2026-07-11)
+function saveProductsToFirebase(name,price){
   if(window.db){
-    window.db.ref('config/products').set(P);
-  } else {
-    localStorage.setItem('hxcs_products',JSON.stringify(P));
+    if(!window._cfgTeamsLoaded){showToast('Katalog belum dimuat — tunggu sebentar lalu ulangi.','error');return false;}
+    if(name==null)return false;
+    const fail=err=>showToast('Gagal menyimpan produk: '+err.message,'error');
+    if(!window._cfgHasProducts){
+      // katalog di server kosong (mis. setelah terhapus): isi ulang SELURUHNYA lewat update, jangan cuma 1 produk
+      window.db.ref('config/products').update(Object.assign({},P,{[name]:price==null?null:price})).catch(fail);
+      return true;
+    }
+    const ref=window.db.ref('config/products/'+name);
+    (price==null?ref.remove():ref.set(price)).catch(fail);
+    return true;
   }
+  try{localStorage.setItem('hxcs_products',JSON.stringify(Object.assign({},P,name==null?{}:{[name]:price})));}catch(e){}
+  return true;
 }
 
 function refreshProductDropdown(){
@@ -3681,7 +3764,7 @@ function changePassword(){
   const newP=document.getElementById('newPwd').value;
   if(current!==getAdminPwd()){showToast('Current password is wrong','error');return;}
   if(newP.length<6){showToast('New password must be at least 6 characters','error');return;}
-  localStorage.setItem('hxcs_admin_pwd',newP);
+  window.__hxAdminPwd=newP;try{localStorage.setItem('hxcs_admin_pwd',newP);}catch(e){}
   document.getElementById('currentPwd').value='';
   document.getElementById('newPwd').value='';
   showToast('Password updated!','success');
@@ -3689,7 +3772,8 @@ function changePassword(){
 
 // Load admin config on page load (for everyone, applies settings)
 function loadGlobalConfig(){
-  if(window.db){
+  if(window.db&&!window.__hxCfgListen){
+    window.__hxCfgListen=true;   // dipanggil dua kali (awal onload + akhir onload) — listener cukup satu
     // .on, bukan .once: roster harus tetap segar di SEMUA tab. Dengan .once,
     // tab yang dibuka pagi masih memakai roster pagi — orang yang baru
     // ditambahkan tidak muncul di dropdown sampai halaman di-reload, dan TM
@@ -3697,7 +3781,12 @@ function loadGlobalConfig(){
     window.db.ref('config').on('value',snap=>{
       const c=snap.val()||{};
       window._cfgTeamsLoaded=true; // roster writes are blocked until the shared config has loaded
-      if(c.products&&typeof c.products==='object')Object.assign(P,c.products);
+      // config/products = katalog lengkap (termasuk PENGHAPUSAN); daftar di kode hanya cadangan kalau node kosong
+      window._cfgHasProducts=!!(c.products&&typeof c.products==='object'&&Object.keys(c.products).length);
+      if(window._cfgHasProducts){
+        Object.keys(P).forEach(k=>{if(!Object.prototype.hasOwnProperty.call(c.products,k))delete P[k];});
+        Object.assign(P,c.products);
+      }
 
       // Safe team merge — terima team yang ADA di config, termasuk yang
       // anggotanya kosong. Dulu team beranggota 0 ditolak, lalu blok "restore"
@@ -3751,6 +3840,8 @@ function loadGlobalConfig(){
       const _pa=document.getElementById('page-admin');
       if(typeof renderAdminTeams==='function'&&_pa&&_pa.classList.contains('active'))renderAdminTeams();
       if(typeof populateMsSPSelect==='function')populateMsSPSelect();
+      // daftar peserta di Admin → Form Closing ikut roster live
+      if(window.HXClosing&&HXClosing.repaintAdmin)HXClosing.repaintAdmin();
       renderAll();
     });
   }
@@ -3823,7 +3914,7 @@ function renderMySales(){
   let spSales=[];
   Object.entries(allData).forEach(([date,entries])=>{
     entries.forEach((e,idx)=>{
-      if(e.sp===sp&&e.team===team){
+      if(e&&(e.sp===sp&&e.team===team||rosterKey(e.sp,e.team)===val)){
         if(msPeriod==='thisMonth'&&date<thisMonthStart)return;
         if(msPeriod==='last30'&&date<last30Start)return;
         spSales.push({...e,_date:date,_idx:idx});
@@ -3919,7 +4010,7 @@ function renderMySales(){
               ${e.priceMode==='custom'?'<span class="ms-badge ms-badge-custom">Custom price</span>':''}
               ${tags.map(t=>t==='upsell'?'<span class="sale-type-tag tag-upsell">Upsell</span>':t==='cross'?'<span class="sale-type-tag tag-cross">Cross</span>':t==='repeat'?'<span class="sale-type-tag tag-repeat">Repeat</span>':t==='testdrive'?'<span class="sale-type-tag tag-testdrive">Test Drive</span>':t==='complete'?'<span class="sale-type-tag tag-complete">'+(e.src==='closing'?'Langsung Order':'Complete')+'</span>':'').join('')}
               ${!hasTags&&!e.units>1?'<span class="ms-badge" style="color:#6060a0;border-color:#252540;">Regular sale</span>':''}
-              ${e.notes?`<span class="ms-note">${e.notes}</span>`:''}
+              ${e.notes?`<span class="ms-note">${_htmlEsc(e.notes)}</span>`:''}
             </div>
           </div>`;
         }).join('')}
@@ -4038,13 +4129,15 @@ async function adminAddSale(){
       if(!price){showToast('Enter custom price','error');return;}
     }
 
-    const existing=allData[date]||[];
-    existing.push({team,sp,prod,chats:0,units,price,revenue:price*units,saleType,notes,priceMode:adminAddPriceMode,ts:Date.now(),addedByAdmin:true});
-    allData[date]=existing;
+    const entry={team,sp,prod,chats:0,units,price,revenue:price*units,saleType,notes,priceMode:adminAddPriceMode,ts:Date.now(),addedByAdmin:true};
 
     if(window.db){
+      if(window.__hxQuickAdding){showToast('Masih menyimpan…','info');return;}
+      window.__hxQuickAdding=true;
       showToast('Saving...','info');
-      window.db.ref('scores/'+date).set(existing).then(()=>{
+      // transaction: digabung dengan data server, tidak pernah menimpa satu hari penuh
+      _txnAppend('scores',date,entry).then(()=>{
+        window.__hxQuickAdding=false;
         showToast('Sale added for '+sp+' on '+date,'success');
         renderAll();
         renderEditRecords();
@@ -4056,8 +4149,9 @@ async function adminAddSale(){
         adminAddTypes.clear();
         ['upsell','cross','repeat'].forEach(t=>{const b=document.getElementById('aatb_'+t);if(b)b.className='sale-type-btn';});
         adminAddPriceMode='normal';
-      }).catch(err=>showToast('Save failed: '+err.message,'error'));
+      }).catch(err=>{window.__hxQuickAdding=false;showToast('Save failed: '+err.message,'error');});
     } else {
+      (allData[date]=allData[date]||[]).push(entry);
       try{localStorage.setItem('hxcs',JSON.stringify({s:allData,a:allActs}));}catch(e){}
       showToast('Sale added (local)','success');
       renderAll();
