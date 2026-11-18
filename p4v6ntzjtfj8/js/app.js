@@ -2729,6 +2729,29 @@
     box.innerHTML = '<div class="sheet-sec" style="margin:10px 2px 6px">Last check · ' + L.length + ' email' + (L.length > 1 ? 's' : '') + '</div>' + L.slice().reverse().map(function (x) {
       return '<div class="sl-row' + (/^✓/.test(x.r) ? ' ok' : '') + '"><span class="grow"><b>' + esc(x.s || '(no subject)') + '</b><small>' + esc(x.f) + ' · ' + fmtDate(ymd(new Date(x.d))) + '</small>' + (x.x ? '<details><summary>Show email text</summary><pre>' + esc(x.x) + '</pre></details>' : '') + '</span><em>' + esc(x.r) + '</em></div>'; }).join('');
   }
+  // Undo today's bank sync: list everything BCA/Mandiri sync logged today, remove the ticked ones (they never come back).
+  function undoSyncSheet() {
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    var L = S.tx.filter(function (t) { return (t.src === 'bca' || t.src === 'mandiri') && t.srcId && (t.created || 0) >= d0.getTime(); }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
+    if (!L.length) { toast('Nothing was logged automatically today'); return; }
+    openSheet('<h3>Undo today\u2019s bank sync</h3><p class="muted small" style="text-align:center;margin-top:-8px">These were added automatically from bank emails today. Untick any you want to keep.</p>' +
+      '<div class="card list-card">' + L.map(function (t) { return '<label class="ml-row us-row"><input type="checkbox" class="us-ck" data-id="' + esc(t.id) + '" checked><span class="grow"><b>' + esc(t.merchant || cat(t.cat).name) + '</b><span class="sub">' + fmtDate(t.date) + (t.time ? ' · ' + esc(t.time) : '') + ' · ' + esc(wallet(t.wallet).name) + ' · ' + (t.src === 'mandiri' ? 'Mandiri' : 'BCA') + '</span></span><span class="' + (t.type === 'income' ? 'pos' : 'neg') + '">' + (t.type === 'income' ? '+' : '−') + money(t.amount, { rp: false }) + '</span></label>'; }).join('') + '</div>' +
+      '<button class="btn danger block" id="usGo" style="margin-top:12px"></button><p class="muted small" style="text-align:center">Removed ones are remembered, so the next sync won\u2019t add them again.</p>',
+      function (r) {
+        var go = r.querySelector('#usGo');
+        function lbl() { var n = r.querySelectorAll('.us-ck:checked').length; go.textContent = n ? 'Remove ' + n + ' transaction' + (n > 1 ? 's' : '') : 'Nothing selected'; go.disabled = !n; }
+        r.addEventListener('change', lbl); lbl();
+        go.onclick = function () {
+          var ids = [].map.call(r.querySelectorAll('.us-ck:checked'), function (c) { return c.dataset.id; }); if (!ids.length) return;
+          confirmBox('Remove ' + ids.length + ' transaction' + (ids.length > 1 ? 's' : '') + '?', 'They come out of your wallets and reports. Your own entries stay.', 'Remove', true).then(function (ok) {
+            if (!ok) return; S.gone = S.gone || {};
+            S.tx = S.tx.filter(function (t) { if (ids.indexOf(t.id) === -1) return true; if (t.srcId) S.gone[t.srcId] = Date.now(); return false; });
+            S.debts.forEach(function (d) { d.payments = (d.payments || []).filter(function (p) { return ids.indexOf(p.txId) === -1; }); });
+            haptic(); save(); closeSheet(); renderAll(); toast(ids.length + ' removed ✓');
+          });
+        };
+      });
+  }
   function pruneSeen() {
     var cut = Date.now() - 120 * 864e5;
     Object.keys(S.seen).forEach(function (k) { if (S.seen[k] < cut) delete S.seen[k]; });
@@ -3481,6 +3504,7 @@
     };
     if ($('txExportBtn')) $('txExportBtn').onclick = function () { haptic(); exportSheet(); };
     $('sSync').onclick = function () { if ($('sSave').onclick() !== false) sync(true); };
+    if ($('sUndo')) $('sUndo').onclick = function () { haptic(); undoSyncSheet(); };
     if ($('sRescan')) $('sRescan').onclick = function () { if ($('sSave').onclick() !== false) { haptic(); sync(true, 7); } };
 
     $('tRun').onclick = function () {
