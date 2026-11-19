@@ -53,7 +53,10 @@ config/
 scores/{YYYY-MM-DD}         array of sale entries:
                             {sp, team, prod, units, revenue, saleType:[...], custom?, ts}
 activities/{YYYY-MM-DD}     array of activity entries:
-                            {sp, team, calls, chats, fups, isLate, notes, ts}
+                            {sp, team, calls, answered, chats, fups, isLate, notes, ts}
+                            calls = calls MADE; answered = calls ANSWERED (since 2026-11-19;
+                            required when calls>0, ≤ calls; older reports have no answered →
+                            shown "—", excluded from answered totals/% via _ansAdd/_ansPct/_ansTxt)
 omset/{YYYY-MM-DD}          manual omset overrides
 briefing/{YYYY-MM-DD}       daily briefing text
 ```

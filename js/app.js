@@ -883,6 +883,7 @@ function addActivity(){
     const spEl=document.getElementById('aSP');
     const chatsEl=document.getElementById('aChats');
     const callsEl=document.getElementById('aCalls');
+    const ansEl=document.getElementById('aAns');
     const fupsEl=document.getElementById('aFups');
     const notesEl=document.getElementById('aNotes');
 
@@ -902,6 +903,8 @@ function addActivity(){
     const parseNum=v=>{const n=parseInt(String(v||'').replace(/[^0-9-]/g,''));return isNaN(n)?0:n;};
     const chats=parseNum((chatsEl||{}).value);
     const calls=parseNum(callsEl.value);
+    const ansRaw=String((ansEl||{}).value||'').trim();
+    const answered=parseNum(ansRaw);
     const fups=parseNum(fupsEl.value);
     const notes=((notesEl||{}).value||'').trim();
 
@@ -916,7 +919,12 @@ function addActivity(){
     const isLate=(hour>14)||(hour===14&&minute>0); // after 2:00 PM
 
     const arr=allActs[targetKey]||[];
-    const newAct={team,sp,chats,calls,fups,notes,ts:Date.now(),isLate};
+    // call yang diangkat wajib diisi kalau ada call (0 kalau tidak ada yang mengangkat), tidak boleh > call dibuat
+    if(ansEl&&ansRaw!==''&&!/^\d+$/.test(ansRaw)){showToast('Calls Answered harus angka (0 kalau tidak ada yang angkat).','error');try{ansEl.focus();}catch(e){}return;}
+    if(ansEl&&calls>0&&ansRaw===''){showToast('Isi Calls Answered: berapa call yang diangkat (0 kalau tidak ada).','error');try{ansEl.focus();}catch(e){}return;}
+    if(answered<0||answered>calls){showToast('Calls Answered ('+answered+') tidak boleh lebih dari Calls Made ('+calls+').','error');try{ansEl&&ansEl.focus();}catch(e){}return;}
+    const newAct={team,sp,chats,calls,answered,fups,notes,ts:Date.now(),isLate};
+    if(!ansEl)delete newAct.answered;
     arr.push(newAct);
 
     allActs[targetKey]=arr;
@@ -938,6 +946,7 @@ function addActivity(){
 
     if(chatsEl)chatsEl.value='';
     callsEl.value='';
+    if(ansEl)ansEl.value='';
     fupsEl.value='';
     if(notesEl)notesEl.value='';
     renderAll();
@@ -948,7 +957,7 @@ function addActivity(){
 }
 async function removeActivityByDate(dateKey,ts){
   const a=(allActs[dateKey]||[]).find(x=>x&&x.ts===ts);
-  const what=a?`${a.sp}'s report (${a.chats||0} chats · ${a.calls||0} calls · ${a.fups||0} f/up)`:'this activity log';
+  const what=a?`${a.sp}'s report (${a.chats||0} chats · ${a.calls||0} calls${typeof a.answered==='number'?' ('+a.answered+' diangkat)':''} · ${a.fups||0} f/up)`:'this activity log';
   const ok=await showConfirm('Delete Activity Log','Delete '+what+'? This cannot be undone.','Delete',true);
   if(!ok)return;
   if(window.db){
@@ -999,7 +1008,7 @@ function aggTeams(entries,acts){
   const t={};
   Object.keys(TM).forEach(k=>t[k]={chats:0,closes:0,revenue:0,calls:0,fups:0});
   entries.forEach(e=>{const tk=_teamFor(e.sp,e.team);if(t[tk]){t[tk].chats+=e.chats||0;t[tk].closes+=e.units||0;t[tk].revenue+=e.revenue||0;}});
-  acts.forEach(a=>{const tk=_teamFor(a.sp,a.team);if(t[tk]){t[tk].calls+=a.calls||0;t[tk].fups+=a.fups||0;t[tk].chats+=a.chats||0;}});
+  acts.forEach(a=>{const tk=_teamFor(a.sp,a.team);if(t[tk]){t[tk].calls+=a.calls||0;t[tk].fups+=a.fups||0;t[tk].chats+=a.chats||0;_ansAdd(t[tk],a);}});
   return Object.entries(t).map(([n,d])=>({n,...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue);
 }
 function aggSP(entries,acts){
@@ -1020,7 +1029,7 @@ function aggSP(entries,acts){
   acts.forEach(a=>{
     const k=a.sp+'|'+a.team;
     if(!s[k])s[k]={sp:a.sp,team:a.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
-    s[k].calls+=a.calls;s[k].fups+=a.fups;s[k].chats+=a.chats;
+    s[k].calls+=a.calls;s[k].fups+=a.fups;s[k].chats+=a.chats;_ansAdd(s[k],a);
   });
   return Object.values(s).filter(d=>!_isHiddenSP(d.sp,d.team,d.revenue)).map(d=>({...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue||b.chats-a.chats);
 }
@@ -1029,10 +1038,20 @@ function aggProds(entries){
   entries.forEach(e=>{if(e.prod){if(!p[e.prod])p[e.prod]={count:0,revenue:0};p[e.prod].count+=e.units;p[e.prod].revenue+=e.revenue;}});
   return p;
 }
+// ══ CALL DIANGKAT (sejak 19 Nov 2026) ══
+// Laporan aktivitas punya 2 angka call: calls = call yang DIBUAT, answered = yang DIANGKAT.
+// Laporan lama tidak punya "answered" → tidak dihitung ke jumlah/persentase diangkat ("—").
+function _ansAdd(g,a){
+  if(g&&a&&typeof a.answered==='number'){g.ans=(g.ans||0)+a.answered;g.ansCalls=(g.ansCalls||0)+(a.calls||0);g.ansN=(g.ansN||0)+1;}
+  return g;
+}
+function _ansPct(g){return g&&g.ansN&&g.ansCalls>0?Math.round(g.ans/g.ansCalls*100):null;}
+function _ansTxt(g,pct){if(!g||!g.ansN)return '—';const p=_ansPct(g);return pct&&p!=null?g.ans+' ('+p+'%)':String(g.ans);}
 function tots(entries,acts){
   const e=entries.reduce((a,x)=>({chats:a.chats+x.chats,closes:a.closes+x.units,revenue:a.revenue+x.revenue}),{chats:0,closes:0,revenue:0});
   const a=acts.reduce((a,x)=>({calls:a.calls+x.calls,fups:a.fups+x.fups}),{calls:0,fups:0});
-  return{...e,...a};
+  const an=acts.reduce((g,x)=>_ansAdd(g,x),{ans:0,ansCalls:0,ansN:0});
+  return{...e,...a,...an};
 }
 
 // Total revenue across all logged entries in the same calendar month as `vd`
@@ -1093,7 +1112,7 @@ function aggSPByRoster(entries,acts){
     if(!a||typeof a!=='object')return;
     const k=rosterKey(a.sp,a.team); if(!k)return;
     const g=put(k);
-    g.calls+=a.calls||0;g.fups+=a.fups||0;g.chats+=a.chats||0;
+    g.calls+=a.calls||0;g.fups+=a.fups||0;g.chats+=a.chats||0;_ansAdd(g,a);
   });
   return out;
 }
@@ -1138,7 +1157,8 @@ function monthActBySP(vd){
       const key=rosterKey(a.sp,a.team);
       if(!key)return;
       const g=map[key]||(map[key]={chats:0,calls:0,fups:0});
-      g.chats+=a.chats||0;g.calls+=a.calls||0;g.fups+=a.fups||0;
+      g.chats+=a.chats||0;g.calls+=a.calls||0;g.fups+=a.fups||0;_ansAdd(g,a);
+      if(typeof a.answered==='number')g.ansFrom=Math.min(g.ansFrom||99,+p[2]);   // "diangkat" baru dicatat sejak 19 Nov 2026
     });
   });
   return map;
@@ -1363,6 +1383,7 @@ function renderActLog(acts){
       <div class="alog-date-tot">
         <span style="color:#f5c518">${dayTotals.chats}</span>
         <span style="color:#448aff">${dayTotals.calls}</span>
+        <span style="color:#5ac8fa" title="call diangkat">${_ansTxt(dayEntries.reduce((g,x)=>_ansAdd(g,x),{}))}</span>
         <span style="color:#ff6b1a">${dayTotals.fups}</span>
       </div>
     </div>`;
@@ -1380,15 +1401,17 @@ function renderActLog(acts){
         <div class="alog-team-tot">
           <span style="color:#f5c518">${teamTotals.chats}c</span> ·
           <span style="color:#448aff">${teamTotals.calls} calls</span> ·
+          <span style="color:#5ac8fa">${_ansTxt(entries.reduce((g,x)=>_ansAdd(g,x),{}))} angkat</span> ·
           <span style="color:#ff6b1a">${teamTotals.fups}f</span>
         </div>
       </div>`;
       const rows=entries.map(a=>{
         const lateBadge=a.isLate?'<span style="font-family:\'DM Mono\',monospace;font-size:9px;background:rgba(255,107,26,0.15);color:#ff6b1a;border:1px solid rgba(255,107,26,0.3);padding:1px 5px;border-radius:4px;letter-spacing:1px;flex-shrink:0">LATE</span>':'';
-        return `<div class="ar" style="grid-template-columns:1fr .5fr .5fr .5fr 1fr auto">
+        return `<div class="ar" style="grid-template-columns:1fr .5fr .5fr .5fr .5fr 1fr auto">
           <div><span class="asn" style="color:${tc.c}">${a.sp}</span></div>
           <div class="av" style="color:#f5c518">${a.chats||0}</div>
           <div class="av" style="color:#448aff">${a.calls}</div>
+          <div class="av av-ans${typeof a.answered==='number'?' has':''}" style="color:#5ac8fa">${typeof a.answered==='number'?a.answered:'—'}</div>
           <div class="av" style="color:#ff6b1a">${a.fups}</div>
           <div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:4px;">${_htmlEsc(a.notes||'—')} ${lateBadge}</div>
           <div><span class="ed" onclick="removeActivityByDate('${a.dateKey}',${a.ts})">✕</span></div>
@@ -1466,6 +1489,7 @@ function renderSPGrid(entries,acts){
           const v=n=>_isActExcluded(sp)?'—':avg(n);
           return `<div class="spc-row"><span class="spc-rl">Chat / hari</span><span class="spc-rv">${v(ma.chats)}</span></div>
         <div class="spc-row"><span class="spc-rl">Call / hari</span><span class="spc-rv">${v(ma.calls)}</span></div>
+        <div class="spc-row"><span class="spc-rl">Diangkat / hari</span><span class="spc-rv" style="color:#5ac8fa">${(typeof _isActExcluded==='function'&&_isActExcluded(sp))||!ma.ansN?'—':(moDays>0?(ma.ans/Math.max(1,moDays-(ma.ansFrom||1)+1)).toFixed(1):'0.0')+(_ansPct(ma)!=null?' ('+_ansPct(ma)+'%)':'')}</span></div>
         <div class="spc-row"><span class="spc-rl">Follow Up / hari</span><span class="spc-rv">${v(ma.fups)}</span></div>`;
         })()}
         <div class="spc-rev-lbl"><span class="live-dot"></span>${moLbl}</div>
@@ -1532,7 +1556,7 @@ function _spModalPaint(sp,team,d,reopen){
   document.getElementById('mKPIs').innerHTML=
     '<div class="mk"><div class="mkl">Omset / Revenue</div><div class="mkv go" style="font-size:20px">'+fFull(d.revenue)+'</div>'+s(d.sub.rev)+'</div>'+
     '<div class="mk"><div class="mkl">Chat Masuk</div><div class="mkv">'+n(d.chats)+'</div>'+s(excl?'':d.sub.chat)+'</div>'+
-    '<div class="mk"><div class="mkl">Calls / Telepon</div><div class="mkv bl">'+n(d.calls)+'</div>'+s(excl?'':d.sub.call)+'</div>'+
+    '<div class="mk"><div class="mkl">Calls / Telepon</div><div class="mkv bl">'+n(d.calls)+'</div>'+s(excl?'':[d.ansN?'<span style="color:#5ac8fa">'+d.ans+' diangkat'+(_ansPct(d)!=null?' ('+_ansPct(d)+'%)':'')+'</span>':'',d.sub.call].filter(Boolean).join(' · '))+'</div>'+
     '<div class="mk"><div class="mkl">Follow Up</div><div class="mkv or">'+n(d.fups)+'</div>'+s(excl?'':d.sub.fup)+'</div>'+
     '<div class="mk"><div class="mkl">Closes</div><div class="mkv gr">'+(d.closes||0)+'</div>'+s(d.sub.close)+'</div>'+
     '<div class="mk"><div class="mkl">Close Rate</div><div class="mkv">'+rate+'</div>'+s(d.sub.rate)+'</div>';
@@ -1578,7 +1602,7 @@ function openSPModal(sp,team){
         ||{chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
   _spModalPaint(sp,team,{
     period:vd.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),
-    revenue:s.revenue,chats:s.chats,calls:s.calls,fups:s.fups,closes:s.closes,prods:s.prods,
+    revenue:s.revenue,chats:s.chats,calls:s.calls,ans:s.ans,ansCalls:s.ansCalls,ansN:s.ansN,fups:s.fups,closes:s.closes,prods:s.prods,
     sub:{rev:'',chat:'',call:'',fup:'',close:'',rate:'close ÷ chat'},
     empty:'Belum ada closing di tanggal ini.'
   },function(){openSPModal(sp,team);});
@@ -1598,7 +1622,7 @@ function openSPMonth(sp,team){
   const lblHari=vOff===0?'hari ini':vd.toLocaleDateString('id-ID',{day:'numeric',month:'short'});
   _spModalPaint(sp,team,{
     period:vd.toLocaleDateString('id-ID',{month:'long',year:'numeric'}),
-    revenue:rev,chats:a.chats,calls:a.calls,fups:a.fups,closes:p.closes,prods:p.prods,
+    revenue:rev,chats:a.chats,calls:a.calls,ans:a.ans,ansCalls:a.ansCalls,ansN:a.ansN,fups:a.fups,closes:p.closes,prods:p.prods,
     sub:{rev:lblHari+' '+fFull(hariIni),chat:per(a.chats),call:per(a.calls),fup:per(a.fups),
          close:'dalam '+hari+' hari',rate:'close ÷ chat'},
     empty:'Belum ada closing bulan ini.'
@@ -1630,11 +1654,11 @@ function buildWA(){
   const cp=TC>0?(chats<TC?Math.min(99,Math.round(chats/TC*100)):Math.round(chats/TC*100)):0;
   let txt='*HURRICANE XCS — DAILY REPORT*\n━━━━━━━━━━━━━━━━━━━━━━\n';
   txt+=`${ds}\n\n*SUMMARY*\n`;
-  txt+=`Chats : ${chats}/${TC} (${cp}%)\nCloses : ${T.closes} units\nCalls : ${T.calls}\nFollow Up : ${T.fups}\nClose Rate : ${rate}%\nRevenue : ${fFull(T.revenue)}\n\n`;
+  txt+=`Chats : ${chats}/${TC} (${cp}%)\nCloses : ${T.closes} units\nCalls : ${T.calls}${T.ansN?' (diangkat '+T.ans+')':''}\nFollow Up : ${T.fups}\nClose Rate : ${rate}%\nRevenue : ${fFull(T.revenue)}\n\n`;
   txt+='*TEAM RANKING*\n';
   const teams=aggTeams(entries,acts).filter(t=>t.chats>0||t.closes>0||t.calls>0);
   if(!teams.length)txt+='No data.\n';
-  else teams.forEach((t,i)=>{txt+=`${i+1}. *${t.n}* — ${t.chats}c · ${t.calls} calls · ${t.closes}x · ${fFull(t.revenue)}\n`;});
+  else teams.forEach((t,i)=>{txt+=`${i+1}. *${t.n}* — ${t.chats}c · ${t.calls} calls${t.ansN?' ('+t.ans+' angkat)':''} · ${t.closes}x · ${fFull(t.revenue)}\n`;});
   txt+='\n*TOP 5 SALESPEOPLE*\n';
   // seller tanpa order/aktivitas sama sekali tidak dicetak sebagai 'Top 5'
   const sps=aggSP(entries,acts).filter(s=>s.closes>0||s.revenue>0||s.chats>0||s.calls>0).slice(0,5);
@@ -1687,7 +1711,7 @@ function renderMonthly(){
   }
 
   // Aggregate all data for the month
-  let totalChats=0,totalCloses=0,totalRev=0,totalCalls=0,totalFups=0;
+  let totalChats=0,totalCloses=0,totalRev=0,totalCalls=0,totalFups=0;const mAns={};
   const teamTotals={};
   const spTotals={};
   const prodTotals={};
@@ -1731,12 +1755,12 @@ function renderMonthly(){
       daySPMap[sk].rev+=e.revenue;
     });
     acts.forEach(a=>{
-      totalCalls+=a.calls;totalFups+=a.fups;totalChats+=a.chats;
+      totalCalls+=a.calls;totalFups+=a.fups;totalChats+=a.chats;_ansAdd(mAns,a);
       dayChats+=a.chats;
-      {const tk=_teamFor(a.sp,a.team);if(teamTotals[tk]){teamTotals[tk].calls+=a.calls||0;teamTotals[tk].fups+=a.fups||0;teamTotals[tk].chats+=a.chats||0;}}
+      {const tk=_teamFor(a.sp,a.team);if(teamTotals[tk]){teamTotals[tk].calls+=a.calls||0;teamTotals[tk].fups+=a.fups||0;teamTotals[tk].chats+=a.chats||0;_ansAdd(teamTotals[tk],a);}}
       const sk=a.sp+'|'+a.team;
       if(!spTotals[sk])spTotals[sk]={sp:a.sp,team:a.team,chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
-      spTotals[sk].calls+=a.calls;spTotals[sk].fups+=a.fups;spTotals[sk].chats+=a.chats;
+      spTotals[sk].calls+=a.calls;spTotals[sk].fups+=a.fups;spTotals[sk].chats+=a.chats;_ansAdd(spTotals[sk],a);
     });
 
     if(dayRev>bestRev){bestRev=dayRev;bestDate=k;}
@@ -1751,6 +1775,7 @@ function renderMonthly(){
   document.getElementById('mK2').textContent=totalCloses;
   document.getElementById('mK3').innerHTML=rate+'<span class="u">%</span>';
   document.getElementById('mK4').textContent=totalCalls;
+  {const c4=document.getElementById('mK4c')||(document.getElementById('mK4')||{}).nextElementSibling;if(c4)c4.textContent=mAns.ansN?mAns.ans+' diangkat'+(_ansPct(mAns)!=null?' ('+_ansPct(mAns)+'%)':''):'—';}
   document.getElementById('mK5').textContent=fRp(totalRev);
   document.getElementById('mK5c').textContent=fFull(totalRev);
   const mob=document.getElementById('mOmsetBig');
@@ -1766,7 +1791,7 @@ function renderMonthly(){
   const sortedTeams=Object.entries(teamTotals).map(([n,d])=>({n,...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue);
   const maxTeamRev=Math.max(1,...sortedTeams.map(t=>t.revenue));
   document.getElementById('mTeamBody').innerHTML=sortedTeams.every(t=>t.revenue===0)
-    ?'<tr class="erow"><td colspan="9">No data for this month</td></tr>'
+    ?'<tr class="erow"><td colspan="10">No data for this month</td></tr>'
     :sortedTeams.map((t,i)=>{
       const tc=TM[t.n]||{c:'#888',bg:'#111',e:''};
       const barW=Math.round(t.revenue/maxTeamRev*100);
@@ -1775,6 +1800,7 @@ function renderMonthly(){
         <td><div class="tcell">${teamTav(t.n,tc)}<div class="tn">${t.n}</div></div></td>
         <td><span class="nb">${t.chats}</span></td>
         <td><span class="nb">${t.calls}</span></td>
+        <td><span class="nb" style="color:#5ac8fa">${_ansTxt(t,true)}</span></td>
         <td><span class="nb">${t.fups}</span></td>
         <td><span class="nb">${t.closes}</span></td>
         <td><span class="rb ${rc(t.rate)}">${t.rate.toFixed(1)}%</span></td>
@@ -1804,6 +1830,7 @@ function renderMonthly(){
         if(k===main[0])return;
         main[1].chats+=v.chats||0; main[1].closes+=v.closes||0;
         main[1].revenue+=v.revenue||0; main[1].calls+=v.calls||0; main[1].fups+=v.fups||0;
+        main[1].ans=(main[1].ans||0)+(v.ans||0); main[1].ansCalls=(main[1].ansCalls||0)+(v.ansCalls||0); main[1].ansN=(main[1].ansN||0)+(v.ansN||0);
         if(v.prods)Object.entries(v.prods).forEach(([pr,d])=>{
           const pp=main[1].prods[pr]||(main[1].prods[pr]={u:0,r:0});
           pp.u+=d.u||0; pp.r+=d.r||0;
@@ -1825,7 +1852,7 @@ function renderMonthly(){
   // SP table
   const sortedSPs=Object.values(spTotals).map(d=>({...d,rate:d.chats>0?d.closes/d.chats*100:0})).sort((a,b)=>b.revenue-a.revenue);
   document.getElementById('mSPBody').innerHTML=sortedSPs.length===0
-    ?'<tr class="erow"><td colspan="7">No data for this month</td></tr>'
+    ?'<tr class="erow"><td colspan="8">No data for this month</td></tr>'
     :sortedSPs.map((s,i)=>{
       const tc=TM[s.team]||{c:'#888'};
       return`<tr data-k="${_htmlEsc(s.sp+'|'+s.team)}" onclick="openSPMonthly('${_js(s.sp)}','${_js(s.team)}')">
@@ -1833,6 +1860,7 @@ function renderMonthly(){
         <td><div class="tcell"><div class="tav" style="background:rgba(0,0,0,0.4);color:${tc.c};font-size:13px">${String(s.sp||'?')[0].toUpperCase()}</div><div><div class="tn">${s.sp}</div><div class="tm">Team ${s.team}</div></div></div></td>
         <td><span class="nb">${s.chats}</span></td>
         <td><span class="nb">${s.calls}</span></td>
+        <td><span class="nb" style="color:#5ac8fa">${_ansTxt(s,true)}</span></td>
         <td><span class="nb">${s.closes}</span></td>
         <td>${!_rateOk(s.sp,s.closes,s.chats)?'<span class="nb">—</span>':`<span class="rb ${rc(s.rate)}">${s.rate.toFixed(1)}%</span>`}</td>
         <td><span class="rc">${fFull(s.revenue)}</span></td>
@@ -1910,7 +1938,7 @@ function renderSpLookup(){
       </div>
       <div class="sp-lookup-stats">
         <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Chats</div><div class="sp-lookup-stat-val" style="color:#f5c518">${s.chats||0}</div></div>
-        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Calls</div><div class="sp-lookup-stat-val" style="color:#448aff">${s.calls||0}</div></div>
+        <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Calls</div><div class="sp-lookup-stat-val" style="color:#448aff">${s.calls||0}</div>${s.ansN?'<div style="font-size:10px;color:#5ac8fa;margin-top:4px;font-weight:700">'+s.ans+' diangkat</div>':''}</div>
         <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Follow-ups</div><div class="sp-lookup-stat-val" style="color:#ff6b1a">${s.fups||0}</div></div>
         <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Closes</div><div class="sp-lookup-stat-val" style="color:#00e676">${s.closes||0}</div></div>
         <div class="sp-lookup-stat"><div class="sp-lookup-stat-lbl">Close Rate</div><div class="sp-lookup-stat-val" style="color:#7c4dff">${rate}${rate==='—'?'':'%'}</div></div>
@@ -1941,7 +1969,7 @@ function openSPMonthly(sp,team){
   s=s||{chats:0,closes:0,revenue:0,calls:0,fups:0,prods:{}};
   _spModalPaint(sp,team,{
     period:fMonthName(mYear,mMonth),
-    revenue:s.revenue||0,chats:s.chats||0,calls:s.calls||0,fups:s.fups||0,
+    revenue:s.revenue||0,chats:s.chats||0,calls:s.calls||0,ans:s.ans||0,ansCalls:s.ansCalls||0,ansN:s.ansN||0,fups:s.fups||0,
     closes:s.closes||0,prods:s.prods,
     sub:{rev:'',chat:'',call:'',fup:'',close:'',rate:'close ÷ chat'},
     empty:'Belum ada closing bulan ini.'
@@ -1991,7 +2019,7 @@ function buildDataSummaryForAI(){
     date:yd.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}),
     yesterday:{
       chats:ydTots.chats,closes:ydTots.closes,revenue:ydTots.revenue,
-      calls:ydTots.calls,followups:ydTots.fups,closeRate:ydRate,
+      calls:ydTots.calls,answered:ydTots.ansN?ydTots.ans:null,followups:ydTots.fups,closeRate:ydRate,
       target:160,hitTarget:ydTots.chats>=160
     },
     todayChats:todayEntries.reduce((a,e)=>a+e.chats,0),
@@ -2026,7 +2054,7 @@ Data performa tim kemarin (${data.date}):
 - Total Closes: ${data.yesterday.closes} unit
 - Total Revenue: Rp ${data.yesterday.revenue.toLocaleString('id-ID')}
 - Close Rate: ${data.yesterday.closeRate}%
-- Total Calls: ${data.yesterday.calls}
+- Total Calls: ${data.yesterday.calls}${data.yesterday.answered!=null?' (diangkat: '+data.yesterday.answered+')':''}
 - Total Follow Up: ${data.yesterday.followups}
 
 Top 5 Salesperson kemarin:
@@ -3068,7 +3096,7 @@ function renderEditRecords(){
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px;font-family:'Space Mono',monospace;color:#e8e8f8;margin-bottom:10px;">
           <div><span style="color:#6060a0;">Chats:</span><br/><b style="color:#f5c518;">${r.chats||0}</b></div>
-          <div><span style="color:#6060a0;">Calls:</span><br/><b style="color:#448aff;">${r.calls||0}</b></div>
+          <div><span style="color:#6060a0;">Calls:</span><br/><b style="color:#448aff;">${r.calls||0}</b>${typeof r.answered==='number'?' <span style="color:#5ac8fa">('+r.answered+' angkat)</span>':''}</div>
           <div><span style="color:#6060a0;">Followups:</span><br/><b style="color:#ff6b1a;">${r.fups||0}</b></div>
         </div>
         ${r.notes?`<div style="font-size:10px;color:#6060a0;font-family:'Space Mono',monospace;margin-bottom:10px;">${_htmlEsc(r.notes)}</div>`:''}
@@ -3149,9 +3177,10 @@ function openEditMo(type,date,idx){
     const r=allActs[date][idx];
     document.getElementById('editMoTitle').textContent='Edit Activity — '+r.sp;
     document.getElementById('editMoFields').innerHTML=`
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px;align-items:end;">
         <div class="ig"><div class="igl">Chats</div><input type="text" inputmode="numeric" id="erChats" value="${r.chats||0}"/></div>
         <div class="ig"><div class="igl">Calls</div><input type="text" inputmode="numeric" id="erCalls" value="${r.calls||0}"/></div>
+        <div class="ig"><div class="igl">Diangkat</div><input type="text" inputmode="numeric" id="erAns" value="${typeof r.answered==='number'?r.answered:''}" placeholder="—"/></div>
         <div class="ig"><div class="igl">Follow Ups</div><input type="text" inputmode="numeric" id="erFups" value="${r.fups||0}"/></div>
       </div>
       <div class="ig">
@@ -3204,10 +3233,13 @@ function saveEditMo(){
   } else {
     const pn=v=>parseInt(String(v||'').replace(/[^0-9]/g,''))||0;
     const chats=pn(document.getElementById('erChats').value),calls=pn(document.getElementById('erCalls').value),fups=pn(document.getElementById('erFups').value);
+    const _ansRaw=String((document.getElementById('erAns')||{}).value||'').trim(),_ans=_ansRaw===''?null:pn(_ansRaw);
+    if(_ansRaw!==''&&!/^\d+$/.test(_ansRaw)){showToast('Diangkat harus angka (kosongkan kalau tidak tahu).','error');return;}
+    if(_ans!=null&&_ans>calls){showToast('Diangkat tidak boleh lebih dari Calls.','error');return;}
     const notes=document.getElementById('erNotes').value.trim();
     if(window.db){
       showToast('Saving...','info');
-      _txnRecord('activities',date,sig,r=>Object.assign(r,{chats,calls,fups,notes,editedAt:Date.now()})).then(()=>{
+      _txnRecord('activities',date,sig,r=>{Object.assign(r,{chats,calls,fups,notes,editedAt:Date.now()});if(_ans!=null)r.answered=_ans;else delete r.answered;return r;}).then(()=>{
         showToast('Activity updated!','success');
         renderEditRecords();renderAll();
       }).catch(_changed);
@@ -3635,7 +3667,7 @@ function exportAllData(){
     });
     Object.entries(allActs).forEach(([date,acts])=>{
       acts.forEach(a=>{
-        allEntries.push({date,team:a.team,sp:a.sp,product:'CALLS/FUPS',units:0,price:0,revenue:0,saleType:`chats:${a.chats||0}|calls:${a.calls}|fups:${a.fups}`,notes:a.notes||''});
+        allEntries.push({date,team:a.team,sp:a.sp,product:'CALLS/FUPS',units:0,price:0,revenue:0,saleType:`chats:${a.chats||0}|calls:${a.calls}|answered:${typeof a.answered==='number'?a.answered:''}|fups:${a.fups}`,notes:a.notes||''});
       });
     });
 

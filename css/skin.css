@@ -246,10 +246,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--green)!important;outl
 .ins-trend-bar.rp{background:#30d158!important}
 
 /* ── Kartu sales: Chat / Call / Follow Up masing-masing beda warna ──
-   Urutan baris dari app.js: 1 chat · 2 call · 3 follow up. */
+   Urutan baris dari app.js: 1 chat · 2 call · 3 call diangkat (sejak 19 Nov 2026) · 4 follow up. */
 .spc-row:nth-child(5) .spc-rv{color:var(--chat)!important}
 .spc-row:nth-child(6) .spc-rv{color:var(--call)!important}
-.spc-row:nth-child(7) .spc-rv{color:var(--fup)!important}
+.spc-row:nth-child(7) .spc-rv{color:#5ac8fa!important;white-space:nowrap}
+.spc-row:nth-child(8) .spc-rv{color:var(--fup)!important}
 .spc-row .spc-rl{color:var(--muted)!important}
 
 /* ── BURUK = MERAH, tegas ── */
