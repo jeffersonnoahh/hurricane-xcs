@@ -3072,8 +3072,9 @@
   }
   // Asset sold (e.g. gold buyback): money moves into a cash wallet, the asset wallet goes to 0 and is hidden, the loss/gain is accepted.
   function saleImport(d) {
-    var rx = new RegExp(d.from, 'i'), src = S.wallets.filter(function (w) { return rx.test(w.name); })[0];
-    var dst = S.wallets.filter(function (w) { return new RegExp(d.toMatch || ('^' + d.to + '$'), 'i').test(w.name); })[0];
+    function find(id, rx, alt) { var W = S.wallets; return W.filter(function (w) { return w.id === id; })[0] || W.filter(function (w) { return rx.test(String(w.name).trim()); })[0] || W.filter(alt)[0]; }
+    var src = find(d.fromId, new RegExp(d.from, 'i'), function (w) { return (w.holding && w.holding.asset === d.label) || (new RegExp(d.label, 'i').test(w.name) && !/puter/i.test(w.name) && !w.hidden); });
+    var dst = find(d.toId, new RegExp(d.toMatch || ('^' + d.to + '$'), 'i'), function (w) { return /mandiri/i.test(w.name) && !/personal/i.test(w.name); });
     var done = S.tx.some(function (t) { return t.seedKey === d.key; });
     if (!dst) { toast('Could not find ' + d.to); return; }
     var book = src ? balance(src.id) : 0, res = d.amount - book;
