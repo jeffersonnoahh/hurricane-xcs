@@ -82,7 +82,9 @@ export async function onRequestGet({ request }) {
     // Currency pair with a frozen Yahoo quote during the trading week: use the freshest of Stooq / CoinGecko.
     if (/IDR=X$/.test(sym) && weekdayFxOpen(now) && now - (m.regularMarketTime || 0) > 30 * 60) {
       const cur = sym === 'IDR=X' ? 'USD' : sym.slice(0, 3);
-      const alts = (await Promise.all([stooqFresh(sym).catch(() => null), geckoFresh(cur).catch(() => null)])).filter(Boolean);
+      const errs = [];
+      const alts = (await Promise.all([stooqFresh(sym).catch((e) => { errs.push(String(e && e.message || e)); return null; }), geckoFresh(cur).catch((e) => { errs.push(String(e && e.message || e)); return null; })])).filter(Boolean);
+      out.check = { yahooAgeMin: Math.round((now - (m.regularMarketTime || 0)) / 60), alts: alts.map((x) => x.src + ' ' + x.price + ' @' + x.time), errs };
       const best = alts.sort((a, b) => b.time - a.time)[0];
       if (best && best.time > (m.regularMarketTime || 0)) {
         out.price = best.price; out.time = best.time; out.src = best.src; out.stale = 'yahoo';
