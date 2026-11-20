@@ -97,7 +97,7 @@ export async function onRequestGet({ request }) {
       const cur = sym === 'IDR=X' ? 'USD' : sym.slice(0, 3);
       const errs = [];
       const tryIt = (p) => p.catch((e) => { errs.push(String(e && e.message || e)); return null; });
-      const alts = (await Promise.all([tryIt(yahooAlt(sym)), tryIt(indodax(cur)), tryIt(geckoFresh(cur)), tryIt(stooqFresh(sym))])).filter(Boolean);
+      const alts = (await Promise.all([tryIt(yahooAlt(sym)), tryIt(geckoFresh(cur))])).filter(Boolean); // Indodax/Stooq refuse Cloudflare; the phone also double-checks with CoinGecko
       out.check = { yahooAgeMin: Math.round((now - (m.regularMarketTime || 0)) / 60), alts: alts.map((x) => x.src + ' ' + x.price + ' @' + x.time), errs };
       const best = alts.sort((a, b) => b.time - a.time)[0];
       if (best && best.time > (m.regularMarketTime || 0)) {

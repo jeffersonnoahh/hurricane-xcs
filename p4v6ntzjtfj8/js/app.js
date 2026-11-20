@@ -3973,7 +3973,17 @@
   function fetchFx() {
     clearTimeout(fxT); fxT = setTimeout(fetchFx, 60e3);
     if (document.hidden) return;
-    fetch('mkt?s=IDR%3DX').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) { if (!j || !j.price) throw 0; fxSet(j); })
+    fetch('mkt?s=IDR%3DX').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
+      if (!j || !j.price) throw 0;
+      // The site's USD/IDR feed sometimes freezes for hours: on trading days, if it is over 30 min old, ask CoinGecko from this phone.
+      var now = Date.now() / 1000, d = new Date(), wd = d.getUTCDay(), h = d.getUTCHours(), open = !(wd === 6 || (wd === 0 && h < 21) || (wd === 5 && h >= 22));
+      if (!open || now - (+j.time || 0) < 30 * 60) { fxSet(j); return; }
+      return fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr&include_last_updated_at=true').then(function (r) { return r.json(); }).then(function (g) {
+        var t = g && g.tether; if (!t || !t.idr || (+t.last_updated_at || 0) <= (+j.time || 0)) { fxSet(j); return; }
+        var tt = +t.last_updated_at || now; j.price = Math.round(t.idr); j.time = tt; j.src = 'usdt'; j.day = (j.day || []).concat([[Math.round(tt), j.price]]);
+        j.high = Math.max(+j.high || j.price, j.price); j.low = Math.min(+j.low || j.price, j.price); fxSet(j);
+      }, function () { fxSet(j); });
+    })
       .catch(function () {
         fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr&include_24hr_change=true').then(function (r) { return r.json(); }).then(function (j) {
           var t = j && j.tether; if (!t || !t.idr) return;
