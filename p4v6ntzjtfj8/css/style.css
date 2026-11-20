@@ -1966,11 +1966,11 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
   .mkt-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
   .mkt-row .gold-bar{margin:0;min-width:0}
   .mkt-row .gb-spark{display:none}
-  /* masonry: each card flows into the shorter column, so there are no empty holes */
-  #homeSecs{column-count:2;column-gap:16px}
-  #homeSecs > .sec{break-inside:avoid;-webkit-column-break-inside:avoid;display:block;width:100%;min-width:0;padding-top:1px}
+  /* masonry on a grid (CSS columns mis-draw moving/3D cards in iPhone Safari): app.js sets each card's row span from its height */
+  #homeSecs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;grid-auto-rows:4px;grid-auto-flow:row dense;align-items:start}
+  #homeSecs > .sec{display:block;width:100%;min-width:0;padding-top:1px}
   #homeSecs > .sec.sec-off{display:none}
-  #homeSecs > .sec[data-sec=widgets]{column-span:all;-webkit-column-span:all}
+  #homeSecs > .sec[data-sec=widgets],#homeSecs > .sec[data-sec=trip]{grid-column:1 / -1}
   #homeSecs .ins-row{flex-wrap:wrap;overflow:visible}
   #homeSecs .ins-row{margin:0;padding:2px 0 6px;scroll-snap-type:none}
   #homeSecs .ins-row > *{flex:1 1 100%;max-width:none}

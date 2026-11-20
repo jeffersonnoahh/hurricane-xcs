@@ -5178,6 +5178,23 @@
       return put.then(function () { location.reload(); return true; });
     }).catch(function () { return false; });
   }
+  // Two-column Home in landscape: each card spans as many 4px grid rows as it is tall, so cards pack without holes.
+  (function () {
+    var host = $('homeSecs'), mq = window.matchMedia('(min-width:780px) and (max-width:1199px)'); if (!host) return;
+    var raf = 0, ro = window.ResizeObserver ? new ResizeObserver(function () { if (!raf) raf = requestAnimationFrame(fit); }) : null;
+    function fit() {
+      raf = 0; var on = mq.matches, gap = 16;
+      Array.prototype.forEach.call(host.children, function (el) {
+        if (!on) { el.style.gridRowEnd = ''; return; }
+        var h = el.offsetHeight;
+        el.style.gridRowEnd = h ? 'span ' + Math.ceil((h + gap) / 4) : '';
+        if (ro && !el._ro) { el._ro = 1; ro.observe(el); }
+      });
+    }
+    if (mq.addEventListener) mq.addEventListener('change', fit); else if (mq.addListener) mq.addListener(fit);
+    if (window.MutationObserver) new MutationObserver(function () { if (!raf) raf = requestAnimationFrame(fit); }).observe(host, { childList: true });
+    fit(); setTimeout(fit, 800);
+  })();
   window.apexUpdate = checkUpdate;
   try { var pend = sessionStorage.getItem('apex-code'); if (pend) { sessionStorage.removeItem('apex-code'); setTimeout(function () { codeSheet(pend); }, 600); } } catch (e) {}
   setTimeout(checkUpdate, 1500);
