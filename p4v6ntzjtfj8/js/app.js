@@ -4533,14 +4533,21 @@
     DEF.concat(Object.keys(SEC_NAMES)).forEach(function (k) { if (SEC_NAMES[k] && !L.some(function (x) { return x.k === k; })) L.push({ k: k, on: !S.settings.home ? !OFF[k] : true }); });
     return L;
   }
+  var MKT = [['gold', 'goldBar', 'Gold price'], ['ihsg', 'ihsgBar', 'IHSG'], ['fx', 'fxBar', 'USD / IDR']];
+  function applyMkt() {
+    var off = S.settings.mktOff || {}, any = false;
+    MKT.forEach(function (m) { var el = $(m[1]); if (!el) return; el.style.display = off[m[0]] ? 'none' : ''; if (!off[m[0]]) any = true; });
+    var row = document.querySelector('.mkt-row'); if (row) row.style.display = any ? '' : 'none';
+  }
   function applyHome() {
+    applyMkt();
     var box = $('homeSecs'); if (!box) return;
     homeLayout().forEach(function (x) { var el = box.querySelector('[data-sec="' + x.k + '"]'); if (!el) return; box.appendChild(el); el.classList.toggle('sec-off', !x.on); });
   }
   function homeSheet() {
     var L = homeLayout();
     function rows() { return L.map(function (x, i) { return '<div class="hl-row" data-i="' + i + '" data-id="' + x.k + '"><span class="drag">≡</span><label class="grow"><input type="checkbox" class="switch" ' + (x.on ? 'checked' : '') + '> ' + SEC_NAMES[x.k] + '</label><button class="x" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button class="x" data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + '>↓</button></div>'; }).join(''); }
-    openSheet('<h3>Customize Home</h3><p class="muted small" style="text-align:center">Turn sections on or off and change their order.</p><div class="card list-card hl" id="hlList">' + rows() + '</div><button class="btn primary block" id="hlDone">Done</button><button class="btn block" id="hlReset">Reset to default</button>',
+    openSheet('<h3>Customize Home</h3><p class="muted small" style="text-align:center">Turn sections on or off and change their order.</p><div class="sheet-sec">Live prices</div><div class="card list-card hl" id="hlMkt">' + MKT.map(function (m) { return '<div class="hl-row"><label class="grow"><input type="checkbox" class="switch" data-mkt="' + m[0] + '" ' + ((S.settings.mktOff || {})[m[0]] ? '' : 'checked') + '> ' + m[2] + '</label></div>'; }).join('') + '</div><div class="sheet-sec">Sections</div><div class="card list-card hl" id="hlList">' + rows() + '</div><button class="btn primary block" id="hlDone">Done</button><button class="btn block" id="hlReset">Reset to default</button>',
       function (r) {
         var list = r.querySelector('#hlList');
         list.addEventListener('click', function (e) {
@@ -4550,8 +4557,9 @@
         });
         makeSortable(list, '.hl-row', '.drag', function (ids) { L = ids.map(function (k) { return L.filter(function (x) { return x.k === k; })[0]; }); list.innerHTML = rows(); S.settings.home = L; save(); applyHome(); haptic(); });
         list.addEventListener('change', function (e) { var row = e.target.closest('.hl-row'); if (!row) return; L[+row.dataset.i].on = e.target.checked; S.settings.home = L; save(); applyHome(); });
+        r.querySelector('#hlMkt').addEventListener('change', function (e) { var k = e.target.dataset.mkt; if (!k) return; var o = S.settings.mktOff = S.settings.mktOff || {}; if (e.target.checked) delete o[k]; else o[k] = 1; haptic(); save(); applyMkt(); });
         r.querySelector('#hlDone').onclick = closeSheet;
-        r.querySelector('#hlReset').onclick = function () { delete S.settings.home; save(); applyHome(); closeSheet(); toast('Home reset'); };
+        r.querySelector('#hlReset').onclick = function () { delete S.settings.home; delete S.settings.mktOff; save(); applyHome(); closeSheet(); toast('Home reset'); };
       });
   }
 

@@ -1963,7 +1963,7 @@ body.kp-open .sheet{-webkit-backdrop-filter:none!important;backdrop-filter:none!
 }
 /* Duo open sideways: two-column Home, market bars side by side */
 @media (min-width:780px) and (max-width:1199px){
-  .mkt-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+  .mkt-row{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;margin-bottom:12px}
   .mkt-row .gold-bar{margin:0;min-width:0}
   .mkt-row .gb-spark{display:none}
   /* masonry on a grid (CSS columns mis-draw moving/3D cards in iPhone Safari): app.js sets each card's row span from its height */
