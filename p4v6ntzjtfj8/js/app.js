@@ -2996,6 +2996,7 @@
     if (d.kind === 'plan') { var acc = d.plan.account ? ' · account ••' + String(d.plan.account).replace(/\D/g, '').slice(-4) : ''; return [{ ic: /wedding/i.test(d.name || d.match || '') ? 'wedding' : 'my_home', t: (d.name || 'Plan'), s: d.plan.months + ' months · ' + money(d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0), { rp: false }) + '/mo' + acc }]; }
     if (d.kind === 'clients') return d.list.map(function (c) { return { ic: 'sentaris', t: c.name, s: (c.kind === 'project' ? 'Project ' + money(c.total, { rp: false }) : 'Monthly ' + money(c.amount, { rp: false })) + (c.partner ? ' · ' + c.partner.pct + '% ' + c.partner.name : '') }; });
     if (d.kind === 'komisi') return [{ ic: 'komisi_out', t: 'Commission history', s: d.list.length + ' months' }];
+    if (d.kind === 'sale') return [{ ic: 'gold_inv', t: 'Sold ' + (d.label || 'asset'), s: 'Into ' + d.to + ' · ' + money(d.amount, { rp: false }) }];
     if (d.kind === 'owed') return [{ ic: 'debt_collection', t: 'Owed to me', s: d.list.length + ' records · ' + money(d.list.reduce(function (a, x) { return a + x.amount; }, 0), { rp: false }) }];
     if (d.rows) return [{ ic: 'reserve_transfer', t: d.name || 'Transactions', s: d.rows.length.toLocaleString('id-ID') + ' transactions' }];
     return [{ ic: 'uncat', t: 'Data', s: '' }];
@@ -3054,7 +3055,7 @@
   // Money owed to me, added from a private code (no wallet change: just records to collect).
   function seedApply(d) {
     if (d.kind === 'multi') { (d.items || []).forEach(function (x, i) { if (x.kind === 'plan') planImport(x, i < d.items.length - 1); else seedApply(x); }); return; }
-    if (d.kind === 'clients') clientsImport(d); else if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
+    if (d.kind === 'clients') clientsImport(d); else if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else if (d.kind === 'sale') saleImport(d); else mlPreview(d.rows, d.name, d.balances || {});
   }
   function planImport(d, quiet) {
     var p = (S.inst || []).filter(function (x) { return x.id === d.instId; })[0] || (d.match ? (S.inst || []).filter(function (x) { return new RegExp(d.match, 'i').test(x.name); })[0] : null);
@@ -3068,6 +3069,31 @@
     }
     p.plan = np; p.monthly = per; p.total = per * np.months;
     save(); renderAll(); if (quiet) return; toast('Plans added ✓'); setTimeout(function () { if (S.inst.length > 1) instSheet(); else instDetail(p); }, 300);
+  }
+  // Asset sold (e.g. gold buyback): money moves into a cash wallet, the asset wallet goes to 0 and is hidden, the loss/gain is accepted.
+  function saleImport(d) {
+    var rx = new RegExp(d.from, 'i'), src = S.wallets.filter(function (w) { return rx.test(w.name); })[0];
+    var dst = S.wallets.filter(function (w) { return new RegExp(d.toMatch || ('^' + d.to + '$'), 'i').test(w.name); })[0];
+    var done = S.tx.some(function (t) { return t.seedKey === d.key; });
+    if (!dst) { toast('Could not find ' + d.to); return; }
+    var book = src ? balance(src.id) : 0, res = d.amount - book;
+    openSheet('<h3>' + esc(d.title || 'Asset sold') + '</h3><div class="kt-hero"><small>Received in ' + esc(dst.name) + '</small><b>' + money(d.amount) + '</b></div>' +
+      '<div class="card list-card">' +
+      '<div class="ml-row"><span class="grow"><b>' + esc(src ? src.name : 'Asset') + ' value in Apex</b><span class="sub">What you paid</span></span><span>' + money(book, { rp: false }) + '</span></div>' +
+      '<div class="ml-row"><span class="grow"><b>Sold for</b><span class="sub">' + esc(d.note || '') + '</span></span><span>' + money(d.amount, { rp: false }) + '</span></div>' +
+      '<div class="ml-row"><span class="grow"><b>' + (res < 0 ? 'Loss' : 'Gain') + '</b><span class="sub">Net worth changes by this</span></span><span style="color:' + (res < 0 ? 'var(--neg,#e5484d)' : 'var(--pos,#30a46c)') + '">' + (res < 0 ? '−' : '+') + money(Math.abs(res), { rp: false }) + '</span></div></div>' +
+      '<p class="muted small" style="text-align:center;margin:10px 0">' + esc(src ? src.name : 'The asset') + ' goes to 0 and is hidden. ' + esc(dst.name) + ' rupiah balance goes up by ' + money(d.amount, { rp: false }) + '.</p>' +
+      (done ? '<p class="muted" style="text-align:center">Already added ✓</p>' : '<button class="btn primary block" id="slImp">Confirm sale</button>'),
+      function (r) {
+        var b = r.querySelector('#slImp'); if (!b) return;
+        b.onclick = function () {
+          var t = addTx({ type: 'transfer', cat: '', amount: d.amount, wallet: src ? src.id : dst.id, toWallet: dst.id, date: d.date, time: '', note: (d.note || 'Asset sold') + (res < 0 ? ' · loss ' : ' · gain ') + money(Math.abs(res), { rp: false }), src: 'code' });
+          t.seedKey = d.key;
+          if (!src) { t.type = 'income'; t.wallet = dst.id; t.toWallet = ''; t.cat = ''; }
+          else { if (src.holding) { src.soldHolding = src.holding; delete src.holding; } BAL = {}; src.initial = (+src.initial || 0) - balance(src.id); src.hidden = true; src.soldAt = d.date; }
+          BAL = {}; haptic(); save(); closeSheet(); renderAll(); toast((src ? src.name : 'Asset') + ' sold · ' + money(d.amount, { rp: false }) + ' in ' + dst.name + ' ✓');
+        };
+      });
   }
   function owedImportPreview(list) {
     var todo = list.filter(function (o) { return !S.debts.some(function (d) { return d.seedKey === o.key; }); });
