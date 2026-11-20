@@ -3014,6 +3014,7 @@
           if (!cur) { prev.innerHTML = ''; return; }
           if (cur.type === 'bad') { prev.innerHTML = '<div class="cd-msg bad">This doesn\u2019t look like a full code. Copy the whole code and paste again.</div>'; return; }
           var items = cur.type === 'data' ? codeItems(cur.d) : [{ ic: 'insurance', t: 'Private data file', s: 'Unlocked on your phone after you tap Add' }];
+          if (items.length === 1 && items[0].ic === 'uncat') { go.disabled = true; prev.innerHTML = '<div class="cd-msg bad">This code needs the newest Apex. Updating…</div>'; try { sessionStorage.setItem('apex-code', inp.value); } catch (e) {} if (window.apexUpdate) window.apexUpdate(true).then(function (ok) { if (!ok) prev.innerHTML = '<div class="cd-msg bad">Could not update. Close Apex fully, open it again and paste the code.</div>'; }); return; }
           prev.innerHTML = '<div class="cd-msg">This code adds:</div><div class="card list-card cd-items">' + items.map(function (it) { return '<div class="ml-row"><span class="cd-it">' + sprite(it.ic) + '</span><span class="grow"><b>' + esc(it.t) + '</b><span class="sub">' + esc(it.s) + '</span></span></div>'; }).join('') + '</div>';
           go.textContent = 'Add ' + (items.length > 1 ? items.length + ' items' : 'to Apex');
         }
@@ -5162,4 +5163,23 @@
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
   if (S.settings.autoSync) sync(false);
+  // Self update: an iPhone home screen app keeps its saved copy. When a newer version is live, save it and reload once.
+  var MY_V = ((document.querySelector('script[src*="js/app.js"]') || {}).src || '').replace(/^.*[?&]v=/, '');
+  function checkUpdate(force) {
+    if (!MY_V || navigator.onLine === false) return Promise.resolve(false);
+    return fetch('./index.html?u=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (h) {
+      var m = h.match(/js\/app\.js\?v=([\w-]+)/); if (!m || m[1] === MY_V) return false;
+      var seen = ''; try { seen = sessionStorage.getItem('apex-upd'); } catch (e) {}
+      if (seen === m[1]) return false; // already reloaded for this version once: never loop
+      var busyUser = document.body.classList.contains('sheet-open') || /INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '');
+      if (busyUser && !force) return false;
+      try { sessionStorage.setItem('apex-upd', m[1]); } catch (e) {}
+      var put = window.caches ? caches.open('apex-v4').then(function (c) { var o = { headers: { 'Content-Type': 'text/html; charset=utf-8' } }; return Promise.all([c.put('./index.html', new Response(h, o)), c.put('./', new Response(h, o))]); }).catch(function () {}) : Promise.resolve();
+      return put.then(function () { location.reload(); return true; });
+    }).catch(function () { return false; });
+  }
+  window.apexUpdate = checkUpdate;
+  try { var pend = sessionStorage.getItem('apex-code'); if (pend) { sessionStorage.removeItem('apex-code'); setTimeout(function () { codeSheet(pend); }, 600); } } catch (e) {}
+  setTimeout(checkUpdate, 1500);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(); });
 })();
