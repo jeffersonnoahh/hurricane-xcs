@@ -389,7 +389,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v41</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v42</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -425,7 +425,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   <ul>
     <li><b>Stopped before 24 seconds:</b> the last four digits are the time. 00.07,42 gives the alarm 07.42.</li>
     <li><b>Stopped later:</b> the first four digits are the time. 01.37,12 gives the alarm 01.37.</li>
-    <li>When he scrolls to that alarm and it is on screen, wait: about two and a half seconds later every alarm falls to the same time.</li>
+    <li>Nothing else happens by itself. For the domino, tap the bottom left corner of the Alarms screen: after one and a half seconds every alarm falls to the same time.</li>
+    <li>If he opens the Timers tab, the wheels turn by themselves and settle on the same time.</li>
     <li>It fires once. Clear afterwards with CHANGE, or C on the keypad.</li>
   </ul>
   <label class="row" for="nameBox" style="flex-wrap:wrap">Name on the chosen alarm (leave empty for "Alarm"): <input id="nameBox" type="text" autocomplete="off" autocapitalize="words" style="font:inherit;font-size:16px;width:auto;height:auto;flex:1 1 160px;padding:8px 10px;border-radius:8px;border:1px solid #48484a;background:#1c1c1e;color:#fff;-webkit-user-select:text;user-select:text"></label>
@@ -1001,6 +1002,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     scApply(true);scPeek();
   };
   function found(){
+    return; // automatic start switched off on request: the corner tap starts the domino
     if(!chanceAuto||dominoOn||dominoWait||$('s-alarms').hidden)return;
     var el=$('alarms').querySelector('.al:not(.off):not(:first-child)');
     var cards=$('alarms').querySelectorAll('.al');
@@ -1103,6 +1105,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   }
   function ghost(){
     var d=window.__sticky?window.__sticky():'';
+    if(d.length<4){var ct=chosenTime();if(ct)d=ct.replace('.','')}
     if(d.length<4||d===ghostFor||tRun)return;
     var h=+d.substr(0,2),m=+d.substr(2,2),s=d.length>=6?+d.substr(4,2):0;
     if(h>23||m>59)return;if(s>59)s=0;
