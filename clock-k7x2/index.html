@@ -389,7 +389,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v39</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v40</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -420,6 +420,15 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   </ul>
   <h2>Both tricks from one input</h2>
   <p>Either input loads both tabs. A time entered by scrolling on Alarms also loads the stopwatch: a run of Start, Lap, Stop then gives a lap ending in the hour and a lap ending in the minutes. A four digit time typed on the stopwatch keypad also appears in Alarms.</p>
+  <h2>Chance</h2>
+  <p>Nobody chooses and you touch nothing. Tap the <b>first 0</b> of the big time <b>five times</b> quickly. The corner shows "chance". Hand him the phone: he starts the stopwatch and stops it whenever he likes. The stop is honest. The time he lands on becomes an alarm, buried in the list and switched on.</p>
+  <ul>
+    <li><b>Stopped before 24 seconds:</b> the last four digits are the time. 00.07,42 gives the alarm 07.42.</li>
+    <li><b>Stopped later:</b> the first four digits are the time. 01.37,12 gives the alarm 01.37.</li>
+    <li>When he scrolls to that alarm and it is on screen, wait: about two and a half seconds later every alarm falls to the same time.</li>
+    <li>It fires once. Clear afterwards with CHANGE, or C on the keypad.</li>
+  </ul>
+  <label class="row" for="nameBox" style="flex-wrap:wrap">Name on the chosen alarm (leave empty for "Alarm"): <input id="nameBox" type="text" autocomplete="off" autocapitalize="words" style="font:inherit;font-size:16px;width:auto;height:auto;flex:1 1 160px;padding:8px 10px;border-radius:8px;border:1px solid #48484a;background:#1c1c1e;color:#fff;-webkit-user-select:text;user-select:text"></label>
   <h2>Right now</h2>
   <p>On the stopwatch keypad, tap <b>*</b> with nothing typed. The corner shows "now". He presses Start, Lap, Stop. The first press ends in the current hour and the second in the current minute, read from the clock at that moment. Phone open: read the TOTAL column. Plain Start and Stop runs before that stay honest.</p>
   <h2>Domino</h2>
@@ -452,7 +461,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   var timeEl=$('time'),leftB=$('left'),rightB=$('right'),lapsEl=$('laps'),peekEl=$('peek'),helpEl=$('help');
   var running=false,acc=0,startReal=0,laps=[],lapStart=0;
   var digits='',exact=false,fresh=true,pressIdx=0,peekTimer=0,wake=null,clearNum=function(){};
-  var used=false,nowMode=false,sticky='';
+  var used=false,nowMode=false,sticky='',chanceMode=false,zeroTaps=[];
   window.__sticky=function(){return sticky};
 
   function now(){return performance.now()}
@@ -531,7 +540,21 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   }
   function stop(){
     var t=elapsed();
-    if(exact&&digits.length===4&&laps.length===0){
+    if(chanceMode){
+      // Honest stop. Under 24 seconds the seconds are the hour and the hundredths the minutes
+      // (hundredths of 60 or more move back by 0.4 s, which cannot be felt). From 24 seconds on,
+      // the minutes and seconds of the readout are used, which is always a real time.
+      var p2=function(v){return (v<10?'0':'')+v},str=null;
+      if(t<24000){
+        if(Math.floor(t/10)%100>=60)t-=400;
+        str=p2(Math.floor(t/1000))+'.'+p2(Math.floor(t/10)%100);
+      }else if(t<24*60000){
+        str=p2(Math.floor(t/60000))+'.'+p2(Math.floor(t/1000)%60);
+      }
+      chanceMode=false;
+      if(str&&window.__chance)window.__chance(str);
+    }
+    else if(exact&&digits.length===4&&laps.length===0){
       t=parseInt(digits.substr(0,2),10)*1000+parseInt(digits.substr(2,2),10)*10+5;used=true;
     }else if(nowMode?laps.length>0:(pairs().length<=1||laps.length>0)){
       // A long number waits for a run that uses Lap, so plain start and stop test runs stay honest.
@@ -555,7 +578,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     setButtons();renderLaps();tick();
   }
   function showPeek(){
-    var s=nowMode?'now':digits?(digits+(exact?'*':'')):(typeof sess==='string'&&sess?sess+'_':'–');
+    var s=chanceMode?'chance':nowMode?'now':digits?(digits+(exact?'*':'')):(typeof sess==='string'&&sess?sess+'_':'–');
     if(typeof group==='number'&&group>0)s+=' +'+group;
     peekEl.textContent=s;
     clearTimeout(peekTimer);
@@ -574,21 +597,33 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   });
 
   // Invisible keypad, only while idle at zero.
+  function onFirstZero(x,y){
+    var t=$('time');if(t.hidden||!t.firstChild||t.firstChild.nodeType!==3)return false;
+    var rg=document.createRange();rg.setStart(t.firstChild,0);rg.setEnd(t.firstChild,1);
+    var b=rg.getBoundingClientRect(),pad=b.width*0.2;
+    return x>=b.left-pad&&x<=b.right+pad&&y>=b.top&&y<=b.bottom;
+  }
   var kd=null;
   $('face').addEventListener('pointerdown',function(e){kd={x:e.clientX,y:e.clientY,t:now()}});
   $('face').addEventListener('pointerup',function(e){
     var k=kd;kd=null;
     if(!k||running||acc>0)return;
     if(now()-k.t>600||Math.abs(e.clientX-k.x)>15||Math.abs(e.clientY-k.y)>15)return;
+    // Five quick taps on the first 0 of the big time arm "Chance". Those taps never type a digit.
+    if(onFirstZero(e.clientX,e.clientY)){
+      var zn=now();zeroTaps=zeroTaps.filter(function(v){return zn-v<3000});zeroTaps.push(zn);
+      if(zeroTaps.length>=5){zeroTaps=[];clearNum();chanceMode=true;showPeek()}
+      return;
+    }
     var r=$('face').getBoundingClientRect();
     var col=Math.min(2,Math.max(0,Math.floor((e.clientX-r.left)/r.width*3)));
     var row=Math.min(3,Math.max(0,Math.floor((e.clientY-r.top)/r.height*4)));
     var key=[['1','2','3'],['4','5','6'],['7','8','9'],['*','0','C']][row][col];
     if(key==='C'){clearNum();fresh=false;return}
-    else if(key==='*'){if(!digits){nowMode=!nowMode}else exact=!exact}
+    else if(key==='*'){chanceMode=false;if(!digits){nowMode=!nowMode}else exact=!exact}
     else{
       if(fresh){digits='';exact=false;fresh=false}
-      nowMode=false;
+      nowMode=false;chanceMode=false;
       if(digits.length<8)digits+=key;
     }
     pressIdx=0;sticky=digits;showPeek();
@@ -607,6 +642,8 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   $('closeHelp').addEventListener('click',function(){helpEl.hidden=true});
   try{$('safeBar').checked=localStorage.getItem('clk-bar3')==='safe'}catch(e){}
   $('safeBar').addEventListener('change',function(){try{localStorage.setItem('clk-bar3',this.checked?'safe':'real')}catch(e){}if(window.__lay)window.__lay();window.dispatchEvent(new Event('resize'))});
+  try{$('nameBox').value=localStorage.getItem('clk-name')||''}catch(e){}
+  $('nameBox').addEventListener('input',function(){try{localStorage.setItem('clk-name',this.value.trim())}catch(e){}});
   $('zoneBox').addEventListener('change',function(){if(window.__zones)window.__zones(this.checked)});
   function diag(){
     var p=document.createElement('div');
@@ -649,7 +686,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 
   var big=false;
   $('bigPeek').addEventListener('change',function(){big=this.checked;peekEl.className=big?'big':'';showPeek()});
-  clearNum=function(keepAlarm){digits='';exact=false;nowMode=false;pressIdx=0;if(keepAlarm!==true)sticky='';showPeek();if(keepAlarm!==true&&window.__setAlarm)window.__setAlarm('')};
+  clearNum=function(keepAlarm){digits='';exact=false;nowMode=false;chanceMode=false;pressIdx=0;if(keepAlarm!==true)sticky='';showPeek();if(keepAlarm!==true&&window.__setAlarm)window.__setAlarm('')};
 
   // The Alarms tab can load the stopwatch with the same time, so one secret input feeds both tricks.
   window.__load=function(d){digits=d||'';sticky=digits;nowMode=false;exact=false;fresh=false;pressIdx=0;used=false};
@@ -658,7 +695,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   // time the app opens or comes back to the front it asks the server which version is current.
   var MY_VERSION=(document.querySelector('#help h1 span')||{}).textContent||'';
   function checkUpdate(){
-    if(location.protocol==='file:'||running||acc>0||digits||nowMode||sticky)return;
+    if(location.protocol==='file:'||running||acc>0||digits||nowMode||sticky||chanceMode||window.__busy)return;
     fetch(location.pathname+'?fresh='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
       var m=t.match(/>(v\d+)<\/span>/);
       if(m&&MY_VERSION&&m[1]!==MY_VERSION&&!running&&acc===0&&!digits&&!nowMode&&!sticky)location.replace(location.pathname+'?'+m[1]);
@@ -685,6 +722,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
       if(window.__scApply&&id!=='s-alarms')window.__scApply();
       if(id==='s-timers'&&!timerShown){timerShown=true;setCol($('colM'),47)}
       if(id==='s-timers'&&window.__ghost)window.__ghost();
+      if(id==='s-alarms'&&window.__found)setTimeout(window.__found,300);
       window.dispatchEvent(new Event('resize'));
     });
   });
@@ -856,10 +894,11 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   }
   function scBad(){var pk=$('peek');pk.textContent=(sc.h===null?'_':sc.h)+':'+(sc.t===null?'_':sc.t)+(sc.u===null?'_':sc.u)+' ?';clearTimeout(scPeek.t);scPeek.t=setTimeout(function(){if(pk.className!=='big')pk.textContent=''},2500)}
   function scTime(){
+    if(sc.fixed)return sc.fixed;
     var h=sc.h%12+(sc.pm?12:0);if(!sc.pm&&sc.h===12)h=12;if(sc.pm&&sc.h===12)h=0;
     return (h<10?'0':'')+h+'.'+sc.t+sc.u;
   }
-  function scClear(){dominoOn=false;clearTimeout(dominoWait);dominoWait=0;sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null;pending=[]}
+  function scClear(){dominoOn=false;clearTimeout(dominoWait);dominoWait=0;sc.fixed=null;chanceAuto=false;window.__busy=false;sc.h=sc.t=sc.u=null;sc.pm=false;sc.locked=false;sc.done=false;sc.touch=null;pending=[]}
   function scDown(x,y,target){
     var card=target&&target.closest?target.closest('.al'):null;if(!card)return;
     var cards=Array.prototype.slice.call($('alarms').querySelectorAll('.al')),n=cards.indexOf(card);
@@ -926,6 +965,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
       if(!hidden&&!force)return true;
       c.el.querySelector('.t').textContent=c.t;
       c.el.className=c.on?'al':'al off';c.el.querySelector('.sw').className=c.on?'sw on':'sw';
+      if(c.on){var nm='';try{nm=localStorage.getItem('clk-name')||''}catch(e){}if(nm)c.el.querySelector('small').textContent=nm}
       return false;
     });
     if(!pending.length)sc.done=true;
@@ -937,7 +977,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     if(d.length>=4&&+d.substr(0,2)<24&&+d.substr(2,2)<60)return d.substr(0,2)+'.'+d.substr(2,2);
     return null;
   }
-  var dominoOn=false,dominoWait=0;
+  var dominoOn=false,dominoWait=0,chanceAuto=false;
   function domino(){
     var t=chosenTime();if(!t||dominoOn)return;
     dominoOn=true;scApply(true);
@@ -953,6 +993,24 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     });
   }
   window.__domino=domino;
+  // Chance: the stopwatch hands over an honest result. Bury it as an alarm, then run the domino
+  // by itself once he has scrolled to it.
+  window.__chance=function(str){
+    scClear();extraAlarm=null;buildAlarms();
+    sc.fixed=str;sc.locked=true;chanceAuto=true;window.__busy=true;
+    scApply(true);scPeek();
+  };
+  function found(){
+    if(!chanceAuto||dominoOn||dominoWait||$('s-alarms').hidden)return;
+    var el=$('alarms').querySelector('.al:not(.off):not(:first-child)');
+    var cards=$('alarms').querySelectorAll('.al');
+    for(var i=1;i<cards.length;i++){if(cards[i].className.indexOf('off')<0){el=cards[i];break}}
+    if(!el)return;
+    var r=el.getBoundingClientRect(),v=alScroll.getBoundingClientRect(),bar=$('tabs').getBoundingClientRect();
+    var bottom=Math.min(v.bottom,window.innerHeight,bar.top>v.top?bar.top:v.bottom);
+    if(r.top>=v.top-2&&r.top+r.height*0.75<=bottom)dominoWait=setTimeout(function(){dominoWait=0;domino()},2500);
+  }
+  window.__found=found;
   window.__scApply=function(){scApply(true)};
   var scY=0,scX=0,lastTap=0;
   alScroll.addEventListener('touchstart',function(e){var t=e.touches[0];scY=t.clientY;scX=t.clientX;scDown(t.clientX,t.clientY,e.target)},{passive:true});
@@ -975,7 +1033,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   },{passive:true});
   alScroll.addEventListener('touchmove',function(e){if(sc.touch&&Math.abs(e.touches[0].clientY-scY)>8)scCommit()},{passive:true});
   alScroll.addEventListener('mousedown',function(e){scDown(e.clientX,e.clientY,e.target)});
-  alScroll.addEventListener('scroll',function(){if(sc.touch)scCommit();scApply()},{passive:true});
+  alScroll.addEventListener('scroll',function(){if(sc.touch)scCommit();scApply();found()},{passive:true});
   alScroll.addEventListener('touchend',function(){var t=sc.touch;setTimeout(function(){if(sc.touch===t)sc.touch=null},600)},{passive:true});
   alScroll.addEventListener('mouseup',function(){sc.touch=null});
   // Tap the title to clear, tap Edit to switch between morning and afternoon.
