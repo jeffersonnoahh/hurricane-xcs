@@ -389,7 +389,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
 </nav>
 
 <div id="help" hidden>
-  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v40</span></h1>
+  <h1>Performer notes <span style="font-size:13px;color:var(--muted)">v41</span></h1>
   <p>Hold the time for two seconds to open this page. Nobody else should see it.</p>
   <h2>Secret keypad</h2>
   <p>When the stopwatch shows 00.00,00, the big time area above the buttons is an invisible keypad. Tap it briefly; a swipe changes the page and a two second hold opens these notes:</p>
@@ -421,7 +421,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
   <h2>Both tricks from one input</h2>
   <p>Either input loads both tabs. A time entered by scrolling on Alarms also loads the stopwatch: a run of Start, Lap, Stop then gives a lap ending in the hour and a lap ending in the minutes. A four digit time typed on the stopwatch keypad also appears in Alarms.</p>
   <h2>Chance</h2>
-  <p>Nobody chooses and you touch nothing. Tap the <b>first 0</b> of the big time <b>five times</b> quickly. The corner shows "chance". Hand him the phone: he starts the stopwatch and stops it whenever he likes. The stop is honest. The time he lands on becomes an alarm, buried in the list and switched on.</p>
+  <p>Nobody chooses and you touch nothing. Tap the <b>first 0</b> of the big time <b>five times</b> within three seconds. The corner may show digits during the first four taps, then it shows "chance". Hand him the phone: he starts the stopwatch and stops it whenever he likes. The stop is honest. The time he lands on becomes an alarm, buried in the list and switched on.</p>
   <ul>
     <li><b>Stopped before 24 seconds:</b> the last four digits are the time. 00.07,42 gives the alarm 07.42.</li>
     <li><b>Stopped later:</b> the first four digits are the time. 01.37,12 gives the alarm 01.37.</li>
@@ -609,12 +609,12 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
     var k=kd;kd=null;
     if(!k||running||acc>0)return;
     if(now()-k.t>600||Math.abs(e.clientX-k.x)>15||Math.abs(e.clientY-k.y)>15)return;
-    // Five quick taps on the first 0 of the big time arm "Chance". Those taps never type a digit.
+    // Five quick taps on the first 0 of the big time arm "Chance". The first zero lies over keypad keys,
+    // so the first four taps still type as usual; the fifth wipes what they typed and arms it.
     if(onFirstZero(e.clientX,e.clientY)){
       var zn=now();zeroTaps=zeroTaps.filter(function(v){return zn-v<3000});zeroTaps.push(zn);
-      if(zeroTaps.length>=5){zeroTaps=[];clearNum();chanceMode=true;showPeek()}
-      return;
-    }
+      if(zeroTaps.length>=5){zeroTaps=[];clearNum();chanceMode=true;showPeek();return}
+    }else zeroTaps=[];
     var r=$('face').getBoundingClientRect();
     var col=Math.min(2,Math.max(0,Math.floor((e.clientX-r.left)/r.width*3)));
     var row=Math.min(3,Math.max(0,Math.floor((e.clientY-r.top)/r.height*4)));
