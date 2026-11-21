@@ -10,7 +10,7 @@ try { var _wt = JSON.parse(localStorage.getItem('hxcs_warn_thresh') || 'null'); 
 // same lists as js/app.js (keep in sync)
 var _LEADERS = ['Agung'];
 var _ACT_EXCLUDE = ['Live tiktok', 'Shopee live'];
-var _WARN_EXCLUDE = ['Tokopedia', 'Live tiktok', 'Shopee live', 'Shopee'];
+var _WARN_EXCLUDE = ['Tokopedia', 'Live tiktok', 'Shopee live', 'Shopee', 'TIKTOK'];   // sama dengan app.js
 function _low(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
 function _isLeader(sp) { return _LEADERS.some(function (x) { return _low(x) === _low(sp); }); }
 function _isActExcluded(sp) { return _ACT_EXCLUDE.some(function (x) { return _low(x) === _low(sp); }) || _isLeader(sp); }

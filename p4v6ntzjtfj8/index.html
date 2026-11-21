@@ -32,8 +32,8 @@
 <link rel="icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png" type="image/png">
 <link rel="preload" as="image" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
 <link rel="apple-touch-icon" href="https://d2ol7oe51mr4n9.cloudfront.net/user_39sfmdQQbAHtgXwYGqnL0idUf2I/d25df56c-cca5-403f-a944-88c6533305e9.png">
-<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261109-86" media="print" onload="this.media='all';var p=document.getElementById('preCss');if(p)p.remove();if(window.__cssOk)window.__cssOk()">
-<noscript><link rel="stylesheet" href="css/style.css?v=20261109-86"></noscript>
+<link rel="stylesheet" id="mainCss" href="css/style.css?v=20261120-92" media="print" onload="this.media='all';var p=document.getElementById('preCss');if(p)p.remove();if(window.__cssOk)window.__cssOk()">
+<noscript><link rel="stylesheet" href="css/style.css?v=20261120-92"></noscript>
 </head>
 <body>
 <style>
@@ -377,6 +377,7 @@
     <label class="set-row plain"><span class="grow">Sync automatically when the app is open</span><input type="checkbox" class="switch" id="sAuto"></label>
     <div class="btn-row"><button class="btn" id="sSave">Save</button><button class="btn primary" id="sSync">Sync now</button></div>
     <button class="btn block" id="sRescan" type="button" style="margin-top:8px">↻ Re-check last 7 days</button>
+    <button class="btn block" id="sUndo" type="button" style="margin-top:8px">↺ Undo today’s bank sync</button>
     <p class="muted small" style="margin:6px 2px 0">Missed a payment? This looks at the last 7 days of bank emails again. Ones already in Apex are skipped, so nothing doubles.</p>
     <div class="muted small" id="sStatus"></div>
   </div>
@@ -453,7 +454,7 @@
   var done = false;
   function boot() {
     if (done) return; done = true;
-    ['js/bca-parser.js?v=20261106-8', 'js/app.js?v=20261109-133'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
+    ['js/bca-parser.js?v=20261106-8', 'js/app.js?v=20261120-142'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.async = false; document.body.appendChild(s); });
   }
   var l = document.getElementById('mainCss');
   if (l && l.media === 'all') { var p0 = document.getElementById('preCss'); if (p0) p0.remove(); boot(); } else { window.__cssOk = boot; setTimeout(function () { if (l) l.media = 'all'; var p = document.getElementById('preCss'); if (p) p.remove(); boot(); }, 5000); }

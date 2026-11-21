@@ -451,7 +451,7 @@
   }
   // ---------- render ----------
   function renderAll() {
-    BAL = {};
+    BAL = {}; if (typeof schedSync === 'function') schedSync();
     applyTheme(); renderEye();
     renderHome(); renderTx(); renderBudgets(); renderReport(); renderAccount(); renderDebts(); renderFeatures();
   }
@@ -1273,6 +1273,20 @@
   function debtById(id) { return S.debts.filter(function (d) { return d.id === id; })[0]; }
   function dPaid(d) { return (d.payments || []).reduce(function (a, p) { return a + p.amount; }, 0); }
   function dRemain(d) { return Math.max(0, d.amount - dPaid(d)); }
+  // Monthly plan on a debt (d.sched = [{due, amount}]): the next unpaid month sets the due date.
+  function schedNext(d) {
+    if (!d.sched || !d.sched.length) return null; var paid = dPaid(d), cum = 0;
+    for (var i = 0; i < d.sched.length; i++) { cum += d.sched[i].amount; if (cum > paid) return { i: i, due: d.sched[i].due, amount: Math.min(d.sched[i].amount, cum - paid) }; }
+    return null;
+  }
+  function schedSync() { (S.debts || []).forEach(function (d) { var n = schedNext(d); if (n && d.due !== n.due) d.due = n.due; }); }
+  function schedHtml(d) {
+    if (!d.sched || !d.sched.length) return ''; var paid = dPaid(d), cum = 0, nx = schedNext(d);
+    return '<div class="sheet-sec">Monthly plan</div><div class="card list-card sched">' + d.sched.map(function (x, i) {
+      var before = cum; cum += x.amount; var done = paid >= cum, part = !done && paid > before, dt = new Date(x.due + 'T00:00:00');
+      return '<div class="sch-row' + (done ? ' done' : '') + (nx && nx.i === i ? ' next' : '') + '"><span class="sch-dot">' + (done ? '✓' : '') + '</span><span class="grow"><b>' + MONTHS[dt.getMonth()] + ' ' + dt.getFullYear() + '</b><small>' + (done ? 'Paid' : part ? money(paid - before, { rp: false }) + ' paid so far' : nx && nx.i === i ? 'Next · due ' + fmtDate(x.due) : 'Due ' + fmtDate(x.due)) + '</small></span><b>' + money(x.amount, { rp: false }) + '</b></div>';
+    }).join('') + '</div>';
+  }
   function dStatus(d) {
     if (d.closed === 'cancelled') return 'cancelled';
     if (d.closed === 'writtenoff') return 'writtenoff';
@@ -2049,6 +2063,7 @@
       '<div class="d-prog ' + (st === 'overdue' ? 'overdue' : st === 'partial' ? 'partial' : '') + '" style="margin-top:12px"><i data-w="' + pc + '"></i></div>' +
       '<div class="d-meta"><span>' + pc + '% ' + (inn ? 'collected' : 'paid') + '</span><span>' + dueText(d) + '</span></div>' +
       '<div class="dd-stats"><div><small>Total ' + (inn ? 'owed' : 'borrowed') + '</small><b>' + money(d.amount, { rp: false }) + '</b></div><div><small>' + (inn ? 'Received' : 'Paid') + '</small><b>' + money(p, { rp: false }) + '</b></div><div><small>Remaining</small><b>' + money(dRemain(d), { rp: false }) + '</b></div></div>' +
+      schedHtml(d) +
       '<div class="sheet-sec">Payment timeline</div><div class="timeline">' +
         '<div class="tl start"><div><b>' + (inn ? 'Owed' : 'Borrowed') + ' ' + money(d.amount) + '</b><small>' + fmtDate(d.created) + (d.startTx ? ' · moved via ' + esc(wallet(d.wallet).name) : '') + '</small></div></div>' +
         pays.map(function (x) { return '<div class="tl"><div><b class="pos">+ ' + money(x.amount) + '</b><small>' + fmtDate(x.date) + ' · ' + esc(wallet(x.wallet).name) + (x.note ? ' · ' + esc(x.note) : '') + '</small></div><button class="x" data-delpay="' + esc(x.id) + '" aria-label="Delete payment">×</button></div>'; }).join('') +
@@ -2714,6 +2729,29 @@
     box.innerHTML = '<div class="sheet-sec" style="margin:10px 2px 6px">Last check · ' + L.length + ' email' + (L.length > 1 ? 's' : '') + '</div>' + L.slice().reverse().map(function (x) {
       return '<div class="sl-row' + (/^✓/.test(x.r) ? ' ok' : '') + '"><span class="grow"><b>' + esc(x.s || '(no subject)') + '</b><small>' + esc(x.f) + ' · ' + fmtDate(ymd(new Date(x.d))) + '</small>' + (x.x ? '<details><summary>Show email text</summary><pre>' + esc(x.x) + '</pre></details>' : '') + '</span><em>' + esc(x.r) + '</em></div>'; }).join('');
   }
+  // Undo today's bank sync: list everything BCA/Mandiri sync logged today, remove the ticked ones (they never come back).
+  function undoSyncSheet() {
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    var L = S.tx.filter(function (t) { return (t.src === 'bca' || t.src === 'mandiri') && t.srcId && (t.created || 0) >= d0.getTime(); }).sort(function (a, b) { return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
+    if (!L.length) { toast('Nothing was logged automatically today'); return; }
+    openSheet('<h3>Undo today\u2019s bank sync</h3><p class="muted small" style="text-align:center;margin-top:-8px">These were added automatically from bank emails today. Untick any you want to keep.</p>' +
+      '<div class="card list-card">' + L.map(function (t) { return '<label class="ml-row us-row"><input type="checkbox" class="us-ck" data-id="' + esc(t.id) + '" checked><span class="grow"><b>' + esc(t.merchant || cat(t.cat).name) + '</b><span class="sub">' + fmtDate(t.date) + (t.time ? ' · ' + esc(t.time) : '') + ' · ' + esc(wallet(t.wallet).name) + ' · ' + (t.src === 'mandiri' ? 'Mandiri' : 'BCA') + '</span></span><span class="' + (t.type === 'income' ? 'pos' : 'neg') + '">' + (t.type === 'income' ? '+' : '−') + money(t.amount, { rp: false }) + '</span></label>'; }).join('') + '</div>' +
+      '<button class="btn danger block" id="usGo" style="margin-top:12px"></button><p class="muted small" style="text-align:center">Removed ones are remembered, so the next sync won\u2019t add them again.</p>',
+      function (r) {
+        var go = r.querySelector('#usGo');
+        function lbl() { var n = r.querySelectorAll('.us-ck:checked').length; go.textContent = n ? 'Remove ' + n + ' transaction' + (n > 1 ? 's' : '') : 'Nothing selected'; go.disabled = !n; }
+        r.addEventListener('change', lbl); lbl();
+        go.onclick = function () {
+          var ids = [].map.call(r.querySelectorAll('.us-ck:checked'), function (c) { return c.dataset.id; }); if (!ids.length) return;
+          confirmBox('Remove ' + ids.length + ' transaction' + (ids.length > 1 ? 's' : '') + '?', 'They come out of your wallets and reports. Your own entries stay.', 'Remove', true).then(function (ok) {
+            if (!ok) return; S.gone = S.gone || {};
+            S.tx = S.tx.filter(function (t) { if (ids.indexOf(t.id) === -1) return true; if (t.srcId) S.gone[t.srcId] = Date.now(); return false; });
+            S.debts.forEach(function (d) { d.payments = (d.payments || []).filter(function (p) { return ids.indexOf(p.txId) === -1; }); });
+            haptic(); save(); closeSheet(); renderAll(); toast(ids.length + ' removed ✓');
+          });
+        };
+      });
+  }
   function pruneSeen() {
     var cut = Date.now() - 120 * 864e5;
     Object.keys(S.seen).forEach(function (k) { if (S.seen[k] < cut) delete S.seen[k]; });
@@ -2958,6 +2996,7 @@
     if (d.kind === 'plan') { var acc = d.plan.account ? ' · account ••' + String(d.plan.account).replace(/\D/g, '').slice(-4) : ''; return [{ ic: /wedding/i.test(d.name || d.match || '') ? 'wedding' : 'my_home', t: (d.name || 'Plan'), s: d.plan.months + ' months · ' + money(d.plan.parties.reduce(function (a, x) { return a + x.amt; }, 0), { rp: false }) + '/mo' + acc }]; }
     if (d.kind === 'clients') return d.list.map(function (c) { return { ic: 'sentaris', t: c.name, s: (c.kind === 'project' ? 'Project ' + money(c.total, { rp: false }) : 'Monthly ' + money(c.amount, { rp: false })) + (c.partner ? ' · ' + c.partner.pct + '% ' + c.partner.name : '') }; });
     if (d.kind === 'komisi') return [{ ic: 'komisi_out', t: 'Commission history', s: d.list.length + ' months' }];
+    if (d.kind === 'sale') return [{ ic: 'gold_inv', t: 'Sold ' + (d.label || 'asset'), s: 'Into ' + d.to + ' · ' + money(d.amount, { rp: false }) }];
     if (d.kind === 'owed') return [{ ic: 'debt_collection', t: 'Owed to me', s: d.list.length + ' records · ' + money(d.list.reduce(function (a, x) { return a + x.amount; }, 0), { rp: false }) }];
     if (d.rows) return [{ ic: 'reserve_transfer', t: d.name || 'Transactions', s: d.rows.length.toLocaleString('id-ID') + ' transactions' }];
     return [{ ic: 'uncat', t: 'Data', s: '' }];
@@ -2975,6 +3014,7 @@
           if (!cur) { prev.innerHTML = ''; return; }
           if (cur.type === 'bad') { prev.innerHTML = '<div class="cd-msg bad">This doesn\u2019t look like a full code. Copy the whole code and paste again.</div>'; return; }
           var items = cur.type === 'data' ? codeItems(cur.d) : [{ ic: 'insurance', t: 'Private data file', s: 'Unlocked on your phone after you tap Add' }];
+          if (items.length === 1 && items[0].ic === 'uncat') { go.disabled = true; prev.innerHTML = '<div class="cd-msg bad">This code needs the newest Apex. Updating…</div>'; try { sessionStorage.setItem('apex-code', inp.value); } catch (e) {} if (window.apexUpdate) window.apexUpdate(true).then(function (ok) { if (!ok) prev.innerHTML = '<div class="cd-msg bad">Could not update. Close Apex fully, open it again and paste the code.</div>'; }); return; }
           prev.innerHTML = '<div class="cd-msg">This code adds:</div><div class="card list-card cd-items">' + items.map(function (it) { return '<div class="ml-row"><span class="cd-it">' + sprite(it.ic) + '</span><span class="grow"><b>' + esc(it.t) + '</b><span class="sub">' + esc(it.s) + '</span></span></div>'; }).join('') + '</div>';
           go.textContent = 'Add ' + (items.length > 1 ? items.length + ' items' : 'to Apex');
         }
@@ -3016,7 +3056,7 @@
   // Money owed to me, added from a private code (no wallet change: just records to collect).
   function seedApply(d) {
     if (d.kind === 'multi') { (d.items || []).forEach(function (x, i) { if (x.kind === 'plan') planImport(x, i < d.items.length - 1); else seedApply(x); }); return; }
-    if (d.kind === 'clients') clientsImport(d); else if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else mlPreview(d.rows, d.name, d.balances || {});
+    if (d.kind === 'clients') clientsImport(d); else if (d.kind === 'plan') planImport(d); else if (d.kind === 'komisi') kmImportPreview(d.list); else if (d.kind === 'owed') owedImportPreview(d.list); else if (d.kind === 'sale') saleImport(d); else mlPreview(d.rows, d.name, d.balances || {});
   }
   function planImport(d, quiet) {
     var p = (S.inst || []).filter(function (x) { return x.id === d.instId; })[0] || (d.match ? (S.inst || []).filter(function (x) { return new RegExp(d.match, 'i').test(x.name); })[0] : null);
@@ -3031,6 +3071,32 @@
     p.plan = np; p.monthly = per; p.total = per * np.months;
     save(); renderAll(); if (quiet) return; toast('Plans added ✓'); setTimeout(function () { if (S.inst.length > 1) instSheet(); else instDetail(p); }, 300);
   }
+  // Asset sold (e.g. gold buyback): money moves into a cash wallet, the asset wallet goes to 0 and is hidden, the loss/gain is accepted.
+  function saleImport(d) {
+    function find(id, rx, alt) { var W = S.wallets; return W.filter(function (w) { return w.id === id; })[0] || W.filter(function (w) { return rx.test(String(w.name).trim()); })[0] || W.filter(alt)[0]; }
+    var src = find(d.fromId, new RegExp(d.from, 'i'), function (w) { return (w.holding && w.holding.asset === d.label) || (new RegExp(d.label, 'i').test(w.name) && !/puter/i.test(w.name) && !w.hidden); });
+    var dst = find(d.toId, new RegExp(d.toMatch || ('^' + d.to + '$'), 'i'), function (w) { return /mandiri/i.test(w.name) && !/personal/i.test(w.name); });
+    var done = S.tx.some(function (t) { return t.seedKey === d.key; });
+    if (!dst) { toast('Could not find ' + d.to); return; }
+    var book = src ? balance(src.id) : 0, res = d.amount - book;
+    openSheet('<h3>' + esc(d.title || 'Asset sold') + '</h3><div class="kt-hero"><small>Received in ' + esc(dst.name) + '</small><b>' + money(d.amount) + '</b></div>' +
+      '<div class="card list-card">' +
+      '<div class="ml-row"><span class="grow"><b>' + esc(src ? src.name : 'Asset') + ' value in Apex</b><span class="sub">What you paid</span></span><span>' + money(book, { rp: false }) + '</span></div>' +
+      '<div class="ml-row"><span class="grow"><b>Sold for</b><span class="sub">' + esc(d.note || '') + '</span></span><span>' + money(d.amount, { rp: false }) + '</span></div>' +
+      '<div class="ml-row"><span class="grow"><b>' + (res < 0 ? 'Loss' : 'Gain') + '</b><span class="sub">Net worth changes by this</span></span><span style="color:' + (res < 0 ? 'var(--neg,#e5484d)' : 'var(--pos,#30a46c)') + '">' + (res < 0 ? '−' : '+') + money(Math.abs(res), { rp: false }) + '</span></div></div>' +
+      '<p class="muted small" style="text-align:center;margin:10px 0">' + esc(src ? src.name : 'The asset') + ' goes to 0 and is hidden. ' + esc(dst.name) + ' rupiah balance goes up by ' + money(d.amount, { rp: false }) + '.</p>' +
+      (done ? '<p class="muted" style="text-align:center">Already added ✓</p>' : '<button class="btn primary block" id="slImp">Confirm sale</button>'),
+      function (r) {
+        var b = r.querySelector('#slImp'); if (!b) return;
+        b.onclick = function () {
+          var t = addTx({ type: 'transfer', cat: '', amount: d.amount, wallet: src ? src.id : dst.id, toWallet: dst.id, date: d.date, time: '', note: (d.note || 'Asset sold') + (res < 0 ? ' · loss ' : ' · gain ') + money(Math.abs(res), { rp: false }), src: 'code' });
+          t.seedKey = d.key;
+          if (!src) { t.type = 'income'; t.wallet = dst.id; t.toWallet = ''; t.cat = ''; }
+          else { if (src.holding) { src.soldHolding = src.holding; delete src.holding; } BAL = {}; src.initial = (+src.initial || 0) - balance(src.id); src.hidden = true; src.soldAt = d.date; }
+          BAL = {}; haptic(); save(); closeSheet(); renderAll(); toast((src ? src.name : 'Asset') + ' sold · ' + money(d.amount, { rp: false }) + ' in ' + dst.name + ' ✓');
+        };
+      });
+  }
   function owedImportPreview(list) {
     var todo = list.filter(function (o) { return !S.debts.some(function (d) { return d.seedKey === o.key; }); });
     var tot = todo.reduce(function (a, o) { return a + o.amount; }, 0);
@@ -3040,7 +3106,8 @@
       function (r) {
         var b = r.querySelector('#owImp'); if (!b) return;
         b.onclick = function () {
-          todo.forEach(function (o) { S.debts.push({ id: uid(), dir: 'in', person: o.person, title: o.title, amount: o.amount, created: o.created, due: o.due, wallet: (S.wallets.filter(function (w) { return /^reserve$/i.test(w.name); })[0] || S.wallets[0] || {}).id, tags: o.tags || '', notes: o.notes || '', payments: [], seedKey: o.key, ts: Date.now() }); });
+          todo.forEach(function (o) { S.debts.push({ id: uid(), dir: 'in', person: o.person, title: o.title, amount: o.amount, created: o.created, due: o.due, wallet: (S.wallets.filter(function (w) { return /^reserve$/i.test(w.name); })[0] || S.wallets[0] || {}).id, tags: o.tags || '', notes: o.notes || '', payments: [], sched: o.sched || undefined, seedKey: o.key, ts: Date.now() }); });
+          schedSync();
           haptic(); save(); closeSheet(); renderAll(); toast(todo.length + ' records added to Owed ✓'); show('v-debts');
         };
       });
@@ -3465,6 +3532,7 @@
     };
     if ($('txExportBtn')) $('txExportBtn').onclick = function () { haptic(); exportSheet(); };
     $('sSync').onclick = function () { if ($('sSave').onclick() !== false) sync(true); };
+    if ($('sUndo')) $('sUndo').onclick = function () { haptic(); undoSyncSheet(); };
     if ($('sRescan')) $('sRescan').onclick = function () { if ($('sSave').onclick() !== false) { haptic(); sync(true, 7); } };
 
     $('tRun').onclick = function () {
@@ -3933,7 +4001,17 @@
   function fetchFx() {
     clearTimeout(fxT); fxT = setTimeout(fetchFx, 60e3);
     if (document.hidden) return;
-    fetch('mkt?s=IDR%3DX').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) { if (!j || !j.price) throw 0; fxSet(j); })
+    fetch('mkt?s=IDR%3DX').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
+      if (!j || !j.price) throw 0;
+      // The site's USD/IDR feed sometimes freezes for hours: on trading days, if it is over 30 min old, ask CoinGecko from this phone.
+      var now = Date.now() / 1000, d = new Date(), wd = d.getUTCDay(), h = d.getUTCHours(), open = !(wd === 6 || (wd === 0 && h < 21) || (wd === 5 && h >= 22));
+      if (!open || now - (+j.time || 0) < 30 * 60) { fxSet(j); return; }
+      return fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr&include_last_updated_at=true').then(function (r) { return r.json(); }).then(function (g) {
+        var t = g && g.tether; if (!t || !t.idr || (+t.last_updated_at || 0) <= (+j.time || 0)) { fxSet(j); return; }
+        var tt = +t.last_updated_at || now; j.price = Math.round(t.idr); j.time = tt; j.src = 'usdt'; j.day = (j.day || []).concat([[Math.round(tt), j.price]]);
+        j.high = Math.max(+j.high || j.price, j.price); j.low = Math.min(+j.low || j.price, j.price); fxSet(j);
+      }, function () { fxSet(j); });
+    })
       .catch(function () {
         fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr&include_24hr_change=true').then(function (r) { return r.json(); }).then(function (j) {
           var t = j && j.tether; if (!t || !t.idr) return;
@@ -4115,10 +4193,23 @@
         '<p class="muted small" style="text-align:center">Encrypted on this phone with your passphrase before upload. Nobody else can read it.</p>' +
         (c.mode === 'passkey' ? '<div class="card fid-on"><b>🔐 Face ID sync is on</b><div class="muted small">On another iPhone, iPad or Mac with your Apple account: open the Apex link → More → Encrypted cloud backup → Sign in with Face ID.</div></div>' : '') + '<div class="card"' + (c.mode === 'passkey' ? ' hidden' : '') + '><div class="eyebrow">Your sync code</div><div class="sync-code" id="syncCode">' + esc(c.id) + '</div><div class="muted small">Use this code + your passphrase to open your data on another device.</div><button class="btn block" id="copyCode">Copy code</button></div>' +
         '<div class="fs-st" id="fsSt">Photos & PDFs: checking…</div>' +
+        (c.pass && String(c.pass).indexOf('prf:') !== 0 ? '<button class="btn block" id="cShowPass" type="button">🔑 Show my passphrase</button><div class="card pass-box" id="cPassBox" hidden></div>' : '') +
         '<button class="btn primary block" id="cNow">Back up now</button><button class="btn block" id="cSnap">🕘 Restore an earlier version</button><button class="btn danger block" id="cOff">Turn off on this device</button>',
         function (r) {
           r.querySelector('#copyCode').onclick = function () { try { navigator.clipboard.writeText(c.id); toast('Code copied'); } catch (e) { toast(c.id); } };
           r.querySelector('#cNow').onclick = function () { cloudPush(true).then(function () { toast('Backed up ✓'); closeSheet(); }); };
+          var sp = r.querySelector('#cShowPass');
+          if (sp) sp.onclick = function () {
+            haptic();
+            confirmBox('Show your passphrase?', 'Make sure nobody is looking at your screen. With this passphrase and your sync code, anyone could open your backup.', 'Show it').then(function (ok) {
+              if (!ok) return; faceGate().then(function (ok2) {
+                if (!ok2) return; var box = r.querySelector('#cPassBox');
+                box.innerHTML = '<div class="eyebrow">Your passphrase</div><div class="sync-code pass-code">' + esc(c.pass) + '</div><div class="muted small" style="margin:6px 0 10px">Save it in the Passwords app or Notes now, so you never lose it.</div><button class="btn block" id="cCopyPass" type="button">Copy passphrase</button>';
+                box.hidden = false; sp.hidden = true;
+                box.querySelector('#cCopyPass').onclick = function () { haptic(); (navigator.clipboard ? navigator.clipboard.writeText(c.pass) : Promise.reject()).then(function () { toast('Passphrase copied'); }, function () { toast(c.pass); }); };
+              });
+            });
+          };
           r.querySelector('#cSnap').onclick = function () { haptic(); snapSheet(); };
           var ids = fsAllIds(), up = ids.filter(function (x) { return fsDone()[x]; }).length, st = r.querySelector('#fsSt');
           fsToken(c).then(function (tk) { return fetch(FS + c.id, { headers: { 'x-apex-token': tk }, cache: 'no-store' }); }).then(function (res) {
@@ -4442,14 +4533,21 @@
     DEF.concat(Object.keys(SEC_NAMES)).forEach(function (k) { if (SEC_NAMES[k] && !L.some(function (x) { return x.k === k; })) L.push({ k: k, on: !S.settings.home ? !OFF[k] : true }); });
     return L;
   }
+  var MKT = [['gold', 'goldBar', 'Gold price'], ['ihsg', 'ihsgBar', 'IHSG'], ['fx', 'fxBar', 'USD / IDR']];
+  function applyMkt() {
+    var off = S.settings.mktOff || {}, any = false;
+    MKT.forEach(function (m) { var el = $(m[1]); if (!el) return; el.style.display = off[m[0]] ? 'none' : ''; if (!off[m[0]]) any = true; });
+    var row = document.querySelector('.mkt-row'); if (row) row.style.display = any ? '' : 'none';
+  }
   function applyHome() {
+    applyMkt();
     var box = $('homeSecs'); if (!box) return;
     homeLayout().forEach(function (x) { var el = box.querySelector('[data-sec="' + x.k + '"]'); if (!el) return; box.appendChild(el); el.classList.toggle('sec-off', !x.on); });
   }
   function homeSheet() {
     var L = homeLayout();
     function rows() { return L.map(function (x, i) { return '<div class="hl-row" data-i="' + i + '" data-id="' + x.k + '"><span class="drag">≡</span><label class="grow"><input type="checkbox" class="switch" ' + (x.on ? 'checked' : '') + '> ' + SEC_NAMES[x.k] + '</label><button class="x" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button class="x" data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + '>↓</button></div>'; }).join(''); }
-    openSheet('<h3>Customize Home</h3><p class="muted small" style="text-align:center">Turn sections on or off and change their order.</p><div class="card list-card hl" id="hlList">' + rows() + '</div><button class="btn primary block" id="hlDone">Done</button><button class="btn block" id="hlReset">Reset to default</button>',
+    openSheet('<h3>Customize Home</h3><p class="muted small" style="text-align:center">Turn sections on or off and change their order.</p><div class="sheet-sec">Live prices</div><div class="card list-card hl" id="hlMkt">' + MKT.map(function (m) { return '<div class="hl-row"><label class="grow"><input type="checkbox" class="switch" data-mkt="' + m[0] + '" ' + ((S.settings.mktOff || {})[m[0]] ? '' : 'checked') + '> ' + m[2] + '</label></div>'; }).join('') + '</div><div class="sheet-sec">Sections</div><div class="card list-card hl" id="hlList">' + rows() + '</div><button class="btn primary block" id="hlDone">Done</button><button class="btn block" id="hlReset">Reset to default</button>',
       function (r) {
         var list = r.querySelector('#hlList');
         list.addEventListener('click', function (e) {
@@ -4459,8 +4557,9 @@
         });
         makeSortable(list, '.hl-row', '.drag', function (ids) { L = ids.map(function (k) { return L.filter(function (x) { return x.k === k; })[0]; }); list.innerHTML = rows(); S.settings.home = L; save(); applyHome(); haptic(); });
         list.addEventListener('change', function (e) { var row = e.target.closest('.hl-row'); if (!row) return; L[+row.dataset.i].on = e.target.checked; S.settings.home = L; save(); applyHome(); });
+        r.querySelector('#hlMkt').addEventListener('change', function (e) { var k = e.target.dataset.mkt; if (!k) return; var o = S.settings.mktOff = S.settings.mktOff || {}; if (e.target.checked) delete o[k]; else o[k] = 1; haptic(); save(); applyMkt(); });
         r.querySelector('#hlDone').onclick = closeSheet;
-        r.querySelector('#hlReset').onclick = function () { delete S.settings.home; save(); applyHome(); closeSheet(); toast('Home reset'); };
+        r.querySelector('#hlReset').onclick = function () { delete S.settings.home; delete S.settings.mktOff; save(); applyHome(); closeSheet(); toast('Home reset'); };
       });
   }
 
@@ -5072,4 +5171,40 @@
   bindTilt(); bindSpecular(); bindPull(); bindScrub(); window.addEventListener('scroll', onScroll, { passive: true });
   requestAnimationFrame(moveInd);
   if (S.settings.autoSync) sync(false);
+  // Self update: an iPhone home screen app keeps its saved copy. When a newer version is live, save it and reload once.
+  var MY_V = ((document.querySelector('script[src*="js/app.js"]') || {}).src || '').replace(/^.*[?&]v=/, '');
+  function checkUpdate(force) {
+    if (!MY_V || navigator.onLine === false) return Promise.resolve(false);
+    return fetch('./index.html?u=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (h) {
+      var m = h.match(/js\/app\.js\?v=([\w-]+)/); if (!m || m[1] === MY_V) return false;
+      var seen = ''; try { seen = sessionStorage.getItem('apex-upd'); } catch (e) {}
+      if (seen === m[1]) return false; // already reloaded for this version once: never loop
+      var busyUser = document.body.classList.contains('sheet-open') || /INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '');
+      if (busyUser && !force) return false;
+      try { sessionStorage.setItem('apex-upd', m[1]); } catch (e) {}
+      var put = window.caches ? caches.open('apex-v4').then(function (c) { var o = { headers: { 'Content-Type': 'text/html; charset=utf-8' } }; return Promise.all([c.put('./index.html', new Response(h, o)), c.put('./', new Response(h, o))]); }).catch(function () {}) : Promise.resolve();
+      return put.then(function () { location.reload(); return true; });
+    }).catch(function () { return false; });
+  }
+  // Two-column Home in landscape: each card spans as many 4px grid rows as it is tall, so cards pack without holes.
+  (function () {
+    var host = $('homeSecs'), mq = window.matchMedia('(min-width:780px) and (max-width:1199px)'); if (!host) return;
+    var raf = 0, ro = window.ResizeObserver ? new ResizeObserver(function () { if (!raf) raf = requestAnimationFrame(fit); }) : null;
+    function fit() {
+      raf = 0; var on = mq.matches, gap = 16;
+      Array.prototype.forEach.call(host.children, function (el) {
+        if (!on) { el.style.gridRowEnd = ''; return; }
+        var h = el.offsetHeight;
+        el.style.gridRowEnd = h ? 'span ' + Math.ceil((h + gap) / 4) : '';
+        if (ro && !el._ro) { el._ro = 1; ro.observe(el); }
+      });
+    }
+    if (mq.addEventListener) mq.addEventListener('change', fit); else if (mq.addListener) mq.addListener(fit);
+    if (window.MutationObserver) new MutationObserver(function () { if (!raf) raf = requestAnimationFrame(fit); }).observe(host, { childList: true });
+    fit(); setTimeout(fit, 800);
+  })();
+  window.apexUpdate = checkUpdate;
+  try { var pend = sessionStorage.getItem('apex-code'); if (pend) { sessionStorage.removeItem('apex-code'); setTimeout(function () { codeSheet(pend); }, 600); } } catch (e) {}
+  setTimeout(checkUpdate, 1500);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(); });
 })();

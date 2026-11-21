@@ -1,0 +1,29 @@
+/* Perbaikan tampilan dari pemeriksaan bug 13 Nov 2026. Dimuat SETELAH semua skin
+   (style → premium → skin → reference → professional → glass → fx-*), jadi aturan di
+   sini menang tanpa mengubah urutan file lain. */
+
+/* Insights · 6-Month Trend: kolom harus setinggi grafik — dengan align-items:flex-end
+   kolom menyusut dan semua batang tampil 2px, berapa pun persentasenya */
+.ins-trend{align-items:stretch!important}
+.ins-trend-bars{min-height:0!important}
+
+/* Dashboard di HP: strip status (Target / Top team / Activity / Periode) bisa digeser —
+   reference-dashboard.css memaksa overflow:hidden, kartu ke-3 terpotong & ke-4 tak terlihat */
+@media(max-width:768px){
+  .premium-status-strip{overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none}
+  .premium-status-strip::-webkit-scrollbar{display:none}
+}
+
+/* Top Performers: peringkat & omzet tidak menempel ke tepi kartu kaca */
+.lbi{padding:10px 12px!important}
+
+/* Monthly Recap di HP: pilihan bulan turun ke barisnya sendiri (tadinya terpotong di 393px) */
+@media(max-width:480px){
+  #page-monthly .premium-monthly-head{flex-direction:column!important;align-items:stretch!important;gap:12px!important}
+  #page-monthly .premium-monthly-head .day-switcher{width:100%!important;margin-left:0!important}
+}
+
+/* Admin: baris Danger Zone & Ganti Password muat di layar HP */
+.hx-adm-grid>*{min-width:0}
+.hx-adm-grid input{width:100%;min-width:0;box-sizing:border-box}
+.hx-adm-grid .btn{white-space:normal;line-height:1.2;min-height:42px;height:auto!important;padding-top:6px;padding-bottom:6px}

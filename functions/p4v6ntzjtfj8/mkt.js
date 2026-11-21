@@ -41,6 +41,38 @@ async function stooq(sym) {
   return { price: close, prevClose: open, high: parseFloat(v[4]), low: parseFloat(v[5]), open, day: [], week: [], state: 'unknown', time: Date.now() / 1000, src: 'stooq' };
 }
 
+// Fresh second opinions for currency pairs (Yahoo's IDR=X quote sometimes freezes for hours).
+async function stooqFresh(sym) {
+  const r = await fetch(`https://stooq.com/q/l/?s=${encodeURIComponent(STOOQ[sym] || sym.toLowerCase())}&f=sd2t2ohlc&h&e=csv`);
+  if (!r.ok) throw new Error('stooq ' + r.status);
+  const v = ((await r.text()).trim().split('\n')[1] || '').split(',');
+  const close = parseFloat(v[6]); if (!close || !v[1] || !v[2]) throw new Error('stooq empty');
+  // Stooq times are Warsaw time (CET, UTC+1 in winter / UTC+2 in summer); take UTC+1, close enough to rank freshness.
+  const t = Date.parse(v[1] + 'T' + v[2] + '+01:00') / 1000;
+  return { price: close, time: t, src: 'stooq' };
+}
+async function geckoFresh(cur) {
+  const c = cur.toLowerCase();
+  const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr,${c}&include_last_updated_at=true`, { headers: UA });
+  if (!r.ok) throw new Error('gecko ' + r.status);
+  const t = (await r.json()).tether; if (!t || !t.idr || !t[c]) throw new Error('gecko empty');
+  return { price: Math.round(t.idr / t[c] * 100) / 100, time: t.last_updated_at || Date.now() / 1000, src: 'coingecko' };
+}
+const UA = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1', accept: 'application/json' };
+async function yahooAlt(sym) { // Yahoo also lists USD/IDR as USDIDR=X, which is often fresher than IDR=X
+  const y = await yahoo(sym === 'IDR=X' ? 'USDIDR=X' : sym.replace('IDR=X', 'IDR=X'), '1d', '5m');
+  if (!y.meta || !y.meta.regularMarketPrice) throw new Error('yahoo2 empty');
+  return { price: y.meta.regularMarketPrice, time: y.meta.regularMarketTime, src: 'yahoo2' };
+}
+async function indodax(cur) { // Indonesian exchange: USDT/IDR tracks the dollar minute by minute
+  if (cur !== 'USD') throw new Error('indodax usd only');
+  const r = await fetch('https://indodax.com/api/ticker/usdtidr', { headers: UA });
+  if (!r.ok) throw new Error('indodax ' + r.status);
+  const t = (await r.json()).ticker; if (!t || !t.last) throw new Error('indodax empty');
+  return { price: Math.round(+t.last), time: +t.server_time || Date.now() / 1000, src: 'indodax' };
+}
+function weekdayFxOpen(now) { const d = new Date(now * 1000), wd = d.getUTCDay(), h = d.getUTCHours(); return !(wd === 6 || (wd === 0 && h < 21) || (wd === 5 && h >= 22)); }
+
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const sym = url.searchParams.get('s') || '^JKSE';
@@ -60,6 +92,20 @@ export async function onRequestGet({ request }) {
       state: reg && now >= reg.start && now <= reg.end ? 'open' : 'closed',
       time: m.regularMarketTime, src: 'yahoo',
     };
+    // Currency pair with a frozen Yahoo quote during the trading week: use the freshest of Stooq / CoinGecko.
+    if (/IDR=X$/.test(sym) && weekdayFxOpen(now) && now - (m.regularMarketTime || 0) > 30 * 60) {
+      const cur = sym === 'IDR=X' ? 'USD' : sym.slice(0, 3);
+      const errs = [];
+      const tryIt = (p) => p.catch((e) => { errs.push(String(e && e.message || e)); return null; });
+      const alts = (await Promise.all([tryIt(yahooAlt(sym)), tryIt(geckoFresh(cur))])).filter(Boolean); // Indodax/Stooq refuse Cloudflare; the phone also double-checks with CoinGecko
+      out.check = { yahooAgeMin: Math.round((now - (m.regularMarketTime || 0)) / 60), alts: alts.map((x) => x.src + ' ' + x.price + ' @' + x.time), errs };
+      const best = alts.sort((a, b) => b.time - a.time)[0];
+      if (best && best.time > (m.regularMarketTime || 0)) {
+        out.price = best.price; out.time = best.time; out.src = best.src; out.stale = 'yahoo';
+        out.day = out.day.concat([[Math.round(best.time), best.price]]);
+        out.high = Math.max(out.high || best.price, best.price); out.low = Math.min(out.low || best.price, best.price);
+      }
+    }
   } catch (e) {
     try { out = Object.assign({ name: ALLOW[sym] }, await stooq(sym)); }
     catch (e2) { return json({ error: 'market data unavailable' }, 502); }

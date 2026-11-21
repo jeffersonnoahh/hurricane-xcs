@@ -131,6 +131,8 @@
         w.jumpToToday();
       }
       tabsByPage.get('dashboard').click();
+      // form lama sudah dihapus: tanpa js/closing.js tidak ada form sama sekali → beri tahu, jangan buka drawer kosong
+      if (!w.HXClosing) { if (typeof w.showToast === 'function') w.showToast('Form closing belum termuat — muat ulang halaman.', 'error'); return; }
       d.body.classList.add('premium-form-open');
     }
 
